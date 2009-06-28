@@ -1,0 +1,25 @@
+@import url("js/dijit/themes/tundra/tundra.css");
+html, body { height: 100%; width: 100%; margin: 0; padding: 0; font-family: 'Courier New', courier !important; font-size: 13px !important }
+body pre { padding:0; margin: 0 }
+.k { color: #0000FF; }
+.c { color: #008000; }
+.m { color: black; }
+.t { color: black; }
+.s { color: black; }
+.str { color: #A31515; }
+.s-not-found { color: black; }
+.s-fuzzy { color: black; }
+.p { color: #0000FF; }
+.ln { display:inline-block; text-align: right; width: 3em; color: #555555; border-right: 1px dotted #cccccc; margin-right: 1em; padding-right: 3px}
+.mem { color: black; }
+.highlighted { background: yellow }
+a { cursor: pointer; color: inherit; text-decoration: none; }
+a:hover { cursor: pointer; text-decoration: underline; }
+#ttd { font-family: Arial,sans-serif !important; }
+#ttd .tablabel { font-size: 13px }
+#ttd .titlebar { width: 496px; height: 20px; margin-top: 0; padding-top: 0 }
+#ttd .close {background-image: url('js/dijit/themes/tundra/images/tabClose.png'); background-repeat: no-repeat; cursor: pointer; width: 12px; height: 12px; position: absolute; left: 495px; top: 20px }
+#ttd .ul { color: black }
+#ttd pre { font-size: 13px }
+.sidebarlink { line-height: 18px; }
+.sidebar-highlighted { color: white; background-color: black }

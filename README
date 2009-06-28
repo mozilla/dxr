@@ -1,0 +1,76 @@
+DXR
+---
+
+Introduction:
+-------------
+
+DXR is a source code cross-reference tool that uses static analysis data collected by Dehydra (https://developer.mozilla.org/en/Dehydra).  DXR was created in order to build on tools like LXR and MXR.  DXR only runs on Linux for the moment, and is heavily customized for the Mozilla project's source code.
+
+
+Setup:
+------
+
+DXR is primarily a database of source code information.  You need a lot of space to do this, and a fast computer helps a lot.
+
+1) In order to build the database you need a working Mozilla and Dehydra build environemnt.  If you have this already, take note of the paths for your g++ and dehydra plugin, so you can alter paths in the scripts.  If you do not have one, you can follow the instructions here:
+
+* Mozilla Build Environment for Linux (https://developer.mozilla.org/en/Linux_Build_Prerequisites)
+* Dehydra Build Environment for Linux (https://developer.mozilla.org/En/Dehydra/Installing_Dehydra)
+
+If you are using a Fedora-like Linux, you can also do the following to have an environment setup locally:
+
+./build-tools.sh
+
+NOTE: this will not alter your system in any way, or replace any default tools.  It builds everything in a ./tools directory.  See build-tools.sh for necessary build dependencies.
+
+2) Once you have a working environment, you need to obtain a Mozilla source tree:
+
+https://developer.mozilla.org/En/Developer_Guide/Source_Code/Mercurial
+
+3) Next, you need to patch the xpidl that comes with Mozilla, so that it will produce cross-reference info for .idl files:
+
+cd /path/to/your/mozilla/srcdir
+patch -p1 < dxrsrc/xpidl.patch
+
+4) DXR uses config info from an INI style config file.  Alter the variables in dxrsrc/www/dxr.config for your environment.
+
+5) Alter dxr-mozconfig to use the appropriate paths for your environment, specifically:
+
+# build with gcc+dehydra instead of normal g++.  Update as required for your env.
+export CXX=$HOME/dxr/tools/gcc-dehydra/installed/bin/g++
+
+# use dehydra plugin and dxr.js script
+export CXXFLAGS=-fplugin="$HOME/dxr/tools/gcc-dehydra/dehydra-gcc/gcc_dehydra.so -fplugin-arg=$HOME/dxr/xref-scripts/dxr.js"
+
+6) For the moment you also need to alter dxrsrc/xref-scripts/dxr.js (i.e., the dehydra script) to point to your srcdir:
+
+// NOTE the trailing slash
+var srcroot = "/home/dave/dxr/mozilla-central/";
+
+7) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
+
+8) Copy (or move) the contents of dxrsrc/www to your web dir
+
+9) Download and install (or at least build somewhere the web app can access) Glimpse:
+
+http://webglimpse.net/trial/glimpse-latest.tar.gz
+
+10) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
+
+Running:
+-------
+
+You can build your source, create the xref database, and create the static HTML content as follows:
+
+dxrsrc/xref-scripts/run-dxr.py -f /path/to/web/dir/dxr.config
+
+This will build Mozilla with Dehyda + dxr.js, then post-process the data into dxr.sqlite.  It will also build the static html and create a glimpse full-text search index.  All these files will be created in the wwwdir using the name of the tree you provided in dxr.config (e.g., mozilla-central).  You will end up with the following structure:
+
+/var/www/html/dxr (or whereever your wwwdir is located)
+		 /index.html (auto-generated during run-dxr.py)
+                 /mozilla-central (symnlink to mozilla-central-current)
+                 /mozilla-central-current
+		                         /.dxr_xref
+                                                   /mozilla-central.sqlite
+                                                   /.gliimpse*  (glimpse index files)
+                                         /accessible (and all other source files copied from your src dir)

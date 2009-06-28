@@ -1,0 +1,538 @@
+diff -r fdcb163df592 xpcom/typelib/xpidl/Makefile.in
+--- a/xpcom/typelib/xpidl/Makefile.in	Wed Apr 15 13:21:48 2009 +0100
++++ b/xpcom/typelib/xpidl/Makefile.in	Thu Jun 25 22:26:02 2009 -0400
+@@ -58,16 +58,17 @@ MOZ_NO_DEBUG_RTL=1
+ CSRCS		= \
+ 		xpidl.c \
+ 		xpidl_idl.c \
+ 		xpidl_util.c \
+ 		xpidl_header.c \
+ 		xpidl_typelib.c \
+ 		xpidl_doc.c \
+ 		xpidl_java.c \
++		xpidl_xref.c \
+ 		$(NULL)
+ 
+ ifdef CROSS_COMPILE
+ HOST_PROGRAM	= host_xpidl$(HOST_BIN_SUFFIX)
+ HOST_CSRCS	= $(CSRCS)
+ ifdef WINCE
+ HOST_LDFLAGS += -ladvapi32.lib
+ endif
+diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.c
+--- a/xpcom/typelib/xpidl/xpidl.c	Wed Apr 15 13:21:48 2009 +0100
++++ b/xpcom/typelib/xpidl/xpidl.c	Thu Jun 25 22:26:02 2009 -0400
+@@ -41,16 +41,17 @@
+ 
+ #include "xpidl.h"
+ 
+ static ModeData modes[] = {
+     {"header",  "Generate C++ header",         "h",    xpidl_header_dispatch},
+     {"typelib", "Generate XPConnect typelib",  "xpt",  xpidl_typelib_dispatch},
+     {"doc",     "Generate HTML documentation", "html", xpidl_doc_dispatch},
+     {"java",    "Generate Java interface",     "java", xpidl_java_dispatch},
++    {"xref",    "Generate xref info",          "xref",  xpidl_xref_dispatch},
+     {0,         0,                             0,      0}
+ };
+ 
+ static ModeData *
+ FindMode(char *mode)
+ {
+     int i;
+     for (i = 0; modes[i].mode; i++) {
+diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.h
+--- a/xpcom/typelib/xpidl/xpidl.h	Wed Apr 15 13:21:48 2009 +0100
++++ b/xpcom/typelib/xpidl/xpidl.h	Thu Jun 25 22:26:02 2009 -0400
+@@ -104,16 +104,17 @@ typedef struct backend {
+ 
+ /* Function that produces a struct of output-generation functions */
+ typedef backend *(*backendFactory)();
+  
+ extern backend *xpidl_header_dispatch(void);
+ extern backend *xpidl_typelib_dispatch(void);
+ extern backend *xpidl_doc_dispatch(void);
+ extern backend *xpidl_java_dispatch(void);
++extern backend *xpidl_xref_dispatch(void);
+ 
+ typedef struct ModeData {
+     char               *mode;
+     char               *modeInfo;
+     char               *suffix;
+     backendFactory     factory;
+ } ModeData;
+ 
+diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl_xref.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/xpcom/typelib/xpidl/xpidl_xref.c	Thu Jun 25 22:26:02 2009 -0400
+@@ -0,0 +1,471 @@
++/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
++/* ***** BEGIN LICENSE BLOCK *****
++ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
++ *
++ * The contents of this file are subject to the Mozilla Public License Version
++ * 1.1 (the "License"); you may not use this file except in compliance with
++ * the License. You may obtain a copy of the License at
++ * http://www.mozilla.org/MPL/
++ *
++ * Software distributed under the License is distributed on an "AS IS" basis,
++ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
++ * for the specific language governing rights and limitations under the
++ * License.
++ *
++ * The Original Code is mozilla.org code.
++ *
++ * The Initial Developer of the Original Code is
++ * Netscape Communications Corporation.
++ * Portions created by the Initial Developer are Copyright (C) 1998
++ * the Initial Developer. All Rights Reserved.
++ *
++ * Contributor(s):
++ *
++ * Alternatively, the contents of this file may be used under the terms of
++ * either the GNU General Public License Version 2 or later (the "GPL"), or
++ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
++ * in which case the provisions of the GPL or the LGPL are applicable instead
++ * of those above. If you wish to allow use of your version of this file only
++ * under the terms of either the GPL or the LGPL, and not to allow others to
++ * use your version of this file under the terms of the MPL, indicate your
++ * decision by deleting the provisions above and replace them with the notice
++ * and other provisions required by the GPL or the LGPL. If you do not delete
++ * the provisions above, a recipient may use your version of this file under
++ * the terms of any one of the MPL, the GPL or the LGPL.
++ *
++ * ***** END LICENSE BLOCK ***** */
++
++#include "xpidl.h"
++#include <ctype.h>
++
++static gboolean
++print_list(TreeState *state, IDL_tree list)
++{
++    if (list == NULL)
++        return TRUE;
++
++    while (list != NULL) {
++    fprintf(state->file,
++            "%s.idl:%d %s::%s\n",
++            state->basename,
++            list->_line,
++            (char*)state->priv,
++            IDL_IDENT(IDL_LIST(list).data).str);
++        list = IDL_LIST(list).next;
++    }
++    return TRUE;
++}
++
++static gboolean
++write_type(IDL_tree type_tree, gboolean is_out, FILE *outfile)
++{
++    if (!type_tree) {
++        fputs("void", outfile);
++        return TRUE;
++    }
++
++    switch (IDL_NODE_TYPE(type_tree)) {
++      case IDLN_TYPE_INTEGER: {
++        gboolean sign = IDL_TYPE_INTEGER(type_tree).f_signed;
++        switch (IDL_TYPE_INTEGER(type_tree).f_type) {
++          case IDL_INTEGER_TYPE_SHORT:
++            fputs(sign ? "PRInt16" : "PRUint16", outfile);
++            break;
++          case IDL_INTEGER_TYPE_LONG:
++            fputs(sign ? "PRInt32" : "PRUint32", outfile);
++            break;
++          case IDL_INTEGER_TYPE_LONGLONG:
++            fputs(sign ? "PRInt64" : "PRUint64", outfile);
++            break;
++          default:
++            g_error("Unknown integer type %d\n",
++                    IDL_TYPE_INTEGER(type_tree).f_type);
++            return FALSE;
++        }
++        break;
++      }
++      case IDLN_TYPE_CHAR:
++        fputs("char", outfile);
++        break;
++      case IDLN_TYPE_WIDE_CHAR:
++        fputs("PRUnichar", outfile); /* wchar_t? */
++        break;
++      case IDLN_TYPE_WIDE_STRING:
++        fputs("PRUnichar *", outfile);
++        break;
++      case IDLN_TYPE_STRING:
++        fputs("char*", outfile);
++        break;
++      case IDLN_TYPE_BOOLEAN:
++        fputs("PRBool", outfile);
++        break;
++      case IDLN_TYPE_OCTET:
++        fputs("PRUint8", outfile);
++        break;
++      case IDLN_TYPE_FLOAT:
++        switch (IDL_TYPE_FLOAT(type_tree).f_type) {
++          case IDL_FLOAT_TYPE_FLOAT:
++            fputs("float", outfile);
++            break;
++          case IDL_FLOAT_TYPE_DOUBLE:
++            fputs("double", outfile);
++            break;
++          /* XXX 'long double' just ignored, or what? */
++          default:
++            fprintf(outfile, "unknown_type_%d", IDL_NODE_TYPE(type_tree));
++            break;
++        }
++        break;
++      case IDLN_IDENT:
++        // dh - I'm using *_internal so types will match vs. using macro names
++        if (UP_IS_NATIVE(type_tree)) {
++            if (IDL_tree_property_get(type_tree, "domstring") ||
++                IDL_tree_property_get(type_tree, "astring")) {
++                fputs("nsAString_internal", outfile);
++            } else if (IDL_tree_property_get(type_tree, "utf8string")) {
++                fputs("nsACString_internal", outfile);
++            } else if (IDL_tree_property_get(type_tree, "cstring")) {
++                fputs("nsACString_internal", outfile);
++            } else {
++                fputs(IDL_NATIVE(IDL_NODE_UP(type_tree)).user_type, outfile);
++            }
++            if (IDL_tree_property_get(type_tree, "ptr")) {
++                fputs("*", outfile);
++            } else if (IDL_tree_property_get(type_tree, "ref")) {
++                fputs("&", outfile);
++            }
++        } else {
++            fputs(IDL_IDENT(type_tree).str, outfile);
++        }
++        if (UP_IS_AGGREGATE(type_tree))
++            fputs("*", outfile);
++        break;
++      default:
++        fprintf(outfile, "unknown_type_%d", IDL_NODE_TYPE(type_tree));
++        break;
++    }
++    return TRUE;
++}
++
++/*
++ * param generation:
++ * in string foo        -->     nsString *foo
++ * out string foo       -->     nsString **foo;
++ * inout string foo     -->     nsString **foo;
++ */
++
++/* If notype is true, just write the param name. */
++static gboolean
++write_param(IDL_tree param_tree, FILE *outfile)
++{
++    IDL_tree param_type_spec = IDL_PARAM_DCL(param_tree).param_type_spec;
++    gboolean is_in = IDL_PARAM_DCL(param_tree).attr == IDL_PARAM_IN;
++    /* in string, wstring, nsid, domstring, utf8string, cstring and 
++     * astring any explicitly marked [const] are const 
++     */
++
++    if (is_in &&
++        (IDL_NODE_TYPE(param_type_spec) == IDLN_TYPE_STRING ||
++         IDL_NODE_TYPE(param_type_spec) == IDLN_TYPE_WIDE_STRING ||
++         IDL_tree_property_get(IDL_PARAM_DCL(param_tree).simple_declarator,
++                               "const") ||
++         IDL_tree_property_get(param_type_spec, "nsid") ||
++         IDL_tree_property_get(param_type_spec, "domstring")  ||
++         IDL_tree_property_get(param_type_spec, "utf8string") ||
++         IDL_tree_property_get(param_type_spec, "cstring")    ||
++         IDL_tree_property_get(param_type_spec, "astring"))) {
++        fputs("const ", outfile);
++    }
++    else if (IDL_PARAM_DCL(param_tree).attr == IDL_PARAM_OUT &&
++             IDL_tree_property_get(IDL_PARAM_DCL(param_tree).simple_declarator, 
++                                   "shared")) {
++        fputs("const ", outfile);
++    }
++
++    if (!write_type(param_type_spec, !is_in, outfile))
++        return FALSE;
++
++    if (IDL_PARAM_DCL(param_tree).attr != IDL_PARAM_IN &&
++        !DIPPER_TYPE(param_type_spec)) {
++        fputc('*', outfile);
++    }
++    /* arrays get a bonus * too */
++    /* XXX Should this be a leading '*' or a trailing "[]" ?*/
++    if (IDL_tree_property_get(IDL_PARAM_DCL(param_tree).simple_declarator,
++                              "array"))
++        fputc('*', outfile);
++
++    return TRUE;
++}
++
++#define AS_DECL 0
++#define AS_CALL 1
++#define AS_IMPL 2
++#define ATTR_IDENT(tree) (IDL_IDENT(IDL_LIST(IDL_ATTR_DCL(tree).simple_declarations).data))
++#define ATTR_TYPE_DECL(tree) (IDL_ATTR_DCL(tree).param_type_spec)
++#define ATTR_TYPE(tree) (IDL_NODE_TYPE(ATTR_TYPE_DECL(tree)))
++#define ATTR_DECLS(tree) (IDL_LIST(IDL_ATTR_DCL(tree).simple_declarations).data)
++
++static gboolean
++write_attr_accessor(IDL_tree attr_tree, FILE * outfile,
++                    gboolean getter, int mode, const char *className)
++{
++    char *attrname = ATTR_IDENT(attr_tree).str;
++    const char *binaryname;
++    IDL_tree ident = IDL_LIST(IDL_ATTR_DCL(attr_tree).simple_declarations).data;
++
++    fprintf(outfile, "%cet",
++            getter ? 'G' : 'S');
++    binaryname = IDL_tree_property_get(ATTR_DECLS(attr_tree), "binaryname");
++    if (binaryname) {
++        fprintf(outfile, "%s(",
++                binaryname);
++    } else {
++        fprintf(outfile, "%c%s(",
++                toupper(*attrname),
++                attrname + 1);
++    }
++    if (mode == AS_DECL || mode == AS_IMPL) {
++        /* Setters for string, wstring, nsid, domstring, utf8string, 
++         * cstring and astring get const. 
++         */
++        if (!getter &&
++            (IDL_NODE_TYPE(ATTR_TYPE_DECL(attr_tree)) == IDLN_TYPE_STRING ||
++             IDL_NODE_TYPE(ATTR_TYPE_DECL(attr_tree)) == IDLN_TYPE_WIDE_STRING ||
++             IDL_tree_property_get(ATTR_TYPE_DECL(attr_tree), "nsid") ||
++             IDL_tree_property_get(ATTR_TYPE_DECL(attr_tree), "domstring")  ||
++             IDL_tree_property_get(ATTR_TYPE_DECL(attr_tree), "utf8string") ||
++             IDL_tree_property_get(ATTR_TYPE_DECL(attr_tree), "cstring")    ||
++             IDL_tree_property_get(ATTR_TYPE_DECL(attr_tree), "astring")))
++        {
++            fputs("const ", outfile);
++        }
++
++        if (!write_type(ATTR_TYPE_DECL(attr_tree), getter, outfile))
++            return FALSE;
++        fputs((getter && !DIPPER_TYPE(ATTR_TYPE_DECL(attr_tree))) ? "*" : "", outfile);
++    }
++    fputs(")", outfile);
++    return TRUE;
++}
++
++/* handle ATTR_DCL (attribute declaration) nodes */
++static gboolean
++xref_attribute_declaration(TreeState *state)
++{
++    IDL_tree attr = state->tree;
++
++    if (!verify_attribute_declaration(attr))
++        return FALSE;
++
++    fprintf(state->file,
++            "%s.idl:%d %s::",
++            state->basename,
++            state->tree->_line - 1, /* attr locs are off-by-one */
++            (char*)state->priv);
++
++    if (!write_attr_accessor(state->tree, state->file, TRUE, AS_DECL, NULL))
++        return FALSE;
++    fputs("\n", state->file);
++
++    if (!IDL_ATTR_DCL(state->tree).f_readonly) {
++        fprintf(state->file,
++                "%s.idl:%d %s::",
++                state->basename,
++                state->tree->_line - 1, /* attr locs are off-by-one */
++                (char*)state->priv);
++
++        if (!write_attr_accessor(state->tree, state->file, FALSE, AS_DECL, NULL))
++            return FALSE;
++        fputc('\n', state->file);
++    }
++
++    return TRUE;
++}
++
++/* handle OP_DCL (method declaration) nodes */
++static gboolean
++xref_method_declaration(TreeState *state)
++{
++    struct _IDL_OP_DCL *op = &IDL_OP_DCL(state->tree);
++    IDL_tree iter;
++    char *mname = IDL_IDENT(IDL_OP_DCL(state->tree).ident).str;
++
++    fprintf(state->file,
++            "%s.idl:%d %s::%c%s",
++            state->basename,
++            state->tree->_line - 1, /* locs are off by one */
++            (char*)state->priv,
++            toupper(*mname),
++            mname + 1);
++
++    fprintf(state->file, "(");
++
++    for (iter = op->parameter_dcls; iter; iter = IDL_LIST(iter).next) {
++        write_param(IDL_LIST(iter).data, state->file);
++
++        if ((IDL_LIST(iter).next))
++            fprintf(state->file, ", ");
++    }
++
++    fprintf(state->file, ")\n");
++
++    return TRUE;
++}
++
++static gboolean
++xref_list(TreeState *state)
++{
++    IDL_tree iter;
++    for (iter = state->tree; iter; iter = IDL_LIST(iter).next) {
++        state->tree = IDL_LIST(iter).data;
++        if (!xpidl_process_node(state))
++            return FALSE;
++    }
++    return TRUE;
++}
++
++static gboolean
++xref_interface(TreeState *state)
++{
++    IDL_tree iface = state->tree, iter, orig;
++    state->priv = (void*)IDL_IDENT(IDL_INTERFACE(iface).ident).str;
++
++    // print interface name/loc
++    fprintf(state->file,
++            "%s.idl:%d %s",
++            state->basename,
++            IDL_INTERFACE(iface).ident->_line - 1, // -1 to get in front of \n
++            (char*)state->priv);
++
++    // print base interface, if any
++    if ((iter = IDL_INTERFACE(iface).inheritance_spec)) {
++        if (IDL_LIST(iter).next != NULL) {
++            // multiple inheritance is not supported, but xpidl's problem, not mine here
++        }
++        fprintf(state->file, 
++                " : %s\n", 
++                IDL_IDENT(IDL_LIST(iter).data).str);
++    } else {
++        fprintf(state->file, 
++                "\n"); 
++    }
++
++    /*
++     * Call xpidl_process_node to recur through list of declarations in
++     * interface body; another option would be to explicitly iterate through
++     * the list.  xpidl_process_node currently requires twiddling the state to
++     * get the right node; I'll fix that soon to just take the node.  Makes it
++     * easier to follow what's going on, I think...
++     */
++    orig = state->tree;
++    state->tree = IDL_INTERFACE(iface).body;
++    if (state->tree && !xpidl_process_node(state))
++        return FALSE;
++    state->tree = orig;
++
++    return TRUE;
++}
++
++static gboolean
++xref_const_dcl(TreeState *state)
++{   
++    struct _IDL_CONST_DCL *dcl = &IDL_CONST_DCL(state->tree);
++    const char *name = IDL_IDENT(dcl->ident).str;
++    gboolean is_signed;
++    IDL_tree real_type;
++    const char *const_format;
++
++    /* Could be a typedef; try to map it to the real type. */
++    real_type = find_underlying_type(dcl->const_type);
++    real_type = real_type ? real_type : dcl->const_type;
++    is_signed = IDL_TYPE_INTEGER(real_type).f_signed;
++
++    const_format = is_signed ? "%" IDL_LL "d" : "%" IDL_LL "uU";
++
++    fprintf(state->file,
++            "%s.idl:%d enum %s ",
++            state->basename,
++            state->tree->_line,
++            name);
++
++    fprintf(state->file,
++            const_format,
++            IDL_INTEGER(dcl->const_exp).value);
++
++    fprintf(state->file,
++            "\n");
++
++    return TRUE;
++}
++
++static gboolean
++xref_typedef(TreeState *state)
++{
++    IDL_tree type = IDL_TYPE_DCL(state->tree).type_spec;
++    IDL_tree dcls = IDL_TYPE_DCL(state->tree).dcls;
++    IDL_tree complex;
++
++    if (IDL_NODE_TYPE(type) == IDLN_TYPE_SEQUENCE) {
++        XPIDL_WARNING((state->tree, IDL_WARNING1,
++                       "sequences not supported, ignored"));
++    } else {
++        if (IDL_NODE_TYPE(complex = IDL_LIST(dcls).data) == IDLN_TYPE_ARRAY) {
++            IDL_tree dim = IDL_TYPE_ARRAY(complex).size_list;
++
++            fprintf(state->file,
++                    "%s.idl:%d typedef|",
++                    state->basename,
++                    state->tree->_line - 1);
++
++            if (!write_type(type, FALSE, state->file))
++                return FALSE;
++            fputs("|", state->file);
++
++            fprintf(state->file, "%s|",
++                    IDL_IDENT(IDL_TYPE_ARRAY(complex).ident).str);
++            do {
++                fputc('[', state->file);
++                if (IDL_LIST(dim).data) {
++                    fprintf(state->file, "%ld",
++                            (long)IDL_INTEGER(IDL_LIST(dim).data).value);
++                }
++                fputc(']', state->file);
++            } while ((dim = IDL_LIST(dim).next) != NULL);
++        } else {
++            fprintf(state->file,
++                    "%s.idl:%d typedef|",
++                    state->basename,
++                    state->tree->_line - 1);
++
++            if (!write_type(type, FALSE, state->file))
++                return FALSE;
++            fputs("|", state->file);
++            fputs(IDL_IDENT(IDL_LIST(dcls).data).str, state->file);
++        }
++        fputs("\n", state->file);
++    }
++    return TRUE;
++}
++
++backend *
++xpidl_xref_dispatch(void)
++{
++    static backend result;
++    static nodeHandler table[IDLN_LAST];
++    static gboolean initialized = FALSE;
++
++    if (!initialized) {
++        table[IDLN_LIST] = xref_list;
++        table[IDLN_INTERFACE] = xref_interface;
++        table[IDLN_ATTR_DCL] = xref_attribute_declaration;
++        table[IDLN_CONST_DCL] = xref_const_dcl;
++        table[IDLN_OP_DCL] = xref_method_declaration;
++        table[IDLN_TYPE_DCL] = xref_typedef;
++
++        initialized = TRUE;
++    }
++  
++    result.dispatch_table = table;
++    return &result;
++}
