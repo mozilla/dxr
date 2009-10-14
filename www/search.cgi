@@ -272,7 +272,7 @@ print """Content-Type: text/html
 <body onload="parseQS('search-box');">
 <div id="logo"><a href="%s/index.html"><img src="images/powered-by-mozilla-small.png" border="0"></a></div>
 <div id="search">
-  <form id="searchForm" method="post">
+  <form id="searchForm" method="get">
     <input id="search-box" name=string type=text size=31 maxlength=2048 title="Search">
     <input type=submit value="Search" onclick="return doSearch('searchForm');">
   </form>
