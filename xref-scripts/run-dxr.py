@@ -23,6 +23,25 @@ def ReadFile(filename, print_error=True):
             print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
             return None
 
+def WriteOpenSearch(name, hosturl, virtroot, wwwsrcfiles):
+    try:
+        fp = open(os.path.join(wwwsrcfiles, 'opensearch-' + name + '.xml'), 'w')
+        try:
+            fp.write("""<?xml version="1.0" encoding="UTF-8"?>
+
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+ <ShortName>%s</ShortName>
+ <Description>Search DXR %s</Description>
+ <Tags>mozilla dxr %s</Tags>
+ <Url type="text/html"
+      template="%s/%s/search.cgi?tree=%s&amp;string={searchTerms}"/>
+</OpenSearchDescription>""" % (name[:16], name, name, hosturl, virtroot, name))
+        finally:
+            fp.close()
+    except IOError:
+        print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
+        return None
+
 def parseconfig(filename, doxref, dohtml, tree):
     prepDone = False
     config = ConfigParser.ConfigParser()
@@ -32,14 +51,33 @@ def parseconfig(filename, doxref, dohtml, tree):
     wwwsrcfiles = None
     wwwdir = None
     virtroot = None
+    hosturl = None
 
-    # Build the contents of an html <select> for all trees encountered
+    # Build the contents of an html <select> and open search links
+    # for all trees encountered.
     options = ''
+    opensearch = ''
 
+    # Strip any trailing slashes from path strings
     xrefscripts = config.get('DXR', 'xrefscripts')
+    if xrefscripts.endswith('/'):
+        xrefscripts = xrefscripts[0:-1]
+
     wwwsrcfiles = config.get('DXR', 'wwwsrcfiles')
+    if wwwsrcfiles.endswith('/'):
+        wwwsrcfiles = wwwsrcfiles[0:-1]
+
     wwwdir = config.get('Web', 'wwwdir')
+    if wwwdir.endswith('/'):
+        wwwdir = wwwdir[0:-1]
+
     virtroot = config.get('Web', 'virtroot')
+    if virtroot.endswith('/'):
+        virtroot = virtroot[0:-1]
+
+    hosturl = config.get('Web', 'hosturl')
+    if hosturl.endswith('/'):
+        hosturl = hosturl[0:-1]
 
     for section in config.sections():
         # Look for DXR and Web and anything else is a tree description
@@ -50,8 +88,22 @@ def parseconfig(filename, doxref, dohtml, tree):
             if tree and section != tree:
                 continue
             options += '<option value="' + section + '">' + section + '</option>'
+            opensearch += '<link rel="search" href="opensearch-' + section + '.xml" type="application/opensearchdescription+xml" '
+            opensearch += 'title="' + section + '" />\n'
+
+            print section
+            print hosturl
+            print virtroot
+            print wwwsrcfiles
+            
+
+            WriteOpenSearch(section, hosturl, virtroot, wwwsrcfiles)
             sourcedir = config.get(section, 'sourcedir')
+            if sourcedir.endswith('/'):
+                sourcedir = sourcedir[0:-1]
             objdir = config.get(section, 'objdir')
+            if objdir.endswith('/'):
+                objdir = objdir[0:-1]
             mozconfig = config.get(section, 'mozconfig')
 
             # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
@@ -83,9 +135,10 @@ def parseconfig(filename, doxref, dohtml, tree):
                 glimpseindex = config.get('DXR', 'glimpseindex')
                 retcode = subprocess.call([buildglimpse, wwwdir, section, dbdir, glimpseindex])
 
-    # Generate index page with drop-down for all trees
+    # Generate index page with drop-down + opensearch links for all trees
     indexhtml = ReadFile(os.path.join(wwwsrcfiles, 'dxr-index-template.html'))
     indexhtml = indexhtml.replace('$OPTIONS', options)
+    indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
     index = open(os.path.join(wwwdir, 'index.html'), 'w')
     index.write(indexhtml)
     index.close()
