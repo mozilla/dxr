@@ -56,7 +56,7 @@ def PrintStatement():
   # TODO: deal with this matching multiple in same line...
   row = conn.execute('select vname, vtype, vdeclloc, visFcall, vmember from stmts where vlocf=? and vlocl=? and vshortname=?;', (file, line, name)).fetchone()
 
-  data = None
+  data = ''
 
   if not row:
     data += "Error: Couldn't find " + name + " at line " + line + " as expected."
@@ -82,7 +82,12 @@ def PrintStatement():
     # If this is a function call, do more work to get extra info
     if row[3] and row[3] == 1:
       impl_data = '<ul>'
-      for impl in conn.execute('select mtname, mname, mdecl, mdef from members where mname=? and mtname in (select tcname from impl where tbname=?);', (row[0], row[4])):
+#      for impl in conn.execute('select mtname, mname, mdecl, mdef from members where mname=? and mtname in (select tcname from impl where tbname=?);', (row[0], row[4])):
+      for impl in conn.execute('select mtname, mname, mdecl, mdef, mtloc from members where mname=? and (mtname=? or (not mtname=? and mtname in (select tcname from impl where tbname=?)));', (row[0], row[4], row[4], row[4])):
+        # Skip IDL interface types, which provide no implementation
+        mtype = conn.execute('select tkind from types where tname=? and tloc=?;', (impl[0], impl[4])).fetchone()
+        if mtype and mtype[0] == 'interface':
+          continue
         pathParts = ''
         if impl[3]:
           pathParts = impl[3].split(':')
@@ -182,9 +187,9 @@ def PrintType(typename):
   data += 'Declaration: <a href="' + htmlsrcdir + tlocParts[0] + '.html#l' + tlocParts[1] + '">' + tloc + '</a><br />'
 
   if ttypedefname:
-    data += "Typdef Type: " + ttypedefname + "<br />"
+    data += "Typdef Type: " + cgi.escape(ttypedefname) + "<br />"
   if ttemplate:
-    data += "Template Type: " + ttemplate + "<br />"
+    data += "Template Type: " + cgi.escape(ttemplate) + "<br />"
 
   members = "<ul>"
   # TODO: should add mdef in here somehow...
@@ -205,12 +210,18 @@ def PrintType(typename):
   bases = 'Direct:<br /><ul>'
   for base in conn.execute('select tbname, tbloc from impl where tcname=? and tcloc=? and direct=1;', (typename, tloc)):
     tblocParts = base[1].split(':')
-    bases += '<li><a href="' + htmlsrcdir + tblocParts[0] + '.html#l' + tblocParts[1] + '">' + base[0] + '</a></li>' 
+    if len(tblocParts) == 2:
+      bases += '<li><a href="' + htmlsrcdir + tblocParts[0] + '.html#l' + tblocParts[1] + '">' + base[0] + '</a></li>'
+    else:
+      bases += '<li>' + base[0] + '</li>'
   bases += '</ul>'
   bases += 'Indirect:<br /><ul>'
   for base in conn.execute('select tbname, tbloc from impl where tcname=? and tcloc=? and not direct=1;', (typename, tloc)):
     tblocParts = base[1].split(':')
-    bases += '<li><a href="' + htmlsrcdir + tblocParts[0] + '.html#l' + tblocParts[1] + '">' + base[0] + '</a></li>' 
+    if len(tblocParts) == 2:
+      bases += '<li><a href="' + htmlsrcdir + tblocParts[0] + '.html#l' + tblocParts[1] + '">' + base[0] + '</a></li>'
+    else:
+      bases += '<li>' + base[0] + '</li>'
   bases += '</ul>'
 
   concrete = 'Direct:<br /><ul>'
