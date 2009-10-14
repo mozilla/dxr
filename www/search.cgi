@@ -49,7 +49,7 @@ def processString(string):
                 print '<div class="bubble"><span class="title">Types</span><ul>'
                 printHeader = False
                 printFooter = True
-            print '<li><a href="%s/%s">%s</a></li>' % (tree, tloc, tname)
+            print '<li><a href="%s/%s/%s">%s</a></li>' % (virtroot, tree, tloc, tname)
     if printFooter:
         print "</ul></div>"
 
@@ -74,13 +74,13 @@ def processString(string):
         for filename in glimpsefilenames.split('\n'):
             # Only check in leaf name
             pattern = '/([^/]*' + string + '[^/]*\.[^\.]+)$' if not ext else '/([^/]*' + string + '[^/]*\.' + ext + ')$'
-            m = re.search(pattern, filename)
+            m = re.search(pattern, filename, re.IGNORECASE)
             if m:
                 if printHeader:
                     print '<div class=bubble><span class="title">Files</span><ul>'
                     printHeader = False
                     printFooter = True
-                htmlfilename = filename.replace(wwwdir + '/', '') + '.html'
+                htmlfilename = filename.replace(wwwdir, virtroot) + '.html'
                 print '<li><a href="%s">%s</a></li>' % (htmlfilename, m.group(1))
         if printFooter:
             print "</ul></div>"
@@ -211,7 +211,7 @@ ext = None
 type = ''
 derived = ''
 member = ''
-tree = 'mozilla-central' # just a default for now
+tree = '' #mozilla-central' # just a default for now
 macro = ''
 
 if form.has_key('string'):
