@@ -76,6 +76,8 @@ mkdir -p ${OBJDIR}/config
 cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/config
 
 # build, and hijack REPORT_BUILD so we can get a .macros file for every .cpp file compiled.
+echo "Updating tree..."
+hg pull -u
 echo "Top-Level Build..."
 time make -f client.mk build REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))'
 
