@@ -16,11 +16,31 @@
 
 mkdir tools
 cd tools
+TOOLSDIR=${PWD}
+
+# Grab and build new mozilla-central
+hg clone http://hg.mozilla.org/mozilla-central/ ./mozilla-central
+cd mozilla-central
+
+# jshydra currently needs SpiderMonkey at rev ea128fc02710, see: 
+# http://hg.mozilla.org/users/Pidgeot18_gmail.com/jshydra/file/17651ca38478/configure#l3
+hg update -r ea128fc02710
+
+# Setup a basic mozconfig file
+echo '. $topsrcdir/browser/config/mozconfig' > .mozconfig
+echo 'mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/objdir' >> .mozconfig
+echo 'mk_add_options MOZ_MAKE_FLAGS="-j4"' >> .mozconfig
+
+# Build
+make -f client.mk
+cd ..
+
+if [ "$?" -ne 0 ]; then echo "ERROR - mozilla-central build failed, aborting."; exit 1; fi
 
 # Build jshydra, which will also get mozilla-central
 hg clone http://hg.mozilla.org/users/Pidgeot18_gmail.com/jshydra/ ./jshydra
 cd ./jshydra
-./configure
+./configure --moz-src=${TOOLSDIR}/mozilla-central --moz-obj=${TOOLSDIR}/mozilla-central/objdir
 make
 
 if [ "$?" -ne 0 ]; then echo "ERROR - jshydra build failed, aborting."; exit 1; fi
@@ -28,10 +48,14 @@ if [ "$?" -ne 0 ]; then echo "ERROR - jshydra build failed, aborting."; exit 1; 
 # Clean-up after jshydra build
 cd ./mozilla
 hg st -un | xargs rm -f
-cd ../..
+
+# Update mozilla-central to tip again for SpiderMonkey/dehydra build
+cd ${TOOLSDIR}/mozilla-central
+hg update tip
+cd ${TOOLSDIR}
 
 # Build SpiderMonkey
-cp -R ./jshydra/mozilla/js/ ./js
+cp -R ./mozilla-central/js/ ./js
 cd ./js/src
 autoconf-2.13
 mkdir build-release
@@ -70,8 +94,19 @@ cd dehydra
 make
 if [ "$?" -ne 0 ]; then echo "ERROR - Dehydra build failed, aborting."; exit 1; fi
 
+# Build glimpse + glimpseindex
+wget http://webglimpse.net/trial/glimpse-latest.tar.gz
+tar xzf glimpse-latest.tar.gz
+rm glimpse-latest.tar.gz
+cd glimpse-*
+./configure
+make
+if [ "$?" -ne 0 ]; then echo "ERROR - Glimpse build failed, aborting."; exit 1; fi
+
 echo
 echo "DXR Tools Built Successfully:"
-echo "  GCC with plugin support  ./tools/gcc-dehydra/installed/bin/g++"
-echo "  Dehydra GCC plugin       ./tools/gcc-dehydra/dehydra/gcc_dehydra.so"
-echo "  jshydra                  ./tools/jshydra/jshydra"
+echo "  GCC with plugin support  ${TOOLSDIR}/gcc-dehydra/installed/bin/g++"
+echo "  Dehydra GCC plugin       ${TOOLSDIR}/gcc-dehydra/dehydra/gcc_dehydra.so"
+echo "  jshydra                  ${TOOLSDIR}/jshydra/jshydra"
+echo "  glimpse                  ${PWD}/bin/glimpse"
+echo "  glimpseindex             ${PWD}/bin/glimpseindex"
