@@ -91,12 +91,6 @@ def parseconfig(filename, doxref, dohtml, tree):
             opensearch += '<link rel="search" href="opensearch-' + section + '.xml" type="application/opensearchdescription+xml" '
             opensearch += 'title="' + section + '" />\n'
 
-            print section
-            print hosturl
-            print virtroot
-            print templates
-            
-
             WriteOpenSearch(section, hosturl, virtroot, templates)
             sourcedir = config.get(section, 'sourcedir')
             if sourcedir.endswith('/'):
