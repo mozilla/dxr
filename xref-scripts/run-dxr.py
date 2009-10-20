@@ -48,7 +48,7 @@ def parseconfig(filename, doxref, dohtml, tree):
     config.read(filename)
 
     xrefscripts = None
-    wwwsrcfiles = None
+    templates = None
     wwwdir = None
     virtroot = None
     hosturl = None
@@ -63,9 +63,9 @@ def parseconfig(filename, doxref, dohtml, tree):
     if xrefscripts.endswith('/'):
         xrefscripts = xrefscripts[0:-1]
 
-    wwwsrcfiles = config.get('DXR', 'wwwsrcfiles')
-    if wwwsrcfiles.endswith('/'):
-        wwwsrcfiles = wwwsrcfiles[0:-1]
+    templates = config.get('DXR', 'templates')
+    if templates.endswith('/'):
+        templates = templates[0:-1]
 
     wwwdir = config.get('Web', 'wwwdir')
     if wwwdir.endswith('/'):
@@ -94,10 +94,10 @@ def parseconfig(filename, doxref, dohtml, tree):
             print section
             print hosturl
             print virtroot
-            print wwwsrcfiles
+            print templates
             
 
-            WriteOpenSearch(section, hosturl, virtroot, wwwsrcfiles)
+            WriteOpenSearch(section, hosturl, virtroot, templates)
             sourcedir = config.get(section, 'sourcedir')
             if sourcedir.endswith('/'):
                 sourcedir = sourcedir[0:-1]
@@ -122,8 +122,8 @@ def parseconfig(filename, doxref, dohtml, tree):
             # Build static html
             if dohtml:
                 buildhtml = os.path.join(xrefscripts, "build-html.sh")
-                htmlheader = os.path.join(wwwsrcfiles, "dxr-header.html")
-                htmlfooter = os.path.join(wwwsrcfiles, "dxr-footer.html")
+                htmlheader = os.path.join(templates, "dxr-header.html")
+                htmlfooter = os.path.join(templates, "dxr-footer.html")
                 dxrsqlite = os.path.join(dbdir, dbname)
                 
                 retcode = subprocess.call([buildhtml, wwwdir, sourcedir, htmlheader, htmlfooter, dxrsqlite, section, virtroot])
@@ -136,7 +136,7 @@ def parseconfig(filename, doxref, dohtml, tree):
                 retcode = subprocess.call([buildglimpse, wwwdir, section, dbdir, glimpseindex])
 
     # Generate index page with drop-down + opensearch links for all trees
-    indexhtml = ReadFile(os.path.join(wwwsrcfiles, 'dxr-index-template.html'))
+    indexhtml = ReadFile(os.path.join(templates, 'dxr-index-template.html'))
     indexhtml = indexhtml.replace('$OPTIONS', options)
     indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
     index = open(os.path.join(wwwdir, 'index.html'), 'w')
