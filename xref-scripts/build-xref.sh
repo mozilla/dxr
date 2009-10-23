@@ -66,7 +66,7 @@ fi
 mkdir ${WWWDIR}/${TREENAME}-current
 
 #  clobber build
-echo "Clobber..."
+echo "Clobber ${TREENAME}..."
 cd ${SOURCEROOT}
 rm -rf ${OBJDIR}
 export MOZCONFIG=${MOZCONFIG}
@@ -76,10 +76,10 @@ mkdir -p ${OBJDIR}/config
 cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/config
 
 # build, and hijack REPORT_BUILD so we can get a .macros file for every .cpp file compiled.
-echo "Updating tree..."
+echo "Updating ${TREENAME}..."
 hg pull -u
-echo "Top-Level Build..."
-time make -f client.mk build REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))'
+echo "Top-Level Build of ${TREENAME}..."
+time make -f client.mk build REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' > /dev/null 2>&1
 
 # die if build fails
 if [ "$?" -ne 0 ]; then echo "ERROR - Build failed, aborting."; exit 1; fi

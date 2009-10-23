@@ -22,11 +22,20 @@ __author__ = 'nnorwitz@google.com (Neal Norwitz), modified david.humphrey@seneca
 try:
     # Python 3.x
     import builtins
+    # python 2.6
+    from multiprocessing import Pool, cpuCount
 except ImportError:
     # Python 2.x
     import __builtin__ as builtins
 
-import sys
+    try:
+        # pyprocessing - http://developer.berlios.de/projects/pyprocessing
+        from processing import Pool, cpuCount
+    except ImportError:
+        print >>sys.stderr, "No processing library available! Install pyprocessing or Python 2.6"
+        sys.exit(1)
+
+import sys, os
 from cgi import escape
 import sqlite3
 import re
@@ -229,7 +238,7 @@ def GetTokens(source):
                 i += 1
             elif new_ch == '=':
                 i += 1
-        elif c in '()[]{}~!?^%;/.,':             # Handle single char tokens.
+        elif c in '()[]{}~!?^%;/.,@':             # Handle single char tokens (adding @ for obj-c/c++).
             token_type = SYNTAX
             i += 1
             if c == '.' and source[i].isdigit():
@@ -297,127 +306,100 @@ def GetTokens(source):
 
         yield Token(token_type, source[start:i], start, i, line)
 
+def FormatSource(html_header, html_footer, dxr_db, srcroot, virtroot, tree, filepath, newroot):
+    source = ReadFile(filepath)
+    filename = os.path.basename(filepath)
+    out = open(os.path.join(newroot, filename + '.html'), 'w')
+    if not srcroot.endswith('/'):
+        srcroot = srcroot + '/'
+    srcpath = filepath.replace(srcroot, '')
 
-if __name__ == '__main__':
-    def ReadFile(filename, print_error=True):
-        """Returns the contents of a file."""
-        try:
-            fp = open(filename)
-            try:
-                return fp.read()
-            finally:
-                fp.close()
-        except IOError:
-            if print_error:
-                print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
-            return None
+    conn = sqlite3.connect(dxr_db)
+    conn.execute('PRAGMA temp_store = MEMORY;')
 
-    def main(argv):
-        """Usage: cpp2html.py <html-header> <html-footer> <dxr.sqlite> <srcroot> <cpp-file> <virtroot> <treename>"""
-        html_header = ReadFile(argv[1])
-        if html_header is None:
-            sys.exit()
+    # Make temporary tables for all statements in this file to speed-up lookups
+    conn.executescript('BEGIN TRANSACTION;' +
+                       'CREATE TEMPORARY TABLE stmts_for_file(vfuncname, vshortname, vlocl);' + 
+                       'INSERT INTO stmts_for_file SELECT vfuncname, vshortname, vlocl FROM stmts where vlocf="' + srcpath + '";' +
+                       'CREATE INDEX idx_stmts_for_file ON stmts_for_file (vfuncname, vshortname, vlocl ASC);' +
+                       'COMMIT;')
 
-        html_footer = ReadFile(argv[2])
-        if html_footer is None:
-            sys.exit()
+    conn.executescript('BEGIN TRANSACTION;' +
+                       'CREATE TEMPORARY TABLE types_all (tname);' + 
+                       'INSERT INTO types_all SELECT tname from types;' + # should ignore, but missing too many -- where not tignore = 1;' +
+                       'INSERT INTO types_all SELECT ttypedefname from types;' + # where not tignore = 1;' +
+                       'INSERT INTO types_all SELECT ttemplate from types;' + # where not tignore = 1;' +
+                       'CREATE INDEX idx_types_all ON types_all (tname);' +
+                       'COMMIT;')
 
-        filename = argv[5]
-        source = ReadFile(filename)
-        if source is None:
-            sys.exit()
+    offset = 0       # offset is how much token.start/token.end are off due to extra html being added
+    html = ''        # line after being made into html
 
-        srcpath = filename.replace(argv[4], '')
+    line_start = 0
+    line = source[:source.find('\n')]
+    line_num = 1
 
-        virtroot = argv[6]
-        tree = argv[7]
+    # Fix-up virtroot in html header
+    html_header = html_header.replace('$VIRTROOT', virtroot)
+    out.write(html_header + '\n')
 
-        conn = sqlite3.connect(argv[3])
-        conn.execute('PRAGMA temp_store = MEMORY;')
-
-        # Make temporary tables for all statements in this file to speed-up lookups
-        conn.executescript('BEGIN TRANSACTION;' +
-                           'CREATE TEMPORARY TABLE stmts_for_file(vfuncname, vshortname, vlocl);' + 
-                           'INSERT INTO stmts_for_file SELECT vfuncname, vshortname, vlocl FROM stmts where vlocf="' + srcpath + '";' +
-                           'CREATE INDEX idx_stmts_for_file ON stmts_for_file (vfuncname, vshortname, vlocl ASC);' +
-                           'COMMIT;')
-
-        conn.executescript('BEGIN TRANSACTION;' +
-                           'CREATE TEMPORARY TABLE types_all (tname);' + 
-                           'INSERT INTO types_all SELECT tname from types;' + # should ignore, but missing too many -- where not tignore = 1;' +
-                           'INSERT INTO types_all SELECT ttypedefname from types;' + # where not tignore = 1;' +
-                           'INSERT INTO types_all SELECT ttemplate from types;' + # where not tignore = 1;' +
-                           'CREATE INDEX idx_types_all ON types_all (tname);' +
-                           'COMMIT;')
-
-        offset = 0       # offset is how much token.start/token.end are off due to extra html being added
-        html = ''        # line after being made into html
-
-        line_start = 0
-        line = source[:source.find('\n')]
-        line_num = 1
-
-        # Fix-up virtroot in html header
-        html_header = html_header.replace('$VIRTROOT', virtroot)
-        print(html_header)
-
-        # Add app config info
-        print """<script type="text/javascript">
+    # Add app config info
+    out.write("""<script type="text/javascript">
 // Config info used by dxr.js
 virtroot="%s";
 tree="%s";
-</script>""" % (virtroot, tree)
+</script>\n""" % (virtroot, tree))
 
-        currentType = ''
-        closeDiv = False
-        # TODO: this ordering (by mdecl) is wrong (e.g., if you're in a file of defs) if you want file order
-        for mdecls in conn.execute('select mtname, mtloc, mname, mdecl, mdef, mshortname from members where mdef like "' 
-                                   + srcpath + '%" or mdecl like "' + srcpath + '%" order by mtname, mdecl;').fetchall():
-            if currentType != mdecls[0]:
-                if closeDiv:
-                    print('</div><br />')
+    currentType = ''
+    closeDiv = False
+    # TODO: this ordering (by mdecl) is wrong (e.g., if you're in a file of defs) if you want file order
+    for mdecls in conn.execute('select mtname, mtloc, mname, mdecl, mdef, mshortname from members where mdef like "' + 
+                               srcpath + '%" or mdecl like "' + srcpath + '%" order by mtname, mdecl;').fetchall():
+        if currentType != mdecls[0]:
+            if closeDiv:
+                out.write('</div><br />\n')
 
-                currentType = mdecls[0]
-                tname = mdecls[0]
+            currentType = mdecls[0]
+            tname = mdecls[0]
 
-                if mdecls[1] and mdecls[1].startswith(srcpath):
-                    p = mdecls[1].split(':')
-                    mtlocline = None
-                    # file scope statics have no type and use containing file for loc (no :line)
-                    if len(p) == 2:
-                        mtlocline = p[1]
-                    else:
-                        mtlocline = p[0]
+            if mdecls[1] and mdecls[1].startswith(srcpath):
+                p = mdecls[1].split(':')
+                mtlocline = None
+                # file scope statics have no type and use containing file for loc (no :line)
+                if len(p) == 2:
+                    mtlocline = p[1]
+                else:
+                    mtlocline = p[0]
                     
-                    # TODO: ugly hack, fix this      
-                    if tname == '[File Scope Static]':
-                        tname = ''
-                    else:
-                        tname = '<a class="sidebarlink" title="'+ mdecls[0] + '" href="#l' + mtlocline + '">' + mdecls[0] + '</a>'
-                print("<b>" + tname + "</b>")
-                print('<div>')
-                closeDiv = True
+                # TODO: ugly hack, fix this      
+                if tname == '[File Scope Static]':
+                    tname = ''
+                else:
+                    tname = '<a class="sidebarlink" title="'+ mdecls[0] + '" href="#l' + mtlocline + '">' + mdecls[0] + '</a>'
+            out.write("<b>" + tname + "</b>\n")
+            out.write('<div>\n')
+            closeDiv = True
                 
-            # TODO: is there a better way to deal with showing decl and/or def?
-            # If decl + def are both in this file, or defn is, defn for text and decl for icon
-            if ((mdecls[3] and mdecls[3].startswith(srcpath)) and (mdecls[4] and mdecls[4].startswith(srcpath))) or (mdecls[4] and mdecls[4].startswith(srcpath)):
-                declparts = mdecls[3].split(':')
-                print('<a title="Declaration: ' + mdecls[3] + '" href="' + virtroot + '/' + tree + '/' + declparts[0] + '.html#l' + declparts[1] + 
-                      '"><img src="' + virtroot + '/' + 'images/icons/page_white_code.png" border="0" width="16" height="16"></a>')
-                print('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Definition]" href="#l' + mdecls[4].split(':')[1] + '">' + mdecls[5] + '</a><br />')
-            else:
-                if mdecls[4]:
-                    defparts = mdecls[4].split(':')
-                    print('<a title="Definition: ' + mdecls[4] + '" href="' + virtroot + '/' + tree + '/' + defparts[0] + '.html#l' + defparts[1] + 
-                          '"><img src="' + virtroot + '/images/icons/page_white_wrench.png" border="0" width="16" height="16"></a>')
-                    print('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Declaration]" href="#l' + mdecls[3].split(':')[1] + '">' + mdecls[5] + '</a><br />')
-        if closeDiv:
-            print('</div><br />')
+        # TODO: is there a better way to deal with showing decl and/or def?
+        # If decl + def are both in this file, or defn is, defn for text and decl for icon
+        if ((mdecls[3] and mdecls[3].startswith(srcpath)) and (mdecls[4] and mdecls[4].startswith(srcpath))) or (mdecls[4] and mdecls[4].startswith(srcpath)):
+            declparts = mdecls[3].split(':')
+            out.write('<a title="Declaration: ' + mdecls[3] + '" href="' + virtroot + '/' + tree + '/' + declparts[0] + '.html#l' + declparts[1] + 
+                      '"><img src="' + virtroot + '/' + 'images/icons/page_white_code.png" border="0" width="16" height="16"></a>\n')
+            out.write('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Definition]" href="#l' + mdecls[4].split(':')[1] + '">' + mdecls[5] + '</a><br />\n')
+        else:
+            if mdecls[4]:
+                defparts = mdecls[4].split(':')
+                out.write('<a title="Definition: ' + mdecls[4] + '" href="' + virtroot + '/' + tree + '/' + defparts[0] + '.html#l' + defparts[1] + 
+                          '"><img src="' + virtroot + '/images/icons/page_white_wrench.png" border="0" width="16" height="16"></a>\n')
+                out.write('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Declaration]" href="#l' + mdecls[3].split(':')[1] + '">' + mdecls[5] + '</a><br />\n')
+    if closeDiv:
+        out.write('</div><br />\n')
 
-        for extraTypes in conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
-                                       '%" and tname not in (select mtname from members where mdef like "' + srcpath + '%" or mdecl like "' + srcpath + 
-                                       '%" order by mtname);').fetchall():
-            print('<b><a class="sidebarlink" title="' + extraTypes[0] + '" href="#l' + extraTypes[1].split(':')[1] + '">' + extraTypes[0] + '</a></b><br /><br />')
+    for extraTypes in conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
+                                   '%" and tname not in (select mtname from members where mdef like "' + srcpath + '%" or mdecl like "' + srcpath + 
+                                   '%" order by mtname);').fetchall():
+        out.write('<b><a class="sidebarlink" title="' + extraTypes[0] + '" href="#l' + extraTypes[1].split(':')[1] + '">' + extraTypes[0] + '</a></b><br /><br />\n')
         
 # TODO: Need to figure out static funcs now that I changed how they are done in the db...
 #        printFuncsHeader = True
@@ -433,86 +415,96 @@ tree="%s";
 #        if printFuncsFooter:
 #            print('</div><br />')
 
-        print('</div>')
-        print('<div id="maincontent" dojoType="dijit.layout.ContentPane" region="center" style="border:solid 1px #cccccc">')
-        print('<pre>')
-        print('<div id="ttd" style="display: none;" dojoType="dijit.TooltipDialog"></div>')
+    out.write('</div>\n')
+    out.write('<div id="maincontent" dojoType="dijit.layout.ContentPane" region="center" style="border:solid 1px #cccccc">\n')
+    out.write('<pre>\n')
+    out.write('<div id="ttd" style="display: none;" dojoType="dijit.TooltipDialog"></div>\n')
 
+    for token in GetTokens(source):
+        if token.token_type == NEWLINE:
+            out.write('<div id="l' + `line_num` + '"><a class="ln" href="#l' + `line_num` + '">' + `line_num` + '</a>' + line + '</div>')
+            line_num += 1
+            line_start = token.end
+            offset = 0
 
-        for token in GetTokens(source):
-            if token.token_type == NEWLINE:
-                sys.stdout.write('<div id="l' + `line_num` + '"><a class="ln" href="#l' + `line_num` + '">' + `line_num` + '</a>' + line + '</div>')
-                line_num += 1
-                line_start = token.end
-                offset = 0
+            # Get next line
+            eol = source.find('\n', line_start)
+            if eol > -1:
+                line = source[line_start:eol]
 
-                # Get next line
-                eol = source.find('\n', line_start)
-                if eol > -1:
-                    line = source[line_start:eol]
+        else:
+            if token.token_type == KEYWORD or token.token_type == STRING or token.token_type == COMMENT:
+                start = token.start - line_start + offset
+                end = token.end - line_start + offset
 
-            else:
-                if token.token_type == KEYWORD or token.token_type == STRING or token.token_type == COMMENT:
-                    start = token.start - line_start + offset
-                    end = token.end - line_start + offset
+                if token.token_type == KEYWORD:
+                    link = '<span class="k">' + token.name + '</span>'
+                elif token.token_type == STRING:
+                    link = '<span class="str">' + escape(token.name) + '</span>'
+                else:
+                    link = '<span class="c">' + escape(token.name) + '</span>'
+                offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
+                line = line[:start] + link + line[end:]
+            elif token.token_type == NAME:
+                # Could be a macro, type, or statement
+                prefix = ''
+                suffix = '</a>'
 
-                    if token.token_type == KEYWORD:
-                        link = '<span class="k">' + token.name + '</span>'
-                    elif token.token_type == STRING:
-                        link = '<span class="str">' + escape(token.name) + '</span>'
-                    else:
-                        link = '<span class="c">' + escape(token.name) + '</span>'
-                    offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
-                    line = line[:start] + link + line[end:]
-                elif token.token_type == NAME:
-                    # Could be a macro, type, or statement
+                # Figure out which function we're in, and get the start/end line nums
+                if conn.execute('select count(*) from macros where mshortname=?;', (token.name,)).fetchone()[0] > 0:
+                    prefix = '<a class="m" aria-haspopup="true">'
+
+                if prefix == '' and conn.execute('select count(*) from types_all where tname=?;', (token.name,)).fetchone()[0] > 0:
+                    prefix = '<a class="t" aria-haspopup="true">'
+
+                if prefix == '':
+                    cur = conn.execute('select distinct vfuncname from stmts_for_file where vlocl<=? order by vlocl desc limit 1;', (line_num,)).fetchone()
+
+                    if cur:
+                        range = conn.execute('select min(vlocl), max(vlocl) from stmts_for_file where vfuncname=?;', (cur[0],)).fetchone()
+                        # Now look for the token in that function, taking the line closest to the current line
+                        # TODO: this is not totally accurate, since vshortname can happen in multiple cases (a->offset, g->b->offset)
+                        hit = 0
+                        for l in conn.execute('select distinct vlocl from stmts_for_file where vlocl>=? and vlocl<=? and vshortname=? order by vlocl', 
+                                              (range[0], range[1], token.name)):
+                            if abs(line_num - l[0]) < abs(line_num - hit):
+                                hit = l[0]
+
+                        if hit == line_num:
+                            prefix = '<a class="s" aria-haspopup="true" line="' + `hit` + '" pos=' + `token.start` + '>'
+                        elif hit != 0:  # fuzzy match, as long as hit isn't still at 0
+                            prefix = '<a class="s-fuzzy" aria-haspopup="true" line="' + `hit` + '">'
+
+                if prefix== '' and conn.execute('select count(*) from members where mshortname=?;', (token.name,)).fetchone()[0] > 0:
+                    prefix = '<a class="mem" aria-haspopup="true" pos=' + `token.start` + '>'
+
+                if prefix == '':      # we never found a match
+                    # Don't bother making it a link
+                    suffix = ''
                     prefix = ''
-                    suffix = '</a>'
 
-                    # Figure out which function we're in, and get the start/end line nums
-                    if conn.execute('select count(*) from macros where mshortname=?;', (token.name,)).fetchone()[0] > 0:
-                        prefix = '<a class="m" aria-haspopup="true">'
+                start = token.start - line_start + offset
+                end = token.end - line_start + offset
+                link = prefix + escape(token.name) + suffix
+                offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
+                line = line[:start] + link + line[end:]
+            elif token.token_type == PREPROCESSOR:
+                line = '<span class="p">' + escape(token.name) + '</span>'
+                # Try to match header include filename: #include "nsPIDOMWindow.h"
+                line = re.sub('#include "([^"]+)"', '#include "<a class="f">\g<1></a>"', line)
+            elif token.token_type == SYNTAX or token.token_type == CONSTANT:
+                continue
+    out.write(html_footer + '\n')
 
-                    if prefix == '' and conn.execute('select count(*) from types_all where tname=?;', (token.name,)).fetchone()[0] > 0:
-                        prefix = '<a class="t" aria-haspopup="true">'
-
-                    if prefix == '':
-                        cur = conn.execute('select distinct vfuncname from stmts_for_file where vlocl<=? order by vlocl desc limit 1;', (line_num,)).fetchone()
-
-                        if cur:
-                            range = conn.execute('select min(vlocl), max(vlocl) from stmts_for_file where vfuncname=?;', (cur[0],)).fetchone()
-                            # Now look for the token in that function, taking the line closest to the current line
-                            # TODO: this is not totally accurate, since vshortname can happen in multiple cases (a->offset, g->b->offset)
-                            hit = 0
-                            for l in conn.execute('select distinct vlocl from stmts_for_file where vlocl>=? and vlocl<=? and vshortname=? order by vlocl', 
-                                                  (range[0], range[1], token.name)):
-                                if abs(line_num - l[0]) < abs(line_num - hit):
-                                    hit = l[0]
-
-                            if hit == line_num:
-                                prefix = '<a class="s" aria-haspopup="true" line="' + `hit` + '" pos=' + `token.start` + '>'
-                            elif hit != 0:  # fuzzy match, as long as hit isn't still at 0
-                                prefix = '<a class="s-fuzzy" aria-haspopup="true" line="' + `hit` + '">'
-
-                    if prefix== '' and conn.execute('select count(*) from members where mshortname=?;', (token.name,)).fetchone()[0] > 0:
-                        prefix = '<a class="mem" aria-haspopup="true" pos=' + `token.start` + '>'
-
-                    if prefix == '':      # we never found a match
-                        # Don't bother making it a link
-                        suffix = ''
-                        prefix = ''
-
-                    start = token.start - line_start + offset
-                    end = token.end - line_start + offset
-                    link = prefix + escape(token.name) + suffix
-                    offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
-                    line = line[:start] + link + line[end:]
-                elif token.token_type == PREPROCESSOR:
-                    line = '<span class="p">' + escape(token.name) + '</span>'
-                    # Try to match header include filename: #include "nsPIDOMWindow.h"
-                    line = re.sub('#include "([^"]+)"', '#include "<a class="f">\g<1></a>"', line)
-                elif token.token_type == SYNTAX or token.token_type == CONSTANT:
-                    continue
-        print(html_footer)
-
-    main(sys.argv)
+def ReadFile(filename, print_error=True):
+    """Returns the contents of a file."""
+    try:
+        fp = open(filename)
+        try:
+            return fp.read()
+        finally:
+            fp.close()
+    except IOError:
+        if print_error:
+            print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
+        return None

@@ -25,11 +25,20 @@ __author__ = 'nnorwitz@google.com (Neal Norwitz), modifications david.humphrey@s
 try:
     # Python 3.x
     import builtins
+    # python 2.6
+    from multiprocessing import Pool, cpuCount
 except ImportError:
     # Python 2.x
     import __builtin__ as builtins
 
-import sys
+    try:
+        # pyprocessing - http://developer.berlios.de/projects/pyprocessing
+        from processing import Pool, cpuCount
+    except ImportError:
+        print >>sys.stderr, "No processing library available! Install pyprocessing or Python 2.6"
+        sys.exit(1)
+
+import sys, os
 from cgi import escape
 import sqlite3
 import re
@@ -290,135 +299,119 @@ def GetTokens(source):
 
         yield Token(token_type, source[start:i], start, i, line)
 
+def FormatSource(html_header, html_footer, dxr_db, srcroot, virtroot, tree, filepath, newroot):
+    source = ReadFile(filepath)
+    filename = os.path.basename(filepath)
+    out = open(os.path.join(newroot, filename + '.html'), 'w')
+    if not srcroot.endswith('/'):
+        srcroot = srcroot + '/'
+    srcpath = filepath.replace(srcroot, '')
 
-if __name__ == '__main__':
-    def ReadFile(filename, print_error=True):
-        """Returns the contents of a file."""
-        try:
-            fp = open(filename)
-            try:
-                return fp.read()
-            finally:
-                fp.close()
-        except IOError:
-            if print_error:
-                print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
-            return None
+    conn = sqlite3.connect(dxr_db)
+    conn.execute('PRAGMA temp_store = MEMORY;')
 
-    def main(argv):
-        """Usage: idl2html.py <html-header> <html-footer> <dxr.sqlite> <srcroot> <cpp-file> <virtroot> <treename>"""
-        html_header = ReadFile(argv[1])
-        if html_header is None:
-            sys.exit()
+    offset = 0       # offset is how much token.start/token.end are off due to extra html being added
+    html = ''        # line after being made into html
 
-        html_footer = ReadFile(argv[2])
-        if html_footer is None:
-            sys.exit()
+    line_start = 0
+    line = source[:source.find('\n')]
+    line_num = 1
 
-        filename = argv[5]
-        source = ReadFile(filename)
-        if source is None:
-            sys.exit()
+    # Fix-up virtroot in html header
+    html_header = html_header.replace('$VIRTROOT', virtroot)
+    out.write(html_header + '\n')
 
-        srcpath = filename.replace(argv[4], '')
-
-        virtroot = argv[6]
-        tree = argv[7]
-
-        conn = sqlite3.connect(argv[3]) #'/home/dave/dxr/xref-db-deleteme/class.sqlite')
-        conn.execute('PRAGMA temp_store = MEMORY;')
-
-        offset = 0       # offset is how much token.start/token.end are off due to extra html being added
-        html = ''        # line after being made into html
-
-        line_start = 0
-        line = source[:source.find('\n')]
-        line_num = 1
-
-        # Fix-up virtroot in html header
-        html_header = html_header.replace('$VIRTROOT', virtroot)
-        print(html_header)
-
-        # Add app config info
-        print """<script type="text/javascript">
+    # Add app config info
+    out.write("""<script type="text/javascript">
 // Config info used by dxr.js
 virtroot="%s";
 tree="%s";
-</script>""" % (virtroot, tree)
+</script>\n""" % (virtroot, tree))
 
-        currentType = ''
-        closeDiv = False
-        for mdecls in conn.execute('select mtname, mtloc, mname, mdecl, mshortname from members where mdecl like "' + srcpath + 
-                                   '%" order by mtname, mdecl;').fetchall():
-            if currentType != mdecls[0]:
-                if closeDiv:
-                    print('</div><br />')
+    currentType = ''
+    closeDiv = False
+    for mdecls in conn.execute('select mtname, mtloc, mname, mdecl, mshortname from members where mdecl like "' + srcpath + 
+                               '%" order by mtname, mdecl;').fetchall():
+        if currentType != mdecls[0]:
+            if closeDiv:
+                out.write('</div><br />\n')
 
-                currentType = mdecls[0]
-                tname = mdecls[0]
-                if mdecls[1] and mdecls[1].startswith(srcpath):
-                    mtlocline = mdecls[1].split(':')[1]
-                    tname = '<a class="sidebarlink" href="#l' + mtlocline + '">' + mdecls[0] + '</a>'
-                print("<b>" + tname + "</b>")
-                print('<div style="padding-left:16px">')
-                closeDiv = True
+            currentType = mdecls[0]
+            tname = mdecls[0]
+            if mdecls[1] and mdecls[1].startswith(srcpath):
+                mtlocline = mdecls[1].split(':')[1]
+                tname = '<a class="sidebarlink" href="#l' + mtlocline + '">' + mdecls[0] + '</a>'
+            out.write("<b>" + tname + "</b>\n")
+            out.write('<div style="padding-left:16px">\n')
+            closeDiv = True
                 
-            if mdecls[3]: # mdecl
-                print('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Definition]" href="#l' + mdecls[3].split(':')[1] + '">' + mdecls[4] + '</a><br />')
+        if mdecls[3]: # mdecl
+            out.write('&nbsp;<a class="sidebarlink" title="' + mdecls[2] + ' [Definition]" href="#l' + mdecls[3].split(':')[1] + '">' + mdecls[4] + '</a><br />\n')
 
-        if closeDiv:
-            print('</div><br />')
+    if closeDiv:
+        out.write('</div><br />\n')
 
-        for extraTypes in conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
-                                       '%" and tname not in (select mtname from members where mdef like "' + srcpath + 
-                                       '%" or mdecl like "' + srcpath + '%" order by mtname);').fetchall():
-            print('<b><a class="sidebarlink" href="#l' + extraTypes[1].split(':')[1] + '">' + extraTypes[0] + '</a></b><br /><br />')
+    for extraTypes in conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
+                                   '%" and tname not in (select mtname from members where mdef like "' + srcpath + 
+                                   '%" or mdecl like "' + srcpath + '%" order by mtname);').fetchall():
+        out.write('<b><a class="sidebarlink" href="#l' + extraTypes[1].split(':')[1] + '">' + extraTypes[0] + '</a></b><br /><br />\n')
 
-        print('</div>')
-        print('<div id="maincontent" dojoType="dijit.layout.ContentPane" region="center" style="border:solid 1px #cccccc">')
-        print('<pre>')
-        print('<div id="ttd" style="display: none;" dojoType="dijit.TooltipDialog"></div>')
+    out.write('</div>\n')
+    out.write('<div id="maincontent" dojoType="dijit.layout.ContentPane" region="center" style="border:solid 1px #cccccc">\n')
+    out.write('<pre>\n')
+    out.write('<div id="ttd" style="display: none;" dojoType="dijit.TooltipDialog"></div>\n')
 
-        for token in GetTokens(source):
-            if token.token_type == NEWLINE:
-                sys.stdout.write('<div id="l' + `line_num` + '"><a href="#l' + `line_num` + '" class="ln">' + `line_num` + '</a>' + line + '</div>')
-                line_num += 1
-                line_start = token.end
-                offset = 0
+    for token in GetTokens(source):
+        if token.token_type == NEWLINE:
+            out.write('<div id="l' + `line_num` + '"><a href="#l' + `line_num` + '" class="ln">' + `line_num` + '</a>' + line + '</div>')
+            line_num += 1
+            line_start = token.end
+            offset = 0
 
-                # Get next line
-                eol = source.find('\n', line_start)
-                if eol > -1:
-                    line = source[line_start:eol]
+            # Get next line
+            eol = source.find('\n', line_start)
+            if eol > -1:
+                line = source[line_start:eol]
 
-            else:
-                if token.token_type == KEYWORD or token.token_type == STRING or token.token_type == COMMENT:
-                    start = token.start - line_start + offset
-                    end = token.end - line_start + offset
+        else:
+            if token.token_type == KEYWORD or token.token_type == STRING or token.token_type == COMMENT:
+                start = token.start - line_start + offset
+                end = token.end - line_start + offset
 
-                    if token.token_type == KEYWORD:
-                        link = '<span class="k">' + token.name + '</span>'
-                    elif token.token_type == STRING:
-                        link = '<span class="str">' + escape(token.name) + '</span>'
-                    else:
-                        link = '<span class="c">' + escape(token.name) + '</span>'
-                    offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
-                    line = line[:start] + link + line[end:]
-                elif token.token_type == SYNTAX or token.token_type == CONSTANT:
-                    continue
-                else: #lif token.token_type == PREPROCESSOR:
-                    start = token.start - line_start + offset
-                    end = token.end - line_start + offset
+                if token.token_type == KEYWORD:
+                    link = '<span class="k">' + token.name + '</span>'
+                elif token.token_type == STRING:
+                    link = '<span class="str">' + escape(token.name) + '</span>'
+                else:
+                    link = '<span class="c">' + escape(token.name) + '</span>'
+                offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
+                line = line[:start] + link + line[end:]
+            elif token.token_type == SYNTAX or token.token_type == CONSTANT:
+                continue
+            else: #lif token.token_type == PREPROCESSOR:
+                start = token.start - line_start + offset
+                end = token.end - line_start + offset
 
-                    if token.token_type == KEYWORD:
-                        link = '<span class="k">' + token.name + '</span>'
-                    elif token.token_type == NAME:
-                        link = token.name
-                    else:
-                        link = '<span class="p">' + escape(token.name) + '</span>'
-                    offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
-                    line = line[:start] + link + line[end:]
+                if token.token_type == KEYWORD:
+                    link = '<span class="k">' + token.name + '</span>'
+                elif token.token_type == NAME:
+                    link = token.name
+                else:
+                    link = '<span class="p">' + escape(token.name) + '</span>'
+                offset += len(link) - len(token.name)       # token is linkified, so update offset with new width
+                line = line[:start] + link + line[end:]
 
-        print(html_footer)
+    out.write(html_footer + '\n')
 
-    main(sys.argv)
+def ReadFile(filename, print_error=True):
+    """Returns the contents of a file."""
+    try:
+        fp = open(filename)
+        try:
+            return fp.read()
+        finally:
+            fp.close()
+    except IOError:
+        if print_error:
+            print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
+        return None

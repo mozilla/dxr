@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 
+try:
+    # python 2.6
+    from multiprocessing import Pool, cpuCount
+except ImportError:
+    try:
+        # pyprocessing - http://developer.berlios.de/projects/pyprocessing
+        from processing import Pool, cpuCount
+    except ImportError:
+        print >>sys.stderr, "No processing library available! Install pyprocessing or Python 2.6"
+        sys.exit(1)
+
 import os, sys, getopt, ConfigParser, subprocess
+import idl2html, cpp2html
+import shutil
 
 def usage():
     print """Usage: run-dxr.py [options]
@@ -23,9 +36,9 @@ def ReadFile(filename, print_error=True):
             print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
             return None
 
-def WriteOpenSearch(name, hosturl, virtroot, wwwsrcfiles):
+def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     try:
-        fp = open(os.path.join(wwwsrcfiles, 'opensearch-' + name + '.xml'), 'w')
+        fp = open(os.path.join(wwwdir, 'opensearch-' + name + '.xml'), 'w')
         try:
             fp.write("""<?xml version="1.0" encoding="UTF-8"?>
 
@@ -41,6 +54,64 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwsrcfiles):
     except IOError:
         print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
         return None
+
+def indextree(tree, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templatesdir, virtroot, glimpseindex, doxref, dohtml):
+    # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
+    # and we'll symlink it to wwwdir/treename later
+    htmlroot = os.path.join(wwwdir, tree + '-current')
+    dbdir = os.path.join(htmlroot, '.dxr_xref')
+    dbname = tree + '.sqlite'
+
+    retcode = 0
+    # Build dxr.sqlite
+    if doxref:
+        buildxref = os.path.join(xrefscripts, "build-xref.sh")
+        retcode = subprocess.call([buildxref, sourcedir, objdir, mozconfig, xrefscripts, dbdir, dbname, wwwdir, tree])
+        if retcode != 0:
+            return
+
+    # Build static html
+    if dohtml:
+        buildhtml = os.path.join(xrefscripts, "build-html.sh")
+        htmlheader = ReadFile(os.path.join(templatesdir, "dxr-header.html"))
+        htmlfooter = ReadFile(os.path.join(templatesdir, "dxr-footer.html"))
+        dxrsqlite = os.path.join(dbdir, dbname)
+                
+        n = cpuCount()
+        p = Pool(processes=n)
+
+        print 'Building HTML files for ' + tree +  '...'
+
+        for root, dirs, filenames in os.walk(sourcedir):
+            if root.find('/.hg') > -1:
+                continue
+
+            newroot = root.replace(sourcedir, htmlroot)
+            
+            for dir in dirs:
+                newdirpath = os.path.join(newroot, dir)
+                if not os.path.exists(newdirpath):
+                    os.makedirs(newdirpath)
+                    
+            for filename in filenames:
+                srcpath = os.path.join(root, filename)
+                # Hack: Glimpse indexing needs the .cpp to exist beside the .cpp.html
+                cpypath = os.path.join(newroot, filename)
+                if filename.endswith('.cpp') or filename.endswith('.h'):
+                    shutil.copyfile(srcpath, cpypath)
+                    p.apply_async(cpp2htmlparallel.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
+                elif filename.endswith('.idl'):
+                    shutil.copyfile(srcpath, cpypath)
+                    p.apply_async(idl2htmlparallel.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
+
+        p.close()
+        p.join()
+
+        # Build glimpse index
+        buildglimpse = os.path.join(xrefscripts, "build-glimpseidx.sh")
+        subprocess.call([buildglimpse, wwwdir, tree, dbdir, glimpseindex])
+
+        # TODO: should I delete the .cpp, .h, .idl, etc, that were copied into wwwdir/treename-current for glimpse indexing?
 
 def parseconfig(filename, doxref, dohtml, tree):
     prepDone = False
@@ -79,6 +150,10 @@ def parseconfig(filename, doxref, dohtml, tree):
     if hosturl.endswith('/'):
         hosturl = hosturl[0:-1]
 
+    glimpseindex = config.get('DXR', 'glimpseindex')
+
+    p = Pool(processes=2)
+
     for section in config.sections():
         # Look for DXR and Web and anything else is a tree description
         if section == 'DXR' or section == 'Web':
@@ -91,7 +166,7 @@ def parseconfig(filename, doxref, dohtml, tree):
             opensearch += '<link rel="search" href="opensearch-' + section + '.xml" type="application/opensearchdescription+xml" '
             opensearch += 'title="' + section + '" />\n'
 
-            WriteOpenSearch(section, hosturl, virtroot, templates)
+            WriteOpenSearch(section, hosturl, virtroot, wwwdir)
             sourcedir = config.get(section, 'sourcedir')
             if sourcedir.endswith('/'):
                 sourcedir = sourcedir[0:-1]
@@ -100,34 +175,10 @@ def parseconfig(filename, doxref, dohtml, tree):
                 objdir = objdir[0:-1]
             mozconfig = config.get(section, 'mozconfig')
 
-            # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
-            # and we'll symlink it to wwwdir/treename later
-            dbdir = os.path.join(wwwdir, section + '-current', '.dxr_xref')
-            dbname = section + '.sqlite'
+            p.apply_async(indextree, (section, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates, virtroot, glimpseindex, doxref, dohtml))
 
-            retcode = 0
-            # Build dxr.sqlite
-            if doxref:
-                buildxref = os.path.join(xrefscripts, "build-xref.sh")
-                retcode = subprocess.call([buildxref, sourcedir, objdir, mozconfig, xrefscripts, dbdir, dbname, wwwdir, section])
-                if retcode != 0:
-                    sys.exit(retcode)
-
-            # Build static html
-            if dohtml:
-                buildhtml = os.path.join(xrefscripts, "build-html.sh")
-                htmlheader = os.path.join(templates, "dxr-header.html")
-                htmlfooter = os.path.join(templates, "dxr-footer.html")
-                dxrsqlite = os.path.join(dbdir, dbname)
-                
-                retcode = subprocess.call([buildhtml, wwwdir, sourcedir, htmlheader, htmlfooter, dxrsqlite, section, virtroot])
-                if retcode != 0:
-                    sys.ext(retcode)
-
-                # Build glimpse index
-                buildglimpse = os.path.join(xrefscripts, "build-glimpseidx.sh")
-                glimpseindex = config.get('DXR', 'glimpseindex')
-                retcode = subprocess.call([buildglimpse, wwwdir, section, dbdir, glimpseindex])
+    p.close()
+    p.join()
 
     # Generate index page with drop-down + opensearch links for all trees
     indexhtml = ReadFile(os.path.join(templates, 'dxr-index-template.html'))
@@ -136,8 +187,6 @@ def parseconfig(filename, doxref, dohtml, tree):
     index = open(os.path.join(wwwdir, 'index.html'), 'w')
     index.write(indexhtml)
     index.close()
-
-    # TODO: need proper exit handling so you can C-c and kill subprocesses spawned in the bash scripts
 
 
 if __name__ == '__main__':
