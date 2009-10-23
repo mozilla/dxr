@@ -161,12 +161,26 @@ def processType(type):
             print GetLine(type[1])
 
 def processDerived(derived):
-    for type in conn.execute('select tcname, tcloc, direct from impl where tbname = ? order by direct desc;', (derived,)).fetchall():
-        tname = cgi.escape(type[0])
-        tdirect = 'Direct' if type[2] == 1 else 'Indirect'
-        if not path or re.search(path, tloc):
-            print '<h3>%s (%s)</h3>' % (tname, tdirect)
-            print GetLine(type[1])
+    # See if this is nsIFoo or nsIFoo::GetBar
+    parts = derived.split('::')
+    if len(parts) == 1:
+        for type in conn.execute('select tcname, tcloc, direct from impl where tbname = ? order by direct desc;', (derived,)).fetchall():
+            tname = cgi.escape(type[0])
+            tdirect = 'Direct' if type[2] == 1 else 'Indirect'
+            if not path or re.search(path, tloc):
+                print '<h3>%s (%s)</h3>' % (tname, tdirect)
+                print GetLine(type[1])
+    elif len(parts) == 2:
+        for type in conn.execute('select mtname, mtloc, mname, mdecl, mdef from members where mshortname=? and mtname in ' +
+                                 '(select tcname from impl where tbname=?) order by mtname;', (parts[1], parts[0])).fetchall():
+            tname = cgi.escape(type[0])
+            mname = cgi.escape(type[2])
+            if not path or re.search(path, tloc):
+                print '<h3>%s::%s</h3>' % (tname, mname)
+                if type[3]:
+                    print GetLine(type[3])
+                if type[4]:
+                    print GetLine(type[4])
 
 def processMacro(macro):
     for m in conn.execute('select mname, mvalue from macros where mshortname like "' + macro + '%";').fetchall():
