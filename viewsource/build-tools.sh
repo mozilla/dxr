@@ -87,6 +87,7 @@ make install
 cd ..
 hg clone http://hg.mozilla.org/rewriting-and-analysis/dehydra/
 cd dehydra
+export CXX=${TOOLSDIR}/gcc-dehydra/installed/bin/g++
 ./configure --js-libs=../../SpiderMonkey/lib/ --js-headers=../../SpiderMonkey/include/js
 make
 if [ "$?" -ne 0 ]; then echo "ERROR - Dehydra build failed, aborting."; exit 1; fi

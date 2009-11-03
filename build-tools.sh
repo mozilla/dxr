@@ -89,6 +89,7 @@ make install
 cd ..
 #http://hg.mozilla.org/users/tglek_mozilla.com/dehydra-gcc/
 hg clone http://hg.mozilla.org/rewriting-and-analysis/dehydra/
+export CXX=${TOOLSDIR}/gcc-dehydra/installed/bin/g++
 cd dehydra
 ./configure --js-libs=../../SpiderMonkey/lib/ --js-headers=../../SpiderMonkey/include/js
 make
