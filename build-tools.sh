@@ -96,6 +96,7 @@ make
 if [ "$?" -ne 0 ]; then echo "ERROR - Dehydra build failed, aborting."; exit 1; fi
 
 # Build glimpse + glimpseindex
+cd ${TOOLSDIR}
 wget http://webglimpse.net/trial/glimpse-latest.tar.gz
 tar xzf glimpse-latest.tar.gz
 rm glimpse-latest.tar.gz
