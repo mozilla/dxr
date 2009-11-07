@@ -46,12 +46,13 @@ make
 if [ "$?" -ne 0 ]; then echo "ERROR - jshydra build failed, aborting."; exit 1; fi
 
 # Clean-up after jshydra build
-cd ./mozilla
+cd ${TOOLSDIR}/mozilla-central
 hg st -un | xargs rm -f
 
 # Update mozilla-central to tip again for SpiderMonkey/dehydra build
-cd ${TOOLSDIR}/mozilla-central
-hg update tip
+# TODO: fix this once bug https://bugzilla.mozilla.org/show_bug.cgi?id=526299 is fixed.
+#hg update tip
+hg update -r 89e665eb9944
 cd ${TOOLSDIR}
 
 # Build SpiderMonkey
@@ -69,25 +70,22 @@ make install
 cd ../../..
 mkdir gcc-dehydra
 cd gcc-dehydra
-wget ftp://ftp.nluug.nl/mirror/languages/gcc/releases/gcc-4.3.0/gcc-4.3.0.tar.bz2
-tar jxvf gcc-4.3.0.tar.bz2
-cd gcc-4.3.0/ 
+wget ftp://ftp.nluug.nl/mirror/languages/gcc/releases/gcc-4.3.4/gcc-4.3.4.tar.bz2
+tar jxvf gcc-4.3.4.tar.bz2
+cd gcc-4.3.4/ 
 hg init .
 hg clone http://hg.mozilla.org/users/tglek_mozilla.com/gcc-moz-plugin-mq .hg/patches
 (for file in `cat .hg/patches/series`; do cat .hg/patches/$file; done) |patch -p1 
 cd ..
 mkdir gcc-build 
 cd gcc-build
-# For 32-bit OS, use this:
-# ../gcc-4.3.0/configure --without-libstdcxx --enable-checking --disable-bootstrap CFLAGS="-g3 -O0" --enable-languages=c,c++ --enable-__cxa_atexit --prefix=$PWD/../installed 
-../gcc-4.3.0/configure --without-libstdcxx --enable-languages=c,c++ --disable-multilib --prefix=$PWD/../installed
-make
+../gcc-4.3.4/configure --without-libstdcxx --enable-languages=c,c++ --disable-multilib --prefix=$PWD/../installed
+make -j4
 if [ "$?" -ne 0 ]; then echo "ERROR - GCC with plugin support build failed, aborting."; exit 1; fi
 make install
 
 # Build Dehydra
 cd ..
-#http://hg.mozilla.org/users/tglek_mozilla.com/dehydra-gcc/
 hg clone http://hg.mozilla.org/rewriting-and-analysis/dehydra/
 export CXX=${TOOLSDIR}/gcc-dehydra/installed/bin/g++
 cd dehydra
