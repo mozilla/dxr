@@ -79,7 +79,7 @@ cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/config
 echo "Updating ${TREENAME}..."
 hg pull -u
 echo "Top-Level Build of ${TREENAME}..."
-time make -f client.mk build REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' > /dev/null 2>&1
+time make -f client.mk build DEHYDRA_PATH='/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_treehydra.so' DEHYDRA_MODULES="${DXRSCRIPTS}/dxr.js" TREEHYDRA_MODULES="${DXRSCRIPTS}/callgraph/callgraph_static.js" REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' > /dev/null 2>&1
 
 # die if build fails
 if [ "$?" -ne 0 ]; then echo "ERROR - Build failed, aborting."; exit 1; fi
@@ -112,9 +112,15 @@ grep "^insert" ${DBROOT}/all-uniq-fixed-paths.sql > ${DBROOT}/cpp-insert.sql
 grep -v "^insert" ${DBROOT}/all-uniq-fixed-paths.sql > ${DBROOT}/cpp-update.sql
 rm ${DBROOT}/all-uniq-fixed-paths.sql
 
-cat ${DXRSCRIPTS}/dxr-schema.sql > ${DBROOT}/all-cpp.sql
+echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' > ${DBROOT}/all-cpp.sql
+cat ${DXRSCRIPTS}/dxr-schema.sql >> ${DBROOT}/all-cpp.sql
+echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' >> ${DBROOT}/all-cpp.sql
 cat ${DBROOT}/cpp-insert.sql >> ${DBROOT}/all-cpp.sql
+echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
+echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' >> ${DBROOT}/all-cpp.sql
+cat ${DXRSCRIPTS}/dxr-indices.sql >> ${DBROOT}/all-cpp.sql
+echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 cat ${DBROOT}/cpp-update.sql >> ${DBROOT}/all-cpp.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 
@@ -153,7 +159,16 @@ rm ${DBROOT}/macros-uniq-processed
 # XXX: leaving this file for debugging
 #rm ${DBROOT}/all-macros.sql
 
-# add index and then defrag
-sqlite3 ${DBNAME} "CREATE INDEX idx_members ON members (mshortname); VACUUM;"
+# create callgraph
+echo "Process callgraph .sql..."
+(cat ${DXRSCRIPTS}/callgraph/schema.sql
+echo 'BEGIN TRANSACTION;'
+find ${OBJDIR} -name '*.cg.sql' | xargs cat
+cat ${DXRSCRIPTS}/callgraph/indices.sql
+echo 'COMMIT;') > ${DBROOT}/callgraph.sql
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log
+
+# Defrag db
+sqlite3 ${DBNAME} "VACUUM;"
 
 echo "Done - DB created at ${DBROOT}/${DBNAME}"

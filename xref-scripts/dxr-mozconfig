@@ -10,5 +10,6 @@ ac_add_options --enable-application=browser
 export CXX=/var/www/html/dxr/tools/gcc-dehydra/installed/bin/g++
 
 # TODO: need to get arg passing to dxr script working
-export CXXFLAGS=-fplugin="/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_dehydra.so -fplugin-arg=/var/www/html/dxr/xref-scripts/dxr.js"
+#export CXXFLAGS=-fplugin="/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_dehydra.so -fplugin-arg=/var/www/html/dxr/xref-scripts/dxr.js"
+#export CXXFLAGS=-fplugin="/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_dehydra.so"
 

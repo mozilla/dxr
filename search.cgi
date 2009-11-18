@@ -9,6 +9,27 @@ import ConfigParser
 import re
 import subprocess
 
+def split_type(val):
+    parts = val.split('::')
+    # check for 'type' vs. 'type::member' vs. 'namespace::type::member' or 'namespace::namespace2::type::member'
+    n = None
+    t = None
+    m = None
+
+    if len(parts) == 1:
+        # just a single string, stuff it in type
+        t = val
+    elif len(parts) == 2:
+        t = parts[0]
+        m = parts[1]
+    else:
+        m = parts[-1]
+        t = parts[-2]
+        # use the rest as namespace
+        n = '::'.join(parts[0:-2])
+
+    return n, t, m
+
 def GetLine(loc):
     parts = loc.split(':')
     file = ReadFile(os.path.join(wwwdir, tree, parts[0]))
@@ -110,7 +131,7 @@ def processString(string):
     # Check for strings like 'foo::bar'
     halves = string.split('::')
     if len(halves) == 2:
-        count = processMember(halves[1], halves[0])
+        count = processMember(halves[1], halves[0], True)
         if count > 0:
             # we printed results, so don't bother with a text search
             return
@@ -188,7 +209,7 @@ def processMacro(macro):
         mvalue = cgi.escape(m[1])
         print '<h3>%s</h3><pre>%s</pre>' % (mname, mvalue)
 
-def processMember(member, type):
+def processMember(member, type, printDecl):
     members = None
     count = 0 # make sure we find something
     if type:
@@ -204,7 +225,7 @@ def processMember(member, type):
         else:
             print '<h3>%s::%s</h3>' % (cgi.escape(m[1]), cgi.escape(m[0]))
 
-        if m[3]:
+        if printDecl and m[3]:
             print GetLine(m[3])
             count += 1
         if m[4]:
@@ -212,10 +233,50 @@ def processMember(member, type):
             count += 1
     return count
 
+def processCallers(callers):
+    n, t, m = split_type(callers)
+
+    if not t and not m:
+        return
+
+    if n:
+        # type names will include namespace
+        t = n + '::' + t
+
+    hits = conn.execute("select namespace, type, shortName from node where id in (select caller from edge where callee in (select id from node where type=? COLLATE NOCASE and shortName=? COLLATE NOCASE));", (t, m)).fetchall();
+    count = 0
+    for h in hits:
+        count += 1
+        if h[0]:
+            processMember(h[2], h[0] + '::' + h[1], False)
+        else:
+            processMember(h[2], h[1], False)
+
+#    # No hits on direct type, try bases
+#    if count == 0:
+#        hits = conn.execute("select type, shortName from node where id in (select caller from edge where callee in (select id from node where shortName=? and type in (select tbname from impl where tcname=?)));", (parts[1], parts[0])).fetchall();
+#        for h in hits:
+#            count += 1
+#            processMember(h[1], h[0], False)        
+    
+    if count == 0:
+        print "No matches found.  Perhaps you want a base type?"
+
+        # Show base types with this member
+        for type in conn.execute('select tbname, tcloc, direct from impl where tcname = ? order by direct desc COLLATE NOCASE;', (t,)).fetchall():
+            tname = cgi.escape(type[0])
+            tdirect = 'Direct' if type[2] == 1 else 'Indirect'
+            if not path or re.search(path, tloc):
+                print '<h3>%s (%s)</h3>' % (tname, tdirect)
+                print GetLine(type[1])
+
+
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
 # and 0 as the buffer size (unbuffered)
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
+log = open('./search.log', 'a')
 
 form = cgi.FieldStorage()
 
@@ -227,32 +288,47 @@ derived = ''
 member = ''
 tree = '' #mozilla-central' # just a default for now
 macro = ''
+callers = ''
 
 if form.has_key('string'):
     string = form['string'].value
+    log.write('string: ' + string + '\n')
 
 if form.has_key('path'):
     path = form['path'].value
+    log.write('path: ' + path + '\n')
 
 if form.has_key('ext'):
     ext = form['ext'].value
     # remove . if present
     ext = ext.replace('.', '')
+    log.write('ext: ' + ext + '\n')
 
 if form.has_key('type'):
     type = form['type'].value
+    log.write('type: ' + type + '\n')
 
 if form.has_key('derived'):
     derived = form['derived'].value
+    log.write('derived: ' + derived + '\n')
 
 if form.has_key('member'):
     member = form['member'].value
+    log.write('member: ' + member + '\n')
 
 if form.has_key('tree'):
     tree = form['tree'].value
 
 if form.has_key('macro'):
     macro = form['macro'].value
+    log.write('macro: ' + macro + '\n')
+
+if form.has_key('callers'):
+    callers = form['callers'].value
+    log.write('callers: ' + callers + '\n')
+
+log.write('\n')
+log.close()
 
 htmldir = os.path.join('./', tree)
 
@@ -300,14 +376,16 @@ else:
     print '<div id="content">'    
     if type:
         if member:
-            processMember(member, type)
+            processMember(member, type, True)
         else:
             processType(type)
     elif derived:
         processDerived(derived)
     elif member:
-        processMember(member, type)
+        processMember(member, type, True)
     elif macro:
         processMacro(macro)
+    elif callers:
+        processCallers(callers)
 
 print """</div></div></body></html>"""

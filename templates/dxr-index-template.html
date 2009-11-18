@@ -50,7 +50,8 @@ img{border:0}
 <p>
 </p>
 
-<font color='#ee3026'><b>Mozilla DXR Source Code Index</b></font>
+<font color='#ee3026'><b>*** WARNING: Development Branch of DXR Source Code Index ***</b></font><br />
+<font color='#ee3026'><b>Stable Demo at <a href="http://dxr.proximity.on.ca/dxr">http://dxr.proximity.on.ca/dxr</a>.</b></font>
 
 <br><br>
 
@@ -63,7 +64,7 @@ img{border:0}
       </tr>
       <tr>
         <td nowrap valign=top><font size=-1>simple string</font></td>
-        <td>Search for a word or list of words separated by spaces.<br>  Any bare words (e.g., not path:*) in the search are taken together.<br><a href="search.cgi?tree=mozilla-central&string=Open">Open</a> <a href="search.cgi?tree=mozilla-central&string=nsAccessible::SetParent">nsAccessible::SetParent</a></td>
+        <td>Search for a word or list of words separated by spaces.<br>  Any bare words (e.g., not path:*) in the search are taken together.<br><a href="search.cgi?tree=mozilla-central&string=Open">Open</a> <a href="search.cgi?tree=mozilla-central&string=nsAccessible::SetParent">nsAccessible::SetParent</a> <a href="search.cgi?tree=mozilla-central&string=nsAccessible::">nsAccessible::</a></td>
       </tr>
 <!--
       <tr>
@@ -86,12 +87,16 @@ img{border:0}
         <td>Find types that begin with or match <i>name</i>. Can be paired with member:.<br>Bare words are not allowed when doing type: searches.<br><a href="search.cgi?tree=mozilla-central&type=nsIFile">type:nsIFile</a></td>
       </tr>
       <tr>
-        <td nowrap valign=top>derived:<i>name</i></td>
-        <td>Find types that derive from type named <i>name</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=mozilla-central&derived=nsIFile">derived:nsIFile</a></td>
+        <td nowrap valign=top>derived:<i>name</i><br />derived:<i>name::type</i></td>
+        <td>Find types that derive from type named <i>name</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=mozilla-central&derived=nsIFile">derived:nsIFile</a> <a href="search.cgi?tree=mozilla-central&amp;derived=nsIFile%3A%3AAppend">derived:nsIFile::Append</a></td>
       </tr>
       <tr>
         <td nowrap valign=top>member:<i>name</i></td>
         <td>Find members that begin with or match <i>name</i>. Can be paired with type:.<br>Bare words are not allowed when doing member: searches.<br><a href="search.cgi?tree=mozilla-central&member=CopyTo">member:CopyTo</a> <a href="search.cgi?tree=mozilla-central&member=CopyTo&type=nsLocalFile">member:CopyTo type:nsLocalFile</a></td>
+      </tr>
+      <tr>
+        <td nowrap valign=top>callers:<i>type::member</i></td>
+        <td>Find callers (e.g., containing functions) of <i>type::member</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=mozilla-central&amp;callers=nsAccessible%3A%3ACacheChildren">callers:nsAccessible::CacheChildren</a></td>
       </tr>
       <tr>
         <td nowrap valign=top>macro:<i>name</i></td>
