@@ -1,0 +1,10 @@
+. $topsrcdir/browser/config/mozconfig
+mk_add_options MOZ_OBJDIR=$OBJDIR
+mk_add_options MOZ_MAKE_FLAGS=-j6
+ac_add_options --disable-optimize --disable-debug
+ac_add_options --disable-tests
+
+# build with treehydra instead of normal gcc/g++
+export CXX="$GCCBIN/g++ -fplugin=$DEHYDRA/gcc_treehydra.so -fplugin-arg=$SCRIPT"
+export CC="$GCCBIN/gcc -fplugin=$DEHYDRA/gcc_treehydra.so -fplugin-arg=$SCRIPT"
+

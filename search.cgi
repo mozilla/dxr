@@ -276,8 +276,6 @@ def processCallers(callers):
 # and 0 as the buffer size (unbuffered)
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
-log = open('./search.log', 'a')
-
 form = cgi.FieldStorage()
 
 string = None
@@ -292,43 +290,32 @@ callers = ''
 
 if form.has_key('string'):
     string = form['string'].value
-    log.write('string: ' + string + '\n')
 
 if form.has_key('path'):
     path = form['path'].value
-    log.write('path: ' + path + '\n')
 
 if form.has_key('ext'):
     ext = form['ext'].value
     # remove . if present
     ext = ext.replace('.', '')
-    log.write('ext: ' + ext + '\n')
 
 if form.has_key('type'):
     type = form['type'].value
-    log.write('type: ' + type + '\n')
 
 if form.has_key('derived'):
     derived = form['derived'].value
-    log.write('derived: ' + derived + '\n')
 
 if form.has_key('member'):
     member = form['member'].value
-    log.write('member: ' + member + '\n')
 
 if form.has_key('tree'):
     tree = form['tree'].value
 
 if form.has_key('macro'):
     macro = form['macro'].value
-    log.write('macro: ' + macro + '\n')
 
 if form.has_key('callers'):
     callers = form['callers'].value
-    log.write('callers: ' + callers + '\n')
-
-log.write('\n')
-log.close()
 
 htmldir = os.path.join('./', tree)
 

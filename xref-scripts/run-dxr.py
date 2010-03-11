@@ -21,7 +21,8 @@ Options:
   -h, --help                              Show help information.
   -f, --file    FILE                      Use FILE as config file (default is ./dxr.config).
   -t, --tree    TREE                      Indxe and Build only section TREE (default is all).
-  -c, --create  [xref|html]               Create xref or html and glimpse index (default is all)."""
+  -c, --create  [xref|html]               Create xref or html and glimpse index (default is all).
+  -d, --daemon                            Run continuously (not a real daemon yet)."""
 
 def ReadFile(filename, print_error=True):
     """Returns the contents of a file."""
@@ -99,10 +100,10 @@ def indextree(tree, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates
                 cpypath = os.path.join(newroot, filename)
                 if filename.endswith('.cpp') or filename.endswith('.h'):
                     shutil.copyfile(srcpath, cpypath)
-                    p.apply_async(cpp2htmlparallel.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
+                    p.apply_async(cpp2html.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
                 elif filename.endswith('.idl'):
                     shutil.copyfile(srcpath, cpypath)
-                    p.apply_async(idl2htmlparallel.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
+                    p.apply_async(idl2html.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
 
         p.close()
         p.join()
@@ -152,8 +153,6 @@ def parseconfig(filename, doxref, dohtml, tree):
 
     glimpseindex = config.get('DXR', 'glimpseindex')
 
-    p = Pool(processes=2)
-
     for section in config.sections():
         # Look for DXR and Web and anything else is a tree description
         if section == 'DXR' or section == 'Web':
@@ -175,10 +174,7 @@ def parseconfig(filename, doxref, dohtml, tree):
                 objdir = objdir[0:-1]
             mozconfig = config.get(section, 'mozconfig')
 
-            p.apply_async(indextree, (section, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates, virtroot, glimpseindex, doxref, dohtml))
-
-    p.close()
-    p.join()
+            indextree(section, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates, virtroot, glimpseindex, doxref, dohtml)
 
     # Generate index page with drop-down + opensearch links for all trees
     indexhtml = ReadFile(os.path.join(templates, 'dxr-index-template.html'))
@@ -196,6 +192,7 @@ if __name__ == '__main__':
         dohtml = True
         doglimpse = True
         tree = None
+        daemonize = False
 
         try:
             opts, args = getopt.getopt(argv, "hc:f:t:", ["help", "create=", "file=", "tree="])                               
@@ -216,7 +213,14 @@ if __name__ == '__main__':
                 sys.exit(0)
             elif a in ('-t', '--tree'):
                 tree = o
+            elif a in ('-d', '--daemon'):
+                daemonize = True
 
-        parseconfig(configfile, doxref, dohtml, tree)
+        # XXX: poor man's continuous indexing.  fixme.
+        if daemonize:
+            while True:
+                parseconfig(configfile, doxref, dohtml, tree)
+        else:
+            parseconfig(configfile, doxref, dohtml, tree)
 
     main(sys.argv[1:])

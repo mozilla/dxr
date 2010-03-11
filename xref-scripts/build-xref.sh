@@ -74,6 +74,9 @@ export MOZCONFIG=${MOZCONFIG}
 # add special rule for building xref info from idl
 mkdir -p ${OBJDIR}/config
 cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/config
+# same for js/ which has its own build system
+mkdir -p ${OBJDIR}/js/src/config
+cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/js/src/config
 
 # build, and hijack REPORT_BUILD so we can get a .macros file for every .cpp file compiled.
 echo "Updating ${TREENAME}..."
@@ -167,6 +170,11 @@ find ${OBJDIR} -name '*.cg.sql' | xargs cat
 cat ${DXRSCRIPTS}/callgraph/indices.sql
 echo 'COMMIT;') > ${DBROOT}/callgraph.sql
 sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log
+
+# Get js files and run through jshydra
+#echo "Process all JavaScript..."
+#make -C ${OBJDIR} jsexport
+
 
 # Defrag db
 sqlite3 ${DBNAME} "VACUUM;"
