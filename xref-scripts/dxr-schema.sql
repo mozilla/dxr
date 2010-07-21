@@ -7,6 +7,7 @@ drop table if exists members;
 drop table if exists impl;
 drop table if exists funcs;
 drop table if exists callers;
+drop table if exists warnings;
 
 -- Table types: all named structs and classes defined in the mozilla source tree
 -- tname: Type Name
@@ -64,3 +65,10 @@ create table stmts(vfuncname TEXT, vfuncloc TEXT, vname TEXT, vshortname TEXT, v
 -- mshortname: name with no (args)
 -- mvalue: the value of the macro
 create table macros(mname TEXT, mshortname TEXT, mvalue TEXT, PRIMARY KEY(mshortname, mvalue));
+
+-- Table warnings: all GCC file warnings for the build
+-- wid: a unique id
+-- wfile: the file that produced the warning
+-- wloc: the line number
+-- wmsg: the warning message
+create table warnings(wid INTEGER, wfile TEXT, wloc INTEGER, wmsg TEXT, PRIMARY KEY(wid));

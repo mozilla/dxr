@@ -14,6 +14,10 @@
 #  su -c "yum install mercurial autoconf213" 
 #  su -c "yum install mpfr-devel"
 
+# Change this to whatever -j value you want (e.g., 2 * CPUs + 1)
+JOBCOUNT=9
+
+rm -fr tools
 mkdir tools
 cd tools
 TOOLSDIR=${PWD}
@@ -29,7 +33,7 @@ hg update -r ea128fc02710
 # Setup a basic mozconfig file
 echo '. $topsrcdir/browser/config/mozconfig' > .mozconfig
 echo 'mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/objdir' >> .mozconfig
-echo 'mk_add_options MOZ_MAKE_FLAGS="-j4"' >> .mozconfig
+echo 'mk_add_options MOZ_MAKE_FLAGS="-j${JOBCOUNT}"' >> .mozconfig
 
 # Build
 make -f client.mk
@@ -52,7 +56,9 @@ hg st -un | xargs rm -f
 # Update mozilla-central to tip again for SpiderMonkey/dehydra build
 # TODO: fix this once bug https://bugzilla.mozilla.org/show_bug.cgi?id=526299 is fixed.
 #hg update tip
-hg update -r 89e665eb9944
+#hg update -r 89e665eb9944 # this one used to work, but is not working atm
+hg update -r 5f425aecd7ab # need newer spidermonkey, but current is broken... 
+
 cd ${TOOLSDIR}
 
 # Build SpiderMonkey
@@ -76,11 +82,16 @@ cd gcc-4.3.4/
 hg init .
 hg clone http://hg.mozilla.org/users/tglek_mozilla.com/gcc-moz-plugin-mq .hg/patches
 (for file in `cat .hg/patches/series`; do cat .hg/patches/$file; done) |patch -p1 
+# Apply https://bugzilla.mozilla.org/show_bug.cgi?id=579203 to get abs path names for warnings
+wget "https://bug579203.bugzilla.mozilla.org/attachment.cgi?id=457700" -O /tmp/gcc-warnings.diff
+if [ "$?" -ne 0 ]; then echo "WARNING - Unable to get gcc warnings patch from Mozilla, continuing..."; fi 
+patch -p0 < /tmp/gcc-warnings.diff
+if [ "$?" -ne 0 ]; then echo "WARNING - Unable to apply gcc warnings patch from Mozilla, continuing..."; fi
 cd ..
 mkdir gcc-build 
 cd gcc-build
 ../gcc-4.3.4/configure --without-libstdcxx --enable-languages=c,c++ --disable-multilib --prefix=$PWD/../installed
-make -j4
+make -j${JOBCOUNT}
 if [ "$?" -ne 0 ]; then echo "ERROR - GCC with plugin support build failed, aborting."; exit 1; fi
 make install
 

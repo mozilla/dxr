@@ -65,6 +65,9 @@ fi
 
 mkdir ${WWWDIR}/${TREENAME}-current
 
+# create dir to hold db if not present
+if [ ! -d ${DBROOT} ]; then mkdir ${DBROOT}; fi
+
 #  clobber build
 echo "Clobber ${TREENAME}..."
 cd ${SOURCEROOT}
@@ -82,14 +85,12 @@ cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/js/src/config
 echo "Updating ${TREENAME}..."
 hg pull -u
 echo "Top-Level Build of ${TREENAME}..."
-time make -f client.mk build DEHYDRA_PATH='/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_treehydra.so' DEHYDRA_MODULES="${DXRSCRIPTS}/dxr.js" TREEHYDRA_MODULES="${DXRSCRIPTS}/callgraph/callgraph_static.js" REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' > /dev/null 2>&1
+time make -f client.mk build DEHYDRA_PATH='/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_treehydra.so' DEHYDRA_MODULES="${DXRSCRIPTS}/dxr.js" TREEHYDRA_MODULES="${DXRSCRIPTS}/callgraph/callgraph_static.js" REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' 2> ${DBROOT}/build-log.txt
 
 # die if build fails
 if [ "$?" -ne 0 ]; then echo "ERROR - Build failed, aborting."; exit 1; fi
 echo "Build Complete."
 
-# create dir to hold db if not present
-if [ ! -d ${DBROOT} ]; then mkdir ${DBROOT}; fi
 cd ${DBROOT}
 
 # fix-up NSS, since it will copy (and lose links) from dist/include/public/nss to dist/include/nss
@@ -127,7 +128,7 @@ echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 cat ${DBROOT}/cpp-update.sql >> ${DBROOT}/all-cpp.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-cpp.sql > ${DBROOT}/error-cpp.log
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-cpp.sql > ${DBROOT}/error-cpp.log 2>&1
 rm ${DBROOT}/cpp-insert.sql
 rm ${DBROOT}/cpp-update.sql
 # XXX: leaving this file for debugging
@@ -142,7 +143,7 @@ echo 'PRAGMA count_changes=off; PRAGMA synchronous=off; PRAGMA journal_mode=off;
 cat ${DBROOT}/idl.sql >> ${DBROOT}/all-idl.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL; ' >> ${DBROOT}/all-idl.sql
 
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-idl.sql > ${DBROOT}/error-idl.log
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-idl.sql > ${DBROOT}/error-idl.log 2>&1
 # XXX: leaving this file for debugging
 #rm ${DBROOT}/all-idl.sql
 
@@ -153,14 +154,20 @@ awk '!($0 in a) {a[$0];print}' ${DBROOT}/macros > ${DBROOT}/macros-uniq
 rm ${DBROOT}/macros
 cat ${DBROOT}/macros-uniq | ${DXRSCRIPTS}/process_macros.pl > ${DBROOT}/macros-uniq-processed
 rm ${DBROOT}/macros-uniq
-
 echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; PRAGMA coung_changes=off; BEGIN TRANSACTION;' > ${DBROOT}/all-macros.sql
 cat ${DBROOT}/macros-uniq-processed >> ${DBROOT}/all-macros.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-macros.sql
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-macros.sql > ${DBROOT}/error-macros.log
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-macros.sql > ${DBROOT}/error-macros.log 2>&1
 rm ${DBROOT}/macros-uniq-processed
 # XXX: leaving this file for debugging
 #rm ${DBROOT}/all-macros.sql
+
+# Extract gcc warnings
+echo "Process GCC warnings into SQL..."
+echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; PRAGMA coung_changes=off; BEGIN TRANSACTION;' > ${DBROOT}/warnings.sql
+python ${DXRSCRIPTS}/warning-parser.py ${SOURCEROOT} ${OBJDIR} ${DBROOT}/build-log.txt >> ${DBROOT}/warnings.sql
+echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/warnings.sql
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/warnings.sql > ${DBROOT}/warnings-error.log 2>&1
 
 # create callgraph
 echo "Process callgraph .sql..."
@@ -169,12 +176,11 @@ echo 'BEGIN TRANSACTION;'
 find ${OBJDIR} -name '*.cg.sql' | xargs cat
 cat ${DXRSCRIPTS}/callgraph/indices.sql
 echo 'COMMIT;') > ${DBROOT}/callgraph.sql
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log
+sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log 2>&1
 
 # Get js files and run through jshydra
 #echo "Process all JavaScript..."
 #make -C ${OBJDIR} jsexport
-
 
 # Defrag db
 sqlite3 ${DBNAME} "VACUUM;"

@@ -8,3 +8,4 @@ CREATE INDEX idx_vmember ON stmts (vmember);
 CREATE INDEX idx_tcname ON impl (tcname);
 CREATE INDEX idx_tbname ON impl (tbname);
 CREATE INDEX idx_members ON members (mshortname);
+CREATE INDEX idx_warnings ON warnings (wfile);

@@ -19,31 +19,10 @@
 
 __author__ = 'nnorwitz@google.com (Neal Norwitz), modified david.humphrey@senecac.on.ca (David Humphrey)'
 
-try:
-    # Python 3.x
-    import builtins
-    # python 2.6
-    from multiprocessing import Pool, cpuCount
-except ImportError:
-    # Python 2.x
-    import __builtin__ as builtins
-
-    try:
-        # pyprocessing - http://developer.berlios.de/projects/pyprocessing
-        from processing import Pool, cpuCount
-    except ImportError:
-        print >>sys.stderr, "No processing library available! Install pyprocessing or Python 2.6"
-        sys.exit(1)
-
 import sys, os
 from cgi import escape
 import sqlite3
 import re
-
-if not hasattr(builtins, 'set'):
-    # Nominal support for Python 2.3.
-    from sets import Set as set
-
 
 # Add $ as a valid identifier char since so much code uses it.
 _letters = 'abcdefghijklmnopqrstuvwxyz'
@@ -51,10 +30,8 @@ VALID_IDENTIFIER_CHARS = frozenset(_letters + _letters.upper() + '_0123456789$')
 HEX_DIGITS = frozenset('0123456789abcdefABCDEF')
 INT_OR_FLOAT_DIGITS = frozenset('01234567890eE-+')
 
-
 # C++0x string preffixes.
 _STR_PREFIXES = frozenset(('R', 'u8', 'u8R', 'u', 'uR', 'U', 'UR', 'L', 'LR'))
-
 
 # C++ keywords
 _keywords = frozenset(['auto', 'const', 'double',  'float',  'int', 'short', 'struct', 

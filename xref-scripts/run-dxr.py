@@ -2,7 +2,7 @@
 
 try:
     # python 2.6
-    from multiprocessing import Pool, cpuCount
+    from multiprocessing import Pool, cpu_count
 except ImportError:
     try:
         # pyprocessing - http://developer.berlios.de/projects/pyprocessing
@@ -78,7 +78,7 @@ def indextree(tree, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates
         htmlfooter = ReadFile(os.path.join(templatesdir, "dxr-footer.html"))
         dxrsqlite = os.path.join(dbdir, dbname)
                 
-        n = cpuCount()
+        n = cpu_count()
         p = Pool(processes=n)
 
         print 'Building HTML files for ' + tree +  '...'
