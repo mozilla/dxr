@@ -16,6 +16,9 @@ import sys, os, re
 srcdir = os.path.realpath(srcdir) + '/'
 objdir = os.path.realpath(objdir) + '/'
 
+# Remember current working dir so we can pick-out files missing full path later.
+cwd = os.getcwd()
+
 warningre = re.compile(r'(?P<file>[-/\.\w<>]+):((?P<line>\d+):)?(\d+:)? warning: (?P<msg>[^ ].*)$')
 
 curid = -1
@@ -43,8 +46,10 @@ for line in open(logfile):
     if file.startswith(srcdir):
         file = file[len(srcdir):]
 
-    # Skip non-source loc warnings from objdir
-    if not file.startswith(objdir):
+    # Skip non-source loc warnings from objdir, and any files that 
+    # now claim to be rooted in cwd, since this means we never had
+    # an abs path, and just a filename.
+    if not file.startswith(objdir) and not file.startswith(cwd):
         # fix-up gcc's quotes
         msg = msg.replace("\xe2\x80\x98", "'").replace("\xe2\x80\x99", "'")
         print "insert into warnings (wid,wfile,wloc,wmsg) values (%s,\"%s\",%s,\"%s\");" % (curid, file, lineno, msg.replace('"',"'")) 
