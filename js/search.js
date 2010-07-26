@@ -1,6 +1,6 @@
 function doSearch(id) {
   var f = document.getElementById(id);
-  var treename = this.tree || document.getElementById('trees').value;
+  var treename = 'mozilla-central';
   var args = f.string.value.split(/ +/);
   var string = "";
   var url = virtroot + '/search.cgi?tree=' + treename;

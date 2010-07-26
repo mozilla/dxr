@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 
 import cgitb; cgitb.enable()
 import cgi
@@ -37,7 +37,7 @@ config = ConfigParser.ConfigParser()
 config.read('dxr.config')
 
 dxrdb = os.path.join(config.get('Web', 'wwwdir'), tree, '.dxr_xref', tree  + '.sqlite');
-htmlsrcdir = os.path.join(virtroot, tree) + '/'
+htmlsrcdir = os.path.join('/', virtroot, tree) + '/'
 
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')

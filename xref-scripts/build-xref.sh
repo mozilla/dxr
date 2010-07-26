@@ -56,11 +56,18 @@ TREENAME=$8
 # backup current data while we build new
 if [ -d ${WWWDIR}/${TREENAME}-current ]
 then
-    # Backup the existing so the web app still works while we build the new one
-    rm -fr ${WWWDIR}/${TREENAME}-old
-    mv ${WWWDIR}/${TREENAME}-current ${WWWDIR}/${TREENAME}-old
-    rm -f ${WWWDIR}/${TREENAME} # symlink to -current
-    ln -s ${WWWDIR}/${TREENAME}-old ${WWWDIR}/${TREENAME}
+    # See if last build/index was successful
+    if [ -e ${WWWDIR}/${TREENAME}-current/.dxr_xref/.success ]
+    then 
+      # Leave the existing -old index in place and try again (failed build)
+      rm -fr ${WWWDIR}/${TREENAME}-current	
+    else 
+      # Backup the existing so the web app still works while we build the new one
+      rm -fr ${WWWDIR}/${TREENAME}-old
+      mv ${WWWDIR}/${TREENAME}-current ${WWWDIR}/${TREENAME}-old
+      rm -f ${WWWDIR}/${TREENAME} # symlink to -current
+      ln -s ${WWWDIR}/${TREENAME}-old ${WWWDIR}/${TREENAME}
+    fi
 fi
 
 mkdir ${WWWDIR}/${TREENAME}-current
@@ -184,5 +191,8 @@ sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log 
 
 # Defrag db
 sqlite3 ${DBNAME} "VACUUM;"
+
+# Everything worked, log success
+touch ${DBROOT}/.success
 
 echo "Done - DB created at ${DBROOT}/${DBNAME}"

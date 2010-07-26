@@ -15,7 +15,7 @@
       dojo.byId('type').value = type;
       dojo.byId('output').innerHTML = "Processing your request, please wait (this can take a while)...";
       var args = {
-        url: "./viewsource.py",
+        url: "./viewsource.cgi",
         load: function(data){
           dojo.byId('output').innerHTML = data;
         },

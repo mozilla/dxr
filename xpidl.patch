@@ -1,8 +1,8 @@
-diff -r fdcb163df592 xpcom/typelib/xpidl/Makefile.in
---- a/xpcom/typelib/xpidl/Makefile.in	Wed Apr 15 13:21:48 2009 +0100
-+++ b/xpcom/typelib/xpidl/Makefile.in	Thu Jun 25 22:26:02 2009 -0400
-@@ -58,16 +58,17 @@ MOZ_NO_DEBUG_RTL=1
- CSRCS		= \
+diff -r d225b78f6738 xpcom/typelib/xpidl/Makefile.in
+--- a/xpcom/typelib/xpidl/Makefile.in	Thu Jul 15 09:59:24 2010 -0400
++++ b/xpcom/typelib/xpidl/Makefile.in	Wed Jul 21 13:07:43 2010 -0700
+@@ -52,16 +52,17 @@ MOZ_NO_DEBUG_RTL=1
+ XPIDL_CSRCS	= \
  		xpidl.c \
  		xpidl_idl.c \
  		xpidl_util.c \
@@ -14,14 +14,14 @@ diff -r fdcb163df592 xpcom/typelib/xpidl/Makefile.in
  		$(NULL)
  
  ifdef CROSS_COMPILE
+ 
  HOST_PROGRAM	= host_xpidl$(HOST_BIN_SUFFIX)
- HOST_CSRCS	= $(CSRCS)
+ HOST_CSRCS	= $(XPIDL_CSRCS)
+ 
  ifdef WINCE
- HOST_LDFLAGS += -ladvapi32.lib
- endif
-diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.c
---- a/xpcom/typelib/xpidl/xpidl.c	Wed Apr 15 13:21:48 2009 +0100
-+++ b/xpcom/typelib/xpidl/xpidl.c	Thu Jun 25 22:26:02 2009 -0400
+diff -r d225b78f6738 xpcom/typelib/xpidl/xpidl.c
+--- a/xpcom/typelib/xpidl/xpidl.c	Thu Jul 15 09:59:24 2010 -0400
++++ b/xpcom/typelib/xpidl/xpidl.c	Wed Jul 21 13:07:43 2010 -0700
 @@ -41,16 +41,17 @@
  
  #include "xpidl.h"
@@ -40,9 +40,9 @@ diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.c
  {
      int i;
      for (i = 0; modes[i].mode; i++) {
-diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.h
---- a/xpcom/typelib/xpidl/xpidl.h	Wed Apr 15 13:21:48 2009 +0100
-+++ b/xpcom/typelib/xpidl/xpidl.h	Thu Jun 25 22:26:02 2009 -0400
+diff -r d225b78f6738 xpcom/typelib/xpidl/xpidl.h
+--- a/xpcom/typelib/xpidl/xpidl.h	Thu Jul 15 09:59:24 2010 -0400
++++ b/xpcom/typelib/xpidl/xpidl.h	Wed Jul 21 13:07:43 2010 -0700
 @@ -104,16 +104,17 @@ typedef struct backend {
  
  /* Function that produces a struct of output-generation functions */
@@ -61,9 +61,9 @@ diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl.h
      backendFactory     factory;
  } ModeData;
  
-diff -r fdcb163df592 xpcom/typelib/xpidl/xpidl_xref.c
+diff -r d225b78f6738 xpcom/typelib/xpidl/xpidl_xref.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/xpcom/typelib/xpidl/xpidl_xref.c	Thu Jun 25 22:26:02 2009 -0400
++++ b/xpcom/typelib/xpidl/xpidl_xref.c	Wed Jul 21 13:07:43 2010 -0700
 @@ -0,0 +1,471 @@
 +/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****

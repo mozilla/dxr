@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 
 #import cgitb; cgitb.enable()
 import cgi
@@ -325,6 +325,8 @@ config.read('dxr.config')
 glimpse = config.get('DXR', 'glimpse')
 wwwdir = config.get('Web', 'wwwdir')
 virtroot = config.get('Web', 'virtroot')
+if virtroot.endswith('/'): # strip trailing / if present
+  virtroot = virtroot[0:-1]
 dbname = tree + '.sqlite'
 dxrdb = os.path.join(wwwdir, tree, '.dxr_xref', dbname)
 
