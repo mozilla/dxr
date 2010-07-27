@@ -399,7 +399,17 @@ tree="%s";
 
     for token in GetTokens(source):
         if token.token_type == NEWLINE:
-            out.write('<div id="l' + `line_num` + '"><a class="ln" href="#l' + `line_num` + '">' + `line_num` + '</a>' + line + '</div>')
+            # See if there are any warnings for this line
+            warningString = ''
+            for warnings in conn.execute('select wmsg from warnings where wfile=? and wloc=?;', (srcpath, line_num)).fetchall():
+                warningString += warnings[0] + '\n'
+
+            if len(warningString) > 0:
+                warningString = warningString[0:-1] # remove extra \n
+                out.write('<div class="lnw" title="' + warningString + '" id="l' + `line_num` + '"><a class="ln" href="#l' + `line_num` + '">' + `line_num` + '</a>' + line + '</div>')
+            else:
+                out.write('<div id="l' + `line_num` + '"><a class="ln" href="#l' + `line_num` + '">' + `line_num` + '</a>' + line + '</div>')
+
             line_num += 1
             line_start = token.end
             offset = 0

@@ -67,8 +67,7 @@ create table stmts(vfuncname TEXT, vfuncloc TEXT, vname TEXT, vshortname TEXT, v
 create table macros(mname TEXT, mshortname TEXT, mvalue TEXT, PRIMARY KEY(mshortname, mvalue));
 
 -- Table warnings: all GCC file warnings for the build
--- wid: a unique id
 -- wfile: the file that produced the warning
 -- wloc: the line number
 -- wmsg: the warning message
-create table warnings(wid INTEGER, wfile TEXT, wloc INTEGER, wmsg TEXT, PRIMARY KEY(wid));
+create table warnings(wid INTEGER, wfile TEXT, wloc INTEGER, wmsg TEXT, PRIMARY KEY(wfile, wloc, wmsg));

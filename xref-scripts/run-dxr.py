@@ -98,7 +98,7 @@ def indextree(tree, sourcedir, objdir, mozconfig, wwwdir, xrefscripts, templates
                 srcpath = os.path.join(root, filename)
                 # Hack: Glimpse indexing needs the .cpp to exist beside the .cpp.html
                 cpypath = os.path.join(newroot, filename)
-                if filename.endswith('.cpp') or filename.endswith('.h'):
+                if filename.endswith('.cpp') or filename.endswith('.h') or filename.endswith('.c'):
                     shutil.copyfile(srcpath, cpypath)
                     p.apply_async(cpp2html.FormatSource, (htmlheader, htmlfooter, dxrsqlite, sourcedir, virtroot, tree, srcpath, newroot))
                 elif filename.endswith('.idl'):

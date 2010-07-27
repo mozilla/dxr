@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 
 """
 Modified from http://hg.mozilla.org/users/bsmedberg_mozilla.com/static-analysis-buildbot/file/19e7a98a8dc4/warning-parser.py
@@ -21,16 +21,12 @@ cwd = os.getcwd()
 
 warningre = re.compile(r'(?P<file>[-/\.\w<>]+):((?P<line>\d+):)?(\d+:)? warning: (?P<msg>[^ ].*)$')
 
-curid = -1
-
 for line in open(logfile):
     line = line.strip()
 
     m = warningre.match(line)
     if m is None:
         continue
-
-    curid += 1
 
     file, lineno, msg = m.group('file', 'line', 'msg')
 
@@ -51,5 +47,5 @@ for line in open(logfile):
     # an abs path, and just a filename.
     if not file.startswith(objdir) and not file.startswith(cwd):
         # fix-up gcc's quotes
-        msg = msg.replace("\xe2\x80\x98", "'").replace("\xe2\x80\x99", "'")
-        print "insert into warnings (wid,wfile,wloc,wmsg) values (%s,\"%s\",%s,\"%s\");" % (curid, file, lineno, msg.replace('"',"'")) 
+        msg = "Warning: " + msg.replace("\xe2\x80\x98", "'").replace("\xe2\x80\x99", "'")
+        print "insert into warnings (wfile,wloc,wmsg) values (\"%s\",%s,\"%s\");" % (file, lineno, msg.replace('"',"'")) 

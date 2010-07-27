@@ -10,9 +10,10 @@ body pre { padding:0; margin: 0 }
 .s-not-found { color: black; }
 .s-fuzzy { color: black; }
 .p { color: #0000FF; }
-.ln { display:inline-block; text-align: right; width: 3em; color: #555555; border-right: 1px dotted #cccccc; margin-right: 1em; padding-right: 3px}
+.ln { display:inline-block; text-align: right; width: 3em; color: #555555; border-right: 1px dotted #cccccc; margin-right: 1em; margin-left: 16px; padding-right: 3px}
+.lnw { background-image:url("images/icons/error.png"); background-repeat: no-repeat; }
 .mem { color: black; }
-.highlighted { background: yellow }
+.highlighted { background-color: yellow; }
 a { cursor: pointer; color: inherit; text-decoration: none; }
 a:hover { cursor: pointer; text-decoration: underline; }
 #ttd { font-family: Arial,sans-serif !important; }

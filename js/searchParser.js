@@ -30,6 +30,9 @@ function parseQS(id) {
       case "callers":
         search += "callers:" + s + " ";
         break;
+      case "warnings":
+        search += "warnings:" + s + " ";
+        break;
       case "macro":
         search += "macro:" + s + " ";
         break;

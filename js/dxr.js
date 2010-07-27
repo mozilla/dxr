@@ -51,7 +51,7 @@ function showPopup(node) {
     }
   });
   location.hash = line + '/' + name;
-  dojo.addClass(node, "highlighted");
+  dojo.addClass(node, 'highlighted');
 }
 
 function init() {

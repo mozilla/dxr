@@ -270,6 +270,16 @@ def processCallers(callers):
                 print '<h3>%s (%s)</h3>' % (tname, tdirect)
                 print GetLine(type[1])
 
+def processWarnings(warnings):
+    # Check for * which means user entered "warnings:" and wants to see all of them.
+    if warnings == '*':
+      warnings = ''
+
+    for w in conn.execute("select wfile, wloc, wmsg from warnings where wmsg like '%" + warnings + "%' order by wfile, wloc;").fetchall():
+    	if not path or re.search(path, w[0]):
+           loc = w[0] + ':' + `w[1]`
+    	   print '<h3>Warning: %s</h3>' % w[2]
+           print GetLine(loc)
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
@@ -287,6 +297,7 @@ member = ''
 tree = '' #mozilla-central' # just a default for now
 macro = ''
 callers = ''
+warnings = ''
 
 if form.has_key('string'):
     string = form['string'].value
@@ -316,6 +327,9 @@ if form.has_key('macro'):
 
 if form.has_key('callers'):
     callers = form['callers'].value
+
+if form.has_key('warnings'):
+    warnings = form['warnings'].value
 
 htmldir = os.path.join('./', tree)
 
@@ -376,5 +390,7 @@ else:
         processMacro(macro)
     elif callers:
         processCallers(callers)
+    elif warnings:
+    	processWarnings(warnings)
 
 print """</div></div></body></html>"""
