@@ -9,6 +9,11 @@ import ConfigParser
 import re
 import subprocess
 
+# HACK: template.py is below us
+sys.path.append('./xref-scripts')
+import template
+import dxr_config
+
 def split_type(val):
     parts = val.split('::')
     # check for 'type' vs. 'type::member' vs. 'namespace::type::member' or 'namespace::namespace2::type::member'
@@ -32,7 +37,7 @@ def split_type(val):
 
 def GetLine(loc):
     parts = loc.split(':')
-    file = ReadFile(os.path.join(wwwdir, tree, parts[0]))
+    file = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, parts[0]))
     line = int(parts[1])
     if file:
         result  = '<div class="searchfile"><a href="%s/%s">%s</a></div><ul class="searchresults">' % (tree, parts[0] + '.html#l' + parts[1], loc)
@@ -46,17 +51,6 @@ def GetLine(loc):
     else:
         return ''
             
-def ReadFile(filename):
-    """Returns the contents of a file."""
-    try:
-        fp = open(filename)
-        try:
-            return fp.read()
-        finally:
-            fp.close()
-    except IOError:
-        return None
-
 def processString(string):
     # Print type sidebar
     printHeader = True
@@ -70,7 +64,7 @@ def processString(string):
                 print '<div class="bubble"><span class="title">Types</span><ul>'
                 printHeader = False
                 printFooter = True
-            print '<li><a href="%s/%s/%s">%s</a></li>' % (virtroot, tree, tloc, tname)
+            print '<li><a href="%s/%s/%s">%s</a></li>' % (dxrconfig['virtroot'], tree, tloc, tname)
     if printFooter:
         print "</ul></div>"
 
@@ -83,14 +77,14 @@ def processString(string):
             print '<div class="bubble"><span class="title">Macros</span><ul>'
             printHeader = False
             printFooter = True
-        print '<li><a href="%s/search.cgi?tree=%s&macro=%s">%s</a></li>' % (virtroot, tree, mshortname, mshortname)
+        print '<li><a href="%s/search.cgi?tree=%s&macro=%s">%s</a></li>' % (dxrconfig['virtroot'], tree, mshortname, mshortname)
     if printFooter:
         print "</ul></div>"
 
     # Print file sidebar
     printHeader = True
     printFooter = False
-    glimpsefilenames = ReadFile(os.path.join(wwwdir, tree, '.dxr_xref', '.glimpse_filenames'))
+    glimpsefilenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', '.glimpse_filenames'))
     if glimpsefilenames:
         for filename in glimpsefilenames.split('\n'):
             # Only check in leaf name
@@ -101,7 +95,7 @@ def processString(string):
                     print '<div class=bubble><span class="title">Files</span><ul>'
                     printHeader = False
                     printFooter = True
-                htmlfilename = filename.replace(wwwdir, virtroot) + '.html'
+                htmlfilename = filename.replace(dxrconfig['wwwdir'], dxrconfig['virtroot']) + '.html'
                 print '<li><a href="%s">%s</a></li>' % (htmlfilename, m.group(1))
         if printFooter:
             print "</ul></div>"
@@ -140,7 +134,7 @@ def processString(string):
     count = 0
     
     # ./glimpse -i -e -H ./mozilla-central/.glimpse_index/ -F 'uconv;.h$' nsString
-    searchargs = '-i -y -n -H ' + os.path.join(wwwdir, tree, '.dxr_xref')
+    searchargs = '-i -y -n -H ' + os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref')
     if path:
         searchargs += " -F '" + path
         if ext:
@@ -150,7 +144,7 @@ def processString(string):
 
     # TODO: should I do -L matches:files:matches/file (where 0 means infinity) ?
     # TODO: glimpse can fail in various ways, need to deal with those cases (>29 chars, no results, etc.)
-    pipe = subprocess.Popen(glimpse + ' ' + searchargs, shell=True, stdout=subprocess.PIPE).stdout
+    pipe = subprocess.Popen(dxrconfig['glimpse'] + ' ' + searchargs, shell=True, stdout=subprocess.PIPE).stdout
     if pipe:
         line = pipe.readline()
         prevfile = None
@@ -159,7 +153,7 @@ def processString(string):
             (filepath, linenum, text) = line.split(': ', 2)
             text = cgi.escape(text)
             text = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', text)
-            srcpath = filepath.replace(wwwdir + '/', '')
+            srcpath = filepath.replace(dxrconfig['wwwdir'] + '/', '')
             if filepath != prevfile:
                 prevfile = filepath
                 if not first:
@@ -278,7 +272,7 @@ def processWarnings(warnings):
     for w in conn.execute("select wfile, wloc, wmsg from warnings where wmsg like '%" + warnings + "%' order by wfile, wloc;").fetchall():
     	if not path or re.search(path, w[0]):
            loc = w[0] + ':' + `w[1]`
-    	   print '<h3>Warning: %s</h3>' % w[2]
+    	   print '<h3>%s</h3>' % w[2]
            print GetLine(loc)
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
@@ -333,45 +327,20 @@ if form.has_key('warnings'):
 
 htmldir = os.path.join('./', tree)
 
-config = ConfigParser.ConfigParser()
-config.read('dxr.config')
+# TODO: kill off hard coded path
+dxrconfig = dxr_config.load('./dxr.config')
 
-glimpse = config.get('DXR', 'glimpse')
-wwwdir = config.get('Web', 'wwwdir')
-virtroot = config.get('Web', 'virtroot')
-if virtroot.endswith('/'): # strip trailing / if present
-  virtroot = virtroot[0:-1]
+#glimpse = config.get('DXR', 'glimpse')
+#wwwdir = config.get('Web', 'wwwdir')
 dbname = tree + '.sqlite'
-dxrdb = os.path.join(wwwdir, tree, '.dxr_xref', dbname)
-
+dxrdb = os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', dbname)
+header_template = os.path.join(dxrconfig['templates'], 'dxr-search-header.html')
+footer_template = os.path.join(dxrconfig['templates'], 'dxr-search-footer.html')
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
-print """Content-Type: text/html
-
-<!DOCTYPE HTML>
-<html lang="en-US">
-<head>
-  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />    
-  <title>DXR Search Results - %s</title>
-  <link href="dxr-search-styles.css" rel="stylesheet" type="text/css">
-  <script type="text/javascript" src="%s/js/searchParser.js"></script>
-  <script type="text/javascript" src="%s/js/search.js"></script>
-  <script type="text/javascript">
-    var virtroot = '%s';
-    var tree = '%s';
-  </script>
-</head>
-<body onload="parseQS('search-box');">
-<div id="logo"><a href="%s/index.html"><img src="images/powered-by-mozilla-small.png" border="0"></a></div>
-<div id="search">
-  <form id="searchForm" method="get">
-    <input id="search-box" name=string type=text size=31 maxlength=2048 title="Search">
-    <input type=submit value="Search" onclick="return doSearch('searchForm');">
-  </form>
-</div>
-<div id=results>
-""" % (string, virtroot, virtroot, virtroot, tree, virtroot)
+print 'Content-Type: text/html\n'
+print template.expand(template.readFile(header_template), dxrconfig["virtroot"], tree) % (string, dxrconfig["virtroot"], tree) 
 
 if string:
     processString(string)
@@ -393,4 +362,5 @@ else:
     elif warnings:
     	processWarnings(warnings)
 
-print """</div></div></body></html>"""
+print template.readFile(footer_template)
+

@@ -1,60 +1,66 @@
-dojo.require("dijit.TooltipDialog");
-dojo.require("dijit.layout.TabContainer");
-dojo.require("dojo.dnd.Moveable");
+dojo.require("dojo.data.ItemFileReadStore");
+dojo.require("dijit.tree.ForestStoreModel");
+dojo.require("dojox.layout.ContentPane");
+dojo.require("dijit.Tree");
+dojo.require("dojo.fx");
 
-// note: virtroot, tree are defined in the .html file
+// note: virtroot, tree, and this.ranges are defined in the .html file
 
-function showPopup(node) {
-  var name = node.innerHTML;
+var infoDiv,
+    infoDivID = 0,
+    currentLine,
+    signature,
+    maincontent,
+    signatureVisible = false;
+
+function closeInfo() {
+  if (!infoDiv) {
+    return;
+  }
+  dojo.query(".highlighted").removeClass("highlighted");
+  dojo.fx.wipeOut({ node: infoDiv.id,
+                    duration: 500,
+                  }).play();
+  infoDiv = null;
+}
+
+function showInfo(node) {
   var type = node.className;
+  var name = node.innerHTML;
   var line = node.parentNode.id.replace('l', '');
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
-  var url = virtroot + "/getinfo.cgi?virtroot=" + virtroot + "&tree=" + tree
-
-  // put back the tooltip connector image and remove old highlight (if any)
-  dojo.query(".dijitTooltipConnector").style("display", "inline");
-  dojo.query(".sidebar-highlighted").removeClass("sidebar-highlighted");
-  dojo.query(".highlighted").removeClass("highlighted");
-
-  if (type == 's' || type == 's-fuzzy')  // statements have matching line number
-    url += "&type=" + type + "&name=" + name + "&file=" + file  + "&line=" + node.getAttribute("line").replace('l','');
-  else
+//  var url = virtroot + "/getinfo2.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
+  var url = "/dxr/getinfo2.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
+  if (type == 's' || type == 's-fuzzy') { // statements have matching line number
+    url += "&type=" + type + "&name=" + name + "&file=" +
+	   file  + "&line=" + node.getAttribute("line").replace('l','');
+  } else {
     url += "&type=" + type + "&name=" + name;
+  }
 
-  var ttd = dijit.byId("ttd");
-  var e = dojo.connect(ttd, "onDownloadEnd", function () {
-    var ttd_dnd = new dojo.dnd.Moveable('ttd', {handle: 'titlebar'});
-    var ofm = dojo.connect(ttd_dnd, "onFirstMove", function(mover) {
-      // If the user drags the dialog away from the link, remove the connector
-      var s = mover.node.style;
-      var xy = dojo.coords('ttd');
-      dojo.style("ttd", {
-        position: "absolute",
-        top: xy.y + "px",
-        left: xy.x  + "px"
-      });
+  if (infoDiv) {
+    closeInfo();
+  }
 
-      dojo.query(".dijitTooltipConnector").style("display", "none");
-      dojo.disconnect(ofm);
-    });
-
-    dojo.disconnect(e);
+  var id = 'info-div-' + infoDivID;
+  infoDiv = new dojox.layout.ContentPane({
+              id: id,
+              style: "margin:0; padding:0; white-space: normal !important;"
   });
-  ttd.attr("href", url);
-
-  dijit.popup.open({
-    popup: ttd,
-    around: node,
-    onCancel: function(){
-      dijit.popup.close(ttd);
-      dojo.query(".highlighted").removeClass("highlighted");
-    }
-  });
+  infoDiv.placeAt(node.parentNode, "after");
+  infoDiv.attr('href', url); //"/dxr/getinfo2.cgi?tree-id=" + ); // /dxr/info-test.html?id=" + infoDivID);
   location.hash = line + '/' + name;
   dojo.addClass(node, 'highlighted');
+
+  // TODO: this needs to happen in an onLoad or onDownloadEnd event vs. here...
+  dojo.fx.wipeIn({node: infoDiv.id, duration: 500}).play();
 }
 
 function init() {
+  signature = dojo.byId('signature');
+  maincontent = dojo.byId('maincontent');
+  signatureVisible = false;
+
   if (!location.hash) {
     dojo.byId('search-box').focus();
     return;
@@ -62,7 +68,6 @@ function init() {
 
   // hash may have line number, or line number + name separated by /
   var parts = location.hash.split('#')[1].split('/');
-
   if (parts[0]) {
     var l;
     // Deal with #l323 vs. #323
@@ -78,7 +83,7 @@ function init() {
         // TODO: what about case of multiple items in line with same name?
         if (children[i].innerHTML == parts[1]) {
           // XXX: what's up with this, dojo?
-          setTimeout(function() { showPopup(children[i]); }, 0);
+          setTimeout(function() { showInfo(children[i]); }, 0);
           break;
         }
       }
@@ -88,27 +93,175 @@ function init() {
   }
 }
 
+// Given a line number, try to find the ID for the containing function in the sidebar.
+function findSidebarItem(line) {
+  var ranges = this.ranges;
+  if (!ranges || !ranges.length) {
+    return;
+  }
+
+  var l=0, r=ranges.length - 1, c;
+  while(l < r) {
+    c = Math.ceil((l + r) / 2);
+    if (line < ranges[c].start) { 
+      r = c - 1; 
+    } else {
+      l = c;
+    }
+  }
+
+  if (ranges[l].start <= line && line <= ranges[l].end) { 
+    return ranges[l];
+  }
+
+  return null;
+}
+
+// See if this is a line div, e.g., <div id="l567">
+function isLineDiv(node) {
+  return (node.nodeName === 'DIV' && /l\d+/.exec(node.id));
+}
+
+function hideSignature() {
+  dojo.fadeOut({node: signature}).play();
+  signatureVisible = false;	
+}
+
+function showSignature() {
+  if (!currentLine) {
+    return;
+  }
+
+  var sidebarItem = findSidebarItem(currentLine);
+  if (!sidebarItem) {
+    if (signatureVisible) {
+      hideSignature();
+    }
+    return;
+  }
+
+  if (!signatureVisible) {
+    dojo.fadeIn({node: signature}).play();
+    signatureVisible = true;
+  }
+
+  signature.innerHTML = sidebarItem.loc + ' ' + sidebarItem.sig;
+  dojo.style(signature, { top: maincontent.scrollTop + "px"});
+}
+
+function hoverLine(node) {
+  // Indicate the current source line
+  dojo.query(".lni").removeClass("lni");
+  dojo.addClass(node, "lni");
+
+  // Try to indicate in the sidebar where we are now (e.g., which function).
+  dojo.query(".sidebar-highlighted").removeClass("sidebar-highlighted");
+  currentLine = node.id.replace('l', '');
+
+  var sidebarItem = findSidebarItem(currentLine);
+  if (!sidebarItem) {
+    return;
+  }
+ 
+  var sb = dojo.byId(sidebarItem.sid);
+  if (sb) {
+    sb.scrollIntoView();
+    dojo.addClass(sb, 'sidebar-highlighted');
+  }
+}
+
+function buildTree(items, id) {
+  var store = new dojo.data.ItemFileReadStore({
+    data: { label: 'label',
+            items: [items] }
+  });
+
+  var treeModel = new dijit.tree.ForestStoreModel({
+    store: store
+  });
+
+  var treeControl = new dijit.Tree({
+    model: treeModel,
+    showRoot: false,
+    onClick: function(item, node) { if (item.url) { alert(item.url); } },
+    getIconClass: function(item, opened) { return item.icon || 'icon-type'; }
+/*,
+            _createTreeNode: function(args) {
+//                if (!once) { alert(args.label); once = true; }
+                var tnode = new dijit._TreeNode(args);
+                tnode.labelNode.innerHTML = args.label;
+                return tnode;
+            }
+*/
+  },id);
+}
+
 dojo.addOnLoad(function() {
+  // TODO: deal with sidebar being absent
+  var maincontent = dojo.byId('maincontent');
+
+  dojo.connect(maincontent, "onmouseout", function(e) {
+    hideSignature();
+  });
+
+  dojo.connect(maincontent, "onmouseover", function(e) {
+    showSignature();
+
+    var node = e.target;
+    var parentID = node.parentNode.id;
+
+    // Indicate which line we're hovering
+    if (isLineDiv(node)) {
+      hoverLine(node);
+    } else if (isLineDiv(node.parentNode)) {
+      hoverLine(node.parentNode); 
+    }
+
+    // Build an HREF url for anchor links dynamically.
+    if (e.target.nodeName === 'A') { 
+      if (node.getAttribute('href')) {
+        return; // If the link already has an href, bail, otherwise build one
+      }
+
+      var url = location.href.replace(location.hash, '');
+      var name = node.innerHTML;
+      var line = parentID.replace('l', '');
+
+      node.setAttribute('href', url + '#' + line + '/' + name);
+    }
+  });
+
   dojo.connect(dojo.body(), "onclick", function(e) {
-    if (e.target.nodeName == 'A') {
+    if (e.target.nodeName === 'A') {
       var link = e.target;
 
       if (link.getAttribute("aria-haspopup")) {
+        showInfo(link);
         e.preventDefault();
-        showPopup(link);
       } else if (link.className == 'sidebarlink') {
-        // Clicked outline link in sidebar, highlight link + line, close popup (if open)
+        // Clicked outline link in sidebar, highlight link + line, close info (if open)
+	link.scrollIntoView();
         dojo.query(".sidebar-highlighted").removeClass("sidebar-highlighted");
         dojo.query(".highlighted").removeClass("highlighted");
         dojo.addClass(link, "sidebar-highlighted");
-        dijit.popup.close(dijit.byId("ttd"));
+        closeInfo();
         dojo.addClass(dojo.byId(link.href.split('#')[1]), 'highlighted');
+	// Remove signature if visible, or it will cover this
+        hideSignature();	
       } else if (link.href && link.href.split('#')[0] == location.href.split('#')[0]) {
         // Link in same file, remove connector in popup, highlight line
         dojo.query(".highlighted").removeClass("highlighted");
         dojo.addClass(dojo.byId(link.href.split('#')[1]), 'highlighted');
-        dojo.query(".dijitTooltipConnector").style("display", "none");
       }
+    } else if (isLineDiv(e.target)) {
+        closeInfo();
+    }
+  });
+
+  dojo.connect(dojo.body(), "onkeypress", function(e) {
+    if (e.keyCode == dojo.keys.ESCAPE) {
+      closeInfo();
+      dojo.stopEvent(e);
     }
   });
 

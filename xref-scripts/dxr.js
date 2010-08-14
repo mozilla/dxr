@@ -435,12 +435,22 @@ function print_members(t, members) {
 }
 
 function parse_name(c) {
-  // Used to split type::member (if only it were that simple!)
-  var m = /^(?:[a-zA-Z0-9_]* )?(?:(.*)::)?([^:]+(\(.*\)( .*)?)?)$/.exec(c.name).slice(1, 3);
   var result = {};
 
-  result.mtname = m[0];
-  result.mname = m[1];
+  // TODO: not working yet, but need to move this way...
+  if (c.memberOf) {
+    // Try and do this using member type info if possible
+    result.mtname = c.memberOf.name;
+    result.mname = c.name.replace(c.memberOf.name, '');
+    result.mname = result.mname.replace(/^::/, '');      
+  } else {
+
+    // Fallback to regex used to split type::member (if only it were that simple!)
+    var m = /^(?:[a-zA-Z0-9_]* )?(?:(.*)::)?([^:]+(\(.*\)( .*)?)?)$/.exec(c.name).slice(1, 3);
+    result.mtname = m[0];
+    result.mname = m[1];
+
+  }
 
   return result;
 }
