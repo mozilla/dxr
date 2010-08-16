@@ -29,8 +29,7 @@ function showInfo(node) {
   var name = node.innerHTML;
   var line = node.parentNode.id.replace('l', '');
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
-//  var url = virtroot + "/getinfo2.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
-  var url = "/dxr/getinfo2.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
+  var url = "/dxr/getinfo.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
   if (type == 's' || type == 's-fuzzy') { // statements have matching line number
     url += "&type=" + type + "&name=" + name + "&file=" +
 	   file  + "&line=" + node.getAttribute("line").replace('l','');
