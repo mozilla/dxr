@@ -11,6 +11,7 @@ var infoDiv,
     currentLine,
     signature,
     maincontent,
+    sep = '',
     signatureVisible = false;
 
 function closeInfo() {
@@ -29,7 +30,7 @@ function showInfo(node) {
   var name = node.innerHTML;
   var line = node.parentNode.id.replace('l', '');
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
-  var url = "/dxr/getinfo.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
+  var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
   if (type == 's' || type == 's-fuzzy') { // statements have matching line number
     url += "&type=" + type + "&name=" + name + "&file=" +
 	   file  + "&line=" + node.getAttribute("line").replace('l','');
@@ -90,6 +91,9 @@ function init() {
       dojo.addClass(l, 'highlighted');
     }
   }
+
+  // Figure out the right path separator to use with virtroot
+  sep = virtroot[virtroot.length - 1] === '/' ? '' : '/';
 }
 
 // Given a line number, try to find the ID for the containing function in the sidebar.
