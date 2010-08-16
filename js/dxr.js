@@ -186,7 +186,10 @@ function buildTree(items, id) {
   var treeControl = new dijit.Tree({
     model: treeModel,
     showRoot: false,
-    onClick: function(item, node) { if (item.url) { alert(item.url); } },
+      onClick: function(item, node) { if (item.url) {
+        // TODO: fix this in the python code that generates these URLs
+        p = item.url[0].replace(/\.([^:]+):/, '.$1.html#'); //replace('.', '.html');
+        window.location = virtroot + sep + tree + '/' + p; } },
     getIconClass: function(item, opened) { return item.icon || 'icon-type'; }
 /*,
             _createTreeNode: function(args) {
