@@ -92,7 +92,7 @@ cp ${DXRSCRIPTS}/myrules.mk ${OBJDIR}/js/src/config
 echo "Updating ${TREENAME}..."
 hg pull -u
 echo "Top-Level Build of ${TREENAME}..."
-time make -f client.mk build DEHYDRA_PATH='/var/www/html/dxr/tools/gcc-dehydra/dehydra/gcc_treehydra.so' DEHYDRA_MODULES="${DXRSCRIPTS}/dxr.js" TREEHYDRA_MODULES="${DXRSCRIPTS}/callgraph/callgraph_static.js" REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' 2> ${DBROOT}/build-log.txt
+time make -f client.mk build REPORT_BUILD='$(if $(filter %.cpp,$<),$(CXX) -dM -E $(COMPILE_CXXFLAGS) $< > $(subst .o,.macros,$@) 2>&1,@echo $(notdir $<))' 2> ${DBROOT}/build-log.txt
 
 # die if build fails
 if [ "$?" -ne 0 ]; then echo "ERROR - Build failed, aborting."; exit 1; fi

@@ -31,12 +31,12 @@ function process_decl (d) {
     return;
 
   // Skip things we don't care about
-  if ( (/:?:?operator.*$/(d.name)) ||      /* overloaded operators */
-       (/^D_[0-9]+$/(d.name))      ||      /* gcc temporaries */
-       (/^_ZTV.*$/(d.name))        ||      /* vtable vars */
-       (/.*COMTypeInfo.*/(d.name)) ||      /* ignore COMTypeInfo<int> */
+  if ( (/:?:?operator.*$/.exec(d.name)) ||      /* overloaded operators */
+       (/^D_[0-9]+$/.exec(d.name))      ||      /* gcc temporaries */
+       (/^_ZTV.*$/.exec(d.name))        ||      /* vtable vars */
+       (/.*COMTypeInfo.*/.exec(d.name)) ||      /* ignore COMTypeInfo<int> */
        ('this' == d.name)          ||
-       (/^__built_in.*$/(d.name)) )        /* gcc built-ins */
+       (/^__built_in.*$/.exec(d.name)) )        /* gcc built-ins */
     return;
 
   if (d.isFunction) {
@@ -49,7 +49,7 @@ function process_decl (d) {
     var vtype = '';
     var vname = d.name;
 
-    if (/::/(vname)) {
+    if (/::/.exec(vname)) {
       var parts = parse_name(d);
       vtype = parts.mtname || vtype;
       vname = parts.mname || vname;
@@ -104,14 +104,14 @@ function process_type (c) {
   //TODO - what to do about other types?
   if (c.typedef)
     process_typedef(c);
-  else if (/class|struct/(c.kind))
+  else if (/class|struct/.exec(c.kind))
     process_RegularType(c);
   else if (c.kind == 'enum')
     process_EnumType(c);
   // TODO: what about other types?
 
   function process_typedef (c) {
-    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/(c.loc.file) || /dist\/include/(c.loc.file)) {
+    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/.exec(c.loc.file) || /dist\/include/.exec(c.loc.file)) {
       // Normalize path and throw away column info -- we just care about file + line for types.
       fix_path(c.loc);
       var tloc = c.loc.file + ":" + c.loc.line.toString();
@@ -138,7 +138,7 @@ function process_type (c) {
     if (!c.name || c.name.toString() == 'undefined')
       return;
 
-    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/(c.loc.file) || /dist\/include/(c.loc.file)) {
+    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/.exec(c.loc.file) || /dist\/include/.exec(c.loc.file)) {
       // Normalize path and throw away column info -- we just care about file + line for types.
       fix_path(c.loc);
       var tloc = c.loc.file + ":" + c.loc.line.toString();
@@ -166,7 +166,7 @@ function process_type (c) {
 
     // Various internal types are uninteresting for autocomplete and such
     var tignore = 0;
-    if (/.*COMTypeInfo.*/(c.name))
+    if (/.*COMTypeInfo.*/.exec(c.name))
       return;
 
     // Lots of types are really just instances of a handful of templates
@@ -192,7 +192,7 @@ function process_type (c) {
     // NOTE2: there is one more case we care about: sometimes .cpp files are linked
     // into the objdir, and linked locally (e.g., xpcom/glue), and in such cases
     // loc will be a filename with no path.  These are useful to have after post-processing.
-    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/(c.loc.file) || /dist\/include/(c.loc.file)) {
+    if (srcRegex.test(c.loc.file) || /^[^\/]+\.cpp$/.exec(c.loc.file) || /dist\/include/.exec(c.loc.file)) {
       // Normalize path and throw away column info -- we just care about file + line for types.
       fix_path(c.loc);
       var tloc = c.loc.file + ":" + c.loc.line.toString();
@@ -214,7 +214,7 @@ function process_type (c) {
 // Def
 function process_function(decl, body) {
   // Only worry about members in the source tree (e.g., ignore /usr/... or /dist/include)
-  if (!/.*\/dist\/include.*/(decl.loc.file) && srcRegex.test(decl.loc.file)) {
+  if (!/.*\/dist\/include.*/.exec(decl.loc.file) && srcRegex.test(decl.loc.file)) {
     fix_path(decl.loc);
     var floc = decl.loc.file + ":" + decl.loc.line.toString();
 
@@ -260,12 +260,12 @@ function process_function(decl, body) {
         var vname = s.name;
 
         // Ignore statements and other things we can't easily link in the source.
-        if ( (/:?:?operator/(vname))    ||      /* overloaded operators */
-             (/^D_[0-9]+$/(vname))      ||      /* gcc temporaries */
-             (/^_ZTV.*$/(vname))        ||      /* vtable vars */
-             (/.*COMTypeInfo.*/(vname)) ||      /* ignore COMTypeInfo<int> */
+        if ( (/:?:?operator/.exec(vname))    ||      /* overloaded operators */
+             (/^D_[0-9]+$/.exec(vname))      ||      /* gcc temporaries */
+             (/^_ZTV.*$/.exec(vname))        ||      /* vtable vars */
+             (/.*COMTypeInfo.*/.exec(vname)) ||      /* ignore COMTypeInfo<int> */
              ('this' == vname)          ||
-             (/^__built_in.*$/(vname)) )        /* gcc built-ins */
+             (/^__built_in.*$/.exec(vname)) )        /* gcc built-ins */
           return;
 
         var vtype = '';
@@ -280,17 +280,17 @@ function process_function(decl, body) {
         // Special case these smart pointer types: nsCOMPtr, nsRefPtr, nsMaybeWeakPtr, and nsAutoPtr.
         // This is a hack, and very Mozilla specific, but lets us treat these as if they were regular
         // pointer types.
-        if ((/^nsCOMPtr</(s.type.name) ||
-             /^nsRefPtr</(s.type.name) ||
-             /^nsAutoPtr</(s.type.name) ||
-             /^nsMaybeWeakPtr</(s.type.name)) && s.type.template) {
+        if ((/^nsCOMPtr</.exec(s.type.name) ||
+             /^nsRefPtr</.exec(s.type.name) ||
+             /^nsAutoPtr</.exec(s.type.name) ||
+             /^nsMaybeWeakPtr</.exec(s.type.name)) && s.type.template) {
           // Use T in nsCOMPtr<T>.
           vtype = s.type.template.arguments[0].name + "*";  // it's really a pointer, so add *
           vtloc = s.type.template.arguments[0].loc;
           // Increase the column, since we'll hit this spot multiple times otherwise
           // (e.g., once for nsCOMPtr and one for internal type.)  This prevents primary key dupes.
           vloc.column++;
-        } else if (/::/(s.name)) {
+        } else if (/::/.exec(s.name)) {
           var parts = parse_name(s);
           vtype = s.type.name;
           vtloc = s.type.loc;
@@ -411,7 +411,7 @@ function print_members(t, members) {
     fix_path(members[i].memberOf.loc);
     var tloc = members[i].memberOf.loc.file + ":" + members[i].memberOf.loc.line.toString();
 
-    if (!/.*\/dist\/include.*/(members[i].loc.file) && srcRegex.test(members[i].loc.file)) {
+    if (!/.*\/dist\/include.*/.exec(members[i].loc.file) && srcRegex.test(members[i].loc.file)) {
       // if this is static, ignore the reported decl in the compilation unit.
       // .isStatic will only be reported in the containing compilation unit.
 //      if (!members[i].isStatic) {
