@@ -6,5 +6,5 @@ ac_add_options --disable-tests --disable-elf-hack
 ac_add_options --enable-application=browser
 
 # TODO: need to get arg passing to dxr script working
-mk_add_options CXXFLAGS="-fplugin=/src/mozilla-tools/dehydra/gcc_dehydra.so -fplugin-arg-gcc_dehydra-script=/src/dxr/src/xref-scripts/dxr.js"
-mk_add_options CFLAGS="-fplugin=/src/mozilla-tools/dehydra/gcc_dehydra.so -fplugin-arg-gcc_dehydra-script=/src/dxr/src/xref-scripts/dxr.js"
+export CXXFLAGS="-fplugin=/src/mozilla-tools/dehydra/gcc_dehydra.so -fplugin-arg-gcc_dehydra-script=/src/dxr/src/xref-scripts/dxr.js"
+export CFLAGS="-fplugin=/src/mozilla-tools/dehydra/gcc_dehydra.so -fplugin-arg-gcc_dehydra-script=/src/dxr/src/xref-scripts/dxr.js"
