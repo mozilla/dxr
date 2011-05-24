@@ -17,11 +17,17 @@ DXR is primarily a database of source code information.  You need a lot of space
 * Mozilla Build Environment for Linux (https://developer.mozilla.org/en/Linux_Build_Prerequisites)
 * Dehydra Build Environment for Linux (https://developer.mozilla.org/En/Dehydra/Installing_Dehydra)
 
+Note that Dehydra is only supported for gcc-4.5; any earlier version of gcc uses
+a different plugin architecture, which is not supported.
+
 If you are using a Fedora-like Linux, you can also do the following to have an environment setup locally:
 
 ./build-tools.sh
 
 NOTE: this will not alter your system in any way, or replace any default tools.  It builds everything in a ./tools directory.  See build-tools.sh for necessary build dependencies.
+
+You also need to make sure that you have python and python-sqlite installed on
+your computer.
 
 2) Once you have a working environment, you need to obtain a Mozilla source tree:
 
@@ -49,7 +55,8 @@ var srcroot = "/home/dave/dxr/mozilla-central/";
 
 7) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
 
-8) Copy (or move) the contents of dxrsrc/www to your web dir
+8) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
+to symlink the xref-scripts directory.
 
 9) Download and install (or at least build somewhere the web app can access) Glimpse:
 
