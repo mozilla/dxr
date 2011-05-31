@@ -262,6 +262,13 @@ void processTypedef(CXCursor cursor) {
     "', '" << (simple ? cursorLocation(typeRef) : "") << "');" << std::endl;
 }
 
+void processInheritance(CXCursor base, CXCursor clazz, bool direct = 1) {
+  sql_output << "INSERT INTO impl('tbname', 'tloc', 'tcname', 'tcloc', "
+    "'direct') VALUES ('" << getFQName(clazz) << "', '" <<
+    cursorLocation(clazz) << "', '" << getFQName(base) << "', '" <<
+    cursorLocation(base) << "', " << (direct ? "1" : "0") << ");" << std::endl;
+}
+
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
   CXCursorKind kind = clang_getCursorKind(cursor);
 
@@ -271,7 +278,7 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     return CXChildVisit_Continue;
 
   // Dispatch the code to the main processors
-  if (!clang_isDeclaration(kind))
+  if (!clang_isDeclaration(kind) && kind != CXCursor_CXXBaseSpecifier)
     return CXChildVisit_Continue;
   switch (kind) {
     case CXCursor_StructDecl:
@@ -297,6 +304,9 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
       return CXChildVisit_Recurse;
     case CXCursor_TypedefDecl:
       processTypedef(cursor);
+      return CXChildVisit_Recurse;
+    case CXCursor_CXXBaseSpecifier:
+      processInheritance(cursor, parent);
       return CXChildVisit_Recurse;
     case CXCursor_UnexposedDecl:
     case CXCursor_TemplateTypeParameter:
