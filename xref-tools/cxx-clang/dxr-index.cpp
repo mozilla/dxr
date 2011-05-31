@@ -57,7 +57,7 @@ bool wantLocation(CXSourceLocation loc) {
   std::string cxxstr((const char*)locStr);
   if (cxxstr[0] != '/') // Relative -> probably in srcdir
     return true;
-  return cxxstr.find("/src/mozilla-tools/clang-dxr-noplugin") == 0;
+  return cxxstr.find("/src/OpenSkyscraper") == 0;
 }
 
 std::string sanitizeString(std::string &str) {
@@ -91,6 +91,7 @@ std::string cursorLocation(CXCursor cursor) {
 std::string getFQName(CXType type);
 std::string getFQName(CXCursor cursor);
 
+#ifdef BUILD_FQ_SELF
 static CXChildVisitResult fqbld(CXCursor child, CXCursor parent, void *param) {
   std::string &build = *(std::string*)param;
   CXCursorKind kind = clang_getCursorKind(child);
@@ -101,6 +102,7 @@ static CXChildVisitResult fqbld(CXCursor child, CXCursor parent, void *param) {
   build += ", ";
   return CXChildVisit_Continue;
 }
+#endif
 
 std::string getFQName(CXCursor cursor) {
   CXCursor parent = clang_getCursorSemanticParent(cursor);
@@ -109,6 +111,7 @@ std::string getFQName(CXCursor cursor) {
   std::string base = getFQName(parent);
   if (!base.empty())
     base += "::";
+#ifdef BUILD_FQ_SELF
   String component(clang_getCursorSpelling(cursor));
   if ((const char *)component != NULL)
     base += component;
@@ -124,9 +127,15 @@ std::string getFQName(CXCursor cursor) {
     else
       base.replace(base.end() - 2, base.end(), ")");
   }
+#else
+  String component(clang_getCursorDisplayName(cursor));
+  if ((const char *)component != NULL)
+    base += component;
+#endif
   return base;
 }
 
+#ifdef BUILD_FQ_SELF
 const char *primitiveTypes[] = {
   "void", "bool", "char", "unsigned char", "char16_t", "char32_t",
   "unsigned short", "unsigned int", "unsigned long", "unsigned long long",
@@ -157,8 +166,23 @@ std::string getFQName(CXType type) {
       if (clang_isVolatileQualifiedType(type))
         typeStr += " volatile";
       break;
+    case CXType_LValueReference:
+      // references don't do cv-qualified
+      typeStr += getFQName(clang_getPointeeType(type));
+      typeStr += "&";
+      break;
+    case CXType_RValueReference:
+      // references don't do cv-qualified
+      typeStr += getFQName(clang_getPointeeType(type));
+      typeStr += "&&";
+      break;
+    case CXType_Record:
     case CXType_Enum:
     case CXType_Typedef:
+      if (clang_isConstQualifiedType(type))
+        typeStr += "const ";
+      if (clang_isVolatileQualifiedType(type))
+        typeStr += "volatile ";
       return getFQName(clang_getTypeDeclaration(type));
     default: {
       String kindStr(clang_getTypeKindSpelling(type.kind));
@@ -167,6 +191,7 @@ std::string getFQName(CXType type) {
   }
   return typeStr;
 }
+#endif
 
 void processCompoundType(CXCursor cursor, CXCursorKind kind) {
   const char *kindName;
@@ -178,6 +203,8 @@ void processCompoundType(CXCursor cursor, CXCursorKind kind) {
     kindName = "class";
   else if (kind == CXCursor_EnumDecl)
     kindName = "enum";
+  else if (kind == CXCursor_ClassTemplate)
+    kindName = "class"; // Curse you libclang
   else
     kindName = "___UNKNOWN___";
   // XXX: Need to support namespaces
@@ -207,13 +234,32 @@ void processFunctionType(CXCursor cursor, CXCursorKind kind) {
 void processVariableType(CXCursor cursor, CXCursorKind kind) {
   // Is this an included method or not?
   CXCursor container = clang_getCursorSemanticParent(cursor);
-  // XXX: broken!
-  //if (clang_equalCursors(container, clang_getNullCursor()))
-  //  fprintf(stderr, "No parent!\n");
+  CXCursorKind parentKind = clang_getCursorKind(container);
+  bool isContained = (parentKind != CXCursor_Namespace &&
+      parentKind != CXCursor_TranslationUnit &&
+      parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
   String name(clang_getCursorSpelling(cursor));
-  sql_output << "INSERT INTO members ('mname', 'mdecl') VALUES ('" <<
-    (name) << "', '" <<
+  sql_output << "INSERT INTO members (";
+  if (isContained)
+    sql_output << "'mtname', 'mtdecl', ";
+  sql_output << "'mname', 'mdecl') VALUES ('";
+  if (isContained)
+    sql_output << getFQName(container) << "', '" <<
+      cursorLocation(container) << "', '";
+  sql_output << (name) << "', '" <<
     cursorLocation(cursor) << "');" << std::endl;
+}
+
+void processTypedef(CXCursor cursor) {
+  // Are we a straightup typedef?
+  CXType type = clang_getCanonicalType(clang_getCursorType(cursor));
+  bool simple = (type.kind == CXType_Record ||
+    (type.kind >= CXType_FirstBuiltin && type.kind <= CXType_LastBuiltin));
+  CXCursor typeRef = clang_getTypeDeclaration(type);
+  sql_output << "INSERT INTO types ('tname', 'tloc', 'ttypedefname',"
+    " 'ttypedefloc', 'tkind') VALUES ('" << getFQName(cursor) << "', '" <<
+    cursorLocation(cursor) << "', '" << (simple ? getFQName(typeRef) : "") <<
+    "', '" << (simple ? cursorLocation(typeRef) : "") << "');" << std::endl;
 }
 
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
@@ -232,6 +278,7 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     case CXCursor_UnionDecl:
     case CXCursor_ClassDecl:
     case CXCursor_EnumDecl:
+    case CXCursor_ClassTemplate:
       processCompoundType(cursor, kind);
       return CXChildVisit_Recurse;
     case CXCursor_FunctionDecl:
@@ -239,6 +286,7 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     case CXCursor_Constructor:
     case CXCursor_Destructor:
     case CXCursor_ConversionFunction:
+    case CXCursor_FunctionTemplate:
       processFunctionType(cursor, kind);
       return CXChildVisit_Recurse;
     case CXCursor_FieldDecl:
@@ -247,8 +295,14 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     case CXCursor_ParmDecl:
       processVariableType(cursor, kind);
       return CXChildVisit_Recurse;
+    case CXCursor_TypedefDecl:
+      processTypedef(cursor);
+      return CXChildVisit_Recurse;
     case CXCursor_UnexposedDecl:
+    case CXCursor_TemplateTypeParameter:
     case CXCursor_Namespace:
+    case CXCursor_UsingDeclaration:
+    case CXCursor_UsingDirective:
       return CXChildVisit_Recurse;
     default: {
       String kindSpell(clang_getCursorKindSpelling(kind));
