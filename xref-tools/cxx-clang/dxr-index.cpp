@@ -1,6 +1,8 @@
 #include <clang-c/Index.h>
 #include <fstream>
 #include <string>
+#include <limits.h>
+#include <stdlib.h>
 
 class String {
   CXString m_str;
@@ -33,6 +35,8 @@ int main(int argc, char **argv) {
   // We are going to output to file.sql
   CXString ifile = clang_getTranslationUnitSpelling(contents);
   std::string ofile(clang_getCString(ifile));
+  if (ofile.empty())
+    return 0; // Must be only object files!
   ofile += ".sql";
   sql_output.open(ofile.c_str());
   clang_disposeString(ifile);
@@ -57,7 +61,7 @@ bool wantLocation(CXSourceLocation loc) {
   std::string cxxstr((const char*)locStr);
   if (cxxstr[0] != '/') // Relative -> probably in srcdir
     return true;
-  return cxxstr.find("/src/OpenSkyscraper") == 0;
+  return cxxstr.find("/src/dxr/git-1.7.5.3") == 0;
 }
 
 std::string sanitizeString(std::string &str) {
@@ -78,8 +82,10 @@ std::string cursorLocation(CXCursor cursor) {
   std::string fstr;
   if (filestring == NULL)
     fstr += "(null)";
-  else
-    fstr += filestring;
+  else {
+    char buf[PATH_MAX + 1];
+    fstr += realpath(filestring, buf);
+  }
   std::string result = sanitizeString(fstr);
   result += ":";
   result += line;
@@ -239,6 +245,18 @@ void processVariableType(CXCursor cursor, CXCursorKind kind) {
       parentKind != CXCursor_TranslationUnit &&
       parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
   String name(clang_getCursorSpelling(cursor));
+  // Function stuff needs stmts for now
+  String kindStr(clang_getCursorKindSpelling(parentKind));
+  if (parentKind == CXCursor_FunctionDecl) {
+    sql_output << "INSERT INTO stmts ('vfuncname', 'vfuncloc', 'vname', "
+      "'vlocf', 'vlocl', 'vlocc') VALUES ('" <<
+      getFQName(container) << "', '" << cursorLocation(container) << "', '" <<
+      name << "', '";
+    CXFile f; unsigned int line, col;
+    clang_getSpellingLocation(clang_getCursorLocation(cursor), &f, &line, &col, NULL);
+    String fileStr(clang_getFileName(f));
+    sql_output << fileStr << "', " << line << ", " << col << ");";
+  } else {
   sql_output << "INSERT INTO members (";
   if (isContained)
     sql_output << "'mtname', 'mtdecl', ";
@@ -248,6 +266,7 @@ void processVariableType(CXCursor cursor, CXCursorKind kind) {
       cursorLocation(container) << "', '";
   sql_output << (name) << "', '" <<
     cursorLocation(cursor) << "');" << std::endl;
+  }
 }
 
 void processTypedef(CXCursor cursor) {
