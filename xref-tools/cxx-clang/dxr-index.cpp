@@ -280,6 +280,16 @@ void processInheritance(CXCursor base, CXCursor clazz) {
     "\",tcloc,\"" << cursorLocation(clazz) << "\"" << std::endl;
 }
 
+void processReference(CXCursor cursor, CXCursorKind kind) {
+  CXSourceLocation loc = clang_getCursorLocation(cursor);
+  CXFile f; unsigned int row, col;
+  clang_getSpellingLocation(loc, &f, &row, &col, NULL);
+  String fileStr(clang_getFileName(f));
+  csv_output << "ref,varname,\"" << getFQName(cursor) << "\",varloc,\"" <<
+    cursorLocation(cursor) << "\",reff,\"" << fileStr << "\",refl," <<
+    row << ",refc," << col << std::endl;
+}
+
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
   CXCursorKind kind = clang_getCursorKind(cursor);
 
@@ -289,7 +299,8 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     return CXChildVisit_Continue;
 
   // Dispatch the code to the main processors
-  if (!clang_isDeclaration(kind) && kind != CXCursor_CXXBaseSpecifier)
+  if (!clang_isDeclaration(kind) && !clang_isExpression(kind) &&
+      kind != CXCursor_CXXBaseSpecifier)
     return CXChildVisit_Continue;
   switch (kind) {
     case CXCursor_StructDecl:
@@ -324,6 +335,11 @@ CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
     case CXCursor_Namespace:
     case CXCursor_UsingDeclaration:
     case CXCursor_UsingDirective:
+    case CXCursor_UnexposedExpr:
+      return CXChildVisit_Recurse;
+    case CXCursor_DeclRefExpr:
+    case CXCursor_CallExpr:
+      processReference(cursor, kind);
       return CXChildVisit_Recurse;
     default: {
       String kindSpell(clang_getCursorKindSpelling(kind));

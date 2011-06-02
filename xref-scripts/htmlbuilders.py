@@ -150,13 +150,6 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
     def __init__(self, dxrconfig, treeconfig, filepath, newroot):
         HtmlBuilderSidebar.__init__(self, dxrconfig, treeconfig, filepath, newroot)
         
-        # Create temp in-memory tables to make lookups faster
-        self.conn.executescript('BEGIN TRANSACTION;' +
-                                'CREATE TEMPORARY TABLE stmts_for_file(vfuncname, vshortname, vlocl);' + 
-                                'INSERT INTO stmts_for_file SELECT vfuncname, vshortname, vlocl FROM stmts where vlocf="'
-                                + self.srcpath + '";' + 'CREATE INDEX idx_stmts_for_file ON stmts_for_file (vfuncname, vshortname, vlocl ASC);' +
-                                'COMMIT;')
-
         self.conn.executescript('BEGIN TRANSACTION;' +
                                 'CREATE TEMPORARY TABLE types_all (tname);' + 
                                 'INSERT INTO types_all SELECT tname from types;' + # should ignore -- where not tignore = 1;' +
@@ -170,11 +163,12 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
 
 
     def getMemberRange(self, func, sid, loc):
-        lineRange = self.conn.execute("select min(vlocl), max(vlocl) from stmts_for_file where vfuncname=?;",
-                                      (func,)).fetchone()
-        if lineRange and lineRange[0] and lineRange[1]:
-            self.globalScript.append('this.ranges.push({start: %s, end: %s, sid: "%s", sig:"%s", loc: %s});' % 
-                                     (lineRange[0], lineRange[1], sid, cgi.escape(func), loc.split(':')[1]))
+        pass
+        #lineRange = self.conn.execute("select min(vlocl), max(vlocl) from stmts_for_file where vfuncname=?;",
+        #                              (func,)).fetchone()
+        #if lineRange and lineRange[0] and lineRange[1]:
+        #    self.globalScript.append('this.ranges.push({start: %s, end: %s, sid: "%s", sig:"%s", loc: %s});' % 
+        #                             (lineRange[0], lineRange[1], sid, cgi.escape(func), loc.split(':')[1]))
 
     def buildSidebarLink(self, loc, mname, anchor, mshortname, sid, isDeclaration):
       img = None
@@ -207,8 +201,9 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
         self.globalScript.append('this.ranges = [];')
 
         # TODO: this ordering (by mdecl) is wrong (e.g., if you're in a file of defs) if you want file order
-        for mdecls in self.conn.execute('select mtname, mtloc, mname, mdecl, mdef, mshortname from members where mdef like "' + 
-                                        srcpath + '%" or mdecl like "' + srcpath + '%" order by mtname, mdecl;').fetchall():
+        #for mdecls in self.conn.execute('select mtname, mtloc, mname, mdecl, mdef, mshortname from members where mdef like "' + 
+        #                                srcpath + '%" or mdecl like "' + srcpath + '%" order by mtname, mdecl;').fetchall():
+        for mdecls in []:
             sid += 1
             if currentType != mdecls[0]:
                 if closeDiv:
@@ -253,11 +248,11 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
         if closeDiv:
             out.write('</div><br />\n')
 
-        for extraTypes in self.conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
-                                            '%" and tname not in (select mtname from members where mdef like "' + srcpath +
-                                            '%" or mdecl like "' + srcpath + '%" order by mtname);').fetchall():
-            out.write('<b><a class="sidebarlink" title="%s" href="#l%s">%s</a></b><br /><br />\n' %
-                      (extraTypes[0], extraTypes[1].split(':')[1], cgi.escape(extraTypes[0])))
+        #for extraTypes in self.conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
+        #                                    '%" and tname not in (select mtname from members where mdef like "' + srcpath +
+        #                                    '%" or mdecl like "' + srcpath + '%" order by mtname);').fetchall():
+        #    out.write('<b><a class="sidebarlink" title="%s" href="#l%s">%s</a></b><br /><br />\n' %
+        #              (extraTypes[0], extraTypes[1].split(':')[1], cgi.escape(extraTypes[0])))
 
         # Sort the range lines so lookups are faster
         self.globalScript.append('this.ranges.sort(function(x,y) { return x.start - y.start; });')
@@ -335,27 +330,15 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
                                                           (token.name,)).fetchone()[0] > 0:
                         prefix = '<a class="t" aria-haspopup="true">'
 
-                    if prefix == '':
-                        cur = self.conn.execute('select distinct vfuncname from stmts_for_file where vlocl<=? order by vlocl desc limit 1;',
-                                                (line_num,)).fetchone()
-                        if cur:
-                            range = self.conn.execute('select min(vlocl), max(vlocl) from stmts_for_file where vfuncname=?;',
-                                                      (cur[0],)).fetchone()
-                            # Now look for the token in that function, taking the line closest to the current line
-                            # TODO: this is not totally accurate, since vshortname can happen in multiple cases (a->offset, g->b->offset)
-                            hit = 0
-                            for l in self.conn.execute('select distinct vlocl from stmts_for_file where vlocl>=? and vlocl<=? and vshortname=? order by vlocl', 
-                                                       (range[0], range[1], token.name)):
-                                if abs(line_num - l[0]) < abs(line_num - hit):
-                                    hit = l[0]
+                    if prefix == '' and self.conn.execute('select count(*) from functions where fname=?',
+                                                          (token.name,)).fetchone()[0] > 0:
+                        prefix = '<a class="func" aria-haspopup=true" pos=%s>' % `token.start`
 
-                            if hit == line_num:
-                                prefix = '<a class="s" aria-haspopup="true" line="%s" pos=%s>' % (`hit`, `token.start`)
-                            elif hit != 0:  # fuzzy match, as long as hit isn't still at 0
-                                prefix = '<a class="s-fuzzy" aria-haspopup="true" line="%s">' % `hit`
+                    if prefix == '' and self.conn.execute('select count(*) from variables where vname=? and vloc=?',
+                                                          (token.name,self.srcpath+':'+line)).fetchone()[0] > 0:
+                        prefix = '<a class="s" aria-haspopup="true" line="%s" pos=%s>' % (`line`, `token.start`)
 
-                    if prefix== '' and self.conn.execute('select count(*) from members where mshortname=?;', (token.name,)).fetchone()[0] > 0:
-                        prefix = '<a class="mem" aria-haspopup="true" pos=%s>' % `token.start`
+                    # XXX: variable references
                     if prefix == '':      # we never found a match
                         # Don't bother making it a link
                         suffix = ''

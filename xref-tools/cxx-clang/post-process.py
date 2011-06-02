@@ -54,6 +54,7 @@ typedefs = {}
 functions = {}
 inheritance = set()
 variables = {}
+refs = []
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -74,6 +75,9 @@ def process_impl(info):
 
 def process_variable(varinfo):
   variables[varinfo['vname'], varinfo['vloc']] = varinfo
+
+def process_ref(info):
+  refs.append(info)
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -117,6 +121,9 @@ def produce_sql(sqlout):
       funcKeys.add(key)
       scopes[key] = nextIndex
       nextIndex += 1
+
+  # Variables aren't scoped, but we still need to refer to them in the same
+  # manner, so we'll unify variables with the scope ids
   varKeys = {}
   for v in variables:
     key = (v[0], v[1])
@@ -148,6 +155,7 @@ def produce_sql(sqlout):
     subs.append(child)
     supers.append(base)
 
+  # Fix up (name, loc) pairs to ids
   for fkey in funcKeys:
     funcinfo = functions[fkey]
     if 'scopename' in funcinfo:
@@ -163,6 +171,13 @@ def produce_sql(sqlout):
         varinfo.pop('scopeloc'))]
     else:
       varinfo['scopeid'] = 0
+  
+  varRefs = []
+  for ref in refs:
+    canon = canonicalize_decl(ref.pop('varname'), ref.pop('varloc'))
+    if canon in varKeys:
+      ref['varid'] = varKeys[canon]
+      varRefs.append(ref)
 
   # Finally, produce all sql statements
   def write_sql(table, obj):
@@ -181,6 +196,8 @@ def produce_sql(sqlout):
     write_sql("types", typedefs[t])
   for i in inheritsTree:
     write_sql("impl", i)
+  for r in varRefs:
+    write_sql("variable_refs", varRefs[r])
 
 # Run this on the srcdir
 import sys, os

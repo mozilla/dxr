@@ -49,7 +49,10 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
     else:
         htmlBuilder = htmlbuilders.HtmlBuilderBase(dxrconfig, treeconfig, srcpath, newroot)
 
-    htmlBuilder.toHTML()
+    try:
+      htmlBuilder.toHTML()
+    except Exception, e:
+      print e.message
  
 
 
@@ -81,7 +84,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml):
         dxrconfig["html_main_footer"] = os.path.join(dxrconfig["templates"], "dxr-main-footer.html")
         dxrconfig["database"] = os.path.join(dbdir, dbname)
 #        dxrsqlite = os.path.join(dbdir, dbname)
-                
+
         n = cpu_count()
         p = Pool(processes=n)
 
