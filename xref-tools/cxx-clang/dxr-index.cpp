@@ -252,30 +252,12 @@ void processVariableType(CXCursor cursor, CXCursorKind kind) {
       parentKind != CXCursor_TranslationUnit &&
       parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
   String name(clang_getCursorSpelling(cursor));
-  // Function stuff needs stmts for now
-  String kindStr(clang_getCursorKindSpelling(parentKind));
-#if 0
-  if (parentKind == CXCursor_FunctionDecl) {
-    csv_output << "INSERT INTO stmts ('vfuncname', 'vfuncloc', 'vname', "
-      "'vlocf', 'vlocl', 'vlocc') VALUES ('" <<
-      getFQName(container) << "', '" << cursorLocation(container) << "', '" <<
-      name << "', '";
-    CXFile f; unsigned int line, col;
-    clang_getSpellingLocation(clang_getCursorLocation(cursor), &f, &line, &col, NULL);
-    String fileStr(clang_getFileName(f));
-    csv_output << fileStr << "', " << line << ", " << col << ");";
-  } else {
-  csv_output << "INSERT INTO members (";
+  csv_output << "variable,vname,\"" << name << "\",vloc,\"" <<
+    cursorLocation(cursor) << "\"";
   if (isContained)
-    csv_output << "'mtname', 'mtdecl', ";
-  csv_output << "'mname', 'mdecl') VALUES ('";
-  if (isContained)
-    csv_output << getFQName(container) << "', '" <<
-      cursorLocation(container) << "', '";
-  csv_output << (name) << "', '" <<
-    cursorLocation(cursor) << "');" << std::endl;
-  }
-#endif
+    csv_output << ",scopename,\"" << getFQName(container) << "\",scopeloc,\"" <<
+      cursorLocation(container) << "\"";
+  csv_output << std::endl;
 }
 
 void processTypedef(CXCursor cursor) {
@@ -284,17 +266,18 @@ void processTypedef(CXCursor cursor) {
   bool simple = (type.kind == CXType_Record ||
     (type.kind >= CXType_FirstBuiltin && type.kind <= CXType_LastBuiltin));
   CXCursor typeRef = clang_getTypeDeclaration(type);
-  //csv_output << "INSERT INTO types ('tname', 'tloc', 'ttypedefname',"
-  //  " 'ttypedefloc', 'tkind') VALUES ('" << getFQName(cursor) << "', '" <<
-  //  cursorLocation(cursor) << "', '" << (simple ? getFQName(typeRef) : "") <<
-  //  "', '" << (simple ? cursorLocation(typeRef) : "") << "');" << std::endl;
+  csv_output << "typedef,tname,\"" << getFQName(cursor) << "\",tloc,\"" <<
+    cursorLocation(cursor) << "\"";
+  if (simple)
+    csv_output << ",ttypedefname,\"" << getFQName(typeRef) <<
+      "\",ttypedefloc,\"" << cursorLocation(typeRef) << "\"";
+  csv_output << std::endl;
 }
 
-void processInheritance(CXCursor base, CXCursor clazz, bool direct = 1) {
-  //csv_output << "INSERT INTO impl('tbname', 'tloc', 'tcname', 'tcloc', "
-  //  "'direct') VALUES ('" << getFQName(clazz) << "', '" <<
-  //  cursorLocation(clazz) << "', '" << getFQName(base) << "', '" <<
-  //  cursorLocation(base) << "', " << (direct ? "1" : "0") << ");" << std::endl;
+void processInheritance(CXCursor base, CXCursor clazz) {
+  csv_output << "impl,tbname,\"" << getFQName(base) << "\",tbloc,\"" <<
+    cursorLocation(base) << "\",tcname,\"" << getFQName(clazz) <<
+    "\",tcloc,\"" << cursorLocation(clazz) << "\"" << std::endl;
 }
 
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {

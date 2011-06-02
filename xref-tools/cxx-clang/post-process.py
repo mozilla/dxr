@@ -50,7 +50,10 @@ class UnionFind:
 
 decl_master = {}
 types = {}
+typedefs = {}
 functions = {}
+inheritance = set()
+variables = {}
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -60,8 +63,17 @@ def process_decldef(args):
 def process_type(typeinfo):
   types[(typeinfo['tname'], typeinfo['tloc'])] = typeinfo
 
+def process_typedef(typeinfo):
+  typedefs[(typeinfo['tname'], typeinfo['tloc'])] = typeinfo
+
 def process_function(funcinfo):
   functions[(funcinfo['flongname'], funcinfo['floc'])] = funcinfo
+
+def process_impl(info):
+  inheritance.add(info)
+
+def process_variable(varinfo):
+  variables[varinfo['vname'], varinfo['vloc']] = varinfo
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -105,15 +117,52 @@ def produce_sql(sqlout):
       funcKeys.add(key)
       scopes[key] = nextIndex
       nextIndex += 1
+  varKeys = {}
+  for v in variables:
+    key = (v[0], v[1])
+    if key not in varKeys:
+      varKeys[key] = nextIndex
+      nextIndex += 1
 
   # Scopes are now defined, this allows us to modify structures for sql prep
+
+  # Inheritance:
+  # We need to canonicalize the types and then set up the inheritance tree
+  # Since we don't know which order we'll see the pairs, we have to propagate
+  # bidirectionally when we find out more.
+  def build_inherits(base, child, direct):
+    return {
+        'tbname': base[0], 'tbloc': base[1],
+        'tcname': child[0], 'tcloc': child[1],
+        'direct': direct}
+  childMap, parentMap = {}, {}
+  inheritsTree = []
+  for info in inheritance:
+    base = canonicalize_decl(info['tbname'], info['tbloc'])
+    child = canonicalize_decl(info['tcname'], info['tcloc'])
+    subs = childMap.setdefault(base, set())
+    supers = parentMap.setdefault(child, set())
+    inheritsTree.append(build_inherits(base, child, True))
+    inheritsTree.extend([build_inherits(base, sub, False) for sub in subs])
+    inheritsTree.extend([build_inherits(sup, child, False) for sup in supers])
+    subs.append(child)
+    supers.append(base)
+
   for fkey in funcKeys:
     funcinfo = functions[fkey]
     if 'scopename' in funcinfo:
-      funcinfo['scopeid'] = scopes[funcinfo.pop('scopename'),
-        funcinfo.pop('scopeloc')]
+      funcinfo['scopeid'] = scopes[canonize_decl(funcinfo.pop('scopename'),
+        funcinfo.pop('scopeloc'))]
     else:
-      funcinfo = 0
+      funcinfo['scopeid'] = 0
+
+  for vkey in varKeys:
+    varinfo = variables[vkey]
+    if 'scopename' in varinfo:
+      varinfo['scopeid'] = scopes[canonicalize_decl(varinfo.pop('scopename'),
+        varinfo.pop('scopeloc'))]
+    else:
+      varinfo['scopeid'] = 0
 
   # Finally, produce all sql statements
   def write_sql(table, obj):
@@ -124,8 +173,14 @@ def produce_sql(sqlout):
     write_sql("scopes", {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]})
   for f in funcKeys:
     write_sql("functions", functions[f])
+  for v in varKeys:
+    write_sql("variables", variables[v])
   for t in typeKeys:
     write_sql("types", types[t])
+  for t in typedefs:
+    write_sql("types", typedefs[t])
+  for i in inheritsTree:
+    write_sql("impl", i)
 
 # Run this on the srcdir
 import sys, os
