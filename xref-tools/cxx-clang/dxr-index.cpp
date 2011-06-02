@@ -23,7 +23,7 @@ std::string &operator+=(std::string &str, unsigned int i) {
   return str += (ptr + 1);
 }
 
-std::ofstream sql_output;
+std::ofstream csv_output;
 
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data);
 
@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
   std::string ofile(clang_getCString(ifile));
   if (ofile.empty())
     return 0; // Must be only object files!
-  ofile += ".sql";
-  sql_output.open(ofile.c_str());
+  ofile += ".csv";
+  csv_output.open(ofile.c_str());
   clang_disposeString(ifile);
 
   CXCursor mainCursor = clang_getTranslationUnitCursor(contents);
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
 
   // Clean everything up!
-  sql_output.close();
+  csv_output.close();
   clang_disposeTranslationUnit(contents);
   clang_disposeIndex(idx);
   return 0;
@@ -61,14 +61,14 @@ bool wantLocation(CXSourceLocation loc) {
   std::string cxxstr((const char*)locStr);
   if (cxxstr[0] != '/') // Relative -> probably in srcdir
     return true;
-  return cxxstr.find("/src/dxr/git-1.7.5.3") == 0;
+  return cxxstr.find("/src/dxr/") == 0;
 }
 
 std::string sanitizeString(std::string &str) {
   std::string result(str);
   size_t iter = -1;
-  while ((iter = result.find('\'', iter + 1)) != std::string::npos) {
-    result.replace(iter, 1, "''");
+  while ((iter = result.find('"', iter + 1)) != std::string::npos) {
+    result.replace(iter, 1, "\"\"");
   }
   return result;
 }
@@ -89,8 +89,8 @@ std::string cursorLocation(CXCursor cursor) {
   std::string result = sanitizeString(fstr);
   result += ":";
   result += line;
-  result += ":";
-  result += column;
+  //result += ":";
+  //result += column;
   return result;
 }
 
@@ -199,6 +199,15 @@ std::string getFQName(CXType type) {
 }
 #endif
 
+void outputCursorDefinition(CXCursor cursor) {
+  CXCursor definition = clang_getCursorDefinition(cursor);
+  if (clang_equalCursors(definition, clang_getNullCursor()))
+    return;
+  csv_output << "decldef,name,\"" << getFQName(cursor) << "\",declloc,\"" <<
+    cursorLocation(cursor) << "\",defloc,\"" << cursorLocation(definition) <<
+    "\"" << std::endl;
+}
+
 void processCompoundType(CXCursor cursor, CXCursorKind kind) {
   const char *kindName;
   if (kind == CXCursor_StructDecl)
@@ -214,9 +223,9 @@ void processCompoundType(CXCursor cursor, CXCursorKind kind) {
   else
     kindName = "___UNKNOWN___";
   // XXX: Need to support namespaces
-  sql_output << "INSERT INTO types ('tname', 'tloc', 'tkind') VALUES ('" <<
-    getFQName(cursor) << "', '" << cursorLocation(cursor) << "', '" <<
-    kindName << "');" << std::endl;
+  csv_output << "type,tname,\"" << getFQName(cursor) << "\",tloc,\"" <<
+    cursorLocation(cursor) << "\",tkind,\"" << kindName << "\"" << std::endl;
+  outputCursorDefinition(cursor);
 }
 
 void processFunctionType(CXCursor cursor, CXCursorKind kind) {
@@ -225,16 +234,14 @@ void processFunctionType(CXCursor cursor, CXCursorKind kind) {
   bool isContained = (parentKind != CXCursor_Namespace &&
       parentKind != CXCursor_TranslationUnit &&
       parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
-  sql_output << "INSERT INTO members (";
-  if (isContained)
-    sql_output << "'mtname', 'mtdecl', ";
-  sql_output << "'mname', 'mshortname', 'mdecl') VALUES ('";
-  if (isContained)
-    sql_output << getFQName(container) << "', '" <<
-      cursorLocation(container) << "', '";
   String shortname(clang_getCursorSpelling(cursor));
-  sql_output << getFQName(cursor) << "', '" << (shortname) << "', '" <<
-    cursorLocation(cursor) << "');" << std::endl;
+  csv_output << "function,fname,\"" << shortname << "\",flongname,\"" <<
+    getFQName(cursor) << "\",floc,\"" << cursorLocation(cursor) << "\"";
+  if (isContained)
+    csv_output << ",scopename,\"" << getFQName(container) << "\",scopeloc,\"" <<
+      cursorLocation(container) << "\"";
+  csv_output << std::endl;
+  outputCursorDefinition(cursor);
 }
 
 void processVariableType(CXCursor cursor, CXCursorKind kind) {
@@ -247,26 +254,28 @@ void processVariableType(CXCursor cursor, CXCursorKind kind) {
   String name(clang_getCursorSpelling(cursor));
   // Function stuff needs stmts for now
   String kindStr(clang_getCursorKindSpelling(parentKind));
+#if 0
   if (parentKind == CXCursor_FunctionDecl) {
-    sql_output << "INSERT INTO stmts ('vfuncname', 'vfuncloc', 'vname', "
+    csv_output << "INSERT INTO stmts ('vfuncname', 'vfuncloc', 'vname', "
       "'vlocf', 'vlocl', 'vlocc') VALUES ('" <<
       getFQName(container) << "', '" << cursorLocation(container) << "', '" <<
       name << "', '";
     CXFile f; unsigned int line, col;
     clang_getSpellingLocation(clang_getCursorLocation(cursor), &f, &line, &col, NULL);
     String fileStr(clang_getFileName(f));
-    sql_output << fileStr << "', " << line << ", " << col << ");";
+    csv_output << fileStr << "', " << line << ", " << col << ");";
   } else {
-  sql_output << "INSERT INTO members (";
+  csv_output << "INSERT INTO members (";
   if (isContained)
-    sql_output << "'mtname', 'mtdecl', ";
-  sql_output << "'mname', 'mdecl') VALUES ('";
+    csv_output << "'mtname', 'mtdecl', ";
+  csv_output << "'mname', 'mdecl') VALUES ('";
   if (isContained)
-    sql_output << getFQName(container) << "', '" <<
+    csv_output << getFQName(container) << "', '" <<
       cursorLocation(container) << "', '";
-  sql_output << (name) << "', '" <<
+  csv_output << (name) << "', '" <<
     cursorLocation(cursor) << "');" << std::endl;
   }
+#endif
 }
 
 void processTypedef(CXCursor cursor) {
@@ -275,17 +284,17 @@ void processTypedef(CXCursor cursor) {
   bool simple = (type.kind == CXType_Record ||
     (type.kind >= CXType_FirstBuiltin && type.kind <= CXType_LastBuiltin));
   CXCursor typeRef = clang_getTypeDeclaration(type);
-  sql_output << "INSERT INTO types ('tname', 'tloc', 'ttypedefname',"
-    " 'ttypedefloc', 'tkind') VALUES ('" << getFQName(cursor) << "', '" <<
-    cursorLocation(cursor) << "', '" << (simple ? getFQName(typeRef) : "") <<
-    "', '" << (simple ? cursorLocation(typeRef) : "") << "');" << std::endl;
+  //csv_output << "INSERT INTO types ('tname', 'tloc', 'ttypedefname',"
+  //  " 'ttypedefloc', 'tkind') VALUES ('" << getFQName(cursor) << "', '" <<
+  //  cursorLocation(cursor) << "', '" << (simple ? getFQName(typeRef) : "") <<
+  //  "', '" << (simple ? cursorLocation(typeRef) : "") << "');" << std::endl;
 }
 
 void processInheritance(CXCursor base, CXCursor clazz, bool direct = 1) {
-  sql_output << "INSERT INTO impl('tbname', 'tloc', 'tcname', 'tcloc', "
-    "'direct') VALUES ('" << getFQName(clazz) << "', '" <<
-    cursorLocation(clazz) << "', '" << getFQName(base) << "', '" <<
-    cursorLocation(base) << "', " << (direct ? "1" : "0") << ");" << std::endl;
+  //csv_output << "INSERT INTO impl('tbname', 'tloc', 'tcname', 'tcloc', "
+  //  "'direct') VALUES ('" << getFQName(clazz) << "', '" <<
+  //  cursorLocation(clazz) << "', '" << getFQName(base) << "', '" <<
+  //  cursorLocation(base) << "', " << (direct ? "1" : "0") << ");" << std::endl;
 }
 
 CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {

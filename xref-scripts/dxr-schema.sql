@@ -5,10 +5,22 @@ PRAGMA count_changes=off;
 drop table if exists types;
 drop table if exists members;
 drop table if exists impl;
-drop table if exists funcs;
 drop table if exists callers;
 drop table if exists warnings;
 
+-- Scope definitions
+DROP TABLE IF EXISTS scopes;
+CREATE TABLE scopes (
+  scopeid INTEGER NOT NULL, -- An ID for the scope, used in other tables. All
+                            -- entries in this table will have strictly
+                            -- positive values; negative values for scopes are
+                            -- special values
+  sname VARCHAR(256),       -- The name of the scope
+  sloc VARCHAR(256),        -- The file:loc[:col] of the canonical declaration
+  PRIMARY KEY(scopeid)
+);
+
+-- Types are a subtype of scopes
 -- Table types: all named structs and classes defined in the mozilla source tree
 -- tname: Type Name
 -- tloc: Type DECL Location
@@ -38,9 +50,22 @@ create table members (mtname TEXT, mtloc TEXT, mname TEXT, mshortname TEXT, mdec
 -- direct: Used to recreate inheritance hierarchy [1=direct base, -1=non-direct base]
 create table impl (tbname TEXT, tbloc TEXT, tcname TEXT, tcloc TEXT, direct INTEGER, PRIMARY KEY(tbname, tbloc, tcname, tcloc));
 
--- Table funcs: all file-scope static functions, which are not properly members of any class
--- fname: function name, floc: function location
-create table funcs (fname TEXT, floc TEXT, PRIMARY KEY(fname, floc));
+-- Functions
+CREATE TABLE functions (
+  funcid    INTEGER NOT NULL,      -- A unique ID for the function. As functions
+                                   -- are themselves scopes, this is also a
+                                   -- usable scope ID.
+  scopeid   INTEGER NOT NULL,      -- The scope in which this function is
+                                   -- defined
+  fname     VARCHAR(256) NOT NULL, -- The short name of the function
+  flongname VARCHAR(512) NOT NULL, -- A fully-qualified name for the function
+                                   -- This should include argument types
+  floc      VARCHAR(256),          -- file:line[:col] for the definition of this
+                                   -- function
+  modifiers VARCHAR(256),          -- Modifiers (e.g., private) for the function
+  PRIMARY KEY(funcid),
+  UNIQUE(scopeid, flongname, floc)
+);
 
 -- Table stmts: all statement info collected from process_function bodies
 -- vfuncname: the name of the function in which this var occurs
