@@ -1,18 +1,32 @@
-#include <clang-c/Index.h>
+//===- PrintFunctionNames.cpp ---------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// Example clang plugin which simply prints the names of all the top-level decls
+// in the input file.
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/AST/AST.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendPluginRegistry.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <fstream>
-#include <string>
-#include <limits.h>
-#include <stdlib.h>
+#include <stdio.h>
+using namespace clang;
 
-class String {
-  CXString m_str;
-public:
-  String(CXString str) : m_str(str) {}
-  ~String() { clang_disposeString(m_str); }
+namespace {
 
-  operator const char*() { return clang_getCString(m_str); }
-};
-
+// Curse whomever didn't do this.
 std::string &operator+=(std::string &str, unsigned int i) {
   static char buf[15] = { '\0' };
   char *ptr = &buf[13];
@@ -23,329 +37,151 @@ std::string &operator+=(std::string &str, unsigned int i) {
   return str += (ptr + 1);
 }
 
-std::ofstream csv_output;
-
-CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data);
-
-int main(int argc, char **argv) {
-  CXIndex idx = clang_createIndex(0, 0);
-  CXTranslationUnit contents = clang_parseTranslationUnit(idx,
-    NULL, argv, argc, NULL, 0, CXTranslationUnit_None);
-
-  // We are going to output to file.sql
-  CXString ifile = clang_getTranslationUnitSpelling(contents);
-  std::string ofile(clang_getCString(ifile));
-  if (ofile.empty())
-    return 0; // Must be only object files!
-  ofile += ".csv";
-  csv_output.open(ofile.c_str());
-  clang_disposeString(ifile);
-
-  CXCursor mainCursor = clang_getTranslationUnitCursor(contents);
-  clang_visitChildren(mainCursor, mainVisitor, NULL);
-
-
-  // Clean everything up!
-  csv_output.close();
-  clang_disposeTranslationUnit(contents);
-  clang_disposeIndex(idx);
-  return 0;
-}
-
-bool wantLocation(CXSourceLocation loc) {
-  CXFile file;
-  clang_getSpellingLocation(loc, &file, NULL, NULL, NULL);
-  String locStr(clang_getFileName(file));
-  if ((const char *)locStr == NULL)
-    return false;
-  std::string cxxstr((const char*)locStr);
-  if (cxxstr[0] != '/') // Relative -> probably in srcdir
+class IndexConsumer : public ASTConsumer,
+    public RecursiveASTVisitor<IndexConsumer> {
+private:
+  SourceManager &sm;
+  std::ofstream out;
+public:
+  IndexConsumer(CompilerInstance &ci, const char *file) :
+    sm(ci.getSourceManager()), out(file) {}
+  
+  // Helpers for processing declarations
+  // Should we ignore this location?
+  bool interestingLocation(SourceLocation loc) {
+    std::string filename = sm.getBufferName(loc, NULL);
+    // Invalid locations and built-ins: not interesting at all
+    if (filename[0] == '<')
+      return false;
     return true;
-  return cxxstr.find("/src/dxr/") == 0;
-}
-
-std::string sanitizeString(std::string &str) {
-  std::string result(str);
-  size_t iter = -1;
-  while ((iter = result.find('"', iter + 1)) != std::string::npos) {
-    result.replace(iter, 1, "\"\"");
   }
-  return result;
-}
 
-std::string cursorLocation(CXCursor cursor) {
-  CXSourceLocation sourceLoc = clang_getCursorLocation(cursor);
-  CXFile file;
-  unsigned int line, column;
-  clang_getSpellingLocation(sourceLoc, &file, &line, &column, NULL);
-  String filestring(clang_getFileName(file));
-  std::string fstr;
-  if (filestring == NULL)
-    fstr += "(null)";
-  else {
-    char buf[PATH_MAX + 1];
-    fstr += realpath(filestring, buf);
+  std::string locationToString(SourceLocation loc) {
+    std::string buffer = sm.getBufferName(loc, NULL);
+    buffer += ":";
+    buffer += sm.getSpellingLineNumber(loc);
+    return buffer;
   }
-  std::string result = sanitizeString(fstr);
-  result += ":";
-  result += line;
-  //result += ":";
-  //result += column;
-  return result;
-}
 
-std::string getFQName(CXType type);
-std::string getFQName(CXCursor cursor);
-
-#ifdef BUILD_FQ_SELF
-static CXChildVisitResult fqbld(CXCursor child, CXCursor parent, void *param) {
-  std::string &build = *(std::string*)param;
-  CXCursorKind kind = clang_getCursorKind(child);
-  if (kind != CXCursor_ParmDecl)
-    return CXChildVisit_Break;
-  CXType type = clang_getCursorType(child);
-  build += getFQName(type);
-  build += ", ";
-  return CXChildVisit_Continue;
-}
-#endif
-
-std::string getFQName(CXCursor cursor) {
-  CXCursor parent = clang_getCursorSemanticParent(cursor);
-  if (clang_equalCursors(parent, clang_getNullCursor()))
-    return std::string();
-  std::string base = getFQName(parent);
-  if (!base.empty())
-    base += "::";
-#ifdef BUILD_FQ_SELF
-  String component(clang_getCursorSpelling(cursor));
-  if ((const char *)component != NULL)
-    base += component;
-  CXCursorKind kind = clang_getCursorKind(cursor);
-  if (kind == CXCursor_FunctionDecl || kind == CXCursor_CXXMethod ||
-      kind == CXCursor_Constructor || kind == CXCursor_Destructor ||
-      kind == CXCursor_ConversionFunction) {
-    // This is a method
-    base += "(";
-    clang_visitChildren(cursor, fqbld, &base);
-    if (*(base.end() - 1) == '(')
-      base += ")";
-    else
-      base.replace(base.end() - 2, base.end(), ")");
-  }
-#else
-  String component(clang_getCursorDisplayName(cursor));
-  if ((const char *)component != NULL)
-    base += component;
-#endif
-  return base;
-}
-
-#ifdef BUILD_FQ_SELF
-const char *primitiveTypes[] = {
-  "void", "bool", "char", "unsigned char", "char16_t", "char32_t",
-  "unsigned short", "unsigned int", "unsigned long", "unsigned long long",
-  "__uint128_t", "char", "signed char", "wchar_t", "int", "long", "long long",
-  "__int128_t", "float", "double", "long double", "std::nullptr_t", NULL, NULL,
-  NULL, NULL, NULL};
-
-std::string getFQName(CXType type) {
-  // Normalize types in case of namespace aliasing or other weird stuff
-  // Just don't undo typedefs
-  if (type.kind != CXType_Typedef)
-    type = clang_getCanonicalType(type);
-  std::string typeStr;
-  if (type.kind >= CXType_FirstBuiltin && type.kind <= CXType_LastBuiltin) {
-    if (clang_isConstQualifiedType(type))
-      typeStr += "const ";
-    if (clang_isVolatileQualifiedType(type))
-      typeStr += "volatile ";
-    typeStr += primitiveTypes[type.kind - CXType_FirstBuiltin];
-    return typeStr;
-  }
-  switch (type.kind) {
-    case CXType_Pointer:
-      typeStr += getFQName(clang_getPointeeType(type));
-      typeStr += "*";
-      if (clang_isConstQualifiedType(type))
-        typeStr += " const";
-      if (clang_isVolatileQualifiedType(type))
-        typeStr += " volatile";
-      break;
-    case CXType_LValueReference:
-      // references don't do cv-qualified
-      typeStr += getFQName(clang_getPointeeType(type));
-      typeStr += "&";
-      break;
-    case CXType_RValueReference:
-      // references don't do cv-qualified
-      typeStr += getFQName(clang_getPointeeType(type));
-      typeStr += "&&";
-      break;
-    case CXType_Record:
-    case CXType_Enum:
-    case CXType_Typedef:
-      if (clang_isConstQualifiedType(type))
-        typeStr += "const ";
-      if (clang_isVolatileQualifiedType(type))
-        typeStr += "volatile ";
-      return getFQName(clang_getTypeDeclaration(type));
-    default: {
-      String kindStr(clang_getTypeKindSpelling(type.kind));
-      printf("Kind of type: %s\n", (const char *)kindStr);
+  void printScope(Decl *d) {
+    Decl *ctxt = Decl::castFromDeclContext(d->getNonClosureContext());
+    if (NamedDecl::classof(ctxt)) {
+      NamedDecl *scope = static_cast<NamedDecl*>(ctxt);
+      out << ",scopename,\"" << scope->getQualifiedNameAsString() <<
+        "\",scopeloc,\"" << locationToString(scope->getLocation()) << "\"";
     }
   }
-  return typeStr;
-}
-#endif
 
-void outputCursorDefinition(CXCursor cursor) {
-  CXCursor definition = clang_getCursorDefinition(cursor);
-  if (clang_equalCursors(definition, clang_getNullCursor()))
-    return;
-  csv_output << "decldef,name,\"" << getFQName(cursor) << "\",declloc,\"" <<
-    cursorLocation(cursor) << "\",defloc,\"" << cursorLocation(definition) <<
-    "\"" << std::endl;
-}
+  void declDef(const NamedDecl *decl, const NamedDecl *def) {
+    if (!def)
+      return;
 
-void processCompoundType(CXCursor cursor, CXCursorKind kind) {
-  const char *kindName;
-  if (kind == CXCursor_StructDecl)
-    kindName = "struct";
-  else if (kind == CXCursor_UnionDecl)
-    kindName = "union";
-  else if (kind == CXCursor_ClassDecl)
-    kindName = "class";
-  else if (kind == CXCursor_EnumDecl)
-    kindName = "enum";
-  else if (kind == CXCursor_ClassTemplate)
-    kindName = "class"; // Curse you libclang
-  else
-    kindName = "___UNKNOWN___";
-  // XXX: Need to support namespaces
-  csv_output << "type,tname,\"" << getFQName(cursor) << "\",tloc,\"" <<
-    cursorLocation(cursor) << "\",tkind,\"" << kindName << "\"" << std::endl;
-  outputCursorDefinition(cursor);
-}
-
-void processFunctionType(CXCursor cursor, CXCursorKind kind) {
-  CXCursor container = clang_getCursorSemanticParent(cursor);
-  CXCursorKind parentKind = clang_getCursorKind(container);
-  bool isContained = (parentKind != CXCursor_Namespace &&
-      parentKind != CXCursor_TranslationUnit &&
-      parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
-  String shortname(clang_getCursorSpelling(cursor));
-  csv_output << "function,fname,\"" << shortname << "\",flongname,\"" <<
-    getFQName(cursor) << "\",floc,\"" << cursorLocation(cursor) << "\"";
-  if (isContained)
-    csv_output << ",scopename,\"" << getFQName(container) << "\",scopeloc,\"" <<
-      cursorLocation(container) << "\"";
-  csv_output << std::endl;
-  outputCursorDefinition(cursor);
-}
-
-void processVariableType(CXCursor cursor, CXCursorKind kind) {
-  // Is this an included method or not?
-  CXCursor container = clang_getCursorSemanticParent(cursor);
-  CXCursorKind parentKind = clang_getCursorKind(container);
-  bool isContained = (parentKind != CXCursor_Namespace &&
-      parentKind != CXCursor_TranslationUnit &&
-      parentKind != CXCursor_UnexposedDecl); // Anonymous namespace ?
-  String name(clang_getCursorSpelling(cursor));
-  csv_output << "variable,vname,\"" << name << "\",vloc,\"" <<
-    cursorLocation(cursor) << "\"";
-  if (isContained)
-    csv_output << ",scopename,\"" << getFQName(container) << "\",scopeloc,\"" <<
-      cursorLocation(container) << "\"";
-  csv_output << std::endl;
-}
-
-void processTypedef(CXCursor cursor) {
-  // Are we a straightup typedef?
-  CXType type = clang_getCanonicalType(clang_getCursorType(cursor));
-  bool simple = (type.kind == CXType_Record ||
-    (type.kind >= CXType_FirstBuiltin && type.kind <= CXType_LastBuiltin));
-  CXCursor typeRef = clang_getTypeDeclaration(type);
-  csv_output << "typedef,tname,\"" << getFQName(cursor) << "\",tloc,\"" <<
-    cursorLocation(cursor) << "\"";
-  if (simple)
-    csv_output << ",ttypedefname,\"" << getFQName(typeRef) <<
-      "\",ttypedefloc,\"" << cursorLocation(typeRef) << "\"";
-  csv_output << std::endl;
-}
-
-void processInheritance(CXCursor base, CXCursor clazz) {
-  csv_output << "impl,tbname,\"" << getFQName(base) << "\",tbloc,\"" <<
-    cursorLocation(base) << "\",tcname,\"" << getFQName(clazz) <<
-    "\",tcloc,\"" << cursorLocation(clazz) << "\"" << std::endl;
-}
-
-void processReference(CXCursor cursor, CXCursorKind kind) {
-  CXSourceLocation loc = clang_getCursorLocation(cursor);
-  CXFile f; unsigned int row, col;
-  clang_getSpellingLocation(loc, &f, &row, &col, NULL);
-  String fileStr(clang_getFileName(f));
-  csv_output << "ref,varname,\"" << getFQName(cursor) << "\",varloc,\"" <<
-    cursorLocation(cursor) << "\",reff,\"" << fileStr << "\",refl," <<
-    row << ",refc," << col << std::endl;
-}
-
-CXChildVisitResult mainVisitor(CXCursor cursor, CXCursor parent, void *data) {
-  CXCursorKind kind = clang_getCursorKind(cursor);
-
-  // Step 1: Do we care about this location?
-  CXSourceLocation sourceLoc = clang_getCursorLocation(cursor);
-  if (!wantLocation(sourceLoc))
-    return CXChildVisit_Continue;
-
-  // Dispatch the code to the main processors
-  if (!clang_isDeclaration(kind) && !clang_isExpression(kind) &&
-      kind != CXCursor_CXXBaseSpecifier)
-    return CXChildVisit_Continue;
-  switch (kind) {
-    case CXCursor_StructDecl:
-    case CXCursor_UnionDecl:
-    case CXCursor_ClassDecl:
-    case CXCursor_EnumDecl:
-    case CXCursor_ClassTemplate:
-      processCompoundType(cursor, kind);
-      return CXChildVisit_Recurse;
-    case CXCursor_FunctionDecl:
-    case CXCursor_CXXMethod:
-    case CXCursor_Constructor:
-    case CXCursor_Destructor:
-    case CXCursor_ConversionFunction:
-    case CXCursor_FunctionTemplate:
-      processFunctionType(cursor, kind);
-      return CXChildVisit_Recurse;
-    case CXCursor_FieldDecl:
-    case CXCursor_EnumConstantDecl:
-    case CXCursor_VarDecl:
-    case CXCursor_ParmDecl:
-      processVariableType(cursor, kind);
-      return CXChildVisit_Recurse;
-    case CXCursor_TypedefDecl:
-      processTypedef(cursor);
-      return CXChildVisit_Recurse;
-    case CXCursor_CXXBaseSpecifier:
-      processInheritance(cursor, parent);
-      return CXChildVisit_Recurse;
-    case CXCursor_UnexposedDecl:
-    case CXCursor_TemplateTypeParameter:
-    case CXCursor_Namespace:
-    case CXCursor_UsingDeclaration:
-    case CXCursor_UsingDirective:
-    case CXCursor_UnexposedExpr:
-      return CXChildVisit_Recurse;
-    case CXCursor_DeclRefExpr:
-    case CXCursor_CallExpr:
-      processReference(cursor, kind);
-      return CXChildVisit_Recurse;
-    default: {
-      String kindSpell(clang_getCursorKindSpelling(kind));
-      fprintf(stderr, "Unknown kind: %s at %s\n", (const char *)kindSpell,
-        cursorLocation(cursor).c_str());
-    }
+    out << "decldef,name,\"" << decl->getQualifiedNameAsString() <<
+      "\",declloc,\"" << locationToString(decl->getLocation()) <<
+      "\",defloc,\"" << locationToString(def->getLocation()) << "\"" <<
+      std::endl;
   }
-  return CXChildVisit_Recurse;
+
+  // All we need is to follow the final declaration.
+  virtual void HandleTranslationUnit(ASTContext &ctx) {
+    TraverseDecl(ctx.getTranslationUnitDecl());
+  }
+
+  // Tag declarations: class, struct, union, enum
+  bool VisitTagDecl(TagDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    // Information we need for types: kind, fqname, simple name, location
+    out << "type,tname,\"" << d->getQualifiedNameAsString() << "\",tloc,\"" <<
+      locationToString(d->getLocation()) << "\",tkind," << d->getKindName() <<
+      std::endl;
+
+    declDef(d, d->getDefinition());
+    // XXX: inheritance
+    return true;
+  }
+
+  bool VisitFunctionDecl(FunctionDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    out << "function,fname,\"" << d->getNameAsString() << "\",flongname,\"" <<
+      d->getQualifiedNameAsString() << "\",floc,\"" <<
+      locationToString(d->getLocation()) << "\"";
+    printScope(d);
+    out << std::endl;
+    const FunctionDecl *def;
+    if (d->isDefined(def))
+      declDef(d, def);
+    return true;
+  }
+
+  void visitVariableDecl(ValueDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return;
+    out << "variable,vname,\"" << d->getQualifiedNameAsString() <<
+      "\",vloc,\"" << locationToString(d->getLocation()) << "\"";
+    printScope(d);
+    out << std::endl;
+  }
+
+  bool VisitEnumConstandDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
+  bool VisitFieldDecl(FieldDecl *d) { visitVariableDecl(d); return true; }
+  bool VisitVarDecl(VarDecl *d) { visitVariableDecl(d); return true; }
+
+  bool VisitTypedefNameDecl(TypedefNameDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    out << "typedef,tname,\"" << d->getQualifiedNameAsString() <<
+      "\",tloc,\"" << locationToString(d->getLocation()) << "\"";
+    // XXX: printout the referent
+    out << std::endl;
+    return true;
+  }
+
+  bool VisitDecl(Decl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    if (!TagDecl::classof(d) && !NamespaceDecl::classof(d) &&
+        !FunctionDecl::classof(d) && !FieldDecl::classof(d) &&
+        !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
+        !EnumConstantDecl::classof(d))
+      printf("Unprocessed kind %s\n", d->getDeclKindName());
+    return true;
+  }
+};
+
+class DXRIndexAction : public PluginASTAction {
+protected:
+  ASTConsumer *CreateASTConsumer(CompilerInstance &CI, llvm::StringRef f) {
+    return new IndexConsumer(CI, (f.str() + ".csv").c_str());
+  }
+
+  bool ParseArgs(const CompilerInstance &CI,
+                 const std::vector<std::string>& args) {
+    for (unsigned i = 0, e = args.size(); i != e; ++i) {
+      llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
+
+      // Example error handling.
+      if (args[i] == "-an-error") {
+        Diagnostic &D = CI.getDiagnostics();
+        unsigned DiagID = D.getCustomDiagID(
+          Diagnostic::Error, "invalid argument '" + args[i] + "'");
+        D.Report(DiagID);
+        return false;
+      }
+    }
+    if (args.size() && args[0] == "help")
+      PrintHelp(llvm::errs());
+
+    return true;
+  }
+  void PrintHelp(llvm::raw_ostream& ros) {
+    ros << "Help for PrintFunctionNames plugin goes here\n";
+  }
+
+};
+
 }
+
+static FrontendPluginRegistry::Add<DXRIndexAction>
+X("dxr-index", "create the dxr index database");

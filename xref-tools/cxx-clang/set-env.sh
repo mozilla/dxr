@@ -1,4 +1,4 @@
 #!/bin/sh
 
-export CC="$DXRSRC/xref-tools/cxx-clang/cc-replace.sh $CC"
-export CXX="$DXRSRC/xref-tools/cxx-clang/cc-replace.sh $CXX"
+export CC="clang -Xclang -load -Xclang $DXRSRC/xref-tools/cxx-clang/libclang-index-plugin.so -Xclang -add-plugin -Xclang dxr-index"
+export CXX="clang++ -Xclang -load -Xclang $DXRSRC/xref-tools/cxx-clang/libclang-index-plugin.so -Xclang -add-plugin -Xclang dxr-index"

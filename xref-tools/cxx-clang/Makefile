@@ -1,13 +1,13 @@
-LLVM_INCLUDES := $(shell llvm-config --includedir)
 LLVM_LIBS := $(shell llvm-config --libdir)
-CXXFLAGS := -Wall -g -I$(LLVM_INCLUDES)
-LDFLAGS := -L$(LLVM_LIBS) -Wl,-rpath,$(LLVM_LIBS) -llibclang -lstdc++
+CXXFLAGS := -Wall -Werror -g -I$(shell llvm-config --includedir) \
+	-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fPIC -fno-exceptions -fno-rtti
+LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' -L$(LLVM_LIBS) -shared
 
 %.o: %.cpp
-	$(CXX) -c $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
-clang-dump-sql: dxr-index.o
-	$(CXX) $(LDFLAGS) -o $@ $^
+libclang-index-plugin.so: dxr-index.o
+	$(CXX) $(LDFLAGS) $^ -o $@ -shared
 
 clean:
-	rm -rf *.o clang-dump-sql
+	rm -rf *.o libclang-index-plugin.so
