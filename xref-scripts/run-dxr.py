@@ -52,7 +52,9 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
     try:
       htmlBuilder.toHTML()
     except Exception, e:
-      print e.message
+      print str(e)
+      import traceback
+      traceback.print_exc()
  
 
 

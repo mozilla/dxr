@@ -149,7 +149,16 @@ class HtmlBuilderSidebar(HtmlBuilderBase):
 class CppHtmlBuilder(HtmlBuilderSidebar):
     def __init__(self, dxrconfig, treeconfig, filepath, newroot):
         HtmlBuilderSidebar.__init__(self, dxrconfig, treeconfig, filepath, newroot)
-        
+        # Build up the temporary table for all declarations in the file
+        # XXX: this includes local variables which is ... sub optimal, I think.
+        # Maybe not?
+        self.conn.executescript('''BEGIN TRANSACTION;
+            CREATE TEMPORARY TABLE file_defs (name, scopeid, loc);
+            INSERT INTO file_defs SELECT tname, 0, tloc FROM types;
+            INSERT INTO file_defs SELECT flongname, scopeid, floc FROM functions;
+            INSERT INTO file_defs SELECT vname, scopeid, vloc FROM variables;
+            DELETE FROM file_defs WHERE loc NOT LIKE '%s:%%';
+            COMMIT;''' % (self.srcpath))
         self.conn.executescript('BEGIN TRANSACTION;' +
                                 'CREATE TEMPORARY TABLE types_all (tname);' + 
                                 'INSERT INTO types_all SELECT tname from types;' + # should ignore -- where not tignore = 1;' +
@@ -193,57 +202,44 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
 
     def writeSidebarBody(self, out):
         srcpath = self.srcpath
-        currentType = ''
+        currentScope = ''
         closeDiv = False
         sid = 0
 
         # We'll keep track of member loc ranges in the file
         self.globalScript.append('this.ranges = [];')
 
-        # TODO: this ordering (by mdecl) is wrong (e.g., if you're in a file of defs) if you want file order
-        #for mdecls in self.conn.execute('select mtname, mtloc, mname, mdecl, mdef, mshortname from members where mdef like "' + 
-        #                                srcpath + '%" or mdecl like "' + srcpath + '%" order by mtname, mdecl;').fetchall():
-        for mdecls in []:
+        for defs in self.conn.execute('SELECT name, sname, sloc, loc ' +
+                'FROM file_defs LEFT JOIN scopes USING (scopeid) ' +
+                'ORDER BY sname, loc').fetchall():
             sid += 1
-            if currentType != mdecls[0]:
+            # If we are in a class
+            if currentScope != defs[1] and defs[1] is not None:
                 if closeDiv:
                     out.write('</div><br />\n')
 
-                currentType = mdecls[0]
-                tname = mdecls[0]
+                currentScope = defs[1]
+                scopename = defs[1]
 
-                if mdecls[1] and mdecls[1].startswith(srcpath):
-                    p = mdecls[1].split(':')
-                    mtlocline = None
-                    # file scope statics have no type and use containing file for loc (no :line)
-                    if len(p) == 2:
-                        mtlocline = p[1]
-                    else:
-                        mtlocline = p[0]
+                # If the scope itself is defined here, make that link
+                if defs[2] and defs[2].startswith(srcpath + ':'):
+                    scopeline = defs[2].split(':')[1]
+                    scopename = '<a class="sidebarlink" title="%s" href="#l%s">%s</a>' % \
+                        (scopename, scopeline, cgi.escape(scopename))
 
-                    # TODO: ugly hack, fix this      
-                    if tname == '[File Scope Static]':
-                        tname = ''
-                    else:
-                        tname = '<a class="sidebarlink" title="%s" href="#l%s">%s</a>' % \
-                                (mdecls[0], mtlocline, cgi.escape(mdecls[0]))
-
-                out.write("<b>%s</b>\n" % tname)
+                out.write("<b>%s</b>\n" % scopename)
                 out.write('<div>\n')
                 closeDiv = True
 
-            # TODO: is there a better way to deal with showing decl and/or def?
-            # If decl + def are both in this file, or defn is, defn for text and decl for icon
-
+            # Output the link for this sidebar
             sidText = 'sid-' + `sid`
-            if ((mdecls[3] and mdecls[3].startswith(srcpath)) and (mdecls[4] and mdecls[4].startswith(srcpath))) or \
-               (mdecls[4] and mdecls[4].startswith(srcpath)):
-                out.write(self.buildSidebarLink(mdecls[3], mdecls[2], mdecls[4].split(':')[1], mdecls[5], sidText, True))
-                self.getMemberRange(mdecls[0] + '::' + mdecls[2], sidText, mdecls[3])
-            else:
-                if mdecls[4]:
-                    out.write(self.buildSidebarLink(mdecls[4], mdecls[2], mdecls[3].split(':')[1], mdecls[5], sidText, False))
-                    self.getMemberRange(mdecls[0] + '::' + mdecls[2], sidText, mdecls[4])
+            shortname = defs[0]
+            if defs[1] and shortname.startswith(defs[1] + '::'):
+                # If our scope has a name, remove that portion plus the ::
+                shortname = shortname[len(defs[1]) + 2:]
+            out.write(self.buildSidebarLink(defs[3], defs[0], \
+                defs[3].split(':')[1], shortname, sidText, False))
+            self.getMemberRange(defs[0], sidText, defs[3])
 
         if closeDiv:
             out.write('</div><br />\n')
