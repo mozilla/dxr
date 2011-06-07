@@ -156,7 +156,8 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
             CREATE TEMPORARY TABLE file_defs (name, scopeid, loc);
             INSERT INTO file_defs SELECT tname, 0, tloc FROM types;
             INSERT INTO file_defs SELECT flongname, scopeid, floc FROM functions;
-            INSERT INTO file_defs SELECT vname, scopeid, vloc FROM variables;
+            INSERT INTO file_defs SELECT vname, scopeid, vloc FROM variables
+                WHERE scopeid <= 0;
             DELETE FROM file_defs WHERE loc NOT LIKE '%s:%%';
             COMMIT;''' % (self.srcpath))
         self.conn.executescript('BEGIN TRANSACTION;' +
@@ -334,7 +335,11 @@ class CppHtmlBuilder(HtmlBuilderSidebar):
                                                           (token.name,self.srcpath+':'+line)).fetchone()[0] > 0:
                         prefix = '<a class="s" aria-haspopup="true" line="%s" pos=%s>' % (`line`, `token.start`)
 
-                    # XXX: variable references
+                    # XXX: too slow
+                    #if prefix == '' and self.conn.execute('select count(*) from refs where reff=? and refl=? and refc=?',
+                    #        (self.srcpath, line, token.start)).fetchone()[0] > 0:
+                    #    prefix = '<a class="s" aria-haspopup="true" line="%s" pos="%s">' % (`line`, `token.start`)
+
                     if prefix == '':      # we never found a match
                         # Don't bother making it a link
                         suffix = ''

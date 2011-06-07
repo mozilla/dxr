@@ -54,7 +54,7 @@ typedefs = {}
 functions = {}
 inheritance = set()
 variables = {}
-refs = []
+references = {}
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -77,7 +77,9 @@ def process_variable(varinfo):
   variables[varinfo['vname'], varinfo['vloc']] = varinfo
 
 def process_ref(info):
-  refs.append(info)
+  # Each reference is pretty much unique, but we might record it several times
+  # due to header files.
+  references[info['varname'], info['varloc'], info['reff'], info['refl'], info['refc']] = info
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -128,7 +130,7 @@ def produce_sql(sqlout):
   for v in variables:
     key = (v[0], v[1])
     if key not in varKeys:
-      varKeys[key] = nextIndex
+      varKeys[key] = variables[v]['varid'] = nextIndex
       nextIndex += 1
 
   # Scopes are now defined, this allows us to modify structures for sql prep
@@ -172,12 +174,20 @@ def produce_sql(sqlout):
     else:
       varinfo['scopeid'] = 0
   
-  varRefs = []
-  for ref in refs:
+  # dicts can't be stuffed in sets, and our key is very unwieldy. Since
+  # duplicates are most likely to occur only when we include the same header
+  # file multiple times, the same definition should be used each time, so they
+  # should be equivalent pre-canonicalization
+  refs = []
+  for rkey in references:
+    ref = references[rkey]
     canon = canonicalize_decl(ref.pop('varname'), ref.pop('varloc'))
     if canon in varKeys:
-      ref['varid'] = varKeys[canon]
-      varRefs.append(ref)
+      ref['refid'] = varKeys[canon]
+      refs.append(ref)
+    elif canon in funcKeys:
+      ref['refid'] = functions[canon]['scopeid']
+      refs.append(ref)
 
   # Finally, produce all sql statements
   def write_sql(table, obj):
@@ -196,8 +206,8 @@ def produce_sql(sqlout):
     write_sql("types", typedefs[t])
   for i in inheritsTree:
     write_sql("impl", i)
-  for r in varRefs:
-    write_sql("variable_refs", r)
+  for r in refs:
+    write_sql("refs", r)
 
 # Run this on the srcdir
 import sys, os

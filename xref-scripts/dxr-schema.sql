@@ -67,13 +67,14 @@ CREATE TABLE variables (
   UNIQUE(vname, vloc, vtype)
 );
 
-DROP TABLE IF EXISTS variable_refs;
-CREATE TABLE variable_refs (
-  varid INTEGER NOT NULL,      -- The ID of the variable being referenced
+DROP TABLE IF EXISTS refs;
+CREATE TABLE refs (
+  refid INTEGER NOT NULL,      -- The ID of the identifier being referenced
+                               -- This can be variables, functions, types, etc.
   reff  VARCHAR(256) NOT NULL, -- The file where the reference is located
   refl  INTEGER NOT NULL,      -- The line of the reference
   refc  INTEGER NOT NULL,      -- The column of the reference
-  PRIMARY KEY(varid, reff, refl, refc)
+  PRIMARY KEY(refid, reff, refl, refc)
 );
 
 -- Table macros: all macros defined in translation units
