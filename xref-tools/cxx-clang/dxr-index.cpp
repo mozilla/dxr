@@ -1,17 +1,3 @@
-//===- PrintFunctionNames.cpp ---------------------------------------------===//
-//
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// Example clang plugin which simply prints the names of all the top-level decls
-// in the input file.
-//
-//===----------------------------------------------------------------------===//
-
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -49,17 +35,26 @@ public:
   // Helpers for processing declarations
   // Should we ignore this location?
   bool interestingLocation(SourceLocation loc) {
-    std::string filename = sm.getBufferName(loc, NULL);
+    // If we don't have a valid location... it's probably not interesting.
+    if (loc.isInvalid())
+      return false;
+    // I'm not sure this is the best, since it's affected by #line and #file
+    // et al. On the other hand, if I just do spelling, I get really wrong
+    // values for locations in macros, especially when ## is involved.
+    std::string filename = sm.getPresumedLoc(loc).getFilename();
     // Invalid locations and built-ins: not interesting at all
     if (filename[0] == '<')
       return false;
-    return true;
+    if (filename[0] != '/') // Relative path, keep it
+      return true;
+    return filename.find("/src/dxr/") == 0;
   }
 
   std::string locationToString(SourceLocation loc) {
-    std::string buffer = sm.getBufferName(loc, NULL);
+    PresumedLoc fixed = sm.getPresumedLoc(loc);
+    std::string buffer = fixed.getFilename();
     buffer += ":";
-    buffer += sm.getSpellingLineNumber(loc);
+    buffer += fixed.getLine();
     return buffer;
   }
 
@@ -146,6 +141,32 @@ public:
         !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
         !EnumConstantDecl::classof(d))
       printf("Unprocessed kind %s\n", d->getDeclKindName());
+    return true;
+  }
+
+  // Expressions!
+  void printReference(NamedDecl *d, SourceLocation refLoc) {
+    if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
+      return;
+    std::string filename = sm.getBufferName(refLoc, NULL);
+    if (filename.empty())
+      // Basically, this means we're in a macro expansion and we have serious
+      // preprocessing stuff going on (i.e., ## and possibly #). Just bail for
+      // now.
+      return;
+    out << "ref,varname,\"" << d->getQualifiedNameAsString() <<
+      "\",varloc,\"" << locationToString(d->getLocation()) << "\",reff,\"" <<
+      sm.getBufferName(refLoc, NULL) << "\",refl," <<
+      sm.getSpellingLineNumber(refLoc) << ",refc," <<
+      sm.getSpellingColumnNumber(refLoc) << std::endl;
+  }
+  bool VisitMemberExpr(MemberExpr *e) {
+    printReference(e->getMemberDecl(), e->getExprLoc());
+    return true;
+  }
+  bool VisitDeclRefExpr(DeclRefExpr *e) {
+    printReference(e->getDecl(), e->hasQualifier() ?
+      e->getQualifierLoc().getBeginLoc() : e->getLocation());
     return true;
   }
 };

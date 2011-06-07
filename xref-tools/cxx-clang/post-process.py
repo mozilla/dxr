@@ -159,7 +159,7 @@ def produce_sql(sqlout):
   for fkey in funcKeys:
     funcinfo = functions[fkey]
     if 'scopename' in funcinfo:
-      funcinfo['scopeid'] = scopes[canonize_decl(funcinfo.pop('scopename'),
+      funcinfo['scopeid'] = scopes[canonicalize_decl(funcinfo.pop('scopename'),
         funcinfo.pop('scopeloc'))]
     else:
       funcinfo['scopeid'] = 0
@@ -197,7 +197,7 @@ def produce_sql(sqlout):
   for i in inheritsTree:
     write_sql("impl", i)
   for r in varRefs:
-    write_sql("variable_refs", varRefs[r])
+    write_sql("variable_refs", r)
 
 # Run this on the srcdir
 import sys, os
