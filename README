@@ -44,11 +44,8 @@ variables exported.
 6) Compile and build your program. It is recommended that you use a separate
 build directory from your source directory.
 
-6a) Run $DXRSRC/post-process.py /path/to/srcdir > master.sql from your build
-directory. This is a temporary step while I work with the build system.
-
 7) Run the cross-reference generator:
-dxrsrc/xref-scripts/run-dxr.py -f /path/to/web/dir/dxr.config
+dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
 8) Download and install (or at least build somewhere the web app can access) Glimpse:
 
@@ -61,7 +58,7 @@ Running:
 
 You can build your source, create the xref database, and create the static HTML content as follows:
 
-dxrsrc/xref-scripts/run-dxr.py -f /path/to/web/dir/dxr.config
+dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
 This will post-process the data into dxr.sqlite.  It will also build the static
 html and create a glimpse full-text search index.  All these files will be

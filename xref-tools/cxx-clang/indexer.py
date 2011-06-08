@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import csv
+import os
+import sys
 
 class UnionFind:
   class _Obj:
@@ -102,7 +104,7 @@ def collect_files(arg, dirname, fnames):
     if not name.endswith(arg): continue
     files.append(os.path.join(dirname, name))
 
-def produce_sql(sqlout):
+def make_ball():
   def canonicalize_decl(name, loc):
     return (name, decl_master.get((name, loc), loc))
 
@@ -189,30 +191,37 @@ def produce_sql(sqlout):
       ref['refid'] = functions[canon]['scopeid']
       refs.append(ref)
 
+  # Ball it up for passing on
+  ball = {}
+  ball["scopes"] = [{"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}
+    for s in scopes]
+  ball["functions"] = [functions[f] for f in funcKeys]
+  ball["variables"] = [variables[v] for v in varKeys]
+  ball["types"] = [types[t] for t in typeKeys]
+  ball["types"] += [typedefs[t] for t in typedefs]
+  ball["impl"] = inheritsTree
+  ball["refs"] = refs
+  return ball
+
+def post_process(srcdir, objdir):
+  os.path.walk(srcdir, collect_files, ".csv")
+  for f in files:
+    load_indexer_output(f)
+  return make_ball()
+
+def sqlify(ball):
+  out = [];
   # Finally, produce all sql statements
-  def write_sql(table, obj):
+  def write_sql(table, obj, out):
     keys, vals = zip(*obj.iteritems())
-    sqlout.write("INSERT INTO " + table + " (" + ','.join(keys) + ") VALUES" +
-      " (" + ",".join([repr(v) for v in vals]) + ");\n");
-  for s in scopes:
-    write_sql("scopes", {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]})
-  for f in funcKeys:
-    write_sql("functions", functions[f])
-  for v in varKeys:
-    write_sql("variables", variables[v])
-  for t in typeKeys:
-    write_sql("types", types[t])
-  for t in typedefs:
-    write_sql("types", typedefs[t])
-  for i in inheritsTree:
-    write_sql("impl", i)
-  for r in refs:
-    write_sql("refs", r)
+    out.append("INSERT INTO " + table + " (" + ','.join(keys) + ") VALUES" + 
+      " (" + ",".join([repr(v) for v in vals]) + ");")
+  for table in ball:
+    for row in ball[table]:
+      write_sql(table, row, out)
+  return '\n'.join(out)
 
-# Run this on the srcdir
-import sys, os
+__all__ = ['post_process', 'sqlify']
 
-os.path.walk(sys.argv[1], collect_files, ".csv")
-for f in files:
-  load_indexer_output(f)
-produce_sql(sys.stdout)
+if __name__ == '__main__':
+  sys.stdout.write(sqlify(post_process(sys.argv[1], sys.argv[1])))
