@@ -57,7 +57,7 @@ TREENAME=$8
 if [ -d ${WWWDIR}/${TREENAME}-current ]
 then
     # See if last build/index was successful
-    if [ -e ${WWWDIR}/${TREENAME}-current/.dxr_xref/.success ]
+    if [ ! -e ${WWWDIR}/${TREENAME}-current/.dxr_xref/.success ]
     then 
       # Leave the existing -old index in place and try again (failed build)
       rm -fr ${WWWDIR}/${TREENAME}-current	
@@ -76,18 +76,6 @@ mkdir ${WWWDIR}/${TREENAME}-current
 if [ ! -d ${DBROOT} ]; then mkdir ${DBROOT}; fi
 
 cd ${DBROOT}
-
-# fix-up NSS, since it will copy (and lose links) from dist/include/public/nss to dist/include/nss
-echo "Fix NSS symlinks..."
-# Figure out where dist is (assume mozilla-central objdir/dist)
-DISTPARENT=${OBJDIR}
-if [ -d ${OBJDIR}/mozilla/dist ]
-then
-    # comm-central
-    DISTPARENT=${OBJDIR}/mozilla
-fi
-rm -f ${DISTPARENT}/dist/include/nss/*.h
-ln -s ${DISTPARENT}/dist/public/nss/*.h ${DISTPARENT}/dist/include/nss
 
 # merge and de-dupe sql scripts, putting inserts first, feed into sqlite
 echo "Post-process all C++ .sql and create db..."
@@ -118,49 +106,6 @@ rm ${DBROOT}/cpp-update.sql
 # XXX: leaving this file for debugging
 #rm ${DBROOT}/all-cpp.sql
 echo "DB built."
-
-echo "Process IDL .xref info into SQL..."
-find ${OBJDIR} -name '*.xref' -exec cat {} \; | ${DXRSCRIPTS}/process_xref.pl ${SOURCEROOT} > ${DBROOT}/idl.sql
-
-echo "Insert idl sql into db, then update existing type info with idl data..."
-echo 'PRAGMA count_changes=off; PRAGMA synchronous=off; PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; PRAGMA cache_size=4000; BEGIN TRANSACTION;' > ${DBROOT}/all-idl.sql
-cat ${DBROOT}/idl.sql >> ${DBROOT}/all-idl.sql
-echo 'COMMIT; PRAGMA locking_mode=NORMAL; ' >> ${DBROOT}/all-idl.sql
-
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-idl.sql > ${DBROOT}/error-idl.log 2>&1
-# XXX: leaving this file for debugging
-#rm ${DBROOT}/all-idl.sql
-
-# create SQL for all .macros files 
-echo "Process .macros info into SQL..."
-find ${OBJDIR} -name '*.macros' -exec cat {} \; > ${DBROOT}/macros
-awk '!($0 in a) {a[$0];print}' ${DBROOT}/macros > ${DBROOT}/macros-uniq
-rm ${DBROOT}/macros
-cat ${DBROOT}/macros-uniq | ${DXRSCRIPTS}/process_macros.pl > ${DBROOT}/macros-uniq-processed
-rm ${DBROOT}/macros-uniq
-echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; PRAGMA coung_changes=off; BEGIN TRANSACTION;' > ${DBROOT}/all-macros.sql
-cat ${DBROOT}/macros-uniq-processed >> ${DBROOT}/all-macros.sql
-echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-macros.sql
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-macros.sql > ${DBROOT}/error-macros.log 2>&1
-rm ${DBROOT}/macros-uniq-processed
-# XXX: leaving this file for debugging
-#rm ${DBROOT}/all-macros.sql
-
-# Extract gcc warnings
-echo "Process GCC warnings into SQL..."
-echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; PRAGMA coung_changes=off; BEGIN TRANSACTION;' > ${DBROOT}/warnings.sql
-python ${DXRSCRIPTS}/warning-parser.py ${SOURCEROOT} ${OBJDIR} ${DBROOT}/build-log.txt >> ${DBROOT}/warnings.sql
-echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/warnings.sql
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/warnings.sql > ${DBROOT}/warnings-error.log 2>&1
-
-# create callgraph
-echo "Process callgraph .sql..."
-(cat ${DXRSCRIPTS}/callgraph/schema.sql
-echo 'BEGIN TRANSACTION;'
-find ${OBJDIR} -name '*.cg.sql' | xargs cat
-cat ${DXRSCRIPTS}/callgraph/indices.sql
-echo 'COMMIT;') > ${DBROOT}/callgraph.sql
-sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/callgraph.sql > ${DBROOT}/callgraph.log 2>&1
 
 # Defrag db
 sqlite3 ${DBNAME} "VACUUM;"

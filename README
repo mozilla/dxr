@@ -4,8 +4,20 @@ DXR
 Introduction:
 -------------
 
-DXR is a source code cross-reference tool that uses static analysis data collected by Dehydra (https://developer.mozilla.org/en/Dehydra).  DXR was created in order to build on tools like LXR and MXR.  DXR only runs on Linux for the moment, and is heavily customized for the Mozilla project's source code.
+DXR is a source code cross-reference tool that uses static analysis data
+collected by instrumented compilers.  DXR was created in order to build on
+tools like LXR and MXR.  DXR only runs on Linux for the moment.
 
+Prerequisites:
+--------------
+
+You need a copy of python, python-sqlite, and sqlite3. If you want to use the
+output HTML, you will need a web-server of some kind. Individual tools have
+further requirements:
+
+cxx-clang: A copy of clang.
+
+Furthermore, glimpse is needed to do fulltext indexing.
 
 Setup:
 ------
@@ -13,39 +25,27 @@ Setup:
 DXR is primarily a database of source code information.  You need a lot of
 space to do this, and a fast computer helps a lot.
 
-1) In order to build the database you need a working Mozilla and Dehydra build environemnt.  If you have this already, take note of the paths for your g++ and dehydra plugin, so you can alter paths in the scripts.  If you do not have one, you can follow the instructions here:
-
-* Mozilla Build Environment for Linux (https://developer.mozilla.org/en/Linux_Build_Prerequisites)
-* Dehydra Build Environment for Linux (https://developer.mozilla.org/En/Dehydra/Installing_Dehydra)
-
-Note that Dehydra is only supported for gcc-4.5; any earlier version of gcc uses
-a different plugin architecture, which is not supported.
-
-If you are using a Fedora-like Linux, you can also do the following to have an environment setup locally:
-
-./build-tools.sh
-
-NOTE: this will not alter your system in any way, or replace any default tools.  It builds everything in a ./tools directory.  See build-tools.sh for necessary build dependencies.
-
-You also need to make sure that you have python and python-sqlite installed on
-your computer, as well as sqlite3
-
-2) DXR uses config info from an INI style config file. Alter the variables in
+1) DXR uses config info from an INI style config file. Alter the variables in
 dxrsrc/www/dxr.config for your environment.
 
-3) For the moment you also need to alter dxrsrc/xref-scripts/dxr.js (i.e., the dehydra script) to point to your srcdir:
+2) For the moment, you need to alter dxrsrc/xref-tools/cxx-clang/dxr-index.cpp
+for your source directory:
+return filename.find("/src/dxr/") == 0;
 
-// NOTE the trailing slash
-var srcroot = "/home/dave/dxr/mozilla-central/";
+3) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
 
-4) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
-
-5) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
+4) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
 to copy (or symlink) the xref-scripts directory.
 
-6) Configure and build your program. Note that you need to have:
-CXXFLAGS="-fplugin=/path/to/gcc_dehyra.so -fplugin-arg-gcc_dehydra-script=/path/to/dxrsrc/xref-scripts/dxr.js"
-CFLAGS="-fplugin=/path/to/gcc_dehyra.so -fplugin-arg-gcc_dehydra-script=/path/to/dxrsrc/xref-scripts/dxr.js"
+5) Run . dxrsrc/setup-env.sh to set up your environment. The single `.' at the
+beginning is very important; otherwise, your shell will not have the necessary
+variables exported.
+
+6) Compile and build your program. It is recommended that you use a separate
+build directory from your source directory.
+
+6a) Run $DXRSRC/post-process.py /path/to/srcdir > master.sql from your build
+directory. This is a temporary step while I work with the build system.
 
 7) Run the cross-reference generator:
 dxrsrc/xref-scripts/run-dxr.py -f /path/to/web/dir/dxr.config
@@ -70,7 +70,7 @@ created in the wwwdir using the name of the tree you provided in dxr.config
 
 /var/www/html/dxr (or whereever your wwwdir is located)
 		 /index.html (auto-generated during run-dxr.py)
-                 /mozilla-central (symnlink to mozilla-central-current)
+                 /mozilla-central (symlink to mozilla-central-current)
                  /mozilla-central-current
 		                         /.dxr_xref
                                                    /mozilla-central.sqlite
