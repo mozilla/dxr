@@ -33,6 +33,7 @@ Options:
   -c, --create  [xref|html]               Create xref or html and glimpse index (default is all)."""
 
 plugins = None
+big_ball = None
 def load_plugins():
   global plugins
   if plugins is None:
@@ -44,6 +45,7 @@ def load_plugins():
   return plugins
 
 def post_process(dxrconfig, treeconfig):
+  global big_ball
   big_ball = {}
   srcdir = treeconfig['sourcedir']
   objdir = treeconfig['objdir']
@@ -71,7 +73,7 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
     return None
 
-def async_toHTML(dxrconfig, treeconfig, srcpath, newroot, big_ball):
+def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
   """Wrapper function to allow doing this async without an instance method."""
   htmlBuilder = None
   if os.path.splitext(srcpath)[1] in ['.h', '.c', '.cpp', '.m', '.mm']:
@@ -155,7 +157,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml):
           continue
 
         shutil.copyfile(srcpath, cpypath)
-        p.apply_async(async_toHTML, [dxrconfig, treeconfig, srcpath, newroot, big_ball])
+        p.apply_async(async_toHTML, [dxrconfig, treeconfig, srcpath, newroot])
 
 
     p.close()
