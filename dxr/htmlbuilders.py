@@ -10,8 +10,16 @@ from tokenizers import Token, BaseTokenizer, CppTokenizer, IdlTokenizer
 
 class HtmlBuilderBase:
   def collectSidebar(self):
-    """ Returns a list of (name, line, title, img, container) for items that
+    """Returns a list of (name, line, title, img, container) for items that
     belong in the sidebar."""
+    return []
+
+  def getSyntaxRegions(self):
+    """Returns a list of (start, end+1, kind) tokens for syntax highlighting."""
+    return []
+
+  def getLinkRegions(self):
+    """Returns a list of (start, end+1, {attr:val}) tokens for links."""
     return []
 
   def _init_db(self, database):
@@ -175,55 +183,19 @@ class CppHtmlBuilder(HtmlBuilderBase):
     return lst
 
   def writeMainBody(self, out):
-    offset = 0
-    line_start = 0
-    line = self.source[:self.source.find('\n')]
-    line_num = 1
-
     syntax_regions = []
     links = []
+    lines = []
+    line_num = 1
     for token in self.tokenizer.getTokens():
       if token.token_type == self.tokenizer.NEWLINE:
         # See if there are any warnings for this line
-        warningString = ''
-        for warnings in self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
-                          (self.srcpath, line_num)).fetchall():
-          warningString += warnings[0] + '\n'
-
-        # Implode the line by chararacters
-        chars = [cgi.escape(x) for x in line]
-        for syn in syntax_regions:
-          chars[syn[0] - line_start] = '<span class="%s">%s' % (syn[2],
-              chars[syn[0] - line_start])
-          chars[syn[1] - line_start - 1] += '</span>'
-        for link in links:
-          chars[link[0] - line_start] = '<a aria-haspopup="true" %s>%s' % (
-            [attr + '="' + str(link[2][attr]) + '"' for attr in link[2]],
-            chars[link[0] - line_start])
-          chars[link[1] - line_start - 1] += '</a>'
-        line = ''.join(chars)
-
+        warningString = '\n'.join([warnings[0] for warnings in
+          self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
+                          (self.srcpath, line_num)).fetchall()])
         if len(warningString) > 0:
-          warningString = warningString[0:-1] # remove extra \n
-          out.write('<div class="lnw" title="%s" id="l%s"><a class="ln" href="#l%s">%s</a>%s</div>' %
-                (warningString, `line_num`, `line_num`, `line_num`, line))
-        else:
-          out.write('<div id="l%s"><a class="ln" href="#l%s">%s</a>%s</div>' % 
-                (`line_num`, `line_num`, `line_num`, line))
-
+          lines.append((line_num, {'class': "lnw", 'title': warningString}))
         line_num += 1
-        line_start = token.end
-        offset = 0
-
-        # Clear out the marks for the next region
-        syntax_regions = []
-        links = []
-
-        # Get next line
-        eol = self.source.find('\n', line_start)
-        if eol > -1:
-          line = self.source[line_start:eol]
-
       elif token.token_type == self.tokenizer.KEYWORD:
         syntax_regions.append((token.start, token.end, 'k'))
       elif token.token_type == self.tokenizer.STRING:
@@ -234,9 +206,6 @@ class CppHtmlBuilder(HtmlBuilderBase):
         syntax_regions.append((token.start, token.end, 'p'))
       else:
         if token.token_type == self.tokenizer.NAME:
-          # Could be a macro, type, or statement
-          prefix = ''
-          suffix = '</a>'
           link = None
 
           # Figure out which function we're in, and get the start/end line nums
@@ -250,8 +219,8 @@ class CppHtmlBuilder(HtmlBuilderBase):
                               (token.name,)).fetchone()[0] > 0:
             link = {'class': 'func', 'pos': token.start}
           elif self.conn.execute('select count(*) from variables where vname=? and vloc=?',
-                              (token.name,self.srcpath+':'+line)).fetchone()[0] > 0:
-            link = {'class': 's', 'line': line, 'pos': token.start}
+                              (token.name,self.srcpath+':'+str(line_num))).fetchone()[0] > 0:
+            link = {'class': 's', 'line': line_num, 'pos': token.start}
           # XXX: too slow
           #elif self.conn.execute('select count(*) from refs where reff=? and refl=? and refc=?',
           #    (self.srcpath, line, token.start)).fetchone()[0] > 0:
@@ -259,6 +228,45 @@ class CppHtmlBuilder(HtmlBuilderBase):
 
           if link is not None:
             links.append((token.start, token.end, link))
+
+    # Split up the entire source, and annotate each char invidually
+    # the hack is that we need the first and end to work better
+    # The last "char" is the place holder for the first line entry
+    line_markers = [-1]
+    closure = ['', 0]
+    def handle_char(x):
+      if x == '\n':
+        line_markers.append(closure[1])
+      elif closure[0] == '\r':
+        line_markers.append(closure[1] - 1)
+      closure[0] = x
+      closure[1] += 1
+      if x == '\r' or x == '\n': return ''
+      return cgi.escape(x)
+    chars = [handle_char(x) for x in self.source]
+    chars.append('')
+
+    for syn in syntax_regions:
+      chars[syn[0]] = '<span class="%s">%s' % (syn[2], chars[syn[0]])
+      chars[syn[1] - 1] += '</span>'
+    for link in links:
+      chars[link[0]] = '<a aria-haspopup="true" %s>%s' % (
+        ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
+        chars[link[0]])
+      chars[link[1] - 1] += '</a>'
+
+    # Line attributes
+    for l in lines:
+      chars[line_markers[l[0] - 1]] = \
+        ' '.join([attr + '="' + str(l[1][attr]) + '"' for attr in l[1]])
+    line_num = 2 # First line is special
+    for ind in line_markers[1:]:
+      chars[ind] = '</div><div %s id="l%d"><a class="ln" href="l%d">%d</a>' % \
+        (chars[ind], line_num, line_num, line_num)
+      line_num += 1
+    out.write('<div %s id=";1"><a class="ln" href="l1">1</a>' % chars[-1])
+    chars[-1] = '</div>'
+    out.write(''.join(chars))
 
 class IdlHtmlBuilder(HtmlBuilderBase):
   def __init__(self, dxrconfig, treeconfig, filepath, newroot):
