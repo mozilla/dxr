@@ -22,6 +22,9 @@ class HtmlBuilderBase:
     """Returns a list of (start, end+1, {attr:val}) tokens for links."""
     return []
 
+  def getLineAnnotations(self):
+    return []
+
   def _init_db(self, database):
     self.conn = sqlite3.connect(database)
     self.conn.execute('PRAGMA temp_store = MEMORY;')
@@ -108,33 +111,53 @@ class HtmlBuilderBase:
         out.write('</div><br />\n')
 
   def writeMainContent(self, out):
-    out.write(self.html_main_header + '\n')
+    out.write(self.html_main_header)
     self.writeMainBody(out)
-    out.write(self.html_main_footer + '\n')
+    out.write(self.html_main_footer)
 
   def writeMainBody(self, out):
-    # offset is how much token.start/token.end are off due to extra html being added
-    offset = 0
-    line_start = 0
-    line = self.source[:self.source.find('\n')]
-    line_num = 1
+    syntax_regions = self.getSyntaxRegions()
+    links = self.getLinkRegions()
+    lines = self.getLineAnnotations()
 
-    for token in self.tokenizer.getTokens():
-      if token.token_type == self.tokenizer.NEWLINE:
-        out.write('<div id="l%s"><a href="#l%s" class="ln">%s</a>%s</div>' % 
-              (`line_num`, `line_num`, `line_num`, line))
+    # Split up the entire source, and annotate each char invidually
+    # the hack is that we need the first and end to work better
+    # The last "char" is the place holder for the first line entry
+    line_markers = [-1]
+    closure = ['', 0]
+    def handle_char(x):
+      if x == '\n':
+        line_markers.append(closure[1])
+      elif closure[0] == '\r':
+        line_markers.append(closure[1] - 1)
+      closure[0] = x
+      closure[1] += 1
+      if x == '\r' or x == '\n': return ''
+      return cgi.escape(x)
+    chars = [handle_char(x) for x in self.source]
+    chars.append('')
 
-        line_num += 1
-        line_start = token.end
-        offset = 0
+    for syn in syntax_regions:
+      chars[syn[0]] = '<span class="%s">%s' % (syn[2], chars[syn[0]])
+      chars[syn[1] - 1] += '</span>'
+    for link in links:
+      chars[link[0]] = '<a aria-haspopup="true" %s>%s' % (
+        ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
+        chars[link[0]])
+      chars[link[1] - 1] += '</a>'
 
-        # Get next line
-        eol = self.source.find('\n', line_start)
-        if eol > -1:
-          line = self.source[line_start:eol]
-
-      else:
-        offset, line = self.escapeString(token, line, line_start, offset)
+    # Line attributes
+    for l in lines:
+      chars[line_markers[l[0] - 1]] = \
+        ' '.join([attr + '="' + str(l[1][attr]) + '"' for attr in l[1]])
+    line_num = 2 # First line is special
+    for ind in line_markers[1:]:
+      chars[ind] = '</div><div %s id="l%d"><a class="ln" href="l%d">%d</a>' % \
+        (chars[ind], line_num, line_num, line_num)
+      line_num += 1
+    out.write('<div %s id="l1"><a class="ln" href="l1">1</a>' % chars[-1])
+    chars[-1] = '</div>'
+    out.write(''.join(chars))
 
   def writeGlobalScript(self, out):
     """ Write any extra JS for the page. Lines of script are stored in self.globalScript."""
@@ -165,10 +188,12 @@ class CppHtmlBuilder(HtmlBuilderBase):
                 'INSERT INTO types_all SELECT ttemplate from types;' + # where not tignore = 1;' +
                 'CREATE INDEX idx_types_all ON types_all (tname);' +
                 'COMMIT;')
+    self.syntax_regions = None
+    self.lines = None
+    self.links = None
 
   def _createTokenizer(self):
     return CppTokenizer(self.source)
-
 
   def collectSidebar(self):
     lst = []
@@ -182,14 +207,13 @@ class CppHtmlBuilder(HtmlBuilderBase):
       lst.append(e)
     return lst
 
-  def writeMainBody(self, out):
+  def _getFromTokenizer(self):
     syntax_regions = []
     links = []
     lines = []
     line_num = 1
     for token in self.tokenizer.getTokens():
       if token.token_type == self.tokenizer.NEWLINE:
-        # See if there are any warnings for this line
         warningString = '\n'.join([warnings[0] for warnings in
           self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
                           (self.srcpath, line_num)).fetchall()])
@@ -228,45 +252,25 @@ class CppHtmlBuilder(HtmlBuilderBase):
 
           if link is not None:
             links.append((token.start, token.end, link))
+    self.syntax_regions = syntax_regions
+    self.links = links
+    self.lines = lines
 
-    # Split up the entire source, and annotate each char invidually
-    # the hack is that we need the first and end to work better
-    # The last "char" is the place holder for the first line entry
-    line_markers = [-1]
-    closure = ['', 0]
-    def handle_char(x):
-      if x == '\n':
-        line_markers.append(closure[1])
-      elif closure[0] == '\r':
-        line_markers.append(closure[1] - 1)
-      closure[0] = x
-      closure[1] += 1
-      if x == '\r' or x == '\n': return ''
-      return cgi.escape(x)
-    chars = [handle_char(x) for x in self.source]
-    chars.append('')
+  def getSyntaxRegions(self):
+    if self.syntax_regions is None:
+      self._getFromTokenizer()
+    return self.syntax_regions
 
-    for syn in syntax_regions:
-      chars[syn[0]] = '<span class="%s">%s' % (syn[2], chars[syn[0]])
-      chars[syn[1] - 1] += '</span>'
-    for link in links:
-      chars[link[0]] = '<a aria-haspopup="true" %s>%s' % (
-        ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
-        chars[link[0]])
-      chars[link[1] - 1] += '</a>'
+  def getLinkRegions(self):
+    if self.links is None:
+      self._getFromTokenizer()
+    return self.links
 
-    # Line attributes
-    for l in lines:
-      chars[line_markers[l[0] - 1]] = \
-        ' '.join([attr + '="' + str(l[1][attr]) + '"' for attr in l[1]])
-    line_num = 2 # First line is special
-    for ind in line_markers[1:]:
-      chars[ind] = '</div><div %s id="l%d"><a class="ln" href="l%d">%d</a>' % \
-        (chars[ind], line_num, line_num, line_num)
-      line_num += 1
-    out.write('<div %s id=";1"><a class="ln" href="l1">1</a>' % chars[-1])
-    chars[-1] = '</div>'
-    out.write(''.join(chars))
+  def getLineAnnotations(self):
+    if self.lines is None:
+      self._getFromTokenizer()
+    return self.lines
+
 
 class IdlHtmlBuilder(HtmlBuilderBase):
   def __init__(self, dxrconfig, treeconfig, filepath, newroot):
