@@ -65,15 +65,12 @@ class HtmlBuilderBase:
 
   def toHTML(self):
     out = open(os.path.join(self.newroot, self.filename + '.html'), 'w')
-    self.writeHeader(out)
+    out.write(self.html_header + '\n')
     self.writeSidebar(out)
     self.writeMainContent(out)
     self.writeGlobalScript(out)
-    self.writeFooter(out)
+    out.write(self.html_footer + '\n')
     out.close()
-
-  def writeHeader(self, out):
-    out.write(self.html_header + '\n')
 
   def writeSidebar(self, out):
     sidebarElements = self.collectSidebar()
@@ -103,12 +100,9 @@ class HtmlBuilderBase:
         out.write('</div><br />\n')
 
   def writeMainContent(self, out):
-    self.writeMainHeader(out)
-    self.writeMainBody(out)
-    self.writeMainFooter(out)
-
-  def writeMainHeader(self, out):
     out.write(self.html_main_header + '\n')
+    self.writeMainBody(out)
+    out.write(self.html_main_footer + '\n')
 
   def writeMainBody(self, out):
     # offset is how much token.start/token.end are off due to extra html being added
@@ -134,18 +128,12 @@ class HtmlBuilderBase:
       else:
         offset, line = self.escapeString(token, line, line_start, offset)
 
-  def writeMainFooter(self, out):
-    out.write(self.html_main_footer + '\n')
-
   def writeGlobalScript(self, out):
     """ Write any extra JS for the page. Lines of script are stored in self.globalScript."""
     # Add app config info
     out.write('<script type="text/javascript">')
     out.write('\n'.join(self.globalScript))
     out.write('</script>')
-
-  def writeFooter(self, out):
-    out.write(self.html_footer + '\n')
 
 
 class CppHtmlBuilder(HtmlBuilderBase):
@@ -192,6 +180,8 @@ class CppHtmlBuilder(HtmlBuilderBase):
     line = self.source[:self.source.find('\n')]
     line_num = 1
 
+    syntax_regions = []
+    links = []
     for token in self.tokenizer.getTokens():
       if token.token_type == self.tokenizer.NEWLINE:
         # See if there are any warnings for this line
@@ -199,6 +189,19 @@ class CppHtmlBuilder(HtmlBuilderBase):
         for warnings in self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
                           (self.srcpath, line_num)).fetchall():
           warningString += warnings[0] + '\n'
+
+        # Implode the line by chararacters
+        chars = [cgi.escape(x) for x in line]
+        for syn in syntax_regions:
+          chars[syn[0] - line_start] = '<span class="%s">%s' % (syn[2],
+              chars[syn[0] - line_start])
+          chars[syn[1] - line_start - 1] += '</span>'
+        for link in links:
+          chars[link[0] - line_start] = '<a aria-haspopup="true" %s>%s' % (
+            [attr + '="' + str(link[2][attr]) + '"' for attr in link[2]],
+            chars[link[0] - line_start])
+          chars[link[1] - line_start - 1] += '</a>'
+        line = ''.join(chars)
 
         if len(warningString) > 0:
           warningString = warningString[0:-1] # remove extra \n
@@ -212,64 +215,50 @@ class CppHtmlBuilder(HtmlBuilderBase):
         line_start = token.end
         offset = 0
 
+        # Clear out the marks for the next region
+        syntax_regions = []
+        links = []
+
         # Get next line
         eol = self.source.find('\n', line_start)
         if eol > -1:
           line = self.source[line_start:eol]
 
+      elif token.token_type == self.tokenizer.KEYWORD:
+        syntax_regions.append((token.start, token.end, 'k'))
+      elif token.token_type == self.tokenizer.STRING:
+        syntax_regions.append((token.start, token.end, 'str'))
+      elif token.token_type == self.tokenizer.COMMENT:
+        syntax_regions.append((token.start, token.end, 'c'))
+      elif token.token_type == self.tokenizer.PREPROCESSOR:
+        syntax_regions.append((token.start, token.end, 'p'))
       else:
-        if token.token_type == self.tokenizer.KEYWORD or token.token_type == self.tokenizer.STRING \
-            or token.token_type == self.tokenizer.COMMENT:
-          prefix = None
-          suffix = '</span>'
-
-          if token.token_type == self.tokenizer.KEYWORD:
-            prefix = '<span class="k">'
-          elif token.token_type == self.tokenizer.STRING:
-            prefix = '<span class="str">'
-          else:
-            prefix = '<span class="c">'
-
-          offset, line = self.escapeString(token, line, line_start, offset, prefix, suffix)
-        elif token.token_type == self.tokenizer.NAME:
+        if token.token_type == self.tokenizer.NAME:
           # Could be a macro, type, or statement
           prefix = ''
           suffix = '</a>'
+          link = None
 
           # Figure out which function we're in, and get the start/end line nums
           if self.conn.execute('select count(*) from macros where mshortname=?;',
                      (token.name,)).fetchone()[0] > 0:
-            prefix = '<a class="m" aria-haspopup="true">'
-
-          if prefix == '' and self.conn.execute('select count(*) from types_all where tname=?;',
+            link = {'class': 'm'}
+          elif self.conn.execute('select count(*) from types_all where tname=?;',
                               (token.name,)).fetchone()[0] > 0:
-            prefix = '<a class="t" aria-haspopup="true">'
-
-          if prefix == '' and self.conn.execute('select count(*) from functions where fname=?',
+            link = {'class': 't'}
+          elif self.conn.execute('select count(*) from functions where fname=?',
                               (token.name,)).fetchone()[0] > 0:
-            prefix = '<a class="func" aria-haspopup=true" pos=%s>' % `token.start`
-
-          if prefix == '' and self.conn.execute('select count(*) from variables where vname=? and vloc=?',
+            link = {'class': 'func', 'pos': token.start}
+          elif self.conn.execute('select count(*) from variables where vname=? and vloc=?',
                               (token.name,self.srcpath+':'+line)).fetchone()[0] > 0:
-            prefix = '<a class="s" aria-haspopup="true" line="%s" pos=%s>' % (`line`, `token.start`)
-
+            link = {'class': 's', 'line': line, 'pos': token.start}
           # XXX: too slow
-          #if prefix == '' and self.conn.execute('select count(*) from refs where reff=? and refl=? and refc=?',
+          #elif self.conn.execute('select count(*) from refs where reff=? and refl=? and refc=?',
           #    (self.srcpath, line, token.start)).fetchone()[0] > 0:
-          #  prefix = '<a class="s" aria-haspopup="true" line="%s" pos="%s">' % (`line`, `token.start`)
+          #  link = {'class': 's', 'line': line, 'pos': token.start}
 
-          if prefix == '':    # we never found a match
-            # Don't bother making it a link
-            suffix = ''
-            prefix = ''
-
-          offset, line = self.escapeString(token, line, line_start, offset, prefix, suffix)
-        elif token.token_type == self.tokenizer.PREPROCESSOR:
-          line = '<span class="p">%s</span>' % cgi.escape(token.name)
-          # Try to match header include filename: #include "nsPIDOMWindow.h"
-          line = re.sub('#include "([^"]+)"', '#include "<a class="f">\g<1></a>"', line)
-        elif token.token_type == self.tokenizer.SYNTAX or token.token_type == self.tokenizer.CONSTANT:
-          offset, line = self.escapeString(token, line, line_start, offset)
+          if link is not None:
+            links.append((token.start, token.end, link))
 
 class IdlHtmlBuilder(HtmlBuilderBase):
   def __init__(self, dxrconfig, treeconfig, filepath, newroot):
