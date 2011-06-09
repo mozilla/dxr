@@ -9,7 +9,7 @@ import subprocess
 #import generic2html
 #import idl2html #, cpp2html
 sys.path.append("./xref-scripts")
-import htmlbuilders
+import dxr.htmlbuilders
 import shutil
 import dxr_config
 import template
@@ -77,11 +77,11 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
   """Wrapper function to allow doing this async without an instance method."""
   htmlBuilder = None
   if os.path.splitext(srcpath)[1] in ['.h', '.c', '.cpp', '.m', '.mm']:
-    htmlBuilder = htmlbuilders.CppHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot, big_ball['dxr.cxx-clang'])
+    htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot, big_ball['dxr.cxx-clang'])
   elif os.path.splitext(srcpath)[1] == '.idl':
-    htmlBuilder = htmlbuilders.IdlHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot)
+    htmlBuilder = dxr.htmlbuilders.IdlHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot)
   else:
-    htmlBuilder = htmlbuilders.HtmlBuilderBase(dxrconfig, treeconfig, srcpath, newroot)
+    htmlBuilder = dxr.htmlbuilders.HtmlBuilderBase(dxrconfig, treeconfig, srcpath, newroot)
 
   try:
     htmlBuilder.toHTML()
