@@ -30,7 +30,8 @@ Options:
   -h, --help                              Show help information.
   -f, --file    FILE                      Use FILE as config file (default is ./dxr.config).
   -t, --tree    TREE                      Indxe and Build only section TREE (default is all).
-  -c, --create  [xref|html]               Create xref or html and glimpse index (default is all)."""
+  -c, --create  [xref|html]               Create xref or html and glimpse index (default is all).
+  -d, --debug   file                      Only generate HTML for the file."""
 
 plugins = None
 big_ball = None
@@ -91,7 +92,7 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
     traceback.print_exc()
 
 
-def indextree(dxrconfig, treeconfig, doxref, dohtml):
+def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
   # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
   # and we'll symlink it to wwwdir/treename later
   htmlroot = os.path.join(dxrconfig["wwwdir"], treeconfig["tree"] + '-current')
@@ -151,9 +152,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml):
         cpypath = os.path.join(newroot, filename)
 
         srcpath = os.path.join(root, filename)
-        if debug:
-          if srcpath.endswith('content/base/src/nsContentUtils.cpp'):
-            async_toHTML(dxrconfig, treeconfig, srcpath, newroot)
+        if debugfile is not None and not srcpath.endswith(debugfile):
           continue
 
         shutil.copyfile(srcpath, cpypath)
@@ -170,7 +169,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml):
 
     # TODO: should I delete the .cpp, .h, .idl, etc, that were copied into wwwdir/treename-current for glimpse indexing?
 
-def parseconfig(filename, doxref, dohtml, tree):
+def parseconfig(filename, doxref, dohtml, tree, debugfile):
     prepDone = False
 
     # Build the contents of an html <select> and open search links
@@ -194,7 +193,7 @@ def parseconfig(filename, doxref, dohtml, tree):
             opensearch += 'title="' + section["tree"] + '" />\n'
             WriteOpenSearch(section["tree"], dxrconfig["hosturl"], dxrconfig["virtroot"], dxrconfig["wwwdir"])
 
-            indextree(dxrconfig, section, doxref, dohtml)
+            indextree(dxrconfig, section, doxref, dohtml, debugfile)
 
     # Generate index page with drop-down + opensearch links for all trees
     indexhtml = template.readFile(os.path.join(dxrconfig["templates"], 'dxr-index-template.html'))
@@ -210,9 +209,11 @@ def main(argv):
   doxref = True
   dohtml = True
   tree = None
+  debugfile = None
 
   try:
-    opts, args = getopt.getopt(argv, "hc:f:t:", ["help", "create=", "file=", "tree="])
+    opts, args = getopt.getopt(argv, "hc:f:t:d:",
+        ["help", "create=", "file=", "tree=", "debug="])
   except getopt.GetoptError:
     usage()
     sys.exit(2)
@@ -230,8 +231,10 @@ def main(argv):
       sys.exit(0)
     elif a in ('-t', '--tree'):
       tree = o
+    elif a in ('-d', '--debug'):
+      debugfile = o
 
-  parseconfig(configfile, doxref, dohtml, tree)
+  parseconfig(configfile, doxref, dohtml, tree, debugfile)
 
 if __name__ == '__main__':
   main(sys.argv[1:])

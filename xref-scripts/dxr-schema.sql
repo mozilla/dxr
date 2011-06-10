@@ -69,12 +69,11 @@ CREATE TABLE variables (
 
 DROP TABLE IF EXISTS refs;
 CREATE TABLE refs (
-  refid INTEGER NOT NULL,      -- The ID of the identifier being referenced
-                               -- This can be variables, functions, types, etc.
-  reff  VARCHAR(256) NOT NULL, -- The file where the reference is located
-  refl  INTEGER NOT NULL,      -- The line of the reference
-  refc  INTEGER NOT NULL,      -- The column of the reference
-  PRIMARY KEY(refid, reff, refl, refc)
+  refid  INTEGER NOT NULL,      -- The ID of the identifier being referenced
+                                -- This can be variables, functions, types, ...
+  refloc VARCHAR(256) NOT NULL, -- The file where the reference is located
+  extent VARCHAR(30) NOT NULL,  -- The extent (start:end) of the reference
+  PRIMARY KEY(refid, refloc)
 );
 
 -- Table macros: all macros defined in translation units

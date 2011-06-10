@@ -84,7 +84,7 @@ class HtmlBuilderBase:
     out.close()
 
   def writeSidebar(self, out):
-    sidebarElements = self.collectSidebar()
+    sidebarElements = [x for x in self.collectSidebar()]
     if len(sidebarElements) == 0: return
 
     out.write(self.html_sidebar_header + '\n')
@@ -121,9 +121,7 @@ class HtmlBuilderBase:
     lines = self.getLineAnnotations()
 
     # Split up the entire source, and annotate each char invidually
-    # the hack is that we need the first and end to work better
-    # The last "char" is the place holder for the first line entry
-    line_markers = [-1]
+    line_markers = [0]
     closure = ['', 0]
     def handle_char(x):
       if x == '\n':
@@ -137,15 +135,22 @@ class HtmlBuilderBase:
     chars = [handle_char(x) for x in self.source]
     chars.append('')
 
+    def off(val):
+      if isinstance(val, tuple):
+        return line_markers[val[0] - 1] + val[1]
+      return val
     for syn in syntax_regions:
-      chars[syn[0]] = '<span class="%s">%s' % (syn[2], chars[syn[0]])
-      chars[syn[1] - 1] += '</span>'
+      chars[off(syn[0])] = '<span class="%s">%s' % (syn[2], chars[off(syn[0])])
+      chars[off(syn[1]) - 1] += '</span>'
     for link in links:
-      chars[link[0]] = '<a aria-haspopup="true" %s>%s' % (
+      chars[off(link[0])] = '<a aria-haspopup="true" %s>%s' % (
         ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
-        chars[link[0]])
-      chars[link[1] - 1] += '</a>'
+        chars[off(link[0])])
+      chars[off(link[1]) - 1] += '</a>'
 
+    # the hack is that we need the first and end to work better
+    # The last "char" is the place holder for the first line entry
+    line_markers[0] = -1
     # Line attributes
     for l in lines:
       chars[line_markers[l[0] - 1]] = \
@@ -168,57 +173,48 @@ class HtmlBuilderBase:
 
 
 class CppHtmlBuilder(HtmlBuilderBase):
-  def __init__(self, dxrconfig, treeconfig, filepath, newroot, ball):
+  def __init__(self, dxrconfig, treeconfig, filepath, newroot, blob):
     HtmlBuilderBase.__init__(self, dxrconfig, treeconfig, filepath, newroot)
-    # Build up the temporary table for all declarations in the file
-    # XXX: this includes local variables which is ... sub optimal, I think.
-    # Maybe not?
-    self.conn.executescript('''BEGIN TRANSACTION;
-      CREATE TEMPORARY TABLE file_defs (name, scopeid, loc);
-      INSERT INTO file_defs SELECT tname, 0, tloc FROM types;
-      INSERT INTO file_defs SELECT flongname, scopeid, floc FROM functions;
-      INSERT INTO file_defs SELECT vname, scopeid, vloc FROM variables
-        WHERE scopeid <= 0;
-      DELETE FROM file_defs WHERE loc NOT LIKE '%s:%%';
-      COMMIT;''' % (self.srcpath))
-    self.conn.executescript('BEGIN TRANSACTION;' +
-                'CREATE TEMPORARY TABLE types_all (tname);' + 
-                'INSERT INTO types_all SELECT tname from types;' + # should ignore -- where not tignore = 1;' +
-                'INSERT INTO types_all SELECT ttypedefname from types;' + # where not tignore = 1;' +
-                'INSERT INTO types_all SELECT ttemplate from types;' + # where not tignore = 1;' +
-                'CREATE INDEX idx_types_all ON types_all (tname);' +
-                'COMMIT;')
     self.syntax_regions = None
     self.lines = None
-    self.links = None
+    self.blob_file = blob["byfile"].get(self.srcpath, None)
+    self.blob = blob
 
   def _createTokenizer(self):
     return CppTokenizer(self.source)
 
   def collectSidebar(self):
+    if self.blob_file is None:
+      return
     lst = []
-    for df in self.conn.execute('SELECT name, sname, sloc, loc ' +
-        'FROM file_defs LEFT JOIN scopes USING (scopeid)').fetchall():
-      line = df[3].split(':')[1]
-      if df[1] is None:
-        e = (df[0], line, df[0], 'images/icons/page_white_wrench.png')
-      else:
-        e = (df[0], line, df[0], 'images/icons/page_white_wrench.png', df[1])
-      lst.append(e)
-    return lst
+    def line(linestr):
+      return linestr.split(':')[1]
+    def make_tuple(df, name, loc, scope="scopeid"):
+      img = 'images/icons/page_white_wrench.png'
+      if scope in df:
+        return (df[name], df[loc].split(':')[1], img,
+          self.blob["scopes"][df[scope]]["sname"])
+      return (df[name], df[loc].split(':')[1], img)
+    for df in self.blob_file["types"]:
+      yield make_tuple(df, "tname", "tloc")
+    for df in self.blob_file["functions"]:
+      yield make_tuple(df, "flongname", "floc", "scopeid")
+    for df in self.blob_file["variables"]:
+      if "scopeid" in df: #XXX only kill local vars
+        continue
+      yield make_tuple(df, "vname", "vloc", "scopeid")
 
   def _getFromTokenizer(self):
     syntax_regions = []
-    links = []
     lines = []
     line_num = 1
     for token in self.tokenizer.getTokens():
       if token.token_type == self.tokenizer.NEWLINE:
-        warningString = '\n'.join([warnings[0] for warnings in
-          self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
-                          (self.srcpath, line_num)).fetchall()])
-        if len(warningString) > 0:
-          lines.append((line_num, {'class': "lnw", 'title': warningString}))
+        #warningString = '\n'.join([warnings[0] for warnings in
+        #  self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
+        #                  (self.srcpath, line_num)).fetchall()])
+        #if len(warningString) > 0:
+        #  lines.append((line_num, {'class': "lnw", 'title': warningString}))
         line_num += 1
       elif token.token_type == self.tokenizer.KEYWORD:
         syntax_regions.append((token.start, token.end, 'k'))
@@ -228,32 +224,7 @@ class CppHtmlBuilder(HtmlBuilderBase):
         syntax_regions.append((token.start, token.end, 'c'))
       elif token.token_type == self.tokenizer.PREPROCESSOR:
         syntax_regions.append((token.start, token.end, 'p'))
-      else:
-        if token.token_type == self.tokenizer.NAME:
-          link = None
-
-          # Figure out which function we're in, and get the start/end line nums
-          if self.conn.execute('select count(*) from macros where mshortname=?;',
-                     (token.name,)).fetchone()[0] > 0:
-            link = {'class': 'm'}
-          elif self.conn.execute('select count(*) from types_all where tname=?;',
-                              (token.name,)).fetchone()[0] > 0:
-            link = {'class': 't'}
-          elif self.conn.execute('select count(*) from functions where fname=?',
-                              (token.name,)).fetchone()[0] > 0:
-            link = {'class': 'func', 'pos': token.start}
-          elif self.conn.execute('select count(*) from variables where vname=? and vloc=?',
-                              (token.name,self.srcpath+':'+str(line_num))).fetchone()[0] > 0:
-            link = {'class': 's', 'line': line_num, 'pos': token.start}
-          # XXX: too slow
-          #elif self.conn.execute('select count(*) from refs where reff=? and refl=? and refc=?',
-          #    (self.srcpath, line, token.start)).fetchone()[0] > 0:
-          #  link = {'class': 's', 'line': line, 'pos': token.start}
-
-          if link is not None:
-            links.append((token.start, token.end, link))
     self.syntax_regions = syntax_regions
-    self.links = links
     self.lines = lines
 
   def getSyntaxRegions(self):
@@ -262,9 +233,23 @@ class CppHtmlBuilder(HtmlBuilderBase):
     return self.syntax_regions
 
   def getLinkRegions(self):
-    if self.links is None:
-      self._getFromTokenizer()
-    return self.links
+    if self.blob_file is None:
+      return
+    def make_link(obj, loc, name, clazz):
+      line, col = obj[loc].split(':')[1:]
+      line, col = int(line), int(col)
+      return ((line, col), (line, col + len(obj[name])),
+        {'class': clazz, 'line': line})
+    for df in self.blob_file["variables"]:
+      yield make_link(df, 'vloc', 'vname', 's')
+    for df in self.blob_file["functions"]:
+      yield make_link(df, 'floc', 'fname', 'func')
+    for df in self.blob_file["types"]:
+      yield make_link(df, 'tloc', 'tname', 't')
+    for df in self.blob_file["refs"]:
+      start, end = df["extent"].split(':')
+      line = df["refloc"].split(':')[1]
+      yield (int(start), int(end), {'class': 's', 'line': int(line)})
 
   def getLineAnnotations(self):
     if self.lines is None:

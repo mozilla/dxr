@@ -81,7 +81,7 @@ def process_variable(varinfo):
 def process_ref(info):
   # Each reference is pretty much unique, but we might record it several times
   # due to header files.
-  references[info['varname'], info['varloc'], info['reff'], info['refl'], info['refc']] = info
+  references[info['varname'], info['varloc'], info['refloc']] = info
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -97,14 +97,14 @@ def load_indexer_output(fname):
   finally:
     f.close()
 
-files = []
+file_names = []
 def collect_files(arg, dirname, fnames):
   for name in fnames:
     if os.path.isdir(name): continue
     if not name.endswith(arg): continue
-    files.append(os.path.join(dirname, name))
+    file_names.append(os.path.join(dirname, name))
 
-def make_ball():
+def make_blob():
   def canonicalize_decl(name, loc):
     return (name, decl_master.get((name, loc), loc))
 
@@ -192,32 +192,58 @@ def make_ball():
       refs.append(ref)
 
   # Ball it up for passing on
-  ball = {}
-  ball["scopes"] = [{"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}
+  blob = {}
+  blob["scopes"] = [{"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}
     for s in scopes]
-  ball["functions"] = [functions[f] for f in funcKeys]
-  ball["variables"] = [variables[v] for v in varKeys]
-  ball["types"] = [types[t] for t in typeKeys]
-  ball["types"] += [typedefs[t] for t in typedefs]
-  ball["impl"] = inheritsTree
-  ball["refs"] = refs
-  return ball
+  blob["functions"] = [functions[f] for f in funcKeys]
+  blob["variables"] = [variables[v] for v in varKeys]
+  blob["types"] = [types[t] for t in typeKeys]
+  blob["types"] += [typedefs[t] for t in typedefs]
+  blob["impl"] = inheritsTree
+  blob["refs"] = refs
+  return blob
 
 def post_process(srcdir, objdir):
   os.path.walk(srcdir, collect_files, ".csv")
-  for f in files:
+  for f in file_names:
     load_indexer_output(f)
-  return make_ball()
+  blob = make_blob()
+  
+  # Reindex everything by file
+  def schema():
+    return { "scopes": [], "functions": [], "variables": [], "types": [],
+      "refs": [] }
+  files = {}
+  def add_to_files(table, loc):
+    for row in blob[table]:
+      f = row[loc].split(":")[0]
+      files.setdefault(f, schema())[table].append(row)
+  add_to_files("scopes", "sloc")
+  add_to_files("functions", "floc")
+  add_to_files("variables", "vloc")
+  add_to_files("types", "tloc")
+  add_to_files("refs", "refloc")
 
-def sqlify(ball):
+  # Normalize path names
+  blob["byfile"] = {}
+  for f in files:
+    real = os.path.relpath(os.path.realpath(os.path.join(srcdir, f)), srcdir)
+    realtbl = blob["byfile"].setdefault(real, schema())
+    oldtbl = files[f]
+    for table in oldtbl:
+      realtbl[table].extend(oldtbl[table])
+  return blob
+
+def sqlify(blob):
   out = [];
   # Finally, produce all sql statements
   def write_sql(table, obj, out):
     keys, vals = zip(*obj.iteritems())
     out.append("INSERT INTO " + table + " (" + ','.join(keys) + ") VALUES" + 
       " (" + ",".join([repr(v) for v in vals]) + ");")
-  for table in ball:
-    for row in ball[table]:
+  for table in blob:
+    if table == "byfile": continue
+    for row in blob[table]:
       write_sql(table, row, out)
   return '\n'.join(out)
 

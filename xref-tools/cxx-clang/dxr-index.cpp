@@ -4,6 +4,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <fstream>
@@ -28,9 +29,10 @@ class IndexConsumer : public ASTConsumer,
 private:
   SourceManager &sm;
   std::ofstream out;
+  LangOptions &features;
 public:
   IndexConsumer(CompilerInstance &ci, const char *file) :
-    sm(ci.getSourceManager()), out(file) {}
+    sm(ci.getSourceManager()), out(file), features(ci.getLangOpts()) {}
   
   // Helpers for processing declarations
   // Should we ignore this location?
@@ -55,6 +57,8 @@ public:
     std::string buffer = fixed.getFilename();
     buffer += ":";
     buffer += fixed.getLine();
+    buffer += ":";
+    buffer += fixed.getColumn();
     return buffer;
   }
 
@@ -145,7 +149,7 @@ public:
   }
 
   // Expressions!
-  void printReference(NamedDecl *d, SourceLocation refLoc) {
+  void printReference(NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
     std::string filename = sm.getBufferName(refLoc, NULL);
@@ -155,18 +159,18 @@ public:
       // now.
       return;
     out << "ref,varname,\"" << d->getQualifiedNameAsString() <<
-      "\",varloc,\"" << locationToString(d->getLocation()) << "\",reff,\"" <<
-      sm.getBufferName(refLoc, NULL) << "\",refl," <<
-      sm.getSpellingLineNumber(refLoc) << ",refc," <<
-      sm.getSpellingColumnNumber(refLoc) << std::endl;
+      "\",varloc,\"" << locationToString(d->getLocation()) << "\",refloc,\"" <<
+      locationToString(refLoc) << "\",extent," << sm.getFileOffset(refLoc) <<
+      ":" << sm.getFileOffset(Lexer::getLocForEndOfToken(end, 0, sm, features))
+      << std::endl;
   }
   bool VisitMemberExpr(MemberExpr *e) {
-    printReference(e->getMemberDecl(), e->getExprLoc());
+    printReference(e->getMemberDecl(), e->getExprLoc(), e->getSourceRange().getEnd());
     return true;
   }
   bool VisitDeclRefExpr(DeclRefExpr *e) {
     printReference(e->getDecl(), e->hasQualifier() ?
-      e->getQualifierLoc().getBeginLoc() : e->getLocation());
+      e->getQualifierLoc().getBeginLoc() : e->getLocation(), e->getNameInfo().getEndLoc());
     return true;
   }
 };
