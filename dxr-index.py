@@ -13,6 +13,7 @@ import dxr.htmlbuilders
 import shutil
 import dxr_config
 import template
+import dxr
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -33,28 +34,17 @@ Options:
   -c, --create  [xref|html]               Create xref or html and glimpse index (default is all).
   -d, --debug   file                      Only generate HTML for the file."""
 
-plugins = None
-big_ball = None
-def load_plugins():
-  global plugins
-  if plugins is None:
-    # XXX: discover and iterate over available plugins
-    basedir = os.path.realpath(os.path.dirname(sys.argv[0]))
-    m = imp.find_module('indexer', [os.path.join(basedir, 'xref-tools/cxx-clang')])
-    module = imp.load_module('dxr.cxx-clang', m[0], m[1], m[2])
-    plugins = [module]
-  return plugins
+big_blob = None
 
 def post_process(dxrconfig, treeconfig):
-  global big_ball
-  big_ball = {}
+  global big_blob
+  big_blob = {}
   srcdir = treeconfig['sourcedir']
   objdir = treeconfig['objdir']
-  for plugin in load_plugins():
+  for plugin in dxr.get_active_plugins(treeconfig):
     if 'post_process' in plugin.__all__:
-      big_ball[plugin.__name__] = plugin.post_process(srcdir, objdir)
-  # XXX: pickle this for later
-  return big_ball
+      big_blob[plugin.__name__] = plugin.post_process(srcdir, objdir)
+  return big_blob
 
 def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
   try:
@@ -78,7 +68,7 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
   """Wrapper function to allow doing this async without an instance method."""
   htmlBuilder = None
   if os.path.splitext(srcpath)[1] in ['.h', '.c', '.cpp', '.m', '.mm']:
-    htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot, big_ball['dxr.cxx-clang'])
+    htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot, big_blob['dxr.cxx-clang'])
   elif os.path.splitext(srcpath)[1] == '.idl':
     htmlBuilder = dxr.htmlbuilders.IdlHtmlBuilder(dxrconfig, treeconfig, srcpath, newroot)
   else:
@@ -93,23 +83,26 @@ def async_toHTML(dxrconfig, treeconfig, srcpath, newroot):
 
 
 def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
+  global big_blob
   # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
   # and we'll symlink it to wwwdir/treename later
   htmlroot = os.path.join(dxrconfig["wwwdir"], treeconfig["tree"] + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
   dbname = treeconfig["tree"] + '.sqlite'
 
-  big_ball = post_process(dxrconfig, treeconfig)
   retcode = 0
-  # Build dxr.sqlite
   if doxref:
-    for plugin in load_plugins():
-      if plugin.__name__ in big_ball:
+    # Build the blob, and make the sql
+    post_process(dxrconfig, treeconfig)
+    dxr.store_big_blob(dxrconfig, treeconfig, big_blob)
+    for plugin in dxr.get_active_plugins(treeconfig):
+      if plugin.__name__ in big_blob:
         f = open(os.path.join(treeconfig["objdir"], plugin.__name__ + ".sql"), 'w')
         try:
-          f.write(plugin.__name__ + plugin.sqlify(big_ball[plugin.__name__]));
+          f.write(plugin.sqlify(big_blob[plugin.__name__]));
         finally:
           f.close()
+    # Build dxr.sqlite
     buildxref = os.path.join(dxrconfig["xrefscripts"], "build-xref.sh")
     retcode = subprocess.call([buildxref, treeconfig["sourcedir"], treeconfig["objdir"],
                               treeconfig["mozconfig"], dxrconfig["xrefscripts"], dbdir, dbname,
@@ -119,6 +112,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
 
   # Build static html
   if dohtml:
+    big_blob = dxr.load_big_blob(dxrconfig, treeconfig)
     buildhtml = os.path.join(dxrconfig["xrefscripts"], "build-html.sh")
     dxrconfig["html_header"] = os.path.join(dxrconfig["templates"], "dxr-header.html")
     dxrconfig["html_footer"] = os.path.join(dxrconfig["templates"], "dxr-footer.html")

@@ -249,7 +249,7 @@ class CppHtmlBuilder(HtmlBuilderBase):
     for df in self.blob_file["refs"]:
       start, end = df["extent"].split(':')
       line = df["refloc"].split(':')[1]
-      yield (int(start), int(end), {'class': 's', 'line': int(line)})
+      yield (int(start), int(end), {'class': 'ref', 'line': int(line)})
 
   def getLineAnnotations(self):
     if self.lines is None:
