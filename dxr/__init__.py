@@ -34,7 +34,7 @@ def store_big_blob(dxrconfig, tree, blob):
     f.close()
 
 def load_big_blob(dxrconfig, tree):
-  htmlroot = os.path.join(dxrconfig["wwwdir"], tree["tree"])
+  htmlroot = os.path.join(dxrconfig["wwwdir"], tree["tree"] + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'rb')
   try:

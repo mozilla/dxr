@@ -94,7 +94,6 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
   if doxref:
     # Build the blob, and make the sql
     post_process(dxrconfig, treeconfig)
-    dxr.store_big_blob(dxrconfig, treeconfig, big_blob)
     for plugin in dxr.get_active_plugins(treeconfig):
       if plugin.__name__ in big_blob:
         f = open(os.path.join(treeconfig["objdir"], plugin.__name__ + ".sql"), 'w')
@@ -107,6 +106,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
     retcode = subprocess.call([buildxref, treeconfig["sourcedir"], treeconfig["objdir"],
                               treeconfig["mozconfig"], dxrconfig["xrefscripts"], dbdir, dbname,
                               dxrconfig["wwwdir"], treeconfig["tree"]])
+    dxr.store_big_blob(dxrconfig, treeconfig, big_blob)
     if retcode != 0:
         return
 
