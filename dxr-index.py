@@ -14,6 +14,7 @@ import shutil
 import dxr_config
 import template
 import dxr
+import string
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -191,6 +192,8 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
 
     # Generate index page with drop-down + opensearch links for all trees
     indexhtml = template.readFile(os.path.join(dxrconfig["templates"], 'dxr-index-template.html'))
+    indexhtml = string.Template(indexhtml).safe_substitute(**dxrconfig)
+    indexhtml = string.Template(indexhtml).safe_substitute(**section)
     indexhtml = indexhtml.replace('$OPTIONS', options)
     indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
     index = open(os.path.join(dxrconfig["wwwdir"], 'index.html'), 'w')

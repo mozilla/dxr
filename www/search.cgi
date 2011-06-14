@@ -14,6 +14,10 @@ sys.path.append('./xref-scripts')
 import template
 import dxr_config
 
+def like_escape(val):
+  return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
+    .replace("%", "\\%") + '%" ESCAPE "\\"'
+
 def split_type(val):
     parts = val.split('::')
     # check for 'type' vs. 'type::member' vs. 'namespace::type::member' or 'namespace::namespace2::type::member'
@@ -50,130 +54,114 @@ def GetLine(loc):
         return result
     else:
         return ''
-            
+
 def processString(string):
-    # Print type sidebar
-    printHeader = True
-    printFooter = False
-    print '<div id="sidebar">'
-    for type in conn.execute('select tname, tloc, tkind from types where tname like "' + string + '%";').fetchall():
-        tname = cgi.escape(type[0])
-        tloc = type[1].replace(':', '.html#l')        
-        if not path or re.search(path, tloc):
-            if printHeader:
-                print '<div class="bubble"><span class="title">Types</span><ul>'
-                printHeader = False
-                printFooter = True
-            print '<li><a href="%s/%s/%s">%s</a></li>' % (dxrconfig['virtroot'], tree, tloc, tname)
-    if printFooter:
-        print "</ul></div>"
+  vrootfix = dxrconfig['virtroot']
+  if vrootfix == '/':
+    vrootfix = ''
+  def printSidebarResults(name, results):
+    if len(results) == 0:
+      return
+    print '<div class="bubble"><span class="title">%s</span><ul>' % name
+    for res in results:
+      # Make sure we're not matching part of the scope
+      colon = res[0].rfind(':')
+      if colon != -1 and res[0][colon:].find(string) == -1:
+        continue
+      fixloc = res[1].split(':')
+      if path and not re.search(path, fixlink):
+        continue
+      print '<li><a href="%s/%s/%s.html#l%s">%s</a></li>' % \
+        (vrootfix, tree, fixloc[0], fixloc[1], res[0])
+    print '</ul></div>'
 
-    # Print macro sidebar
-    printHeader = True
-    printFooter = False
-    for type in conn.execute('select mshortname from macros where mshortname like "' + string + '%";').fetchall():
-        mshortname = cgi.escape(type[0])
+  # Print smart sidebar
+  print '<div id="sidebar">'
+  config = {
+    'types': ['tname', 'tloc', 'tname'],
+    #'macros': ['mshortname', 'mloc', 'mshortname'], XXX: need to fix table
+    'variables': ['vname', 'vloc', 'vname'],
+    'functions': ['flongname', 'floc', 'fname'],
+  }
+  for table in config:
+    cols = config[table]
+    results = []
+    for row in conn.execute('SELECT %s FROM %s WHERE %s %s;' % (
+        ', '.join(cols[:-1]), table, cols[0], like_escape(string))).fetchall():
+      results.append((row[0], row[1]))
+    printSidebarResults(str.capitalize(table), results)
+
+  # Print file sidebar
+  printHeader = True
+  glimpsefilenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', '.glimpse_filenames'))
+  if glimpsefilenames:
+    for filename in glimpsefilenames.split('\n'):
+      # Only check in leaf name
+      pattern = '/([^/]*' + string + '[^/]*\.[^\.]+)$' if not ext else '/([^/]*' + string + '[^/]*\.' + ext + ')$'
+      m = re.search(pattern, filename, re.IGNORECASE)
+      if m:
         if printHeader:
-            print '<div class="bubble"><span class="title">Macros</span><ul>'
-            printHeader = False
-            printFooter = True
-        print '<li><a href="%s/search.cgi?tree=%s&macro=%s">%s</a></li>' % (dxrconfig['virtroot'], tree, mshortname, mshortname)
-    if printFooter:
-        print "</ul></div>"
+          print '<div class=bubble><span class="title">Files</span><ul>'
+          printHeader = False
+        filename = filename.replace(dxrconfig['wwwdir'], vrootfix)
+        print '<li><a href="%s.html">%s</a></li>' % (filename, m.group(1))
+    if not printHeader:
+      print "</ul></div>"
 
-    # Print file sidebar
-    printHeader = True
-    printFooter = False
-    glimpsefilenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', '.glimpse_filenames'))
-    if glimpsefilenames:
-        for filename in glimpsefilenames.split('\n'):
-            # Only check in leaf name
-            pattern = '/([^/]*' + string + '[^/]*\.[^\.]+)$' if not ext else '/([^/]*' + string + '[^/]*\.' + ext + ')$'
-            m = re.search(pattern, filename, re.IGNORECASE)
-            if m:
-                if printHeader:
-                    print '<div class=bubble><span class="title">Files</span><ul>'
-                    printHeader = False
-                    printFooter = True
-                htmlfilename = filename.replace(dxrconfig['wwwdir'], dxrconfig['virtroot']) + '.html'
-                print '<li><a href="%s">%s</a></li>' % (htmlfilename, m.group(1))
-        if printFooter:
-            print "</ul></div>"
+  print '</div><div id="content">'
 
-    # Print member sidebar
-    printHeader = True
-    printFooter = False
-    for m in conn.execute('select mshortname, mdef, mdecl, mtname, mname from members where mshortname like "' + string + '%";').fetchall():
-        mshortname = cgi.escape(m[0])
-        link = None
-        if m[1]:
-            link = m[1].replace(':', '.html#l')
-        else:
-            link = m[2].replace(':', '.html#l')
+  # Check for strings like 'foo::bar'
+  halves = string.split('::')
+  if len(halves) == 2:
+    count = processMember(halves[1], halves[0], True)
+    if count > 0:
+      # we printed results, so don't bother with a text search
+      return
 
-        if not path or re.search(path, link):
-            if printHeader:
-                print '<div class="bubble"><span class="title">Members</span><ul>'
-                printHeader = False
-                printFooter = True
-            print '<li><a href="%s/%s" title="%s::%s">%s</a></li>' % (tree, link, m[3], m[4], mshortname)
-    if printFooter:
-        print "</ul></div>"
+  # Glimpse search results
+  count = 0
 
-    print '</div><div id="content">'
+  # ./glimpse -i -e -H ./mozilla-central/.glimpse_index/ -F 'uconv;.h$' nsString
+  searchargs = '-i -y -n -H ' + os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref')
+  if path:
+    searchargs += " -F '" + path
+    if ext:
+      searchargs += ';' + ext + '$'
+    searchargs += "'"
+  searchargs += ' ' + string
 
-    # Check for strings like 'foo::bar'
-    halves = string.split('::')
-    if len(halves) == 2:
-        count = processMember(halves[1], halves[0], True)
-        if count > 0:
-            # we printed results, so don't bother with a text search
-            return
+  # TODO: should I do -L matches:files:matches/file (where 0 means infinity) ?
+  # TODO: glimpse can fail in various ways, need to deal with those cases (>29 chars, no results, etc.)
+  pipe = subprocess.Popen(dxrconfig['glimpse'] + ' ' + searchargs, shell=True, stdout=subprocess.PIPE).stdout
+  if pipe:
+    line = pipe.readline()
+    prevfile = None
+    first = True
+    while line:
+      (filepath, linenum, text) = line.split(': ', 2)
+      text = cgi.escape(text)
+      text = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', text)
+      srcpath = filepath.replace(dxrconfig['wwwdir'] + '/', '')
+      if filepath != prevfile:
+        prevfile = filepath
+        if not first:
+          print "</ul>"
+        first = False
+        print '<div class="searchfile"><a href="%s.html">%s</a></div><ul class="searchresults">' % (srcpath, srcpath.replace(tree + '/', ''))
 
-    # Glimpse search results
-    count = 0
-    
-    # ./glimpse -i -e -H ./mozilla-central/.glimpse_index/ -F 'uconv;.h$' nsString
-    searchargs = '-i -y -n -H ' + os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref')
-    if path:
-        searchargs += " -F '" + path
-        if ext:
-            searchargs += ';' + ext + '$'
-        searchargs += "'"
-    searchargs += ' ' + string
+      print '<li class="searchresult"><a href="%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (srcpath, linenum, linenum, text)
+      count += 1
+      line = pipe.readline()
 
-    # TODO: should I do -L matches:files:matches/file (where 0 means infinity) ?
-    # TODO: glimpse can fail in various ways, need to deal with those cases (>29 chars, no results, etc.)
-    pipe = subprocess.Popen(dxrconfig['glimpse'] + ' ' + searchargs, shell=True, stdout=subprocess.PIPE).stdout
-    if pipe:
-        line = pipe.readline()
-        prevfile = None
-        first = True
-        while line:
-            (filepath, linenum, text) = line.split(': ', 2)
-            text = cgi.escape(text)
-            text = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', text)
-            srcpath = filepath.replace(dxrconfig['wwwdir'] + '/', '')
-            if filepath != prevfile:
-                prevfile = filepath
-                if not first:
-                    print "</ul>"
-                first = False
-                print '<div class="searchfile"><a href="%s.html">%s</a></div><ul class="searchresults">' % (srcpath, srcpath.replace(tree + '/', ''))
-            
-            print '<li class="searchresult"><a href="%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (srcpath, linenum, linenum, text)
-            count += 1
-            line = pipe.readline()
-
-    if count == 0:
-        print '<p>No files match your search parameters.</p>'
+  if count == 0:
+    print '<p>No files match your search parameters.</p>'
 
 def processType(type):
-    for type in conn.execute('select tname, tloc, tkind from types where tname like "' + type + '%";').fetchall():
-        tname = cgi.escape(type[0])
-        if not path or re.search(path, tloc):
-            print '<h3>%s (%s)</h3>' % (tname, type[2])
-            print GetLine(type[1])
+  for type in conn.execute('select tname, tloc, tkind from types where tname like "' + type + '%";').fetchall():
+    tname = cgi.escape(type[0])
+    if not path or re.search(path, tloc):
+      print '<h3>%s (%s)</h3>' % (tname, type[2])
+      print GetLine(type[1])
 
 def processDerived(derived):
     # See if this is nsIFoo or nsIFoo::GetBar
@@ -207,10 +195,10 @@ def processMember(member, type, printDecl):
     members = None
     count = 0 # make sure we find something
     if type:
-        members = conn.execute('select mname, mtname, mtloc, mdecl, mdef, mvalue, maccess from members where mshortname like "' + member + 
+        members = conn.execute('select mname, mtname, mtloc, mdecl, mdef, mvalue, maccess from members where mshortname like "' + member +
                                '%" and mtname like "' + type + '%" order by mtname, maccess, mname;').fetchall()
     else:
-        members = conn.execute('select mname, mtname, mtloc, mdecl, mdef, mvalue, maccess from members where mshortname like "' + member + 
+        members = conn.execute('select mname, mtname, mtloc, mdecl, mdef, mvalue, maccess from members where mshortname like "' + member +
                                '%" order by mtname, maccess, mname;').fetchall()
     # TODO: is there a way to add more of the above data here?
     for m in members:
@@ -251,8 +239,8 @@ def processCallers(callers):
 #        hits = conn.execute("select type, shortName from node where id in (select caller from edge where callee in (select id from node where shortName=? and type in (select tbname from impl where tcname=?)));", (parts[1], parts[0])).fetchall();
 #        for h in hits:
 #            count += 1
-#            processMember(h[1], h[0], False)        
-    
+#            processMember(h[1], h[0], False)
+
     if count == 0:
         print "No matches found.  Perhaps you want a base type?"
 
@@ -339,13 +327,18 @@ footer_template = os.path.join(dxrconfig['templates'], 'dxr-search-footer.html')
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
+if string:
+  titlestr = string
+else:
+  titlestr = ''
 print 'Content-Type: text/html\n'
-print template.expand(template.readFile(header_template), dxrconfig["virtroot"], tree) % (string, dxrconfig["virtroot"], tree) 
+print template.expand(template.readFile(header_template), dxrconfig["virtroot"],
+  tree) % (cgi.escape(titlestr), dxrconfig["virtroot"], cgi.escape(tree))
 
 if string:
     processString(string)
 else:
-    print '<div id="content">'    
+    print '<div id="content">'
     if type:
         if member:
             processMember(member, type, True)

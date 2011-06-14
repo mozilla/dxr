@@ -1,11 +1,10 @@
 function doSearch(id) {
   var f = document.getElementById(id);
-  var treename = 'mozilla-central';
   var args = f.string.value.split(/ +/);
   var string = "";
   // Figure out the right path separator to use with virtroot
   sep = virtroot[virtroot.length - 1] === '/' ? '' : '/';
-  var url = virtroot + sep + 'search.cgi?tree=' + treename;
+  var url = virtroot + sep + 'search.cgi?tree=' + tree;
 
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];

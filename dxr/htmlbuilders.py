@@ -192,9 +192,9 @@ class CppHtmlBuilder(HtmlBuilderBase):
     def make_tuple(df, name, loc, scope="scopeid"):
       img = 'images/icons/page_white_wrench.png'
       if scope in df:
-        return (df[name], df[loc].split(':')[1], img,
+        return (df[name], df[loc].split(':')[1], df[name], img,
           self.blob["scopes"][df[scope]]["sname"])
-      return (df[name], df[loc].split(':')[1], img)
+      return (df[name], df[loc].split(':')[1], df[name], img)
     for df in self.blob_file["types"]:
       yield make_tuple(df, "tname", "tloc")
     for df in self.blob_file["functions"]:

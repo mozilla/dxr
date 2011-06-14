@@ -68,6 +68,7 @@ def process_type(typeinfo):
 
 def process_typedef(typeinfo):
   typedefs[(typeinfo['tname'], typeinfo['tloc'])] = typeinfo
+  typeinfo['tkind'] = 'typedef'
 
 def process_function(funcinfo):
   functions[(funcinfo['flongname'], funcinfo['floc'])] = funcinfo
