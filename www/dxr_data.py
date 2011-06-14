@@ -13,7 +13,7 @@ class Location:
         self.loc = loc
         self.full = path + ':' + `loc`
       else:
-        self.path, self.loc = path.split(':')
+        self.path, self.loc = path.split(':')[:2]
         self.full = path
 
   def __str__(self):
@@ -73,6 +73,8 @@ class DxrType:
     self.kind = kind
     self.template = template
     self.conn = conn
+    self.scopeid = conn.execute('SELECT scopeid FROM scopes WHERE ' +
+      'sname=? AND sloc=?', (name, loc)).fetchone()[0]
 
     # Lazy load these...
     self.users = None
@@ -139,9 +141,15 @@ class DxrType:
       return self.members
 
     self.members = []
-    for row in self.conn.execute('select mname, mshortname, mdecl, mdef, mvalue from members where mtname=? and mtloc=?;',
-                                 (self.name, self.loc.full)):
-      self.members.append(DxrMember(row[0], row[1], self, row[2], row[3], row[4], self.conn))
+    for row in self.conn.execute('SELECT fname, flongname, floc ' +
+        'FROM functions WHERE scopeid=' + str(self.scopeid)):
+      self.members.append(DxrMember(row[1], row[0], self, row[2], None, self.conn))
+    for row in self.conn.execute('SELECT vname, vloc ' +
+        'FROM variables WHERE scopeid=' + str(self.scopeid)):
+      self.members.append(DxrMember(row[0], row[0], self, row[1], None, self.conn))
+    #for row in self.conn.execute('select mname, mshortname, mdecl, mdef, mvalue from members where mtname=? and mtloc=?;',
+    #                             (self.name, self.loc.full)):
+    #  self.members.append(DxrMember(row[0], row[1], self, row[3], row[4], self.conn))
 
     return self.members
 
@@ -198,11 +206,11 @@ class DxrType:
     self.users = []
     limitClause = ''
     if limit:
-      limitClause = 'Limit ' + `limit`
+      limitClause = 'LIMIT ' + `limit`
 
-    sql = 'select vfuncname, vlocf, vlocl from stmts where vtype=? ' + limitClause + ';'
+    sql = "SELECT refloc FROM refs WHERE refid=? %s;" % limitClause
     for row in self.conn.execute(sql, (self.name,)):
-      self.users.append(DxrUser(row[0], Location(row[1], row[2])))
+      self.users.append(DxrUser('', Location(row[1])))
     
     return self.users
 
@@ -233,11 +241,10 @@ class DxrUser:
 
 
 class DxrMember:
-  def __init__(self, name, shortname, dxr_type, decl, defn, value, conn):
+  def __init__(self, name, shortname, dxr_type, defn, value, conn):
     self.name = name
     self.shortname = shortname
     self.type = dxr_type
-    self.decl = Location(decl)
     self.defn = Location(defn)
     self.value = value
     self.conn = conn
@@ -250,8 +257,7 @@ class DxrMember:
            return {'name': member.name, 
                    'shortname': member.shortname,
                    'type': {'name': member.type.name, 'loc': member.type.loc.full},
-                   'decl': member.decl.full,
-                   'defn': member.decl.full,
+                   'defn': member.defn.full,
                    'value': member.value,
                    'implementations': member.getDerivedImplementations()}
          return json.JSONEncoder.default(self, member)
@@ -269,10 +275,7 @@ class DxrMember:
                          'icon': 'icon-member', 
                          'shortname': m.shortname, 
                          'value': m.value}
-           jsonString['children'] = [ {'label': m.decl.full, 'icon': 'icon-decl', 'url': m.decl.full} ]
-
-           if m.defn.full and m.defn.full != m.decl.full:
-             jsonString['children'].append({'label': m.defn.full, 'icon': 'icon-def', 'url': m.defn.full})
+           jsonString['children'] = [{'label': m.defn.full, 'icon': 'icon-def', 'url': m.defn.full}]
 
            if impls:
              jsonString['children'].append(impls)
@@ -288,16 +291,7 @@ class DxrMember:
     
     self.implementations = []
     
-    sql = 'select mname, mshortname, mtname, mdecl, mdef, mvalue from members where mshortname=? and mtname in ' + \
-          '(select tcname from impl where tbname=?) order by mtname;'
-
-    for row in self.conn.execute(sql, (self.shortname, self.type.name)).fetchall():
-      name = row[0]
-      if includeTypeName:
-        name = row[2] + '::' + row[0]
-      
-      self.implementations.append(DxrMember(name, row[1], DxrType.find(row[2], self.conn), row[3], row[4], row[5], self.conn))
-
+    # XXX: fixme
     return self.implementations
 
 #  def getUsers(self):
