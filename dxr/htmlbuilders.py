@@ -235,21 +235,21 @@ class CppHtmlBuilder(HtmlBuilderBase):
   def getLinkRegions(self):
     if self.blob_file is None:
       return
-    def make_link(obj, loc, name, clazz):
+    def make_link(obj, loc, name, clazz, **kwargs):
       line, col = obj[loc].split(':')[1:]
       line, col = int(line), int(col)
-      return ((line, col), (line, col + len(obj[name])),
-        {'class': clazz, 'line': line})
+      kwargs['class'] = clazz
+      kwargs['line'] =  line
+      return ((line, col), (line, col + len(obj[name])), kwargs)
     for df in self.blob_file["variables"]:
-      yield make_link(df, 'vloc', 'vname', 's')
+      yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
     for df in self.blob_file["functions"]:
-      yield make_link(df, 'floc', 'fname', 'func')
+      yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
     for df in self.blob_file["types"]:
       yield make_link(df, 'tloc', 'tname', 't')
     for df in self.blob_file["refs"]:
       start, end = df["extent"].split(':')
-      line = df["refloc"].split(':')[1]
-      yield (int(start), int(end), {'class': 'ref', 'line': int(line)})
+      yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
 
   def getLineAnnotations(self):
     if self.lines is None:

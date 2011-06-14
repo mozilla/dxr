@@ -256,7 +256,7 @@ class DxrMember:
          if isinstance (member, DxrMember):
            return {'name': member.name, 
                    'shortname': member.shortname,
-                   'type': {'name': member.type.name, 'loc': member.type.loc.full},
+                   #'type': {'name': member.type.name, 'loc': member.type.loc.full},
                    'defn': member.defn.full,
                    'value': member.value,
                    'implementations': member.getDerivedImplementations()}
@@ -271,7 +271,7 @@ class DxrMember:
              impls = {'label': 'Implementations', 'icon': 'icon-member', 'children': m.getDerivedImplementations(includeTypeName=True)}
              
            jsonString = {'label': m.name,
-                         'type': m.type.name,
+                         #'type': m.type.name,
                          'icon': 'icon-member', 
                          'shortname': m.shortname, 
                          'value': m.value}

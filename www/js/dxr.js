@@ -26,16 +26,19 @@ function closeInfo() {
 }
 
 function showInfo(node) {
-  var type = node.className;
-  var name = node.innerHTML;
+  var name = node.textContent;
   var line = node.parentNode.id.replace('l', '');
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
-  var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot + "&tree=" + tree + "&div=" + infoDivID++
-  if (type == 's' || type == 's-fuzzy') { // statements have matching line number
-    url += "&type=" + type + "&name=" + name + "&file=" +
-	   file  + "&line=" + node.getAttribute("line").replace('l','');
-  } else {
-    url += "&type=" + type + "&name=" + name;
+  var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot;
+  url += "&tree=" + tree + "&div=" + infoDivID++;
+  url += "&type=" + node.className + "&name=" + name;
+  var attrs = node.attributes;
+  for (var i = 0; i < attrs.length; i++) {
+    var aname = attrs[i].name;
+    var value = attrs[i].value;
+    if (aname == 'class' || aname == 'aria-haspopup' || aname == 'href')
+      continue;
+    url += '&' + aname + '=' + encodeURIComponent(value);
   }
 
   if (infoDiv) {

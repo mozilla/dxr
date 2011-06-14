@@ -30,11 +30,26 @@ def printType():
   jsonString = json.dumps(t, cls=dxr_data.DxrType.DojoEncoder)
   printTree(jsonString)
 
-def printStatement():
-  s = dxr_data.DxrStatement.find(file, line, name, conn)
+def printVariable():
+  row = conn.execute("SELECT vname, vloc FROM variables WHERE varid=?",
+    (refid,)).fetchall()[0]
+  s = dxr_data.DxrMember(row[0], row[0], None, row[1], None, conn)
   jsonString = json.dumps(s, cls=dxr_data.DxrStatement.DojoEncoder)
   printTree(jsonString)
 
+def printFunction():
+  row = conn.execute("SELECT fname, floc, flongname FROM functions" +
+    " WHERE funcid=?", (refid,)).fetchall()[0]
+  s = dxr_data.DxrMember(row[2], row[0], None, row[1], None, conn)
+  jsonString = json.dumps(s, cls=dxr_data.DxrStatement.DojoEncoder)
+  printTree(jsonString)
+
+def printReference():
+  val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
+    " UNION SELECT 'func' FROM functions WHERE funcid=?" +
+    " UNION SELECT 't' FROM types WHERE tname=?",
+    (refid,refid,name)).fetchall()[0][0]
+  return dispatch[val]()
 # TODO - gotta get this stuff added somehow and deal with functions...
 #    # If this is a function call, do more work to get extra info
 #    if row[3] and row[3] == 1:
@@ -131,6 +146,9 @@ if form.has_key('virtroot'):
 if form.has_key('div'):
   div = form['div'].value
 
+if form.has_key('rid'):
+  refid = form['rid'].value
+
 config = ConfigParser.ConfigParser()
 config.read('dxr.config')
 
@@ -140,11 +158,11 @@ htmlsrcdir = os.path.join('/', virtroot, tree) + '/'
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
-if type == 's' or type == 's-fuzzy':
-  printStatement()
-elif type == 't':
-  printType()
-elif type == 'm':
-  printMacro()
-else:
-  printError()
+dispatch = {
+    'var': printVariable,
+    'func': printFunction,
+    't': printType,
+    'm': printMacro,
+    'ref': printReference,
+}
+dispatch.get(type, printError)()

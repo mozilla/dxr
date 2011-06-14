@@ -124,7 +124,7 @@ def make_blob():
     key = canonicalize_decl(f[0], f[1])
     if key not in scopes:
       funcKeys.add(key)
-      scopes[key] = nextIndex
+      functions[key]['funcid'] = scopes[key] = nextIndex
       nextIndex += 1
 
   # Variables aren't scoped, but we still need to refer to them in the same
