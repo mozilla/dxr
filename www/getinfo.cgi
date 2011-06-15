@@ -26,7 +26,9 @@ def printMacro():
 """ % (value[0], cgi.escape(value[1]))
 
 def printType():
-  t = dxr_data.DxrType.find(name, conn)
+  row = conn.execute("SELECT tqualname, tloc, tkind FROM types WHERE tid=?",
+      (refid,)).fetchall()[0]
+  t = dxr_data.DxrType(row[0], row[1], None, None, row[2], None, conn)
   jsonString = json.dumps(t, cls=dxr_data.DxrType.DojoEncoder)
   printTree(jsonString)
 

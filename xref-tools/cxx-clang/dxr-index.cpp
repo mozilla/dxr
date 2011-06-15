@@ -182,6 +182,12 @@ public:
       e->getQualifierLoc().getBeginLoc() : e->getLocation(), e->getNameInfo().getEndLoc());
     return true;
   }
+
+  // Type locators
+  bool VisitTagTypeLoc(TagTypeLoc l) {
+    printReference(l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    return true;
+  }
 };
 
 class DXRIndexAction : public PluginASTAction {

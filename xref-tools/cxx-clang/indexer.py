@@ -196,7 +196,13 @@ def make_blob():
       ref['refid'] = varKeys[canon]
       refs.append(ref)
     elif canon in funcKeys:
-      ref['refid'] = functions[canon]['scopeid']
+      ref['refid'] = functions[canon]['funcid']
+      refs.append(ref)
+    elif canon in typeKeys:
+      ref['refid'] = types[canon]['tid']
+      refs.append(ref)
+    elif canon in typedefs:
+      ref['refid'] = typedefs['tid']
       refs.append(ref)
 
   # Ball it up for passing on
