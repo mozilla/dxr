@@ -116,7 +116,7 @@ class HtmlBuilderBase:
         img = self._buildFullPath(img)
         out.write('<img src="%s" class="sidebarimage">' % (img))
         out.write('<a class="sidebarlink" title="%s" href="#l%d">%s</a><br>\n' %
-          (title, int(e[1]), e[0]))
+          (cgi.escape(title), int(e[1]), cgi.escape(e[0])))
       if cont is not None:
         out.write('</div><br />\n')
 
