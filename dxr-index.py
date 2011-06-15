@@ -129,7 +129,7 @@ def indextree(dxrconfig, treeconfig, doxref, dohtml, debugfile):
 
     print 'Building HTML files for %s...' % treeconfig["tree"]
 
-    debug = False
+    debug = (debugfile is not None)
 
     for root, dirs, filenames in os.walk(treeconfig["sourcedir"]):
       if root.find('/.hg') > -1:

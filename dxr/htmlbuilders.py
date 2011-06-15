@@ -96,7 +96,17 @@ class HtmlBuilderBase:
     for e in elements:
       containers.setdefault(len(e) > 4 and e[4] or None, []).append(e)
 
-    for cont in containers:
+    # Sort the containers by their location
+    # Global scope goes last, and scopes declared outside of this file goes
+    # before everything else
+    clocs = { None: 2 ** 32 }
+    for e in elements:
+      if e[0] in containers:
+        clocs[e[0]] = int(e[1])
+    contKeys = containers.keys()
+    contKeys.sort(lambda x, y: cmp(clocs.get(x, 0), clocs.get(y, 0)))
+
+    for cont in contKeys:
       if cont is not None:
         out.write('<b>%s</b>\n<div>\n' % str(cont))
       containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
@@ -191,12 +201,12 @@ class CppHtmlBuilder(HtmlBuilderBase):
       return linestr.split(':')[1]
     def make_tuple(df, name, loc, scope="scopeid"):
       img = 'images/icons/page_white_wrench.png'
-      if scope in df:
+      if scope in df and df[scope] > 0:
         return (df[name], df[loc].split(':')[1], df[name], img,
           self.blob["scopes"][df[scope]]["sname"])
       return (df[name], df[loc].split(':')[1], df[name], img)
     for df in self.blob_file["types"]:
-      yield make_tuple(df, "tname", "tloc")
+      yield make_tuple(df, "tqualname", "tloc", "scopeid")
     for df in self.blob_file["functions"]:
       yield make_tuple(df, "flongname", "floc", "scopeid")
     for df in self.blob_file["variables"]:
@@ -246,7 +256,7 @@ class CppHtmlBuilder(HtmlBuilderBase):
     for df in self.blob_file["functions"]:
       yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
     for df in self.blob_file["types"]:
-      yield make_link(df, 'tloc', 'tname', 't')
+      yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
     for df in self.blob_file["refs"]:
       start, end = df["extent"].split(':')
       yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
@@ -255,95 +265,3 @@ class CppHtmlBuilder(HtmlBuilderBase):
     if self.lines is None:
       self._getFromTokenizer()
     return self.lines
-
-
-class IdlHtmlBuilder(HtmlBuilderBase):
-  def __init__(self, dxrconfig, treeconfig, filepath, newroot):
-    HtmlBuilderBase.__init__(self, dxrconfig, treeconfig, filepath, newroot)
-
-  def _createTokenizer(self):
-    return IdlTokenizer(self.source)
-  
-  def writeSidebarBody(self, out):
-    currentType = ''
-    closeDiv = False
-    srcpath = self.srcpath
-    for mdecls in self.conn.execute('select mtname, mtloc, mname, mdecl, mshortname from members where mdecl like "' +
-                    srcpath + '%" order by mtname, mdecl;').fetchall():
-      if currentType != mdecls[0]:
-        if closeDiv:
-          out.write('</div><br />\n')
-
-        currentType = mdecls[0]
-        tname = mdecls[0]
-        if mdecls[1] and mdecls[1].startswith(srcpath):
-          mtlocline = mdecls[1].split(':')[1]
-          tname = '<a class="sidebarlink" href="#l%s">%s</a>' % (mtlocline, mdecls[0])
-        out.write("<b>%s</b>\n" % tname)
-        out.write('<div style="padding-left:16px">\n')
-        closeDiv = True
-
-      if mdecls[3]: # mdecl
-        out.write('&nbsp;<a class="sidebarlink" title="%s [Definition]" href="#l%s">%s</a><br />\n' % 
-              (mdecls[2], mdecls[3].split(':')[1], mdecls[4]))
-
-    if closeDiv:
-      out.write('</div><br />\n')
-
-    for extraTypes in self.conn.execute('select tname, tloc from types where tloc like "' + srcpath + 
-                     '%" and tname not in (select mtname from members where mdef like "' + srcpath + 
-                     '%" or mdecl like "' + srcpath + '%" order by mtname);').fetchall():
-      out.write('<b><a class="sidebarlink" href="#l%s">%s</a></b><br /><br />\n' %
-             (extraTypes[1].split(':')[1], extraTypes[0]))
-
-  def writeMainBody(self, out):
-    offset = 0     # offset is how much token.start/token.end are off due to extra html being added
-    line_start = 0
-    line = self.source[:self.source.find('\n')]
-    line_num = 1
-
-    for token in self.tokenizer.getTokens():
-      if token.token_type == self.tokenizer.NEWLINE:
-        out.write('<div id="l' + `line_num` + '"><a href="#l' + `line_num` + '" class="ln">' +
-              `line_num` + '</a>' + line + '</div>')
-        line_num += 1
-        line_start = token.end
-        offset = 0
-
-        # Get next line
-        eol = self.source.find('\n', line_start)
-        if eol > -1:
-          line = self.source[line_start:eol]
-
-      else:
-        if token.token_type == self.tokenizer.KEYWORD or token.token_type == self.tokenizer.STRING \
-            or token.token_type == self.tokenizer.COMMENT:
-          prefix = None
-          suffix = '</span>'
-
-          if token.token_type == self.tokenizer.KEYWORD:
-            prefix = '<span class="k">'
-          elif token.token_type == self.tokenizer.STRING:
-            prefix = '<span class="str">'
-          else:
-            prefix = '<span class="c">'
-
-          offset, line = self.escapeString(token, line, line_start, offset, prefix, suffix)
-
-        elif token.token_type == self.tokenizer.SYNTAX or token.token_type == self.tokenizer.CONSTANT:
-          offset, line = self.escapeString(token, line, line_start, offset)
-        else:
-          prefix = None
-          suffix = None
-
-          if token.token_type == self.tokenizer.KEYWORD:
-            prefix = '<span class="k">'
-            suffix = '</span>'
-          elif token.token_type == self.tokenizer.NAME:
-            prefix = ''
-            suffix = ''
-          else:
-            prefix = '<span class="p">'
-            suffix = '</span>'
-
-          offset, line = self.escapeString(token, line, line_start, offset, prefix, suffix)

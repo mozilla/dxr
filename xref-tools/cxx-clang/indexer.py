@@ -64,10 +64,10 @@ def process_decldef(args):
   decl_master[(name, defloc)] = defloc
 
 def process_type(typeinfo):
-  types[(typeinfo['tname'], typeinfo['tloc'])] = typeinfo
+  types[(typeinfo['tqualname'], typeinfo['tloc'])] = typeinfo
 
 def process_typedef(typeinfo):
-  typedefs[(typeinfo['tname'], typeinfo['tloc'])] = typeinfo
+  typedefs[(typeinfo['tqualname'], typeinfo['tloc'])] = typeinfo
   typeinfo['tkind'] = 'typedef'
 
 def process_function(funcinfo):
@@ -117,8 +117,12 @@ def make_blob():
     key = canonicalize_decl(t[0], t[1])
     if key not in scopes:
       typeKeys.add(key)
-      scopes[key] = nextIndex
+      types[key]['tid'] = scopes[key] = nextIndex
       nextIndex += 1
+  # Typedefs need a tid, but they are not a scope
+  for t in typedefs:
+    typedefs[t]['tid'] = nextIndex
+    nextIndex += 1
   funcKeys = set()
   for f in functions:
     key = canonicalize_decl(f[0], f[1])
@@ -161,21 +165,24 @@ def make_blob():
     supers.append(base)
 
   # Fix up (name, loc) pairs to ids
-  for fkey in funcKeys:
-    funcinfo = functions[fkey]
-    if 'scopename' in funcinfo:
-      funcinfo['scopeid'] = scopes[canonicalize_decl(funcinfo.pop('scopename'),
-        funcinfo.pop('scopeloc'))]
+  def repairScope(info):
+    if 'scopename' in info:
+      info['scopeid'] = scopes[canonicalize_decl(info.pop('scopename'),
+        info.pop('scopeloc'))]
     else:
-      funcinfo['scopeid'] = 0
+      info['scopeid'] = 0
+
+  for tkey in typeKeys:
+    repairScope(types[tkey])
+
+  for tkey in typedefs:
+    repairScope(typedefs[tkey])
+
+  for fkey in funcKeys:
+    repairScope(functions[fkey])
 
   for vkey in varKeys:
-    varinfo = variables[vkey]
-    if 'scopename' in varinfo:
-      varinfo['scopeid'] = scopes[canonicalize_decl(varinfo.pop('scopename'),
-        varinfo.pop('scopeloc'))]
-    else:
-      varinfo['scopeid'] = 0
+    repairScope(variables[vkey])
   
   # dicts can't be stuffed in sets, and our key is very unwieldy. Since
   # duplicates are most likely to occur only when we include the same header
@@ -194,8 +201,8 @@ def make_blob():
 
   # Ball it up for passing on
   blob = {}
-  blob["scopes"] = [{"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}
-    for s in scopes]
+  blob["scopes"] = dict([(scopes[s],
+    {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}) for s in scopes])
   blob["functions"] = [functions[f] for f in funcKeys]
   blob["variables"] = [variables[v] for v in varKeys]
   blob["types"] = [types[t] for t in typeKeys]
@@ -216,7 +223,10 @@ def post_process(srcdir, objdir):
       "refs": [] }
   files = {}
   def add_to_files(table, loc):
+    iskey = isinstance(blob[table], dict)
     for row in blob[table]:
+      if iskey:
+        row = blob[table][row]
       f = row[loc].split(":")[0]
       files.setdefault(f, schema())[table].append(row)
   add_to_files("scopes", "sloc")
@@ -244,7 +254,10 @@ def sqlify(blob):
       " (" + ",".join([repr(v) for v in vals]) + ");")
   for table in blob:
     if table == "byfile": continue
+    iskey = isinstance(blob[table], dict)
     for row in blob[table]:
+      if iskey:
+        row = blob[table][row]
       write_sql(table, row, out)
   return '\n'.join(out)
 

@@ -9,6 +9,7 @@
 
 #include <fstream>
 #include <stdio.h>
+#include <stdlib.h>
 using namespace clang;
 
 namespace {
@@ -49,12 +50,12 @@ public:
       return false;
     if (filename[0] != '/') // Relative path, keep it
       return true;
-    return filename.find("/src/dxr/") == 0;
+    return filename.find("/src/OpenSkyscraper/") == 0;
   }
 
   std::string locationToString(SourceLocation loc) {
     PresumedLoc fixed = sm.getPresumedLoc(loc);
-    std::string buffer = fixed.getFilename();
+    std::string buffer = realpath(fixed.getFilename(), NULL);
     buffer += ":";
     buffer += fixed.getLine();
     buffer += ":";
@@ -64,6 +65,10 @@ public:
 
   void printScope(Decl *d) {
     Decl *ctxt = Decl::castFromDeclContext(d->getNonClosureContext());
+    // Ignore namespace scopes, since it doesn't really help for source code
+    // organization
+    while (NamespaceDecl::classof(ctxt))
+      ctxt = Decl::castFromDeclContext(ctxt->getNonClosureContext());
     if (NamedDecl::classof(ctxt)) {
       NamedDecl *scope = static_cast<NamedDecl*>(ctxt);
       out << ",scopename,\"" << scope->getQualifiedNameAsString() <<
@@ -91,9 +96,11 @@ public:
     if (!interestingLocation(d->getLocation()))
       return true;
     // Information we need for types: kind, fqname, simple name, location
-    out << "type,tname,\"" << d->getQualifiedNameAsString() << "\",tloc,\"" <<
-      locationToString(d->getLocation()) << "\",tkind," << d->getKindName() <<
-      std::endl;
+    out << "type,tname,\"" << d->getNameAsString() << "\",tqualname,\"" <<
+      d->getQualifiedNameAsString() << "\",tloc,\"" <<
+      locationToString(d->getLocation()) << "\",tkind," << d->getKindName();
+    printScope(d);
+    out << std::endl;
 
     declDef(d, d->getDefinition());
     // XXX: inheritance
@@ -130,9 +137,11 @@ public:
   bool VisitTypedefNameDecl(TypedefNameDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
-    out << "typedef,tname,\"" << d->getQualifiedNameAsString() <<
-      "\",tloc,\"" << locationToString(d->getLocation()) << "\"";
+    out << "typedef,tname,\"" << d->getNameAsString() << "\",tqualname,\"" <<
+      d->getQualifiedNameAsString() << "\",tloc,\"" <<
+      locationToString(d->getLocation()) << "\"";
     // XXX: printout the referent
+    printScope(d);
     out << std::endl;
     return true;
   }

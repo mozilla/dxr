@@ -54,16 +54,16 @@ class DxrType:
   def find(cls, typename, conn, loc=None):
     row = None
     if loc:
-      row = conn.execute('select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname=? and tloc=?;', 
+      row = conn.execute('select tname, tloc, tkind from types where tname=? and tloc=?;', 
                          (typename,loc)).fetchone()
     else:
-      row = conn.execute('select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname=?;',
+      row = conn.execute('select tname, tloc, tkind from types where tname=?;',
                          (typename,)).fetchone()
 
     if not row:
       return None
 
-    return DxrType(row[0], row[1], row[2], row[3], row[4], row[5], conn)
+    return DxrType(row[0], row[1], None, None, row[2], None, conn)
 
   def __init__(self, name, loc, typedef, typedef_loc, kind, template, conn):
     self.name = name
@@ -161,18 +161,18 @@ class DxrType:
     relation = None
 
     # Direct bases
-    sql = 'select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname in ' + \
+    sql = 'select tname, tloc, tkind from types where tname in ' + \
           '(select tbname from impl where tcname=? and tcloc=? and direct=1);'
     
     for row in self.conn.execute(sql, (self.name, self.loc.full)).fetchall():
-      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], row[2], row[3], row[4], row[5], self.conn), DxrTypeRelation.DIRECT_BASE))
+      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.DIRECT_BASE))
 
     # Indirect Bases
-    sql = 'select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname in ' + \
+    sql = 'select tname, tloc, tkind from types where tname in ' + \
           '(select tbname from impl where tcname=? and tcloc=? and not direct=1);'
     
     for row in self.conn.execute(sql, (self.name, self.loc.full)).fetchall():
-      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], row[2], row[3], row[4], row[5], self.conn), DxrTypeRelation.INDIRECT_BASE))
+      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.INDIRECT_BASE))
 
     return self.bases
 
@@ -184,18 +184,18 @@ class DxrType:
     relation = None
 
     # Types directly derived from this type.
-    sql = 'select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname in ' + \
+    sql = 'select tname, tloc, tkind from types where tname in ' + \
           '(select tcname from impl where tbname=? and tbloc=? and direct = 1);'
     
     for row in self.conn.execute(sql, (self.name, self.loc.full)):
-      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], row[2], row[3], row[4], row[5], self.conn), DxrTypeRelation.DIRECT_DERIVED))
+      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.DIRECT_DERIVED))
 
     # Types indirectly derived from this type.
-    sql = 'select tname, tloc, ttypedefname, ttypedefloc, tkind, ttemplate from types where tname in ' + \
+    sql = 'select tname, tloc, tkind from types where tname in ' + \
           '(select tcname from impl where tbname=? and tbloc=? and not direct = 1);'
     
     for row in self.conn.execute(sql, (self.name, self.loc.full)):
-      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], row[2], row[3], row[4], row[5], self.conn), DxrTypeRelation.INDIRECT_DERIVED))
+      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.INDIRECT_DERIVED))
 
     return self.derived
 

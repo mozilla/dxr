@@ -47,8 +47,8 @@ def printFunction():
 def printReference():
   val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
     " UNION SELECT 'func' FROM functions WHERE funcid=?" +
-    " UNION SELECT 't' FROM types WHERE tname=?",
-    (refid,refid,name)).fetchall()[0][0]
+    " UNION SELECT 't' FROM types WHERE tid=?",
+    (refid,refid,refid)).fetchall()[0][0]
   return dispatch[val]()
 # TODO - gotta get this stuff added somehow and deal with functions...
 #    # If this is a function call, do more work to get extra info

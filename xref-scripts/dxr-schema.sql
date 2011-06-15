@@ -2,7 +2,6 @@ PRAGMA synchronous=off;
 PRAGMA page_size=4096;
 PRAGMA count_changes=off;
 
-drop table if exists types;
 drop table if exists impl;
 drop table if exists callers;
 drop table if exists warnings;
@@ -19,17 +18,18 @@ CREATE TABLE scopes (
   PRIMARY KEY(scopeid)
 );
 
--- Types are a subtype of scopes
--- Table types: all named structs and classes defined in the mozilla source tree
--- tname: Type Name
--- tloc: Type DECL Location
--- ttypedefname: if this type is a typedef of some other type, this is the real type name
--- ttypedefloc: if this type is a typedef of some other type, this is the real type loc
--- tkind: Type Kind (e.g., class, struct, interface)
--- tmodule: Type Module
--- tignore: mark internal types that are not interesting to moz devs [1 = true, 0 = false]
--- ttemplate: If this is a template instance, the name of the template (nsCOMPtr<nsFoo> --> nsCOMPtr)
-create table types(tname TEXT, tloc TEXT, ttypedefname TEXT, ttypedefloc TEXT, tkind TEXT, ttemplate TEXT, tmodule TEXT, tignore INTEGER, PRIMARY KEY(tname, tloc));
+-- Types
+DROP TABLE IF EXISTS types;
+CREATE TABLE types (
+  tid       INTEGER NOT NULL,      -- The unique ID for this type
+  scopeid   INTEGER NOT NULL,      -- The scope of this type
+  tname     VARCHAR(256) NOT NULL, -- The simple name of this type
+  tqualname VARCHAR(256) NOT NULL, -- The fully-qualified name of this type
+  tloc      VARCHAR(256) NOT NULL, -- The location of the type
+  tkind     VARCHAR(32),           -- The kind of the type (e.g., syntax)
+  PRIMARY KEY(tid),
+  UNIQUE(tqualname, tloc)
+);
 
 -- Table impl: all type hierarchy implementation info (e.g., every concrete class for a base class or interface) 
 -- tbname: Type Base Name (FK-types.tname), tbloc: Type Base DECL Location
