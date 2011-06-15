@@ -6,7 +6,7 @@ import re
 import sqlite3
 import template
 import cgi
-from tokenizers import Token, BaseTokenizer, CppTokenizer, IdlTokenizer
+from tokenizers import Token, BaseTokenizer, CppTokenizer
 
 class HtmlBuilderBase:
   def collectSidebar(self):
@@ -108,7 +108,7 @@ class HtmlBuilderBase:
 
     for cont in contKeys:
       if cont is not None:
-        out.write('<b>%s</b>\n<div>\n' % str(cont))
+        out.write('<b>%s</b>\n<div>\n' % cgi.escape(str(cont)))
       containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
       for e in containers[cont]:
         img = len(e) > 3 and e[3] or "images/icons/page_white_code.png"
@@ -210,7 +210,7 @@ class CppHtmlBuilder(HtmlBuilderBase):
     for df in self.blob_file["functions"]:
       yield make_tuple(df, "flongname", "floc", "scopeid")
     for df in self.blob_file["variables"]:
-      if "scopeid" in df: #XXX only kill local vars
+      if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
         continue
       yield make_tuple(df, "vname", "vloc", "scopeid")
 

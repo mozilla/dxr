@@ -201,10 +201,12 @@ def make_blob():
 
   # Ball it up for passing on
   blob = {}
-  blob["scopes"] = dict([(scopes[s],
-    {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}) for s in scopes])
-  blob["functions"] = [functions[f] for f in funcKeys]
-  blob["variables"] = [variables[v] for v in varKeys]
+  def mdict(info, key):
+    return (info[key], info)
+  blob["scopes"] = dict([mdict({"scopeid": scopes[s], "sname": s[0],
+    "sloc": s[1]}, "scopeid") for s in scopes])
+  blob["functions"] = dict([mdict(functions[f], "funcid") for f in funcKeys])
+  blob["variables"] = dict([mdict(variables[v], "varid") for v in varKeys])
   blob["types"] = [types[t] for t in typeKeys]
   blob["types"] += [typedefs[t] for t in typedefs]
   blob["impl"] = inheritsTree
