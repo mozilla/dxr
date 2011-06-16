@@ -103,7 +103,31 @@ public:
     out << std::endl;
 
     declDef(d, d->getDefinition());
-    // XXX: inheritance
+    return true;
+  }
+
+  bool VisitCXXRecordDecl(CXXRecordDecl *d) {
+    if (!interestingLocation(d->getLocation()) || !d->isDefinition())
+      return true;
+
+    // TagDecl already did decldef and type outputting; we just need impl
+    for (CXXRecordDecl::base_class_iterator iter = d->bases_begin();
+        iter != d->bases_end(); ++iter) {
+      CXXRecordDecl *base = (*iter).getType()->getAsCXXRecordDecl();
+      out << "impl,tcname,\"" << d->getQualifiedNameAsString() <<
+        "\",tcloc,\"" << locationToString(d->getLocation()) << "\",tbname,\"" <<
+        base->getQualifiedNameAsString() << "\",tbloc,\"" <<
+        locationToString(base->getLocation()) << "\",access,\"";
+      switch ((*iter).getAccessSpecifierAsWritten()) {
+      case AS_public: out << "public"; break;
+      case AS_protected: out << "protected"; break;
+      case AS_private: out << "private"; break;
+      case AS_none: break; // It's implied, but we can ignore that
+      }
+      if ((*iter).isVirtual())
+        out << " virtual";
+      out << "\"" << std::endl;
+    }
     return true;
   }
 
@@ -152,7 +176,7 @@ public:
     if (!TagDecl::classof(d) && !NamespaceDecl::classof(d) &&
         !FunctionDecl::classof(d) && !FieldDecl::classof(d) &&
         !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
-        !EnumConstantDecl::classof(d))
+        !EnumConstantDecl::classof(d) && !AccessSpecDecl::classof(d))
       printf("Unprocessed kind %s\n", d->getDeclKindName());
     return true;
   }
@@ -185,6 +209,9 @@ public:
 
   // Type locators
   bool VisitTagTypeLoc(TagTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
     printReference(l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }

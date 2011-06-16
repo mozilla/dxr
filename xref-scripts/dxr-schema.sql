@@ -2,7 +2,6 @@ PRAGMA synchronous=off;
 PRAGMA page_size=4096;
 PRAGMA count_changes=off;
 
-drop table if exists impl;
 drop table if exists callers;
 drop table if exists warnings;
 
@@ -36,6 +35,15 @@ CREATE TABLE types (
 -- tcname: Type Concrete Name (FK-types.tname), tcloc: Type Concrete DECL Location 
 -- direct: Used to recreate inheritance hierarchy [1=direct base, -1=non-direct base]
 create table impl (tbname TEXT, tbloc TEXT, tcname TEXT, tcloc TEXT, direct INTEGER, PRIMARY KEY(tbname, tbloc, tcname, tcloc));
+
+DROP TABLE IF EXISTS impl;
+CREATE TABLE impl (
+  tbase    INTEGER NOT NULL, -- The tid of the base type
+  tderived INTEGER NOT NULL, -- The tid of the derived type
+  inhtype  VARCHAR(32),      -- The type of the inheritance
+                             -- NULL: indirect (needed for SQL queries)
+  PRIMARY KEY(tbase, tderived)
+);
 
 -- Functions
 CREATE TABLE functions (

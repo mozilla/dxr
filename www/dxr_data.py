@@ -160,20 +160,13 @@ class DxrType:
     self.bases = []
     relation = None
 
-    # Direct bases
-    sql = 'select tqualname, tloc, tkind from types where tname in ' + \
-          '(select tbname from impl where tcname=? and tcloc=? and direct=1);'
-    
-    for row in self.conn.execute(sql, (self.name, self.loc.full)).fetchall():
-      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.DIRECT_BASE))
+    sql = 'SELECT tqualname, tloc, tkind, inhtype FROM types ' + \
+      'LEFT JOIN impl ON (tid = tbase) WHERE tderived=?';
+    for row in self.conn.execute(sql, (self.scopeid,)).fetchall():
+      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), row[3] and DxrTypeRelation.DIRECT_BASE or DxrTypeRelation.INDIRECT_BASE))
 
-    # Indirect Bases
-    sql = 'select tqualname, tloc, tkind from types where tname in ' + \
-          '(select tbname from impl where tcname=? and tcloc=? and not direct=1);'
-    
-    for row in self.conn.execute(sql, (self.name, self.loc.full)).fetchall():
-      self.bases.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.INDIRECT_BASE))
-
+    # Sort direct bases first
+    self.bases.sort(lambda x, y: cmp(x.relation, y.relation))
     return self.bases
 
   def getDerived(self):
@@ -183,20 +176,13 @@ class DxrType:
     self.derived = []
     relation = None
 
-    # Types directly derived from this type.
-    sql = 'select tqualname, tloc, tkind from types where tname in ' + \
-          '(select tcname from impl where tbname=? and tbloc=? and direct = 1);'
-    
-    for row in self.conn.execute(sql, (self.name, self.loc.full)):
-      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.DIRECT_DERIVED))
+    sql = 'SELECT tqualname, tloc, tkind, inhtype FROM types ' + \
+      'LEFT JOIN impl ON (tid = tderived) WHERE tbase=?';
+    for row in self.conn.execute(sql, (self.scopeid,)).fetchall():
+      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), row[3] and DxrTypeRelation.DIRECT_DERIVED or DxrTypeRelation.INDIRECT_DERIVED))
 
-    # Types indirectly derived from this type.
-    sql = 'select tqualname, tloc, tkind from types where tname in ' + \
-          '(select tcname from impl where tbname=? and tbloc=? and not direct = 1);'
-    
-    for row in self.conn.execute(sql, (self.name, self.loc.full)):
-      self.derived.append(DxrTypeRelation(self, DxrType(row[0], row[1], None, None, row[2], None, self.conn), DxrTypeRelation.INDIRECT_DERIVED))
-
+    # Sort direct bases first
+    self.derived.sort(lambda x, y: cmp(x.relation, y.relation))
     return self.derived
 
   def getUsers(self, limit=None):

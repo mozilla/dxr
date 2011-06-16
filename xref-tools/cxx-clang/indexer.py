@@ -54,7 +54,7 @@ decl_master = {}
 types = {}
 typedefs = {}
 functions = {}
-inheritance = set()
+inheritance = {}
 variables = {}
 references = {}
 
@@ -74,7 +74,7 @@ def process_function(funcinfo):
   functions[(funcinfo['flongname'], funcinfo['floc'])] = funcinfo
 
 def process_impl(info):
-  inheritance.add(info)
+  inheritance[info['tbname'], info['tbloc'], info['tcname'], info['tcloc']]=info
 
 def process_variable(varinfo):
   variables[varinfo['vname'], varinfo['vloc']] = varinfo
@@ -147,20 +147,18 @@ def make_blob():
   # Since we don't know which order we'll see the pairs, we have to propagate
   # bidirectionally when we find out more.
   def build_inherits(base, child, direct):
-    return {
-        'tbname': base[0], 'tbloc': base[1],
-        'tcname': child[0], 'tcloc': child[1],
-        'direct': direct}
+    return { 'tbase': base, 'tderived': child, 'inhtype': direct }
   childMap, parentMap = {}, {}
   inheritsTree = []
-  for info in inheritance:
-    base = canonicalize_decl(info['tbname'], info['tbloc'])
-    child = canonicalize_decl(info['tcname'], info['tcloc'])
-    subs = childMap.setdefault(base, set())
-    supers = parentMap.setdefault(child, set())
-    inheritsTree.append(build_inherits(base, child, True))
-    inheritsTree.extend([build_inherits(base, sub, False) for sub in subs])
-    inheritsTree.extend([build_inherits(sup, child, False) for sup in supers])
+  for infoKey in inheritance:
+    info = inheritance[infoKey]
+    base = types[canonicalize_decl(info['tbname'], info['tbloc'])]['tid']
+    child = types[canonicalize_decl(info['tcname'], info['tcloc'])]['tid']
+    subs = childMap.setdefault(base, [])
+    supers = parentMap.setdefault(child, [])
+    inheritsTree.append(build_inherits(base, child, info['access']))
+    inheritsTree.extend([build_inherits(base, sub, None) for sub in subs])
+    inheritsTree.extend([build_inherits(sup, child, None) for sup in supers])
     subs.append(child)
     supers.append(base)
 
