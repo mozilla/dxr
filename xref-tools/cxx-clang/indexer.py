@@ -147,20 +147,36 @@ def make_blob():
   # Since we don't know which order we'll see the pairs, we have to propagate
   # bidirectionally when we find out more.
   def build_inherits(base, child, direct):
-    return { 'tbase': base, 'tderived': child, 'inhtype': direct }
-  childMap, parentMap = {}, {}
+    db = { 'tbase': base, 'tderived': child }
+    if direct is not None:
+      db['inhtype'] = direct
+    return db
+
+  children = {}
   inheritsTree = []
   for infoKey in inheritance:
     info = inheritance[infoKey]
     base = types[canonicalize_decl(info['tbname'], info['tbloc'])]['tid']
     child = types[canonicalize_decl(info['tcname'], info['tcloc'])]['tid']
-    subs = childMap.setdefault(base, [])
-    supers = parentMap.setdefault(child, [])
     inheritsTree.append(build_inherits(base, child, info['access']))
+
+    children.setdefault(base, set()).add(child)
+    children[base].update(children.get(child, set()))
+
+    # Get all known relations
+    subs = childMap.setdefault(child, [])
+    supers = parentMap.setdefault(base, [])
     inheritsTree.extend([build_inherits(base, sub, None) for sub in subs])
     inheritsTree.extend([build_inherits(sup, child, None) for sup in supers])
-    subs.append(child)
-    supers.append(base)
+
+    # Carry through these relations
+    newsubs = childMap.setdefault(base, [])
+    newsubs.append(child)
+    newsubs.extend(subs)
+    newsupers = parentMap.setdefault(child, [])
+    newsupers.append(base)
+    newsupers.extend(supers)
+  print childMap[33], parentMap[33]
 
   # Fix up (name, loc) pairs to ids
   def repairScope(info):
