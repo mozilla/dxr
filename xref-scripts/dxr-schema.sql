@@ -2,9 +2,6 @@ PRAGMA synchronous=off;
 PRAGMA page_size=4096;
 PRAGMA count_changes=off;
 
-drop table if exists callers;
-drop table if exists warnings;
-
 -- Scope definitions
 DROP TABLE IF EXISTS scopes;
 CREATE TABLE scopes (
@@ -83,15 +80,3 @@ CREATE TABLE refs (
   extent VARCHAR(30) NOT NULL,  -- The extent (start:end) of the reference
   PRIMARY KEY(refid, refloc)
 );
-
--- Table macros: all macros defined in translation units
--- mname: the name of the macro
--- mshortname: name with no (args)
--- mvalue: the value of the macro
-create table macros(mname TEXT, mshortname TEXT, mvalue TEXT, PRIMARY KEY(mshortname, mvalue));
-
--- Table warnings: all GCC file warnings for the build
--- wfile: the file that produced the warning
--- wloc: the line number
--- wmsg: the warning message
-create table warnings(wid INTEGER, wfile TEXT, wloc INTEGER, wmsg TEXT, PRIMARY KEY(wfile, wloc, wmsg));

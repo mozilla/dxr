@@ -15,7 +15,8 @@ def load(configFile):
     dxrconfig["wwwdir"] = os.path.abspath(config.get('Web', 'wwwdir'))
     dxrconfig["virtroot"] = os.path.normpath(config.get('Web', 'virtroot'))
     dxrconfig["hosturl"] = config.get('Web', 'hosturl')
-    if dxrconfig["hosturl"].endswith('/'): dxrconfig["hosturl"] = dxrconfig["hosturl"][0:-1]
+    if dxrconfig["hosturl"].endswith('/'):
+      dxrconfig["hosturl"] = dxrconfig["hosturl"][0:-1]
     dxrconfig["glimpse"] = os.path.abspath(config.get('DXR', 'glimpse'))
     dxrconfig["glimpseindex"] = os.path.abspath(config.get('DXR', 'glimpseindex'))
 
@@ -29,7 +30,6 @@ def load(configFile):
             treeconfig["tree"] = section
             treeconfig["sourcedir"] = os.path.abspath(config.get(section, 'sourcedir'))
             treeconfig["objdir"] = os.path.abspath(config.get(section, 'objdir'))
-            treeconfig["mozconfig"] = os.path.abspath(config.get(section, 'mozconfig'))
 
             dxrconfig["trees"].append(treeconfig)
 

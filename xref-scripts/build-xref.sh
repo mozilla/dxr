@@ -2,56 +2,44 @@
 
 Usage()
 {
-    echo "Usage: ./build-xref.sh <sourceroot> <objdir> <mozconfig> <xrefscripts> <dbdir> <dbname> <wwwdir> <treename>"
+    echo "Usage: ./build-xref.sh <objdir> <xrefscripts> <dbdir> <dbname> <wwwdir> <treename>"
 }
 
 if [ -z "$1" ]; then
     Usage
     exit
 fi
-SOURCEROOT=$1
+OBJDIR=$1
 
 if [ -z "$2" ]; then
     Usage
     exit
 fi
-OBJDIR=$2
+DXRSCRIPTS=$2
 
 if [ -z "$3" ]; then
     Usage
     exit
 fi
-MOZCONFIG=$3
+DBROOT=$3
 
 if [ -z "$4" ]; then
     Usage
     exit
 fi
-DXRSCRIPTS=$4
+DBNAME=$4
 
 if [ -z "$5" ]; then
     Usage
     exit
 fi
-DBROOT=$5
+WWWDIR=$5
 
 if [ -z "$6" ]; then
     Usage
     exit
 fi
-DBNAME=$6
-
-if [ -z "$7" ]; then
-    Usage
-    exit
-fi
-WWWDIR=$7
-
-if [ -z "$8" ]; then
-    Usage
-    exit
-fi
-TREENAME=$8
+TREENAME=$6
 
 # backup current data while we build new
 if [ -d ${WWWDIR}/${TREENAME}-current ]
@@ -80,29 +68,15 @@ cd ${DBROOT}
 # merge and de-dupe sql scripts, putting inserts first, feed into sqlite
 echo "Post-process all C++ .sql and create db..."
 find ${OBJDIR} -name '*.sql' -exec cat {} \; > ${DBROOT}/all.sql
-awk '!($0 in a) {a[$0];print}' ${DBROOT}/all.sql > ${DBROOT}/all-uniq.sql
-rm ${DBROOT}/all.sql
-cat ${DBROOT}/all-uniq.sql | ${DXRSCRIPTS}/fix_paths.pl ${SOURCEROOT} ${OBJDIR} > ${DBROOT}/all-uniq-fixed-paths.sql
-rm ${DBROOT}/all-uniq.sql
-grep "^insert" ${DBROOT}/all-uniq-fixed-paths.sql > ${DBROOT}/cpp-insert.sql
-grep -v "^insert" ${DBROOT}/all-uniq-fixed-paths.sql > ${DBROOT}/cpp-update.sql
-rm ${DBROOT}/all-uniq-fixed-paths.sql
-
 echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' > ${DBROOT}/all-cpp.sql
 cat ${DXRSCRIPTS}/dxr-schema.sql >> ${DBROOT}/all-cpp.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
 echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' >> ${DBROOT}/all-cpp.sql
-cat ${DBROOT}/cpp-insert.sql >> ${DBROOT}/all-cpp.sql
+awk '!($0 in a) {a[$0];print}' ${DBROOT}/all.sql >> ${DBROOT}/all-cpp.sql
 echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
-echo 'PRAGMA journal_mode=off; PRAGMA locking_mode=EXCLUSIVE; BEGIN TRANSACTION;' >> ${DBROOT}/all-cpp.sql
-#cat ${DXRSCRIPTS}/dxr-indices.sql >> ${DBROOT}/all-cpp.sql
-echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
-cat ${DBROOT}/cpp-update.sql >> ${DBROOT}/all-cpp.sql
-echo 'COMMIT; PRAGMA locking_mode=NORMAL;' >> ${DBROOT}/all-cpp.sql
+rm ${DBROOT}/all.sql
 
 sqlite3 ${DBROOT}/${DBNAME} < ${DBROOT}/all-cpp.sql > ${DBROOT}/error-cpp.log 2>&1
-rm ${DBROOT}/cpp-insert.sql
-rm ${DBROOT}/cpp-update.sql
 # XXX: leaving this file for debugging
 #rm ${DBROOT}/all-cpp.sql
 echo "DB built."

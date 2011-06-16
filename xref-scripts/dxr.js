@@ -20,7 +20,7 @@ nsAccessible print_members() mtname=nsAccessible mname=mAccChildCount loc=/home/
 
 // Change this to your src root
 // TODO: get this working with this.arguments
-var srcroot = "/var/www/html/dxr/mozilla-trees/mozilla-central/";
+var srcroot = "/src/dxr/";
 var srcRegex = new RegExp("^" + srcroot);
 
 var sql = [];
