@@ -3,6 +3,11 @@
 # XXX: I don't know if this is bash-only, but that's the only shell I use. So
 # assume it is.
 
+if [ -z "$1" ]; then
+  echo "Usage: . $0 <srcdir>"
+fi
+SRCDIR="$1"
+
 if [ -z "$DXRSRC" ]; then
   echo "Setting DXRSRC variable"
   export DXRSRC=$(dirname $(readlink -f $0))

@@ -25,6 +25,8 @@ std::string &operator+=(std::string &str, unsigned int i) {
   return str += (ptr + 1);
 }
 
+std::string srcdir;
+
 class IndexConsumer : public ASTConsumer,
     public RecursiveASTVisitor<IndexConsumer> {
 private:
@@ -50,7 +52,7 @@ public:
       return false;
     if (filename[0] != '/') // Relative path, keep it
       return true;
-    return filename.find("/src/OpenSkyscraper/") == 0;
+    return filename.compare(0, srcdir.length(), srcdir) == 0;
   }
 
   std::string locationToString(SourceLocation loc) {
@@ -225,21 +227,14 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string>& args) {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << "PrintFunctionNames arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        Diagnostic &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(
-          Diagnostic::Error, "invalid argument '" + args[i] + "'");
-        D.Report(DiagID);
-        return false;
-      }
+    if (args.size() != 1) {
+      Diagnostic &D = CI.getDiagnostics();
+      unsigned DiagID = D.getCustomDiagID(Diagnostic::Error,
+        "Need an argument for the source directory");
+      D.Report(DiagID);
+      return false;
     }
-    if (args.size() && args[0] == "help")
-      PrintHelp(llvm::errs());
-
+    srcdir = args[0];
     return true;
   }
   void PrintHelp(llvm::raw_ostream& ros) {

@@ -28,30 +28,27 @@ space to do this, and a fast computer helps a lot.
 1) DXR uses config info from an INI style config file. Alter the variables in
 dxrsrc/www/dxr.config for your environment.
 
-2) For the moment, you need to alter dxrsrc/xref-tools/cxx-clang/dxr-index.cpp
-for your source directory:
-return filename.find("/src/dxr/") == 0;
+2) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
 
-3) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
-
-4) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
+3) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
 to copy (or symlink) the xref-scripts directory.
 
-5) Run . dxrsrc/setup-env.sh to set up your environment. The single `.' at the
-beginning is very important; otherwise, your shell will not have the necessary
-variables exported.
+4) Run . dxrsrc/setup-env.sh srcdir to set up your environment, where srcdir is
+the root source directory of your codebase. The single `.' at the beginning is
+very important; otherwise, your shell will not have the necessary variables
+exported.
 
-6) Compile and build your program. It is recommended that you use a separate
+5) Compile and build your program. It is recommended that you use a separate
 build directory from your source directory.
 
-7) Run the cross-reference generator:
+6) Run the cross-reference generator:
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
-8) Download and install (or at least build somewhere the web app can access) Glimpse:
+7) Download and install (or at least build somewhere the web app can access) Glimpse:
 
 http://webglimpse.net/trial/glimpse-latest.tar.gz
 
-9) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
+8) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
 
 Running:
 -------
