@@ -152,16 +152,13 @@ def make_blob():
       db['inhtype'] = direct
     return db
 
-  children = {}
+  childMap, parentMap = {}, {}
   inheritsTree = []
   for infoKey in inheritance:
     info = inheritance[infoKey]
     base = types[canonicalize_decl(info['tbname'], info['tbloc'])]['tid']
     child = types[canonicalize_decl(info['tcname'], info['tcloc'])]['tid']
     inheritsTree.append(build_inherits(base, child, info['access']))
-
-    children.setdefault(base, set()).add(child)
-    children[base].update(children.get(child, set()))
 
     # Get all known relations
     subs = childMap.setdefault(child, [])
@@ -176,7 +173,6 @@ def make_blob():
     newsupers = parentMap.setdefault(child, [])
     newsupers.append(base)
     newsupers.extend(supers)
-  print childMap[33], parentMap[33]
 
   # Fix up (name, loc) pairs to ids
   def repairScope(info):
