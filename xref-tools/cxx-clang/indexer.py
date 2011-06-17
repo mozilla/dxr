@@ -108,6 +108,9 @@ def collect_files(arg, dirname, fnames):
 def make_blob():
   def canonicalize_decl(name, loc):
     return (name, decl_master.get((name, loc), loc))
+  def recanon_decl(name, loc):
+    decl_master[name, loc] = (name, loc)
+    return (name, loc)
 
   # Produce all scopes
   scopes = {}
@@ -115,6 +118,8 @@ def make_blob():
   typeKeys = set()
   for t in types:
     key = canonicalize_decl(t[0], t[1])
+    if key not in types:
+      key = recanon_decl(t[0], t[1])
     if key not in scopes:
       typeKeys.add(key)
       types[key]['tid'] = scopes[key] = nextIndex
@@ -126,6 +131,8 @@ def make_blob():
   funcKeys = set()
   for f in functions:
     key = canonicalize_decl(f[0], f[1])
+    if key not in functions:
+      key = recanon_decl(f[0], f[1])
     if key not in scopes:
       funcKeys.add(key)
       functions[key]['funcid'] = scopes[key] = nextIndex
@@ -156,8 +163,11 @@ def make_blob():
   inheritsTree = []
   for infoKey in inheritance:
     info = inheritance[infoKey]
-    base = types[canonicalize_decl(info['tbname'], info['tbloc'])]['tid']
-    child = types[canonicalize_decl(info['tcname'], info['tcloc'])]['tid']
+    try:
+      base = types[canonicalize_decl(info['tbname'], info['tbloc'])]['tid']
+      child = types[canonicalize_decl(info['tcname'], info['tcloc'])]['tid']
+    except KeyError:
+      continue
     inheritsTree.append(build_inherits(base, child, info['access']))
 
     # Get all known relations

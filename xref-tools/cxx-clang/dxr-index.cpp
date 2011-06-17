@@ -115,7 +115,11 @@ public:
     // TagDecl already did decldef and type outputting; we just need impl
     for (CXXRecordDecl::base_class_iterator iter = d->bases_begin();
         iter != d->bases_end(); ++iter) {
-      CXXRecordDecl *base = (*iter).getType()->getAsCXXRecordDecl();
+      const Type *t = (*iter).getType().getTypePtr();
+      NamedDecl *base = t->getAsCXXRecordDecl();
+      // I don't know what's going on... just bail!
+      if (!base)
+        return true;
       out << "impl,tcname,\"" << d->getQualifiedNameAsString() <<
         "\",tcloc,\"" << locationToString(d->getLocation()) << "\",tbname,\"" <<
         base->getQualifiedNameAsString() << "\",tbloc,\"" <<
