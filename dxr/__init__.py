@@ -1,6 +1,8 @@
 import cPickle
+from ConfigParser import ConfigParser
 import imp
 import os, sys
+import string, template
 
 ###################
 # Plugin handling #
@@ -24,8 +26,8 @@ def load_plugins():
   plugins = [module]
   return plugins
 
-def store_big_blob(dxrconfig, tree, blob):
-  htmlroot = os.path.join(dxrconfig["wwwdir"], tree["tree"] + '-current')
+def store_big_blob(tree, blob):
+  htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'wb')
   try:
@@ -33,8 +35,8 @@ def store_big_blob(dxrconfig, tree, blob):
   finally:
     f.close()
 
-def load_big_blob(dxrconfig, tree):
-  htmlroot = os.path.join(dxrconfig["wwwdir"], tree["tree"] + '-current')
+def load_big_blob(tree):
+  htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'rb')
   try:
@@ -42,4 +44,43 @@ def load_big_blob(dxrconfig, tree):
   finally:
     f.close()
 
-__all__ = ['get_active_plugins', 'store_big_blob', 'load_big_blob']
+class DxrConfig(object):
+  def __init__(self, config, tree=None):
+    self._tree = tree
+    self.xrefscripts = os.path.abspath(config.get('DXR', 'xrefscripts'))
+    self.templates = os.path.abspath(config.get('DXR', 'templates'))
+    self.wwwdir = os.path.abspath(config.get('Web', 'wwwdir'))
+    self.virtroot = os.path.abspath(config.get('Web', 'virtroot'))
+    self.hosturl = config.get('Web', 'hosturl')
+    if self.hosturl.endswith('/'):
+      self.hosturl = self.hosturl[:-1]
+    self.glimpse = os.path.abspath(config.get('DXR', 'glimpse'))
+    self.glimpseindex = os.path.abspath(config.get('DXR', 'glimpseindex'))
+
+    if tree is None:
+      self.trees = []
+      for section in config.sections():
+        if section == 'DXR' or section == 'Web':
+          continue
+        self.trees.append(DxrConfig(config, section))
+    else:
+      self.tree = self._tree
+      for opt in config.options(tree):
+        self.__dict__[opt] = config.get(tree, opt)
+        if opt.endswith('dir'):
+          self.__dict__[opt] = os.path.abspath(self.__dict__[opt])
+
+  def getTemplateFile(self, name):
+    tmpl = template.readFile(os.path.join(self.templates, name))
+    tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
+    return tmpl
+
+
+def load_config(path):
+  config = ConfigParser()
+  config.read(path)
+
+  return DxrConfig(config)
+
+__all__ = ['get_active_plugins', 'store_big_blob', 'load_big_blob',
+  'load_config']

@@ -29,27 +29,24 @@ class HtmlBuilderBase:
     self.conn = sqlite3.connect(database)
     self.conn.execute('PRAGMA temp_store = MEMORY;')
 
-  def __init__(self, dxrconfig, treeconfig, filepath, newroot):
+  def __init__(self, tree, filepath, newroot):
     # Read and expand all templates
-    def read_template(prop):
-      return template.expand(template.readFile(dxrconfig[prop]),
-        dxrconfig["virtroot"], treeconfig["tree"])
-    self.html_header = read_template("html_header")
-    self.html_footer = read_template("html_footer")
-    self.html_sidebar_header = read_template("html_sidebar_header")
-    self.html_sidebar_footer = read_template("html_sidebar_footer")
-    self.html_main_header = read_template("html_main_header")
-    self.html_main_footer = read_template("html_main_footer")
+    self.html_header = tree.getTemplateFile("dxr-header.html")
+    self.html_footer = tree.getTemplateFile("dxr-footer.html")
+    self.html_sidebar_header = tree.getTemplateFile("dxr-sidebar-header.html")
+    self.html_sidebar_footer = tree.getTemplateFile("dxr-sidebar-footer.html")
+    self.html_main_header = tree.getTemplateFile("dxr-main-header.html")
+    self.html_main_footer = tree.getTemplateFile("dxr-main-footer.html")
     
     self.source = template.readFile(filepath)
-    self.virtroot = dxrconfig["virtroot"]
-    self.treename = treeconfig["tree"]
+    self.virtroot = tree.virtroot
+    self.treename = tree.tree
     self.filename = os.path.basename(filepath)
-    self.srcroot = treeconfig["sourcedir"]
+    self.srcroot = tree.sourcedir
     self.newroot = os.path.normpath(newroot)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
 
-    self._init_db(dxrconfig["database"])
+    self._init_db(tree.database)
     self.tokenizer = self._createTokenizer()
 
     # Config info used by dxr.js
@@ -185,8 +182,8 @@ class HtmlBuilderBase:
 
 
 class CppHtmlBuilder(HtmlBuilderBase):
-  def __init__(self, dxrconfig, treeconfig, filepath, newroot, blob):
-    HtmlBuilderBase.__init__(self, dxrconfig, treeconfig, filepath, newroot)
+  def __init__(self, treeconfig, filepath, newroot, blob):
+    HtmlBuilderBase.__init__(self, treeconfig, filepath, newroot)
     self.syntax_regions = None
     self.lines = None
     self.blob_file = blob["byfile"].get(self.srcpath, None)
