@@ -13,6 +13,7 @@ import dxr.htmlbuilders
 import shutil
 import template
 import dxr
+import sqlite3
 import string
 
 # At this point in time, we've already compiled the entire build, so it is time
@@ -81,34 +82,61 @@ def async_toHTML(treeconfig, srcpath, newroot):
     import traceback
     traceback.print_exc()
 
+def builddb(treecfg, dbdir):
+  """ Post-process the build and make the SQL directory """
+  print "Post-processing the source files..."
+  big_blob = post_process(treecfg)
+  dxr.store_big_blob(treecfg, big_blob)
+
+  print "Building SQL..."
+  all_statements = set()
+  for plugin in dxr.get_active_plugins(treecfg):
+    if plugin.__name__ in big_blob:
+      all_statements.update(plugin.sqlify(big_blob[plugin.__name__]));
+
+  dbname = treecfg.tree + '.sqlite'
+  conn = sqlite3.connect(os.path.join(dbdir, dbname))
+  schema = template.readFile(os.path.join(treecfg.xrefscripts, "dxr-schema.sql"))
+  conn.executescript(schema)
+  conn.commit()
+  for stmt in all_statements:
+    conn.execute(stmt)
+  conn.commit()
+  conn.close()
 
 def indextree(treecfg, doxref, dohtml, debugfile):
   global big_blob
+
+  # If we're live, we'll need to move -current to -old; we'll move it back
+  # after we're done.
+  if treecfg.isdblive:
+    currentroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-current')
+    oldroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
+    linkroot = os.path.join(treecfg.wwwdir, treecfg.tree)
+    if os.path.isdir(currentroot):
+      if os.path.exists(os.path.join(currentroot, '.dxr_xref', '.success')):
+        # Move current -> old, change link to old
+        shutil.rmtree(oldroot)
+        shutil.move(currentroot, oldroot)
+        os.unlink(linkroot)
+        os.symlink(oldroot, linkroot)
+      else:
+        # This current directory is bad, move it away
+        shutil.rmtree(currentroot)
+
   # dxr xref files (glimpse + sqlitedb) go in wwwdir/treename-current/.dxr_xref
   # and we'll symlink it to wwwdir/treename later
   htmlroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
+  os.makedirs(dbdir, 0755)
   dbname = treecfg.tree + '.sqlite'
 
   retcode = 0
   if doxref:
-    # Build the blob, and make the sql
-    post_process(treecfg)
-    for plugin in dxr.get_active_plugins(treecfg):
-      if plugin.__name__ in big_blob:
-        f = open(os.path.join(treecfg.objdir, plugin.__name__ + ".sql"), 'w')
-        try:
-          f.write(plugin.sqlify(big_blob[plugin.__name__]));
-        finally:
-          f.close()
-    # Build dxr.sqlite
-    buildxref = os.path.join(treecfg.xrefscripts, "build-xref.sh")
-    retcode = subprocess.call([buildxref, treecfg.objdir,
-                               treecfg.xrefscripts, dbdir, dbname,
-                               treecfg.wwwdir, treecfg.tree])
-    dxr.store_big_blob(treecfg, big_blob)
-    if retcode != 0:
-        return
+    builddb(treecfg, dbdir)
+    if treecfg.isdblive:
+      f = open(os.path.join(dbdir, '.success'), 'w')
+      f.close()
 
   # Build static html
   if dohtml:
@@ -153,11 +181,12 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       buildglimpse = os.path.join(treecfg.xrefscripts, "build-glimpseidx.sh")
       subprocess.call([buildglimpse, treecfg.wwwdir, treecfg.tree, dbdir, treecfg.glimpseindex])
 
+  if treecfg.isdblive:
+    os.unlink(linkroot)
+    os.symlink(currentroot, linkroot)
     # TODO: should I delete the .cpp, .h, .idl, etc, that were copied into wwwdir/treename-current for glimpse indexing?
 
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
-  prepDone = False
-
   # Build the contents of an html <select> and open search links
   # for all trees encountered.
   options = ''
@@ -174,7 +203,6 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
     opensearch += '<link rel="search" href="opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '
     opensearch += 'title="' + treecfg.tree + '" />\n'
     WriteOpenSearch(treecfg.tree, treecfg.hosturl, treecfg.virtroot, treecfg.wwwdir)
-
     indextree(treecfg, doxref, dohtml, debugfile)
 
   # Generate index page with drop-down + opensearch links for all trees

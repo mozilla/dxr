@@ -287,7 +287,7 @@ def sqlify(blob):
       if iskey:
         row = blob[table][row]
       write_sql(table, row, out)
-  return '\n'.join(out)
+  return out
 
 __all__ = ['post_process', 'sqlify']
 

@@ -69,6 +69,10 @@ class DxrConfig(object):
         self.__dict__[opt] = config.get(tree, opt)
         if opt.endswith('dir'):
           self.__dict__[opt] = os.path.abspath(self.__dict__[opt])
+      if not 'dbdir' in self.__dict__:
+        # Build the dbdir from [wwwdir]/tree
+        self.dbdir = os.path.join(self.wwwdir, tree + '-current', '.dxr_xref')
+      self.isdblive = self.dbdir.startswith(self.wwwdir)
 
   def getTemplateFile(self, name):
     tmpl = template.readFile(os.path.join(self.templates, name))

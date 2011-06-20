@@ -31,12 +31,7 @@ if [ -z "$4" ]; then
 fi
 GLIMPSEINDEX=$4
 
-# Steal the symlink from -old to -current
-cd ${WWWDIR}
-rm -f ${TREENAME}
-ln -s ${TREENAME}-current ${TREENAME}
-
 # Find all .cpp, .h, and .idl (note: files are mixed with .html, so using -F to pass on stdin)
-find -H ${WWWDIR}/${TREENAME} -name '*.cpp' -o -name '*.h' -o -name '*.idl' | ${GLIMPSEINDEX} -H ${IDXDIR} -F
+find -H ${WWWDIR}/${TREENAME}-current -name '*.cpp' -o -name '*.h' -o -name '*.idl' | ${GLIMPSEINDEX} -H ${IDXDIR} -F
 cd ${IDXDIR}
 chmod 644 .g*
