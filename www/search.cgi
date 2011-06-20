@@ -93,9 +93,9 @@ def processString(string):
 
   # Print file sidebar
   printHeader = True
-  glimpsefilenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', '.glimpse_filenames'))
-  if glimpsefilenames:
-    for filename in glimpsefilenames.split('\n'):
+  filenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', 'file_list.txt'))
+  if filenames:
+    for filename in filenames.split('\n'):
       # Only check in leaf name
       pattern = '/([^/]*' + string + '[^/]*\.[^\.]+)$' if not ext else '/([^/]*' + string + '[^/]*\.' + ext + ')$'
       m = re.search(pattern, filename, re.IGNORECASE)

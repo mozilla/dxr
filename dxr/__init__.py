@@ -51,9 +51,11 @@ class DxrConfig(object):
     self.templates = os.path.abspath(config.get('DXR', 'templates'))
     self.wwwdir = os.path.abspath(config.get('Web', 'wwwdir'))
     self.virtroot = os.path.abspath(config.get('Web', 'virtroot'))
+    if self.virtroot.endswith('/'):
+      self.virtroot = self.virtroot[:-1]
     self.hosturl = config.get('Web', 'hosturl')
-    if self.hosturl.endswith('/'):
-      self.hosturl = self.hosturl[:-1]
+    if not self.hosturl.endswith('/'):
+      self.hosturl += '/'
     self.glimpse = os.path.abspath(config.get('DXR', 'glimpse'))
     self.glimpseindex = os.path.abspath(config.get('DXR', 'glimpseindex'))
 
@@ -79,6 +81,23 @@ class DxrConfig(object):
     tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
     return tmpl
 
+  def getFileList(self):
+    """ Returns an iterator of (relative, absolute) paths for the tree. """
+    exclusions = self.__dict__.get("exclusions", ".hg\n.git\nCVS\n.svn")
+    exclusions = exclusions.split()
+    for root, dirs, files in os.walk(self.sourcedir, True):
+      # Get the relative path to the source dir
+      relpath = os.path.relpath(root, self.sourcedir)
+      if relpath == '.':
+        relpath = ''
+      for f in files:
+        relfname = os.path.join(relpath, f)
+        if any([f == ex for ex in exclusions]):
+          continue
+        yield (relfname, os.path.join(self.sourcedir, relfname))
+      for ex in exclusions:
+        if ex in dirs:
+          dirs.remove(ex)
 
 def load_config(path):
   config = ConfigParser()

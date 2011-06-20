@@ -57,7 +57,7 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
  <Description>Search DXR %s</Description>
  <Tags>mozilla dxr %s</Tags>
  <Url type="text/html"
-      template="%s/%s/search.cgi?tree=%s&amp;string={searchTerms}"/>
+      template="%s%s/search.cgi?tree=%s&amp;string={searchTerms}"/>
 </OpenSearchDescription>""" % (name[:16], name, name, hosturl, virtroot, name))
     finally:
       fp.close()
@@ -65,18 +65,18 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
     return None
 
-def async_toHTML(treeconfig, srcpath, newroot):
+def async_toHTML(treeconfig, srcpath, dstfile):
   """Wrapper function to allow doing this async without an instance method."""
   try:
     htmlBuilder = None
     if os.path.splitext(srcpath)[1] in ['.h', '.c', '.cpp', '.m', '.mm']:
-      htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(treeconfig, srcpath, newroot, big_blob['dxr.cxx-clang'])
+      htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(treeconfig, srcpath, dstfile, big_blob['dxr.cxx-clang'])
     elif os.path.splitext(srcpath)[1] == '.idl':
-      htmlBuilder = dxr.htmlbuilders.IdlHtmlBuilder(treeconfig, srcpath, newroot)
+      htmlBuilder = dxr.htmlbuilders.IdlHtmlBuilder(treeconfig, srcpath, dstfile)
     else:
-      htmlBuilder = dxr.htmlbuilders.HtmlBuilderBase(treeconfig, srcpath, newroot)
+      htmlBuilder = dxr.htmlbuilders.HtmlBuilderBase(treeconfig, srcpath, dstfile)
 
-      htmlBuilder.toHTML()
+    htmlBuilder.toHTML()
   except Exception, e:
     print str(e)
     import traceback
@@ -137,6 +137,13 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     if treecfg.isdblive:
       f = open(os.path.join(dbdir, '.success'), 'w')
       f.close()
+  elif treecfg.isdblive:
+    # If the database is live, we need to copy database info from the old
+    # version of the code
+    oldhtml = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
+    olddbdir = os.path.join(oldhtml, '.dxr_xref')
+    shutil.rmtree(dbdir)
+    shutil.copytree(olddbdir, dbdir)
 
   # Build static html
   if dohtml:
@@ -150,29 +157,27 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
     debug = (debugfile is not None)
 
-    for root, dirs, filenames in os.walk(treecfg.sourcedir):
-      if root.find('/.hg') > -1:
-        continue
+    index_list = open(os.path.join(dbdir, "file_list.txt"), 'w')
 
-      newroot = root.replace(treecfg.sourcedir, htmlroot)
+    for f in treecfg.getFileList():
+      # In debug mode, we only care about some files
+      if debugfile is not None and f[0] != debugfile: continue
 
-      for dir in dirs:
-        newdirpath = os.path.join(newroot, dir)
-        if not os.path.exists(newdirpath):
-          os.makedirs(newdirpath)
+      index_list.write(f[0] + '\n')
+      cpypath = os.path.join(htmlroot, f[0])
+      srcpath = f[1]
 
-      for filename in filenames:
-        # Hack: Glimpse indexing needs the .cpp to exist beside the .cpp.html
-        cpypath = os.path.join(newroot, filename)
+      # Make output directory
+      cpydir = os.path.dirname(cpypath)
+      if not os.path.exists(cpydir):
+        os.makedirs(cpydir)
 
-        srcpath = os.path.join(root, filename)
-        if debugfile is not None and not srcpath.endswith(debugfile):
-          continue
+      # XXX: For now, we need the file to be in the www-dir. We should figure
+      # out how to not need to do this
+      shutil.copyfile(srcpath, cpypath)
+      p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
 
-        shutil.copyfile(srcpath, cpypath)
-        p.apply_async(async_toHTML, [treecfg, srcpath, newroot])
-
-
+    index_list.close()
     p.close()
     p.join()
 
@@ -181,6 +186,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       buildglimpse = os.path.join(treecfg.xrefscripts, "build-glimpseidx.sh")
       subprocess.call([buildglimpse, treecfg.wwwdir, treecfg.tree, dbdir, treecfg.glimpseindex])
 
+  # If the database is live, we need to switch the live to the new version
   if treecfg.isdblive:
     os.unlink(linkroot)
     os.symlink(currentroot, linkroot)

@@ -29,7 +29,7 @@ class HtmlBuilderBase:
     self.conn = sqlite3.connect(database)
     self.conn.execute('PRAGMA temp_store = MEMORY;')
 
-  def __init__(self, tree, filepath, newroot):
+  def __init__(self, tree, filepath, dstpath):
     # Read and expand all templates
     self.html_header = tree.getTemplateFile("dxr-header.html")
     self.html_footer = tree.getTemplateFile("dxr-footer.html")
@@ -43,7 +43,7 @@ class HtmlBuilderBase:
     self.treename = tree.tree
     self.filename = os.path.basename(filepath)
     self.srcroot = tree.sourcedir
-    self.newroot = os.path.normpath(newroot)
+    self.dstpath = os.path.normpath(dstpath)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
 
     self._init_db(tree.database)
@@ -51,8 +51,6 @@ class HtmlBuilderBase:
 
     # Config info used by dxr.js
     self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
-    if self.virtroot[-1] == '/':
-      self.virtroot = self.virtroot[:-1]
 
   def _createTokenizer(self):
     return BaseTokenizer(self.source)
@@ -74,7 +72,7 @@ class HtmlBuilderBase:
     return (offset, line)
 
   def toHTML(self):
-    out = open(os.path.join(self.newroot, self.filename + '.html'), 'w')
+    out = open(self.dstpath, 'w')
     out.write(self.html_header + '\n')
     self.writeSidebar(out)
     self.writeMainContent(out)
@@ -182,8 +180,8 @@ class HtmlBuilderBase:
 
 
 class CppHtmlBuilder(HtmlBuilderBase):
-  def __init__(self, treeconfig, filepath, newroot, blob):
-    HtmlBuilderBase.__init__(self, treeconfig, filepath, newroot)
+  def __init__(self, treeconfig, filepath, dstpath, blob):
+    HtmlBuilderBase.__init__(self, treeconfig, filepath, dstpath)
     self.syntax_regions = None
     self.lines = None
     self.blob_file = blob["byfile"].get(self.srcpath, None)
