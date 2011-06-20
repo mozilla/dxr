@@ -17,8 +17,6 @@ requirements:
 
 cxx-clang: A copy of clang.
 
-Furthermore, glimpse is needed to do fulltext indexing.
-
 Setup:
 ------
 
@@ -44,11 +42,7 @@ build directory from your source directory.
 6) Run the cross-reference generator:
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
-7) Download and install (or at least build somewhere the web app can access) Glimpse:
-
-http://webglimpse.net/trial/glimpse-latest.tar.gz
-
-8) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
+7) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
 
 Running:
 -------
@@ -58,15 +52,16 @@ You can build your source, create the xref database, and create the static HTML 
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
 This will post-process the data into dxr.sqlite.  It will also build the static
-html and create a glimpse full-text search index.  All these files will be
-created in the wwwdir using the name of the tree you provided in dxr.config
-(e.g., mozilla-central).  You will end up with the following structure:
+html and create a full-text search index.  All these files will be created in
+the wwwdir using the name of the tree you provided in dxr.config. You will end
+up with the following structure:
 
 /var/www/html/dxr (or whereever your wwwdir is located)
-		 /index.html (auto-generated during run-dxr.py)
-                 /mozilla-central (symlink to mozilla-central-current)
-                 /mozilla-central-current
-		                         /.dxr_xref
-                                                   /mozilla-central.sqlite
-                                                   /.glimpse*  (glimpse index files)
-                                         /accessible (and all other source files copied from your src dir)
+      /index.html (auto-generated during dxr-index.py)
+      /tree (symlink to tree-current)
+      /tree-current
+		               /.dxr_xref
+                             /tree.sqlite
+                             /index_bob.dat  [A pickle file of plugin data]
+                             /file_list.txt  [A list of source files]
+                             /file_index.txt [An index of the source files]

@@ -56,8 +56,6 @@ class DxrConfig(object):
     self.hosturl = config.get('Web', 'hosturl')
     if not self.hosturl.endswith('/'):
       self.hosturl += '/'
-    self.glimpse = os.path.abspath(config.get('DXR', 'glimpse'))
-    self.glimpseindex = os.path.abspath(config.get('DXR', 'glimpseindex'))
 
     if tree is None:
       self.trees = []
@@ -91,6 +89,8 @@ class DxrConfig(object):
       if relpath == '.':
         relpath = ''
       for f in files:
+        # XXX: cxx-clang hack
+        if f.endswith(".csv"): continue
         relfname = os.path.join(relpath, f)
         if any([f == ex for ex in exclusions]):
           continue

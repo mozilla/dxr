@@ -17,8 +17,6 @@ def load(configFile):
     dxrconfig["hosturl"] = config.get('Web', 'hosturl')
     if dxrconfig["hosturl"].endswith('/'):
       dxrconfig["hosturl"] = dxrconfig["hosturl"][0:-1]
-    dxrconfig["glimpse"] = os.path.abspath(config.get('DXR', 'glimpse'))
-    dxrconfig["glimpseindex"] = os.path.abspath(config.get('DXR', 'glimpseindex'))
 
     dxrconfig["trees"] = []
     for section in config.sections():

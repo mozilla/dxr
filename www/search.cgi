@@ -69,7 +69,7 @@ def processString(string):
       if colon != -1 and res[0][colon:].find(string) == -1:
         continue
       fixloc = res[1].split(':')
-      if path and not re.search(path, fixlink):
+      if path and not re.search(path, fixloc[0]):
         continue
       print '<li><a href="%s/%s/%s.html#l%s">%s</a></li>' % \
         (vrootfix, tree, fixloc[0], fixloc[1], res[0])
@@ -118,43 +118,32 @@ def processString(string):
       # we printed results, so don't bother with a text search
       return
 
-  # Glimpse search results
-  count = 0
-
-  # ./glimpse -i -e -H ./mozilla-central/.glimpse_index/ -F 'uconv;.h$' nsString
-  searchargs = '-i -y -n -H ' + os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref')
-  if path:
-    searchargs += " -F '" + path
-    if ext:
-      searchargs += ';' + ext + '$'
-    searchargs += "'"
-  searchargs += ' ' + string
-
-  # TODO: should I do -L matches:files:matches/file (where 0 means infinity) ?
-  # TODO: glimpse can fail in various ways, need to deal with those cases (>29 chars, no results, etc.)
-  pipe = subprocess.Popen(dxrconfig['glimpse'] + ' ' + searchargs, shell=True, stdout=subprocess.PIPE).stdout
-  if pipe:
-    line = pipe.readline()
-    prevfile = None
-    first = True
-    while line:
-      (filepath, linenum, text) = line.split(': ', 2)
+  # Text search results
+  prevfile, first = None, True
+  index_file = open(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', 'file_index.txt'))
+  for line in index_file:
+    # The index file is <path>:<line>:<text>
+    colon = line.find(':')
+    colon2 = line.find(':', colon)
+    if path and line.find(path, 0, colon) == -1: continue # Not our file
+    if line.find(string, colon2 + 1) != -1:
+      # We have a match!
+      (filepath, linenum, text) = line.split(':', 2)
       text = cgi.escape(text)
       text = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', text)
-      srcpath = filepath.replace(dxrconfig['wwwdir'] + '/', '')
       if filepath != prevfile:
         prevfile = filepath
         if not first:
           print "</ul>"
         first = False
-        print '<div class="searchfile"><a href="%s.html">%s</a></div><ul class="searchresults">' % (srcpath, srcpath.replace(tree + '/', ''))
+        print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, filepath, filepath)
 
-      print '<li class="searchresult"><a href="%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (srcpath, linenum, linenum, text)
-      count += 1
-      line = pipe.readline()
+      print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, filepath, linenum, linenum, text)
 
-  if count == 0:
+  if first:
     print '<p>No files match your search parameters.</p>'
+  else:
+    print '</ul>'
 
 def processType(type):
   for type in conn.execute('select tname, tloc, tkind from types where tname like "' + type + '%";').fetchall():
@@ -339,7 +328,6 @@ htmldir = os.path.join('./', tree)
 # TODO: kill off hard coded path
 dxrconfig = dxr_config.load('./dxr.config')
 
-#glimpse = config.get('DXR', 'glimpse')
 #wwwdir = config.get('Web', 'wwwdir')
 dbname = tree + '.sqlite'
 dxrdb = os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', dbname)
