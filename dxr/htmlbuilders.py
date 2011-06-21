@@ -3,7 +3,7 @@
 import os
 import dxr
 import cgi
-from tokenizers import Token, BaseTokenizer, CppTokenizer
+from dxr.tokenizers import Token, BaseTokenizer, CppTokenizer
 
 class HtmlBuilderBase:
   def collectSidebar(self):

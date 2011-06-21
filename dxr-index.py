@@ -5,7 +5,6 @@ import os
 import sys
 import getopt
 import subprocess
-sys.path.append("./xref-scripts")
 import dxr.htmlbuilders
 import shutil
 import dxr
