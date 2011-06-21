@@ -28,8 +28,7 @@ dxrsrc/www/dxr.config for your environment.
 
 2) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
 
-3) Copy (or symlink) the contents of dxrsrc/www to your web dir. You also need
-to copy (or symlink) the xref-scripts directory.
+3) Copy (or symlink) the contents of dxrsrc/www to your web dir.
 
 4) Run . dxrsrc/setup-env.sh srcdir to set up your environment, where srcdir is
 the root source directory of your codebase. The single `.' at the beginning is

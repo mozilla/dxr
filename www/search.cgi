@@ -9,10 +9,6 @@ import ConfigParser
 import re
 import subprocess
 
-# HACK: template.py is below us
-sys.path.append('./xref-scripts')
-import template
-
 # Get the DXR installation point from dxr.config
 config = ConfigParser.ConfigParser()
 config.read('dxr.config')
@@ -46,7 +42,7 @@ def split_type(val):
 
 def GetLine(loc):
     parts = loc.split(':')
-    file = template.readFile(os.path.join(dxrconfig.wwwdir, tree, parts[0]))
+    file = dxr.readFile(os.path.join(dxrconfig.wwwdir, tree, parts[0]))
     line = int(parts[1])
     if file:
         result  = '<div class="searchfile"><a href="%s/%s">%s</a></div><ul class="searchresults">' % (tree, parts[0] + '.html#l' + parts[1], loc)
@@ -98,7 +94,7 @@ def processString(string):
 
   # Print file sidebar
   printHeader = True
-  filenames = template.readFile(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_list.txt'))
+  filenames = dxr.readFile(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_list.txt'))
   if filenames:
     for filename in filenames.split('\n'):
       # Only check in leaf name

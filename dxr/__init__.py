@@ -2,7 +2,7 @@ import cPickle
 from ConfigParser import ConfigParser
 import imp
 import os, sys
-import string, template
+import string
 
 ###################
 # Plugin handling #
@@ -75,7 +75,7 @@ class DxrConfig(object):
       self.isdblive = self.dbdir.startswith(self.wwwdir)
 
   def getTemplateFile(self, name):
-    tmpl = template.readFile(os.path.join(self.templates, name))
+    tmpl = readFile(os.path.join(self.templates, name))
     tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
     return tmpl
 
@@ -99,6 +99,17 @@ class DxrConfig(object):
         if ex in dirs:
           dirs.remove(ex)
 
+def readFile(filename):
+  try:
+    fp = open(filename)
+    try:
+      return fp.read()
+    finally:
+      fp.close()
+  except IOError:
+    print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
+    return None
+
 def load_config(path):
   config = ConfigParser()
   config.read(path)
@@ -106,4 +117,4 @@ def load_config(path):
   return DxrConfig(config)
 
 __all__ = ['get_active_plugins', 'store_big_blob', 'load_big_blob',
-  'load_config']
+  'load_config', 'readFile']

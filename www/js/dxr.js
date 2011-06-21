@@ -74,7 +74,7 @@ function init() {
   if (parts[0]) {
     var l;
     // Deal with #l323 vs. #323
-    if (/^l\d+/(parts[0]))
+    if (/^l\d+/.exec(parts[0]))
       l = dojo.byId(parts[0]);
     else
       l = dojo.byId('l' + parts[0]);

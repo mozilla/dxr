@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 
 from multiprocessing import Pool, cpu_count
-import imp
 import os
 import sys
 import getopt
 import subprocess
-#import generic2html
-#import idl2html #, cpp2html
 sys.path.append("./xref-scripts")
 import dxr.htmlbuilders
 import shutil
-import template
 import dxr
 import sqlite3
 import string
@@ -114,7 +110,7 @@ def builddb(treecfg, dbdir):
 
   dbname = treecfg.tree + '.sqlite'
   conn = sqlite3.connect(os.path.join(dbdir, dbname))
-  schema = template.readFile(os.path.join(treecfg.xrefscripts, "dxr-schema.sql"))
+  schema = dxr.readFile(os.path.join(treecfg.xrefscripts, "dxr-schema.sql"))
   conn.executescript(schema)
   conn.commit()
   for stmt in all_statements:

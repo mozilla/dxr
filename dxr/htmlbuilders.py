@@ -1,10 +1,7 @@
 #!/usr/bin/env python2.6
 
-import sys
 import os
-import re
-import sqlite3
-import template
+import dxr
 import cgi
 from tokenizers import Token, BaseTokenizer, CppTokenizer
 
@@ -25,10 +22,6 @@ class HtmlBuilderBase:
   def getLineAnnotations(self):
     return []
 
-  def _init_db(self, database):
-    self.conn = sqlite3.connect(database)
-    self.conn.execute('PRAGMA temp_store = MEMORY;')
-
   def __init__(self, tree, filepath, dstpath):
     # Read and expand all templates
     self.html_header = tree.getTemplateFile("dxr-header.html")
@@ -38,7 +31,7 @@ class HtmlBuilderBase:
     self.html_main_header = tree.getTemplateFile("dxr-main-header.html")
     self.html_main_footer = tree.getTemplateFile("dxr-main-footer.html")
     
-    self.source = template.readFile(filepath)
+    self.source = dxr.readFile(filepath)
     self.virtroot = tree.virtroot
     self.treename = tree.tree
     self.filename = os.path.basename(filepath)
@@ -46,7 +39,6 @@ class HtmlBuilderBase:
     self.dstpath = os.path.normpath(dstpath)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
 
-    self._init_db(tree.database)
     self.tokenizer = self._createTokenizer()
 
     # Config info used by dxr.js
