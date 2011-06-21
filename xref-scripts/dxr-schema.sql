@@ -80,3 +80,9 @@ CREATE TABLE refs (
   extent VARCHAR(30) NOT NULL,  -- The extent (start:end) of the reference
   PRIMARY KEY(refid, refloc)
 );
+
+DROP TABLE IF EXISTS warnings;
+CREATE TABLE warnings (
+  wloc VARCHAR(256) NOT NULL, -- The locaiton of the warning
+  wmsg VARCHAR(256) NOT NULL  -- The warning text
+);

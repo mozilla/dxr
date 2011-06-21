@@ -263,15 +263,15 @@ def processCallers(callers):
                 print GetLine(type[1])
 
 def processWarnings(warnings):
-    # Check for * which means user entered "warnings:" and wants to see all of them.
-    if warnings == '*':
-      warnings = ''
+  # Check for * which means user entered "warnings:" and wants to see all of them.
+  if warnings == '*':
+    warnings = ''
 
-    for w in conn.execute("select wfile, wloc, wmsg from warnings where wmsg like '%" + warnings + "%' order by wfile, wloc;").fetchall():
-    	if not path or re.search(path, w[0]):
-           loc = w[0] + ':' + `w[1]`
-    	   print '<h3>%s</h3>' % w[2]
-           print GetLine(loc)
+  for w in conn.execute("SELECT wloc, wmsg FROM warnings WHERE wmsg LIKE '%" +
+      warnings + "%' ORDER BY wloc COLLATE loc;").fetchall():
+    if not path or re.search(path, w[0]):
+      print '<h3>%s</h3>' % w[1]
+      print GetLine(w[0])
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
@@ -334,6 +334,16 @@ dxrdb = os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', dbname)
 header_template = os.path.join(dxrconfig['templates'], 'dxr-search-header.html')
 footer_template = os.path.join(dxrconfig['templates'], 'dxr-search-footer.html')
 conn = sqlite3.connect(dxrdb)
+def collate_loc(str1, str2):
+  parts1 = str1.split(':')
+  parts2 = str2.split(':')
+  for i in range(1, len(parts1)):
+    parts1[i] = int(parts1[i])
+  for i in range(2, len(parts2)):
+    parts2[i] = int(parts2[i])
+  return cmp(parts1, parts2)
+conn.create_collation("loc", collate_loc)
+
 conn.execute('PRAGMA temp_store = MEMORY;')
 
 if string:
@@ -362,7 +372,7 @@ else:
     elif callers:
         processCallers(callers)
     elif warnings:
-    	processWarnings(warnings)
+      processWarnings(warnings)
 
 print template.readFile(footer_template)
 

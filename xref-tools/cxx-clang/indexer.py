@@ -57,6 +57,7 @@ functions = {}
 inheritance = {}
 variables = {}
 references = {}
+warnings = []
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -83,6 +84,9 @@ def process_ref(info):
   # Each reference is pretty much unique, but we might record it several times
   # due to header files.
   references[info['varname'], info['varloc'], info['refloc']] = info
+
+def process_warning(warning):
+  warnings.append(warning)
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -237,6 +241,7 @@ def make_blob():
   blob["types"] += [typedefs[t] for t in typedefs]
   blob["impl"] = inheritsTree
   blob["refs"] = refs
+  blob["warnings"] = warnings
   return blob
 
 def post_process(srcdir, objdir):
@@ -248,7 +253,7 @@ def post_process(srcdir, objdir):
   # Reindex everything by file
   def schema():
     return { "scopes": [], "functions": [], "variables": [], "types": [],
-      "refs": [] }
+      "refs": [], "warnings": [] }
   files = {}
   def add_to_files(table, loc):
     iskey = isinstance(blob[table], dict)
@@ -262,6 +267,7 @@ def post_process(srcdir, objdir):
   add_to_files("variables", "vloc")
   add_to_files("types", "tloc")
   add_to_files("refs", "refloc")
+  add_to_files("warnings", "wloc")
 
   # Normalize path names
   blob["byfile"] = {}

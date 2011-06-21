@@ -183,7 +183,6 @@ class CppHtmlBuilder(HtmlBuilderBase):
   def __init__(self, treeconfig, filepath, dstpath, blob):
     HtmlBuilderBase.__init__(self, treeconfig, filepath, dstpath)
     self.syntax_regions = None
-    self.lines = None
     self.blob_file = blob["byfile"].get(self.srcpath, None)
     self.blob = blob
 
@@ -213,17 +212,8 @@ class CppHtmlBuilder(HtmlBuilderBase):
 
   def _getFromTokenizer(self):
     syntax_regions = []
-    lines = []
-    line_num = 1
     for token in self.tokenizer.getTokens():
-      if token.token_type == self.tokenizer.NEWLINE:
-        #warningString = '\n'.join([warnings[0] for warnings in
-        #  self.conn.execute('select wmsg from warnings where wfile=? and wloc=?;',
-        #                  (self.srcpath, line_num)).fetchall()])
-        #if len(warningString) > 0:
-        #  lines.append((line_num, {'class': "lnw", 'title': warningString}))
-        line_num += 1
-      elif token.token_type == self.tokenizer.KEYWORD:
+      if token.token_type == self.tokenizer.KEYWORD:
         syntax_regions.append((token.start, token.end, 'k'))
       elif token.token_type == self.tokenizer.STRING:
         syntax_regions.append((token.start, token.end, 'str'))
@@ -232,7 +222,6 @@ class CppHtmlBuilder(HtmlBuilderBase):
       elif token.token_type == self.tokenizer.PREPROCESSOR:
         syntax_regions.append((token.start, token.end, 'p'))
     self.syntax_regions = syntax_regions
-    self.lines = lines
 
   def getSyntaxRegions(self):
     if self.syntax_regions is None:
@@ -259,6 +248,8 @@ class CppHtmlBuilder(HtmlBuilderBase):
       yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
 
   def getLineAnnotations(self):
-    if self.lines is None:
-      self._getFromTokenizer()
-    return self.lines
+    if self.blob_file is None:
+      return
+    for warn in self.blob_file["warnings"]:
+      line = int(warn["wloc"].split(":")[1])
+      yield (line, {"class": "lnw", "title": warn["wmsg"]})

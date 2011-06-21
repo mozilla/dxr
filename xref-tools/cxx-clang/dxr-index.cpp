@@ -28,14 +28,19 @@ std::string &operator+=(std::string &str, unsigned int i) {
 std::string srcdir;
 
 class IndexConsumer : public ASTConsumer,
-    public RecursiveASTVisitor<IndexConsumer> {
+    public RecursiveASTVisitor<IndexConsumer>,
+    public DiagnosticClient {
 private:
   SourceManager &sm;
   std::ofstream out;
   LangOptions &features;
+  DiagnosticClient *inner;
 public:
   IndexConsumer(CompilerInstance &ci, const char *file) :
-    sm(ci.getSourceManager()), out(file), features(ci.getLangOpts()) {}
+      sm(ci.getSourceManager()), out(file), features(ci.getLangOpts()) {
+    inner = ci.getDiagnostics().takeClient();
+    ci.getDiagnostics().setClient(this, false);
+  }
   
   // Helpers for processing declarations
   // Should we ignore this location?
@@ -220,6 +225,22 @@ public:
 
     printReference(l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
+  }
+
+  // Warnings!
+  virtual void HandleDiagnostic(Diagnostic::Level level,
+      const DiagnosticInfo &info) {
+    DiagnosticClient::HandleDiagnostic(level, info);
+    inner->HandleDiagnostic(level, info);
+    if (level != Diagnostic::Warning ||
+        !interestingLocation(info.getLocation()))
+      return;
+
+    llvm::SmallString<100> message;
+    info.FormatDiagnostic(message);
+
+    out << "warning,wloc,\"" << locationToString(info.getLocation()) <<
+      "\",wmsg,\"" << message.c_str() << "\"" << std::endl;
   }
 };
 
