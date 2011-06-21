@@ -2,18 +2,18 @@
 <html lang="en-US">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <link rel="shortcut icon" href="${VIRTROOT/images/favicon.png}" type="image/png" />
+  <link rel="shortcut icon" href="${virtroot}/images/favicon.png" type="image/png" />
   <title>DXR Search Results - %s</title>
-  <link href="${VIRTROOT/dxr-search-styles.css}" rel="stylesheet" type="text/css"></link>
-  <script type="text/javascript" src="${VIRTROOT/js/searchParser.js}"></script>
-  <script type="text/javascript" src="${VIRTROOT/js/search.js}"></script>
+  <link href="${virtroot}/dxr-search-styles.css" rel="stylesheet" type="text/css"></link>
+  <script type="text/javascript" src="${virtroot}/js/searchParser.js"></script>
+  <script type="text/javascript" src="${virtroot}/js/search.js"></script>
   <script type="text/javascript">
-    var virtroot = '%s';
-    var tree = '%s';
+    var virtroot = '${virtroot}';
+    var tree = '${tree}';
   </script>
 </head>
 <body onload="parseQS('search-box');">
-<div id="logo"><a href="${VIRTROOT/index.html}"><img src="${VIRTROOT/images/powered-by-mozilla-small.png}" border="0"></a></div>
+  <div id="logo"><a href="${virtroot}/index.html"><img src="${virtroot}/images/powered-by-mozilla-small.png" border="0"></a></div>
 <div id="search">
   <form id="searchForm" method="get">
     <input id="search-box" name="string" type="text" size="31" maxlength="2048" title="Search">

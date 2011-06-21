@@ -12,7 +12,12 @@ import subprocess
 # HACK: template.py is below us
 sys.path.append('./xref-scripts')
 import template
-import dxr_config
+
+# Get the DXR installation point from dxr.config
+config = ConfigParser.ConfigParser()
+config.read('dxr.config')
+sys.path.append(config.get('DXR', 'dxrroot'))
+import dxr
 
 def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
@@ -41,7 +46,7 @@ def split_type(val):
 
 def GetLine(loc):
     parts = loc.split(':')
-    file = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, parts[0]))
+    file = template.readFile(os.path.join(dxrconfig.wwwdir, tree, parts[0]))
     line = int(parts[1])
     if file:
         result  = '<div class="searchfile"><a href="%s/%s">%s</a></div><ul class="searchresults">' % (tree, parts[0] + '.html#l' + parts[1], loc)
@@ -56,7 +61,7 @@ def GetLine(loc):
         return ''
 
 def processString(string):
-  vrootfix = dxrconfig['virtroot']
+  vrootfix = dxrconfig.virtroot
   if vrootfix == '/':
     vrootfix = ''
   def printSidebarResults(name, results):
@@ -93,7 +98,7 @@ def processString(string):
 
   # Print file sidebar
   printHeader = True
-  filenames = template.readFile(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', 'file_list.txt'))
+  filenames = template.readFile(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_list.txt'))
   if filenames:
     for filename in filenames.split('\n'):
       # Only check in leaf name
@@ -103,7 +108,7 @@ def processString(string):
         if printHeader:
           print '<div class=bubble><span class="title">Files</span><ul>'
           printHeader = False
-        filename = filename.replace(dxrconfig['wwwdir'], vrootfix)
+        filename = filename.replace(dxrconfig.wwwdir, vrootfix)
         print '<li><a href="%s.html">%s</a></li>' % (filename, m.group(1))
     if not printHeader:
       print "</ul></div>"
@@ -120,7 +125,7 @@ def processString(string):
 
   # Text search results
   prevfile, first = None, True
-  index_file = open(os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', 'file_index.txt'))
+  index_file = open(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_index.txt'))
   for line in index_file:
     # The index file is <path>:<line>:<text>
     colon = line.find(':')
@@ -326,13 +331,15 @@ if form.has_key('warnings'):
 htmldir = os.path.join('./', tree)
 
 # TODO: kill off hard coded path
-dxrconfig = dxr_config.load('./dxr.config')
+dxrconfig = dxr.load_config('./dxr.config')
+for treecfg in dxrconfig.trees:
+  if treecfg.tree == tree:
+    dxrconfig = treecfg
+    break
 
 #wwwdir = config.get('Web', 'wwwdir')
 dbname = tree + '.sqlite'
-dxrdb = os.path.join(dxrconfig['wwwdir'], tree, '.dxr_xref', dbname)
-header_template = os.path.join(dxrconfig['templates'], 'dxr-search-header.html')
-footer_template = os.path.join(dxrconfig['templates'], 'dxr-search-footer.html')
+dxrdb = os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', dbname)
 conn = sqlite3.connect(dxrdb)
 def collate_loc(str1, str2):
   parts1 = str1.split(':')
@@ -351,8 +358,7 @@ if string:
 else:
   titlestr = ''
 print 'Content-Type: text/html\n'
-print template.expand(template.readFile(header_template), dxrconfig["virtroot"],
-  tree) % (cgi.escape(titlestr), dxrconfig["virtroot"], cgi.escape(tree))
+print dxrconfig.getTemplateFile("dxr-search-header.html") % cgi.escape(titlestr)
 
 if string:
     processString(string)
@@ -373,6 +379,5 @@ else:
         processCallers(callers)
     elif warnings:
       processWarnings(warnings)
-
-print template.readFile(footer_template)
+print dxrconfig.getTemplateFile("dxr-search-footer.html")
 
