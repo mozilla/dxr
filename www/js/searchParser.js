@@ -47,7 +47,7 @@ function parseQS(id) {
     else
      search = string + " " + search;
   }
-  if (/ $/(search))
+  if (/ $/.exec(search))
     search = search.substring(0, search.length - 1);
   var sb = document.getElementById(id);
   sb.value = search;
