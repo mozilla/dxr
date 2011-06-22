@@ -3,26 +3,17 @@
 import os
 import dxr
 import cgi
-from dxr.tokenizers import Token, BaseTokenizer, CppTokenizer
+import itertools
 
-class HtmlBuilderBase:
-  def collectSidebar(self):
-    """Returns a list of (name, line, title, img, container) for items that
-    belong in the sidebar."""
-    return []
+class HtmlBuilder:
+  def _zipper(self, func):
+    """ Returns all contents from all plugins. """
+    if func not in self.resmap:
+      return []
+    return itertools.chain(*[f(self.blob[name], self.filepath, self.tree)
+      for name, f in self.resmap[func]])
 
-  def getSyntaxRegions(self):
-    """Returns a list of (start, end+1, kind) tokens for syntax highlighting."""
-    return []
-
-  def getLinkRegions(self):
-    """Returns a list of (start, end+1, {attr:val}) tokens for links."""
-    return []
-
-  def getLineAnnotations(self):
-    return []
-
-  def __init__(self, tree, filepath, dstpath):
+  def __init__(self, tree, filepath, dstpath, blob, resmap):
     # Read and expand all templates
     self.html_header = tree.getTemplateFile("dxr-header.html")
     self.html_footer = tree.getTemplateFile("dxr-footer.html")
@@ -35,33 +26,23 @@ class HtmlBuilderBase:
     self.virtroot = tree.virtroot
     self.treename = tree.tree
     self.filename = os.path.basename(filepath)
+    self.filepath = filepath
     self.srcroot = tree.sourcedir
     self.dstpath = os.path.normpath(dstpath)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
 
-    self.tokenizer = self._createTokenizer()
+    self.blob = blob
+    self.resmap = resmap
+    self.tree = tree
 
     # Config info used by dxr.js
     self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
-
-  def _createTokenizer(self):
-    return BaseTokenizer(self.source)
 
   def _buildFullPath(self, ending, includeTreename=True):
     if includeTreename:
       return os.path.join(self.virtroot, self.treename, ending) 
     else:
       return os.path.join(self.virtroot, ending) 
-
-  def escapeString(self, token, line, line_start, offset, prefix='', suffix=''):
-    start = token.start - line_start + offset
-    end = token.end - line_start + offset
-    escaped = prefix + cgi.escape(token.name) + suffix
-    # token is (perhaps) different size, so update offset with new width
-    offset += len(escaped) - len(token.name)
-    line = line[:start] + escaped + line[end:]
-
-    return (offset, line)
 
   def toHTML(self):
     out = open(self.dstpath, 'w')
@@ -73,7 +54,7 @@ class HtmlBuilderBase:
     out.close()
 
   def writeSidebar(self, out):
-    sidebarElements = [x for x in self.collectSidebar()]
+    sidebarElements = [x for x in self._zipper("get_sidebar_links")]
     if len(sidebarElements) == 0: return
 
     out.write(self.html_sidebar_header + '\n')
@@ -115,9 +96,9 @@ class HtmlBuilderBase:
     out.write(self.html_main_footer)
 
   def writeMainBody(self, out):
-    syntax_regions = self.getSyntaxRegions()
-    links = self.getLinkRegions()
-    lines = self.getLineAnnotations()
+    syntax_regions = self._zipper("get_syntax_regions")
+    links = self._zipper("get_link_regions")
+    lines = self._zipper("get_line_annotations")
 
     # Split up the entire source, and annotate each char invidually
     line_markers = [0]
@@ -171,77 +152,49 @@ class HtmlBuilderBase:
     out.write('</script>')
 
 
-class CppHtmlBuilder(HtmlBuilderBase):
-  def __init__(self, treeconfig, filepath, dstpath, blob):
-    HtmlBuilderBase.__init__(self, treeconfig, filepath, dstpath)
-    self.syntax_regions = None
-    self.blob_file = blob["byfile"].get(self.srcpath, None)
-    self.blob = blob
+# HTML-ifier map
+# The keys are the endings of files to match
+# First set of values are {funcname, [funclist]} dicts
+# funclist is the lists of functions to apply, as a (plugin name, func) tuple
 
-  def _createTokenizer(self):
-    return CppTokenizer(self.source)
+htmlifier_map = {}
+ending_iterator = []
+def build_htmlifier_map(plugins):
+  def add_to_map(ending, hmap, pluginname, append):
+    for x in ['get_sidebar_links', 'get_link_regions', 'get_line_annotations',
+        'get_syntax_regions']:
+      details = htmlifier_map[ending].setdefault(x, [None])
+      if append:
+        details.append((pluginname, hmap[x]))
+      else:
+        details[0] = (pluginname, hmap[x])
+  # Add/append details for each map
+  for plug in plugins:
+    plug_map = plug.get_htmlifiers()
+    nosquash = 'no-override' in plug_map
+    for ending in plug_map:
+      if ending not in htmlifier_map:
+        ending_iterator.append(ending)
+        htmlifier_map[ending] = {}
+      add_to_map(ending, plug_map[ending], plug.__name__, nosquash)
+  # Sort the endings by maximum length, so that we can just find the first one
+  # in the list
+  ending_iterator.sort(lambda x, y: cmp(len(y), len(x)))
 
-  def collectSidebar(self):
-    if self.blob_file is None:
-      return
-    lst = []
-    def line(linestr):
-      return linestr.split(':')[1]
-    def make_tuple(df, name, loc, scope="scopeid"):
-      img = 'images/icons/page_white_wrench.png'
-      if scope in df and df[scope] > 0:
-        return (df[name], df[loc].split(':')[1], df[name], img,
-          self.blob["scopes"][df[scope]]["sname"])
-      return (df[name], df[loc].split(':')[1], df[name], img)
-    for df in self.blob_file["types"]:
-      yield make_tuple(df, "tqualname", "tloc", "scopeid")
-    for df in self.blob_file["functions"]:
-      yield make_tuple(df, "flongname", "floc", "scopeid")
-    for df in self.blob_file["variables"]:
-      if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
-        continue
-      yield make_tuple(df, "vname", "vloc", "scopeid")
-
-  def _getFromTokenizer(self):
-    syntax_regions = []
-    for token in self.tokenizer.getTokens():
-      if token.token_type == self.tokenizer.KEYWORD:
-        syntax_regions.append((token.start, token.end, 'k'))
-      elif token.token_type == self.tokenizer.STRING:
-        syntax_regions.append((token.start, token.end, 'str'))
-      elif token.token_type == self.tokenizer.COMMENT:
-        syntax_regions.append((token.start, token.end, 'c'))
-      elif token.token_type == self.tokenizer.PREPROCESSOR:
-        syntax_regions.append((token.start, token.end, 'p'))
-    self.syntax_regions = syntax_regions
-
-  def getSyntaxRegions(self):
-    if self.syntax_regions is None:
-      self._getFromTokenizer()
-    return self.syntax_regions
-
-  def getLinkRegions(self):
-    if self.blob_file is None:
-      return
-    def make_link(obj, loc, name, clazz, **kwargs):
-      line, col = obj[loc].split(':')[1:]
-      line, col = int(line), int(col)
-      kwargs['class'] = clazz
-      kwargs['line'] =  line
-      return ((line, col), (line, col + len(obj[name])), kwargs)
-    for df in self.blob_file["variables"]:
-      yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
-    for df in self.blob_file["functions"]:
-      yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
-    for df in self.blob_file["types"]:
-      yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
-    for df in self.blob_file["refs"]:
-      start, end = df["extent"].split(':')
-      yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
-
-  def getLineAnnotations(self):
-    if self.blob_file is None:
-      return
-    for warn in self.blob_file["warnings"]:
-      line = int(warn["wloc"].split(":")[1])
-      yield (line, {"class": "lnw", "title": warn["wmsg"]})
+def make_html(srcpath, dstfile, treecfg, blob):
+  # Match the file in srcpath
+  result_map = {}
+  signalStop = False
+  for end in ending_iterator:
+    if srcpath.endswith(end):
+      for func in htmlifier_map[end]:
+        reslist = result_map.setdefault(func, [None])
+        flist = htmlifier_map[end][func]
+        reslist.extend(flist[1:])
+        if flist[0] is not None:
+          reslist[0] = flist[0]
+          signalStop = True
+    if signalStop:
+      break
+  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map)
+  builder.toHTML()

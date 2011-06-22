@@ -62,15 +62,7 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
 def async_toHTML(treeconfig, srcpath, dstfile):
   """Wrapper function to allow doing this async without an instance method."""
   try:
-    htmlBuilder = None
-    if os.path.splitext(srcpath)[1] in ['.h', '.c', '.cpp', '.m', '.mm']:
-      htmlBuilder = dxr.htmlbuilders.CppHtmlBuilder(treeconfig, srcpath, dstfile, big_blob['dxr.cxx-clang'])
-    elif os.path.splitext(srcpath)[1] == '.idl':
-      htmlBuilder = dxr.htmlbuilders.IdlHtmlBuilder(treeconfig, srcpath, dstfile)
-    else:
-      htmlBuilder = dxr.htmlbuilders.HtmlBuilderBase(treeconfig, srcpath, dstfile)
-
-    htmlBuilder.toHTML()
+    dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob)
   except Exception, e:
     print str(e)
     import traceback
@@ -161,6 +153,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
   # Build static html
   if dohtml:
     big_blob = dxr.load_big_blob(treecfg)
+    dxr.htmlbuilders.build_htmlifier_map(dxr.get_active_plugins(treecfg))
     treecfg.database = os.path.join(dbdir, dbname)
 
     n = cpu_count()

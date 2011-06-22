@@ -14,7 +14,12 @@ if [ -z "$DXRSRC" ]; then
 fi
 
 echo "Finding available DXR plugins..."
-tools=( $DXRSRC/xref-tools/* )
+tools=( $(python - <<HEREDOC
+import dxr
+files = [x.__file__ for x in dxr.get_active_plugins(None, '$DXRSRC')]
+print ' '.join([x[:x.find('/indexer.py')] for x in files])
+HEREDOC
+) )
 echo -n "Found:"
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n " $(basename ${tools[plugin]})"

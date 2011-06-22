@@ -8,23 +8,35 @@ import string
 # Plugin handling #
 ###################
 
-plugins = None
-def get_active_plugins(tree=None):
+all_plugins = None
+def get_active_plugins(tree=None, dxrsrc=None):
   """ Return all plugins that are used by the tree.
       If tree is None, then all usable plugins are returned. """
-  global plugins
-  if plugins is None:
-    plugins = load_plugins()
-  # XXX: filter out the tree
-  return plugins
+  global all_plugins
+  if all_plugins is None:
+    if dxrsrc is None and tree is not None:
+      dxrsrc = tree.dxrroot
+    all_plugins = load_plugins(dxrsrc)
 
-def load_plugins():
-  # XXX: discover and iterate over available plugins
-  basedir = os.path.realpath(os.path.dirname(sys.argv[0]))
-  m = imp.find_module('indexer', [os.path.join(basedir, 'xref-tools/cxx-clang')])
-  module = imp.load_module('dxr.cxx-clang', m[0], m[1], m[2])
-  plugins = [module]
-  return plugins
+  def plugin_filter(module):
+    return module.can_use(tree)
+  return filter(plugin_filter, all_plugins)
+
+def load_plugins(dxrsrc=None):
+  if dxrsrc is None:
+    dxrsrc = os.path.realpath(os.path.dirname(sys.argv[0]))
+  dirs = os.listdir(os.path.join(dxrsrc, 'xref-tools'))
+  all_plugins = []
+  for dirname in dirs:
+    fullname = os.path.join(dxrsrc, 'xref-tools', dirname)
+    try:
+      m = imp.find_module('indexer', [fullname])
+      module = imp.load_module('dxr.' + dirname, m[0], m[1], m[2])
+      all_plugins.append(module)
+    except:
+      print "Unable to load plugin %s" % dirname
+      pass
+  return all_plugins
 
 def store_big_blob(tree, blob):
   htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
@@ -49,6 +61,11 @@ class DxrConfig(object):
     self._tree = tree
     self.xrefscripts = os.path.abspath(config.get('DXR', 'xrefscripts'))
     self.templates = os.path.abspath(config.get('DXR', 'templates'))
+    if config.has_option('DXR', 'dxrroot'):
+      self.dxrroot = os.path.abspath(config.get('DXR', 'dxrroot'))
+    else:
+      self.dxrroot = None
+
     self.wwwdir = os.path.abspath(config.get('Web', 'wwwdir'))
     self.virtroot = os.path.abspath(config.get('Web', 'virtroot'))
     if self.virtroot.endswith('/'):

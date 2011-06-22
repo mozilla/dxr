@@ -1,54 +1,6 @@
-#!/usr/bin/python
-
 import csv
+import dxr.plugins
 import os
-import sys
-
-class UnionFind:
-  class _Obj:
-    def __init__(self, val):
-      self.val = val
-      self.rank = 0
-      self.parent = self
-
-  def __init__(self):
-    self.objects = {}
-
-  def _canonicalize(self, obj):
-    if obj in self.objects:
-      return self.objects[obj]
-    canon = _Obj(obj)
-    self.objects[obj] = canon
-    return canon
-
-  def find(self, obj):
-    return self._find(self._canonicalize(obj)).obj
-
-  def _find(self, canon):
-    if canon.parent != canon:
-      canon.parent = self.find(canon.parent)
-    return canon
-
-  def union(self, obj1, obj2):
-    obj1 = self._canonicalize(obj1)
-    obj2 = self._canonicalize(obj2)
-    x, y = self._find(obj1), self._find(obj2)
-    if x == y:
-      return
-
-    if x.rank < y.rank:
-      x.parent = y
-    elif x.rank > y.rank:
-      y.parent = x
-    else:
-      y.parent = x
-      x.rank += 1
-
-  def set(self, obj, newval):
-    canon = self._find(obj)
-    canon.obj = newval
-    if newval not in self.objects:
-      self.objects[newval] = canon
 
 decl_master = {}
 types = {}
@@ -295,7 +247,103 @@ def sqlify(blob):
       write_sql(table, row, out)
   return out
 
-__all__ = ['post_process', 'sqlify']
+def can_use(treecfg):
+  # We need to have clang and llvm-config in the path
+  return dxr.plugins.in_path('clang') and dxr.plugins.in_path('llvm-config')
 
-if __name__ == '__main__':
-  sys.stdout.write(sqlify(post_process(sys.argv[1], sys.argv[1])))
+import dxr
+from dxr.tokenizers import CppTokenizer
+class CxxHtmlifier:
+  def __init__(self, blob, srcpath, treecfg):
+    self.source = dxr.readFile(srcpath)
+    self.srcpath = srcpath.replace(treecfg.sourcedir + '/', '')
+    self.blob_file = blob["byfile"].get(self.srcpath, None)
+    self.blob = blob
+
+  def collectSidebar(self):
+    if self.blob_file is None:
+      return
+    def line(linestr):
+      return linestr.split(':')[1]
+    def make_tuple(df, name, loc, scope="scopeid"):
+      img = 'images/icons/page_white_wrench.png'
+      if scope in df and df[scope] > 0:
+        return (df[name], df[loc].split(':')[1], df[name], img,
+          self.blob["scopes"][df[scope]]["sname"])
+      return (df[name], df[loc].split(':')[1], df[name], img)
+    for df in self.blob_file["types"]:
+      yield make_tuple(df, "tqualname", "tloc", "scopeid")
+    for df in self.blob_file["functions"]:
+      yield make_tuple(df, "flongname", "floc", "scopeid")
+    for df in self.blob_file["variables"]:
+      if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
+        continue
+      yield make_tuple(df, "vname", "vloc", "scopeid")
+
+  def getSyntaxRegions(self):
+    self.tokenizer = CppTokenizer(self.source)
+    for token in self.tokenizer.getTokens():
+      if token.token_type == self.tokenizer.KEYWORD:
+        yield (token.start, token.end, 'k')
+      elif token.token_type == self.tokenizer.STRING:
+        yield (token.start, token.end, 'str')
+      elif token.token_type == self.tokenizer.COMMENT:
+        yield (token.start, token.end, 'c')
+      elif token.token_type == self.tokenizer.PREPROCESSOR:
+        yield (token.start, token.end, 'p')
+
+  def getLinkRegions(self):
+    if self.blob_file is None:
+      return
+    def make_link(obj, loc, name, clazz, **kwargs):
+      line, col = obj[loc].split(':')[1:]
+      line, col = int(line), int(col)
+      kwargs['class'] = clazz
+      kwargs['line'] =  line
+      return ((line, col), (line, col + len(obj[name])), kwargs)
+    for df in self.blob_file["variables"]:
+      yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
+    for df in self.blob_file["functions"]:
+      yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
+    for df in self.blob_file["types"]:
+      yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
+    for df in self.blob_file["refs"]:
+      start, end = df["extent"].split(':')
+      yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
+
+  def getLineAnnotations(self):
+    if self.blob_file is None:
+      return
+    for warn in self.blob_file["warnings"]:
+      line = int(warn["wloc"].split(":")[1])
+      yield (line, {"class": "lnw", "title": warn["wmsg"]})
+
+def get_sidebar_links(blob, srcpath, treecfg):
+  if srcpath not in htmlifier_store:
+    htmlifier_store[srcpath] = CxxHtmlifier(blob, srcpath, treecfg)
+  return htmlifier_store[srcpath].collectSidebar()
+def get_link_regions(blob, srcpath, treecfg):
+  if srcpath not in htmlifier_store:
+    htmlifier_store[srcpath] = CxxHtmlifier(blob, srcpath, treecfg)
+  return htmlifier_store[srcpath].getLinkRegions()
+def get_line_annotations(blob, srcpath, treecfg):
+  if srcpath not in htmlifier_store:
+    htmlifier_store[srcpath] = CxxHtmlifier(blob, srcpath, treecfg)
+  return htmlifier_store[srcpath].getLineAnnotations()
+def get_syntax_regions(blob, srcpath, treecfg):
+  if srcpath not in htmlifier_store:
+    htmlifier_store[srcpath] = CxxHtmlifier(blob, srcpath, treecfg)
+  return htmlifier_store[srcpath].getSyntaxRegions()
+htmlifier_store = {}
+
+htmlifier = {}
+for f in ('.c', '.cc', '.cpp', '.h', '.hpp'):
+  htmlifier[f] = {'get_sidebar_links': get_sidebar_links,
+      'get_link_regions': get_link_regions,
+      'get_line_annotations': get_line_annotations,
+      'get_syntax_regions': get_syntax_regions}
+
+def get_htmlifiers():
+  return htmlifier
+
+__all__ = dxr.plugins.required_exports()
