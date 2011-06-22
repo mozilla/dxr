@@ -232,26 +232,13 @@ def post_process(srcdir, objdir):
   return blob
 
 def sqlify(blob):
-  out = [];
-  # Finally, produce all sql statements
-  def write_sql(table, obj, out):
-    keys, vals = zip(*obj.iteritems())
-    out.append("INSERT INTO " + table + " (" + ','.join(keys) + ") VALUES" + 
-      " (" + ",".join([repr(v) for v in vals]) + ");")
-  for table in blob:
-    if table == "byfile": continue
-    iskey = isinstance(blob[table], dict)
-    for row in blob[table]:
-      if iskey:
-        row = blob[table][row]
-      write_sql(table, row, out)
-  return out
+  return schema.get_data_sql(blob)
 
 def can_use(treecfg):
   # We need to have clang and llvm-config in the path
   return dxr.plugins.in_path('clang') and dxr.plugins.in_path('llvm-config')
 
-schema = {
+schema = dxr.plugins.Schema({
   # Scope definitions: a scope is anything that is both interesting (i.e., not
   # a namespace) and can contain other objects. The IDs for this scope should be
   # IDs in other tables as well; the table its in can disambiguate which type of
@@ -316,7 +303,7 @@ schema = {
     "wloc": ("_location", False),   # Location of the warning
     "wmsg": ("VARCHAR(256)", False) # Text of the warning
   }
-}
+})
 
 get_schema = dxr.plugins.make_get_schema_func(schema)
 

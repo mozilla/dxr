@@ -73,12 +73,42 @@ def default_get_htmlifiers():
     return []
   return {}
 
-def make_get_schema_func(schema):
-  """ Returns a function that satisfys get_schema's contract from the schema.
+class Schema:
+  """ A representation of SQL table data.
+
+      This class allows for easy ways to handle SQL data given blob information,
+      and is probably the preferred format for storing the schema.
 
       The input schema is a dictionary whose keys are the table names and whose
       values are dictionaries for table schemas.
-      A table schema dictionary has column names as keys and information tuples
+      
+      This class interprets blob data as a dictionary of tables; each table is
+      either a dictionary of {key:row} elements or a list of {key:row} elements.
+      The rows are dictionaries of {col:value} elements; only those values that
+      are actually present in the schema will be serialized in the get_data_sql
+      function. """
+  def __init__(self, schema):
+    """ Creates a new schema with the given definition. See the class docs for
+        this and SchemaTable for what syntax looks like. """
+    self.tables = {}
+    for tbl in schema:
+      self.tables[tbl] = SchemaTable(tbl, schema[tbl])
+
+  def get_create_sql(self):
+    """ Returns the SQL that creates the tables in this schema. """
+    return '\n'.join([tbl.get_create_sql() for tbl in self.tables.itervalues()])
+
+  def get_data_sql(self, blob):
+    """ Returns the SQL that inserts data into tables given a blob. """
+    for tbl in self.tables:
+      if tbl in blob:
+        sqliter = self.tables[tbl].get_data_sql(blob[tbl])
+        for sql in sqliter:
+          yield sql
+
+
+class SchemaTable:
+  """ A table schema dictionary has column names as keys and information tuples
       as values: "col": (type, mayBeNull)
         type is the type string (e.g., VARCHAR(256) or INTEGER), although it
           may have special values
@@ -98,45 +128,67 @@ def make_get_schema_func(schema):
         ("col2", (type, False)),
         ...
   """
-  special_types = {
-    '_location': 'VARCHAR(256)'
-  }
+  def __init__(self, tblname, tblschema):
+    self.name = tblname
+    self.key = None
+    self.columns = []
+    defaults = ['VARCHAR(256)', True]
+    for col in tblschema:
+      if isinstance(tblschema, tuple) or isinstance(tblschema, list):
+        col, spec = col[0], col[1:]
+      else:
+        spec = tblschema[col]
+      if not isinstance(spec, tuple):
+        spec = (spec,)
+      if col == '_key':
+        self.key = spec
+      elif col[0] != '_':
+        # if spec is deficient, we need to full it in with default tuples
+        values = list(spec)
+        if len(spec) < len(defaults):
+          values.extend(defaults[len(spec):])
+        self.columns.append((col, spec))
+
+  def get_create_sql(self):
+    sql = 'DROP TABLE IF EXISTS %s;\n' % (self.name)
+    sql += 'CREATE TABLE %s (\n  ' % (self.name)
+    colstrs = []
+    special_types = {
+      '_location': 'VARCHAR(256)'
+    }
+    for col, spec in self.columns:
+      specsql = col + ' '
+      if spec[0][0] == '_':
+        specsql += special_types[spec[0]]
+      else:
+        specsql += spec[0]
+      if len(spec) > 1 and spec[1] == False:
+        specsql += ' NOT NULL'
+      colstrs.append(specsql)
+    if self.key is not None:
+      colstrs.append('PRIMARY KEY (%s)' % ', '.join(self.key))
+    sql += ',\n  '.join(colstrs)
+    sql += '\n);\n'
+    return sql
+
+  def get_data_sql(self, blobtbl):
+    it = isinstance(blobtbl, dict) and blobtbl.itervalues() or blobtbl
+    colset = set(col[0] for col in self.columns)
+    sqlset = set()
+    for row in it:
+      # Only add the keys in the columns
+      keys = colset.intersection(row.iterkeys())
+      sqlset.add('INSERT INTO %s (%s) VALUES (%s);' % (self.name,
+        ','.join(keys), ','.join(repr(row[k]) for k in keys)))
+    return iter(sqlset)
+
+
+def make_get_schema_func(schema):
+  """ Returns a function that satisfies get_schema's contract from the given
+      schema object. """
   def get_schema():
     # Iterate over all tables
-    sql = ''
-    for tblname in schema:
-      tblschema = schema[tblname]
-      sql += 'DROP TABLE IF EXISTS %s;\n' % (tblname)
-      sql += 'CREATE TABLE %s (\n  ' % (tblname)
-      # Build column strings
-      # Since PRIMARY KEY, etc., need to be after, we need to keep track of
-      # which order to put stuff in
-      colstrs = []
-      poststrs = []
-      for col in tblschema:
-        # Unpack the structure
-        if isinstance(tblschema, tuple) or isinstance(tblschema, list):
-          col, spec = col[0], col[1:]
-        else:
-          spec = tblschema[col]
-        if not isinstance(spec, tuple):
-          spec = (spec,)
-        if col == '_key':
-          poststrs.append('PRIMARY KEY (%s)' % (', '.join(spec)))
-        elif col[0] != '_':
-          specsql = col + ' '
-          if spec[0][0] == '_':
-            specsql += special_types[spec[0]]
-          else:
-            specsql += spec[0]
-          if len(spec) > 1 and spec[1] == False:
-            specsql += ' NOT NULL'
-          colstrs.append(specsql)
-      # Put all of the innards in a single list
-      colstrs.extend(poststrs)
-      sql += ',\n  '.join(colstrs)
-      sql += '\n);\n\n'
-    return sql
+    return schema.get_create_sql()
   return get_schema
 
 def required_exports():
