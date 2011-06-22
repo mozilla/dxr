@@ -95,14 +95,15 @@ def builddb(treecfg, dbdir):
 
   print "Building SQL..."
   all_statements = set()
+  schemata = []
   for plugin in dxr.get_active_plugins(treecfg):
+    schemata.append(plugin.get_schema())
     if plugin.__name__ in big_blob:
-      all_statements.update(plugin.sqlify(big_blob[plugin.__name__]));
+      all_statements.update(plugin.sqlify(big_blob[plugin.__name__]))
 
   dbname = treecfg.tree + '.sqlite'
   conn = sqlite3.connect(os.path.join(dbdir, dbname))
-  schema = dxr.readFile(os.path.join(treecfg.xrefscripts, "dxr-schema.sql"))
-  conn.executescript(schema)
+  conn.executescript('\n'.join(schemata))
   conn.commit()
   for stmt in all_statements:
     conn.execute(stmt)

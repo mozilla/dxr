@@ -35,6 +35,7 @@ def load_plugins(dxrsrc=None):
       all_plugins.append(module)
     except:
       print "Unable to load plugin %s" % dirname
+      print sys.exc_info()
       pass
   return all_plugins
 
@@ -59,7 +60,6 @@ def load_big_blob(tree):
 class DxrConfig(object):
   def __init__(self, config, tree=None):
     self._tree = tree
-    self.xrefscripts = os.path.abspath(config.get('DXR', 'xrefscripts'))
     self.templates = os.path.abspath(config.get('DXR', 'templates'))
     if config.has_option('DXR', 'dxrroot'):
       self.dxrroot = os.path.abspath(config.get('DXR', 'dxrroot'))

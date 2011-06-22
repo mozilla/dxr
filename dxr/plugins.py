@@ -73,6 +73,72 @@ def default_get_htmlifiers():
     return []
   return {}
 
+def make_get_schema_func(schema):
+  """ Returns a function that satisfys get_schema's contract from the schema.
+
+      The input schema is a dictionary whose keys are the table names and whose
+      values are dictionaries for table schemas.
+      A table schema dictionary has column names as keys and information tuples
+      as values: "col": (type, mayBeNull)
+        type is the type string (e.g., VARCHAR(256) or INTEGER), although it
+          may have special values
+        mayBeNull is an optional attribute that specifies if the column may
+          contain null values. not specifying is equivalent to True
+      
+      Any column name that begins with a `_' is metadata about the table:
+        _key: the result tuple is a tuple for the primary key of the table.
+
+      Special values for type strings are as follows:
+        _location: A file:loc[:col] value for the column.
+
+      Since the order of columns matter in SQL and python dicts are unordered,
+      we will accept a list or tuple of tuples as an alternative specifier:
+      "table": [
+        ("col", type, False),
+        ("col2", (type, False)),
+        ...
+  """
+  special_types = {
+    '_location': 'VARCHAR(256)'
+  }
+  def get_schema():
+    # Iterate over all tables
+    sql = ''
+    for tblname in schema:
+      tblschema = schema[tblname]
+      sql += 'DROP TABLE IF EXISTS %s;\n' % (tblname)
+      sql += 'CREATE TABLE %s (\n  ' % (tblname)
+      # Build column strings
+      # Since PRIMARY KEY, etc., need to be after, we need to keep track of
+      # which order to put stuff in
+      colstrs = []
+      poststrs = []
+      for col in tblschema:
+        # Unpack the structure
+        if isinstance(tblschema, tuple) or isinstance(tblschema, list):
+          col, spec = col[0], col[1:]
+        else:
+          spec = tblschema[col]
+        if not isinstance(spec, tuple):
+          spec = (spec,)
+        if col == '_key':
+          poststrs.append('PRIMARY KEY (%s)' % (', '.join(spec)))
+        elif col[0] != '_':
+          specsql = col + ' '
+          if spec[0][0] == '_':
+            specsql += special_types[spec[0]]
+          else:
+            specsql += spec[0]
+          if len(spec) > 1 and spec[1] == False:
+            specsql += ' NOT NULL'
+          colstrs.append(specsql)
+      # Put all of the innards in a single list
+      colstrs.extend(poststrs)
+      sql += ',\n  '.join(colstrs)
+      sql += '\n);\n\n'
+    return sql
+  return get_schema
+
 def required_exports():
   """ Returns the required exports for a module, for use as __all__. """
-  return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers']
+  return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema']
