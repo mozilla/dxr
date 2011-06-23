@@ -62,7 +62,8 @@ public:
 
   std::string locationToString(SourceLocation loc) {
     PresumedLoc fixed = sm.getPresumedLoc(loc);
-    std::string buffer = realpath(fixed.getFilename(), NULL);
+    const char *path = realpath(fixed.getFilename(), NULL);
+    std::string buffer = path ? path : fixed.getFilename();
     buffer += ":";
     buffer += fixed.getLine();
     buffer += ":";

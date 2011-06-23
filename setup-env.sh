@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# XXX: I don't know if this is bash-only, but that's the only shell I use. So
-# assume it is.
-
 if [ -z "$1" ]; then
   echo "Usage: . $0 <srcdir>"
 fi
@@ -10,11 +7,12 @@ SRCDIR="$1"
 
 if [ -z "$DXRSRC" ]; then
   echo "Setting DXRSRC variable"
-  export DXRSRC=$(dirname $(readlink -f $0))
+  scriptsrc=${BASH_SOURCE[0]}
+  export DXRSRC=$(dirname $(readlink -f $scriptsrc))
 fi
 
 echo "Finding available DXR plugins..."
-tools=( $(python - <<HEREDOC
+tools=( $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
 files = [x.__file__ for x in dxr.get_active_plugins(None, '$DXRSRC')]
 print ' '.join([x[:x.find('/indexer.py')] for x in files])
