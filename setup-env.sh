@@ -1,9 +1,17 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-  echo "Usage: . $0 <srcdir>"
+  echo "Usage: . $0 <srcdir> [<datadir>]"
+  return 1
+  exit 1
 fi
 SRCDIR="$1"
+
+if [ -z "$2" ]; then
+  export OBJDIR="$1"
+else
+  export OBJDIR="$2"
+fi
 
 if [ -z "$DXRSRC" ]; then
   echo "Setting DXRSRC variable"

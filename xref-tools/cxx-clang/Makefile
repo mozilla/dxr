@@ -16,7 +16,7 @@ can-use:
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
-libclang-index-plugin.so: dxr-index.o
+libclang-index-plugin.so: dxr-index.o sha1.o
 	$(CXX) $(LDFLAGS) $^ -o $@ -shared
 
 clean:
