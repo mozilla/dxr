@@ -174,13 +174,11 @@ class SchemaTable:
   def get_data_sql(self, blobtbl):
     it = isinstance(blobtbl, dict) and blobtbl.itervalues() or blobtbl
     colset = set(col[0] for col in self.columns)
-    sqlset = set()
     for row in it:
       # Only add the keys in the columns
       keys = colset.intersection(row.iterkeys())
-      sqlset.add('INSERT INTO %s (%s) VALUES (%s);' % (self.name,
-        ','.join(keys), ','.join(repr(row[k]) for k in keys)))
-    return iter(sqlset)
+      yield 'INSERT OR IGNORE INTO %s (%s) VALUES (%s);' % (self.name,
+        ','.join(keys), ','.join(repr(row[k]) for k in keys))
 
 
 def make_get_schema_func(schema):

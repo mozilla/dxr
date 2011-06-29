@@ -51,6 +51,9 @@ def load_indexer_output(fname):
       for i in range(1, len(line), 2):
         argobj[line[i]] = line[i + 1]
       globals()['process_' + line[0]](argobj)
+  except IndexError, e:
+    print line
+    raise e
   finally:
     f.close()
 
@@ -223,10 +226,10 @@ def post_process(srcdir, objdir):
 
   # Normalize path names
   blob["byfile"] = {}
-  for f in files:
+  while len(files) > 0:
+    f, oldtbl = files.popitem()
     real = os.path.relpath(os.path.realpath(os.path.join(srcdir, f)), srcdir)
     realtbl = blob["byfile"].setdefault(real, schema())
-    oldtbl = files[f]
     for table in oldtbl:
       realtbl[table].extend(oldtbl[table])
   return blob

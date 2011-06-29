@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
+from multiprocessing.pool import ThreadPool as Pool
 import os
 import sys
 import getopt
@@ -91,6 +92,7 @@ def builddb(treecfg, dbdir):
   """ Post-process the build and make the SQL directory """
   print "Post-processing the source files..."
   big_blob = post_process(treecfg)
+  print "Storing data..."
   dxr.store_big_blob(treecfg, big_blob)
 
   print "Building SQL..."
@@ -153,7 +155,8 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
   # Build static html
   if dohtml:
-    big_blob = dxr.load_big_blob(treecfg)
+    if not doxref:
+      big_blob = dxr.load_big_blob(treecfg)
     dxr.htmlbuilders.build_htmlifier_map(dxr.get_active_plugins(treecfg))
     treecfg.database = os.path.join(dbdir, dbname)
 
