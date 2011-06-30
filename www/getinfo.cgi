@@ -1,12 +1,147 @@
 #!/usr/bin/env python2.6
 
-import dxr_data
 import json
 import cgitb; cgitb.enable()
 import cgi
 import sqlite3
 import ConfigParser
 import os
+
+def locUrl(loc):
+  path, line = loc.split(':')[:2]
+  return '%s/%s/%s.html#l%s' % (virtroot, tree, path, line)
+
+def getType(typeinfo, refs=[], deep=False):
+  if isinstance(typeinfo, int):
+    typeinfo = conn.execute("SELECT * FROM types WHERE tid=?",
+      (typeinfo,)).fetchone()
+  typebase = {
+    "label": '%s %s' % (typeinfo['tkind'], typeinfo['tqualname']),
+    "icon": "icon-type",
+    "children": [{
+      "label": 'Defined at %s' % (typeinfo['tloc']),
+      "icon": "icon-def",
+      "url": locUrl(typeinfo['tloc'])
+    }]
+  }
+  if not deep:
+    return typebase
+  members = {
+    "label": "Members",
+    "icon": "icon-member",
+    "children": []
+  }
+  tid = typeinfo['tid']
+  cur = conn.cursor()
+  cur.execute("SELECT tid, 't' FROM types WHERE scopeid=? UNION " +
+    "SELECT funcid, 'f' FROM functions WHERE scopeid=? UNION " +
+    "SELECT varid, 'v' FROM variables WHERE scopeid=?", (tid,tid,tid))
+  for memid, qual in cur:
+    if qual == 't':
+      member = getType(memid)
+    elif qual == 'f':
+      member = getFunction(memid)
+    elif qual == 'v':
+      member = getVariable(memid)
+    members["children"].append(member)
+  if len(members) > 0:
+    typebase["children"].append(members)
+
+  basenode = {
+    "label": "Bases",
+    "icon": "icon-base",
+    "children": []
+  }
+  derivednode = {
+    "label": "Derived",
+    "icon": "icon-base",
+    "children": []
+  }
+  cur.execute("SELECT * FROM impl WHERE tbase=?", (tid,))
+  for derived in cur:
+    sub = getType(derived['tderived'])
+    sub['label'] = '%s %s' % (sub['label'],
+      derived['inhtype'] is None and "(indirect)" or "")
+    derivednode["children"].append(sub)
+  cur.execute("SELECT * FROM impl WHERE tderived=?", (tid,))
+  for base in cur:
+    sub = getType(base['tbase'])
+    sub['label'] = '%s %s' % (sub['label'],
+      base['inhtype'] is None and "(indirect)" or base['inhtype'])
+    basenode["children"].append(sub)
+
+  if len(basenode["children"]) > 0:
+    typebase["children"].append(basenode)
+  if len(derivednode["children"]) > 0:
+    typebase["children"].append(derivednode)
+  
+  refnode = {
+    "label": "References",
+    "children": []
+  }
+  for ref in refs:
+    refnode['children'].append({
+      "label": ref["refloc"],
+      "icon": "icon-def",
+      "url": locUrl(ref["refloc"])
+    })
+  if len(refnode['children']) > 0:
+    typebase['children'].append(refnode)
+  return typebase
+
+def getVariable(varinfo, refs=[]):
+  if isinstance(varinfo, int):
+    varinfo = conn.execute("SELECT * FROM variables WHERE varid=?",
+      (varinfo,)).fetchone()
+  varbase = {
+    "label": '%s %s' % (varinfo['vtype'], varinfo['vname']),
+    "icon": "icon-member",
+    "children": [{
+      "label": 'Defined at %s' % (varinfo['vloc']),
+      "icon": "icon-def",
+      "url": locUrl(varinfo['vloc'])
+    }]
+  }
+  refnode = {
+    "label": "References",
+    "children": []
+  }
+  for ref in refs:
+    refnode['children'].append({
+      "label": ref["refloc"],
+      "icon": "icon-def",
+      "url": locUrl(ref["refloc"])
+    })
+  if len(refnode['children']) > 0:
+    varbase['children'].append(refnode)
+  return varbase
+
+def getFunction(funcinfo, refs=[]):
+  if isinstance(funcinfo, int):
+    funcinfo = conn.execute("SELECT * FROM functions WHERE funcid=?",
+      (funcinfo,)).fetchone()
+  funcbase = {
+    "label": funcinfo['flongname'],
+    "icon": "icon-member",
+    "children": [{
+      "label": 'Defined at %s' % (funcinfo['floc']),
+      "icon": "icon-def",
+      "url": locUrl(funcinfo['floc'])
+    }]
+  }
+  refnode = {
+    "label": "References",
+    "children": []
+  }
+  for ref in refs:
+    refnode['children'].append({
+      "label": ref["refloc"],
+      "icon": "icon-def",
+      "url": locUrl(ref["refloc"])
+    })
+  if len(refnode['children']) > 0:
+    funcbase['children'].append(refnode)
+  return funcbase
 
 def printError():
   print """Content-Type: text/html
@@ -26,82 +161,28 @@ def printMacro():
 """ % (value[0], cgi.escape(value[1]))
 
 def printType():
-  row = conn.execute("SELECT tqualname, tloc, tkind FROM types WHERE tid=?",
-      (refid,)).fetchall()[0]
-  t = dxr_data.DxrType(row[0], row[1], None, None, row[2], None, conn)
-  jsonString = json.dumps(t, cls=dxr_data.DxrType.DojoEncoder)
-  printTree(jsonString)
+  row = conn.execute("SELECT * FROM types WHERE tid=?", (refid,)).fetchone()
+  refs = conn.execute("SELECT * FROM refs WHERE refid=?", (refid,))
+  printTree(json.dumps(getType(row, refs, True)))
 
 def printVariable():
-  row = conn.execute("SELECT vname, vloc FROM variables WHERE varid=?",
-    (refid,)).fetchall()[0]
-  s = dxr_data.DxrMember(row[0], row[0], None, row[1], None, conn)
-  jsonString = json.dumps(s, cls=dxr_data.DxrStatement.DojoEncoder)
-  printTree(jsonString)
+  row = conn.execute("SELECT * FROM variables WHERE varid=?",
+    (refid,)).fetchone()
+  refs = conn.execute("SELECT * FROM refs WHERE refid=?",(refid,))
+  printTree(json.dumps(getVariable(row, refs)))
 
 def printFunction():
   row = conn.execute("SELECT fname, floc, flongname FROM functions" +
-    " WHERE funcid=?", (refid,)).fetchall()[0]
-  s = dxr_data.DxrMember(row[2], row[0], None, row[1], None, conn)
-  jsonString = json.dumps(s, cls=dxr_data.DxrStatement.DojoEncoder)
-  printTree(jsonString)
+    " WHERE funcid=?", (refid,)).fetchone()
+  refs = conn.execute("SELECT * FROM refs WHERE refid=?",(refid,))
+  printTree(json.dumps(getFunction(row, refs)))
 
 def printReference():
   val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
     " UNION SELECT 'func' FROM functions WHERE funcid=?" +
     " UNION SELECT 't' FROM types WHERE tid=?",
-    (refid,refid,refid)).fetchall()[0][0]
+    (refid,refid,refid)).fetchone()[0]
   return dispatch[val]()
-# TODO - gotta get this stuff added somehow and deal with functions...
-#    # If this is a function call, do more work to get extra info
-#    if row[3] and row[3] == 1:
-#      impl_data = '<ul>'
-##      for impl in conn.execute('select mtname, mname, mdecl, mdef from members where mname=? and mtname in (select tcname from impl where tbname=?);', (row[0], row[4])):
-#      for impl in conn.execute('select mtname, mname, mdecl, mdef, mtloc from members where mname=? and (mtname=? or (not mtname=? and mtname in (select tcname from impl where tbname=?)));', (row[0], row[4], row[4], row[4])):
-#        # Skip IDL interface types, which provide no implementation
-#        mtype = conn.execute('select tkind from types where tname=? and tloc=?;', (impl[0], impl[4])).fetchone()
-#        if mtype and mtype[0] == 'interface':
-#          continue
-#        pathParts = ''
-#        if impl[3]:
-#          pathParts = impl[3].split(':')
-#        else:
-#          pathParts = impl[2].split(':')
-#        impl_data += '<li><a href="' + htmlsrcdir + pathParts[0] + ".html#l" + pathParts[1] + '">' + impl[0] + "::" + impl[1] + "</a></li>"
-#      impl_data += "</ul>"
-#
-#    if impl_data != '<ul></ul>' and impl_data != '':
-#      print """
-#<div dojoType="dijit.layout.ContentPane" title="Implementations">
-#<p>
-#%s
-#</p>
-#</div>
-#""" % (impl_data,)
-#  
-#    if includeType:
-#      # drop * from nsIFoo* in cases where we've added
-#      PrintType(row[1].replace('*', ''))
-#
-#    users_data = ''
-#    # Get other users of this same statement
-#    if row[2]:
-#      users_data = '<ul>'
-#      for user in conn.execute('select vlocf, vlocl from stmts where vname=? and vtype=? and vdeclloc=?;', (row[0], row[1], row[2])):
-#        # Don't include decl itself
-#        loc = user[0] + ':' + str(user[1])
-#        if row[2] != loc:
-#          users_data += '<li><a href="' + htmlsrcdir + user[0] + ".html#l" + str(user[1]) + '">' + user[0] + ":" + str(user[1]) + "</a></li>"
-#      users_data += "</ul>"
-#
-##    if users_data != '<ul></ul>' and users_data != '':
-#    print """
-#<div dojoType="dijit.layout.ContentPane" title="Users">
-#<p>
-#%s
-#</p>
-#</div>
-#""" % (users_data,)
 
 def printTree(jsonString):
   print """Content-Type: text/html
@@ -159,6 +240,7 @@ htmlsrcdir = os.path.join('/', virtroot, tree) + '/'
 
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
+conn.row_factory = sqlite3.Row
 
 dispatch = {
     'var': printVariable,
