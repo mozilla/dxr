@@ -129,11 +129,19 @@ public:
   void beginRecord(const char *name, SourceLocation loc) {
     FileInfo *f = getFileInfo(sm.getPresumedLoc(loc).getFilename());
     out = &f->info;
-    f->info << name;
+    *out << name;
   }
   void recordValue(const char *key, std::string value) {
     *out << "," << key << ",\"" << value << "\"";
   }
+
+  void printExtent(SourceLocation begin, SourceLocation end) {
+    if (begin.isMacroID() || end.isMacroID())
+      return;
+    *out << ",extent," << sm.getFileOffset(begin) << ":" <<
+      sm.getFileOffset(Lexer::getLocForEndOfToken(end, 0, sm, features));
+  }
+
   void printScope(Decl *d) {
     Decl *ctxt = Decl::castFromDeclContext(d->getNonClosureContext());
     // Ignore namespace scopes, since it doesn't really help for source code
@@ -199,6 +207,7 @@ public:
     recordValue("tloc", locationToString(d->getLocation()));
     recordValue("tkind", d->getKindName());
     printScope(d);
+    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
 
     declDef(d, d->getDefinition());
@@ -244,6 +253,7 @@ public:
     recordValue("flongname", d->getQualifiedNameAsString());
     recordValue("floc", locationToString(d->getLocation()));
     printScope(d);
+    printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
     *out << std::endl;
     const FunctionDecl *def;
     if (d->isDefined(def))
@@ -259,6 +269,7 @@ public:
     recordValue("vloc", locationToString(d->getLocation()));
     recordValue("vtype", d->getType().getAsString());
     printScope(d);
+    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
   }
 
@@ -275,6 +286,7 @@ public:
     recordValue("tloc", locationToString(d->getLocation()));
     // XXX: print*out the referent
     printScope(d);
+    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -304,9 +316,8 @@ public:
     recordValue("varname", d->getQualifiedNameAsString());
     recordValue("varloc", locationToString(d->getLocation()));
     recordValue("refloc", locationToString(refLoc));
-    *out << ",extent," << sm.getFileOffset(refLoc) << ":" <<
-      sm.getFileOffset(Lexer::getLocForEndOfToken(end, 0, sm, features)) <<
-      std::endl;
+    printExtent(refLoc, end);
+    *out << std::endl;
   }
   bool VisitMemberExpr(MemberExpr *e) {
     printReference(e->getMemberDecl(), e->getExprLoc(), e->getSourceRange().getEnd());

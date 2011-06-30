@@ -385,11 +385,17 @@ class CxxHtmlifier:
     if self.blob_file is None:
       return
     def make_link(obj, loc, name, clazz, **kwargs):
-      line, col = obj[loc].split(':')[1:]
-      line, col = int(line), int(col)
+      if 'extent' in obj:
+        start, end = obj['extent'].split(':')
+        start, end = int(start), int(end)
+      else:
+        line, col = obj[loc].split(':')[1:]
+        line, col = int(line), int(col)
+        start = line, col
+        end = line, col + len(obj[name])
+        kwargs['line'] =  line
       kwargs['class'] = clazz
-      kwargs['line'] =  line
-      return ((line, col), (line, col + len(obj[name])), kwargs)
+      return (start, end, kwargs)
     for df in self.blob_file["variables"]:
       yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
     for df in self.blob_file["functions"]:

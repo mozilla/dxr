@@ -65,7 +65,7 @@ def async_toHTML(treeconfig, srcpath, dstfile):
   try:
     dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob)
   except Exception, e:
-    print str(e)
+    print 'Error on file %s:' % srcpath
     import traceback
     traceback.print_exc()
 

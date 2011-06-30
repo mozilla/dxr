@@ -185,7 +185,7 @@ def printVariable():
   printTree(json.dumps(getVariable(row, refs)))
 
 def printFunction():
-  row = conn.execute("SELECT fname, floc, flongname FROM functions" +
+  row = conn.execute("SELECT * FROM functions" +
     " WHERE funcid=?", (refid,)).fetchone()
   refs = conn.execute("SELECT * FROM refs WHERE refid=?",(refid,))
   printTree(json.dumps(getFunction(row, refs)))
