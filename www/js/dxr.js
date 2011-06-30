@@ -11,7 +11,7 @@ var infoDiv,
     currentLine,
     signature,
     maincontent,
-    sep = '',
+    sep = '/',
     signatureVisible = false;
 
 function closeInfo() {
@@ -190,9 +190,7 @@ function buildTree(items, id) {
     model: treeModel,
     showRoot: false,
       onClick: function(item, node) { if (item.url) {
-        // TODO: fix this in the python code that generates these URLs
-        p = item.url[0].replace(/\.([^:]+):/, '.$1.html#'); //replace('.', '.html');
-        window.location = virtroot + sep + tree + '/' + p; } },
+        window.location = item.url; } },
     getIconClass: function(item, opened) { return item.icon || 'icon-type'; }
 /*,
             _createTreeNode: function(args) {

@@ -184,6 +184,19 @@ def make_blob():
       ref['refid'] = typedefs['tid']
       refs.append(ref)
 
+  # Declaration-definition remapping
+  decldef = []
+  for decl in decl_master:
+    defn = (decl[0], decl_master[decl])
+    if defn != decl:
+      tmap = [ ('types', types, 'tid'), ('functions', functions, 'funcid'),
+        ('types', typedefs, 'tid'), ('variables', variables, 'varid') ]
+      for tblname, tbl, key in tmap:
+        if defn in tbl:
+          decldef.append({"declloc": decl[1], "defid": tbl[defn][key],
+            "table": tblname})
+          break
+
   # Ball it up for passing on
   blob = {}
   def mdict(info, key):
@@ -197,6 +210,7 @@ def make_blob():
   blob["impl"] = inheritsTree
   blob["refs"] = refs
   blob["warnings"] = warnings
+  blob["decldef"] = decldef
   return blob
 
 def post_process(srcdir, objdir):
@@ -208,7 +222,7 @@ def post_process(srcdir, objdir):
   # Reindex everything by file
   def schema():
     return { "scopes": [], "functions": [], "variables": [], "types": [],
-      "refs": [], "warnings": [] }
+      "refs": [], "warnings": [], "decldef": [] }
   files = {}
   def add_to_files(table, loc):
     iskey = isinstance(blob[table], dict)
@@ -223,6 +237,7 @@ def post_process(srcdir, objdir):
   add_to_files("types", "tloc")
   add_to_files("refs", "refloc")
   add_to_files("warnings", "wloc")
+  add_to_files("decldef", "declloc")
 
   # Normalize path names
   blob["byfile"] = {}
@@ -305,6 +320,11 @@ schema = dxr.plugins.Schema({
   "warnings": {
     "wloc": ("_location", False),   # Location of the warning
     "wmsg": ("VARCHAR(256)", False) # Text of the warning
+  },
+  # Declaration/definition mapping
+  "decldef": {
+    "defid": ("INTEGER", False),    # ID of the definition instance
+    "declloc": ("_location", False) # Location of the declaration
   }
 })
 
@@ -324,12 +344,16 @@ class CxxHtmlifier:
       return
     def line(linestr):
       return linestr.split(':')[1]
-    def make_tuple(df, name, loc, scope="scopeid"):
-      img = 'images/icons/page_white_wrench.png'
+    def make_tuple(df, name, loc, scope="scopeid", decl=False):
+      if decl:
+        img = 'images/icons/page_white_code.png'
+      else:
+        loc = df[loc]
+        img = 'images/icons/page_white_wrench.png'
       if scope in df and df[scope] > 0:
-        return (df[name], df[loc].split(':')[1], df[name], img,
+        return (df[name], loc.split(':')[1], df[name], img,
           self.blob["scopes"][df[scope]]["sname"])
-      return (df[name], df[loc].split(':')[1], df[name], img)
+      return (df[name], loc.split(':')[1], df[name], img)
     for df in self.blob_file["types"]:
       yield make_tuple(df, "tqualname", "tloc", "scopeid")
     for df in self.blob_file["functions"]:
@@ -338,6 +362,12 @@ class CxxHtmlifier:
       if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
         continue
       yield make_tuple(df, "vname", "vloc", "scopeid")
+    tblmap = { "functions": "flongname", "types": "tqualname" }
+    for df in self.blob_file["decldef"]:
+      table = df["table"]
+      if table in tblmap:
+        yield make_tuple(self.blob[table][df["defid"]], tblmap[table],
+          df["declloc"], "scopeid", True)
 
   def getSyntaxRegions(self):
     self.tokenizer = CppTokenizer(self.source)
