@@ -11,6 +11,16 @@ def locUrl(loc):
   path, line = loc.split(':')[:2]
   return '%s/%s/%s.html#l%s' % (virtroot, tree, path, line)
 
+def getDeclarations(defid):
+  cur = conn.execute("SELECT declloc FROM decldef WHERE defid=?",(defid,))
+  decls = []
+  for declloc, in cur:
+    decls.append({ "label": "Declared at %s" % (declloc),
+      "icon": "icon-decl",
+      "url": locUrl(declloc)
+    })
+  return decls
+
 def getType(typeinfo, refs=[], deep=False):
   if isinstance(typeinfo, int):
     typeinfo = conn.execute("SELECT * FROM types WHERE tid=?",
@@ -19,11 +29,12 @@ def getType(typeinfo, refs=[], deep=False):
     "label": '%s %s' % (typeinfo['tkind'], typeinfo['tqualname']),
     "icon": "icon-type",
     "children": [{
-      "label": 'Defined at %s' % (typeinfo['tloc']),
+      "label": 'Definition at %s' % (typeinfo['tloc']),
       "icon": "icon-def",
       "url": locUrl(typeinfo['tloc'])
     }]
   }
+  typebase['children'].extend(getDeclarations(typeinfo['tid']))
   if not deep:
     return typebase
   members = {
@@ -97,11 +108,12 @@ def getVariable(varinfo, refs=[]):
     "label": '%s %s' % (varinfo['vtype'], varinfo['vname']),
     "icon": "icon-member",
     "children": [{
-      "label": 'Defined at %s' % (varinfo['vloc']),
+      "label": 'Definition at %s' % (varinfo['vloc']),
       "icon": "icon-def",
       "url": locUrl(varinfo['vloc'])
     }]
   }
+  varbase['children'].extend(getDeclarations(varinfo['varid']))
   refnode = {
     "label": "References",
     "children": []
@@ -124,11 +136,12 @@ def getFunction(funcinfo, refs=[]):
     "label": funcinfo['flongname'],
     "icon": "icon-member",
     "children": [{
-      "label": 'Defined at %s' % (funcinfo['floc']),
+      "label": 'Definition at %s' % (funcinfo['floc']),
       "icon": "icon-def",
       "url": locUrl(funcinfo['floc'])
     }]
   }
+  funcbase['children'].extend(getDeclarations(funcinfo['funcid']))
   refnode = {
     "label": "References",
     "children": []
