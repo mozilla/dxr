@@ -67,6 +67,7 @@ class PreprocThunk : public PPCallbacks {
 public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
   virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
+  virtual void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI);
 };
 
 class IndexConsumer : public ASTConsumer,
@@ -421,10 +422,27 @@ public:
 #endif
     *out << std::endl;
   }
+  virtual void MacroExpands(const Token &tok, const MacroInfo *MI) {
+    if (MI->isBuiltinMacro()) return;
+    if (!interestingLocation(tok.getLocation())) return;
+
+    SourceLocation macroLoc = MI->getDefinitionLoc();
+    SourceLocation refLoc = tok.getLocation();
+    IdentifierInfo *name = tok.getIdentifierInfo();
+    beginRecord("ref", refLoc);
+    recordValue("varname", std::string(name->getNameStart(), name->getLength()));
+    recordValue("varloc", locationToString(macroLoc));
+    recordValue("refloc", locationToString(refLoc));
+    printExtent(refLoc, refLoc);
+    *out << std::endl;
+  }
 };
 
 void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
   real->MacroDefined(tok, MI);
+}
+void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI) {
+  real->MacroExpands(tok, MI);
 }
 class DXRIndexAction : public PluginASTAction {
 protected:

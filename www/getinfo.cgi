@@ -194,8 +194,9 @@ def printFunction():
 def printReference():
   val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
     " UNION SELECT 'func' FROM functions WHERE funcid=?" +
-    " UNION SELECT 't' FROM types WHERE tid=?",
-    (refid,refid,refid)).fetchone()[0]
+    " UNION SELECT 't' FROM types WHERE tid=?" +
+    " UNION SELECT 'm' FROM macros WHERE macroid=?",
+    (refid,refid,refid,refid)).fetchone()[0]
   return dispatch[val]()
 
 def printTree(jsonString):

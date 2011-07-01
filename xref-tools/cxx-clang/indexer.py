@@ -189,7 +189,10 @@ def make_blob():
       ref['refid'] = types[canon]['tid']
       refs.append(ref)
     elif canon in typedefs:
-      ref['refid'] = typedefs['tid']
+      ref['refid'] = typedefs[canon]['tid']
+      refs.append(ref)
+    elif canon in macros:
+      ref['refid'] = macros[canon]['macroid']
       refs.append(ref)
 
   # Declaration-definition remapping
