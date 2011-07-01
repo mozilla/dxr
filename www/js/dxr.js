@@ -50,7 +50,9 @@ function showInfo(node) {
               id: id,
               style: "margin:0; padding:0; white-space: normal !important;"
   });
-  infoDiv.placeAt(node.parentNode, "after");
+  var lineDiv = node.parentNode;
+  while (lineDiv.nodeName != 'DIV') lineDiv = lineDiv.parentNode;
+  infoDiv.placeAt(lineDiv, "after");
   infoDiv.attr('href', url); //"/dxr/getinfo2.cgi?tree-id=" + ); // /dxr/info-test.html?id=" + infoDivID);
   location.hash = line + '/' + name;
   dojo.addClass(node, 'highlighted');

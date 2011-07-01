@@ -10,6 +10,7 @@ inheritance = {}
 variables = {}
 references = {}
 warnings = []
+macros = {}
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -39,6 +40,9 @@ def process_ref(info):
 
 def process_warning(warning):
   warnings.append(warning)
+
+def process_macro(macro):
+  macros[macro['macroname'], macro['macroloc']] = macro
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -105,6 +109,10 @@ def make_blob():
     if key not in varKeys:
       varKeys[key] = variables[v]['varid'] = nextIndex
       nextIndex += 1
+
+  for m in macros:
+    macros[m]['macroid'] = nextIndex
+    nextIndex += 1
 
   # Scopes are now defined, this allows us to modify structures for sql prep
 
@@ -211,6 +219,7 @@ def make_blob():
   blob["refs"] = refs
   blob["warnings"] = warnings
   blob["decldef"] = decldef
+  blob["macros"] = macros
   return blob
 
 def post_process(srcdir, objdir):
@@ -222,7 +231,7 @@ def post_process(srcdir, objdir):
   # Reindex everything by file
   def schema():
     return { "scopes": [], "functions": [], "variables": [], "types": [],
-      "refs": [], "warnings": [], "decldef": [] }
+      "refs": [], "warnings": [], "decldef": [], "macros": [] }
   files = {}
   def add_to_files(table, loc):
     iskey = isinstance(blob[table], dict)
@@ -238,6 +247,7 @@ def post_process(srcdir, objdir):
   add_to_files("refs", "refloc")
   add_to_files("warnings", "wloc")
   add_to_files("decldef", "declloc")
+  add_to_files("macros", "macroloc")
 
   # Normalize path names
   blob["byfile"] = {}
@@ -325,7 +335,15 @@ schema = dxr.plugins.Schema({
   "decldef": {
     "defid": ("INTEGER", False),    # ID of the definition instance
     "declloc": ("_location", False) # Location of the declaration
-  }
+  },
+  "macros": [
+     ("macroid", "INTEGER", False),
+     ("macroloc", "_location", False),
+     ("macroname", "VARCHAR(256)", False),
+     ("macroargs", "VARCHAR(256)", True),
+     ("macrotext", "TEXT", True),
+     ("_key", "macroid", "macroloc"),
+  ]
 })
 
 get_schema = dxr.plugins.make_get_schema_func(schema)
@@ -368,6 +386,8 @@ class CxxHtmlifier:
       if table in tblmap:
         yield make_tuple(self.blob[table][df["defid"]], tblmap[table],
           df["declloc"], "scopeid", True)
+    for df in self.blob_file["macros"]:
+      yield make_tuple(df, "macroname", "macroloc")
 
   def getSyntaxRegions(self):
     self.tokenizer = CppTokenizer(self.source)
@@ -402,6 +422,8 @@ class CxxHtmlifier:
       yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
     for df in self.blob_file["types"]:
       yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
+    for df in self.blob_file["macros"]:
+      yield make_link(df, "macroloc", "macroname", "m", rid=df['macroid'])
     for df in self.blob_file["refs"]:
       start, end = df["extent"].split(':')
       yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})

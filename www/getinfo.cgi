@@ -162,7 +162,8 @@ def printError():
 <div class="info">Um, this isn't right...</div>"""
 
 def printMacro():
-  value = conn.execute('select mname, mvalue from macros where mshortname=?;', (name,)).fetchone()
+  value = conn.execute('select macroname, macrotext from macros where macroid=?;', (refid,)).fetchone()
+  macrotext = value['macrotext'] and value['macrotext'] or ''
   print """Content-Type: text/html
 
 <div class="info">
@@ -171,7 +172,7 @@ def printMacro():
 %s
 </pre>
 </div>
-""" % (value[0], cgi.escape(value[1]))
+""" % (value['macroname'], cgi.escape(macrotext))
 
 def printType():
   row = conn.execute("SELECT * FROM types WHERE tid=?", (refid,)).fetchone()

@@ -5,6 +5,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <iostream>
@@ -58,8 +60,18 @@ struct FileInfo {
   bool interesting;
 };
 
+class IndexConsumer;
+
+class PreprocThunk : public PPCallbacks {
+  IndexConsumer *real;
+public:
+  PreprocThunk(IndexConsumer *c) : real(c) {}
+  virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
+};
+
 class IndexConsumer : public ASTConsumer,
     public RecursiveASTVisitor<IndexConsumer>,
+    public PPCallbacks,
     public DiagnosticClient {
 private:
   SourceManager &sm;
@@ -95,6 +107,7 @@ public:
       sm(ci.getSourceManager()), features(ci.getLangOpts()) {
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
+    ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
   }
   
   // Helpers for processing declarations
@@ -356,8 +369,63 @@ public:
     recordValue("wmsg", message.c_str());
     *out << std::endl;
   }
+
+  // Macros!
+  virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) {
+    if (MI->isBuiltinMacro()) return;
+    if (!interestingLocation(MI->getDefinitionLoc())) return;
+
+    // Yep, we're tokenizing this ourselves. Fun!
+    SourceLocation nameStart = MI->getDefinitionLoc();
+#if 0
+    SourceLocation textEnd = MI->getDefinitionEndLoc();
+    unsigned int length =
+      sm.getFileOffset(Lexer::getLocForEndOfToken(textEnd, 0, sm, features)) -
+      sm.getFileOffset(nameStart);
+#endif
+    const char *contents = sm.getCharacterData(nameStart);
+    unsigned int nameLen = MacroNameTok.getIdentifierInfo()->getLength();
+#if 0
+    unsigned int argsStart = 0, argsEnd = 0, defnStart;
+    bool inArgs = false;
+    for (defnStart = nameLen; defnStart < length; defnStart++) {
+      switch (contents[defnStart]) {
+        case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
+          continue;
+        case '(':
+          inArgs = true;
+          argsStart = defnStart;
+          continue;
+        case ')':
+          inArgs = false;
+          argsEnd = defnStart + 1;
+          continue;
+        default:
+          if (inArgs)
+            continue;
+      }
+      break;
+    }
+#endif
+    beginRecord("macro", nameStart);
+    recordValue("macroloc", locationToString(nameStart));
+    recordValue("macroname", std::string(contents, nameLen));
+    // Bad code, since we may have embedded newlines
+#if 0
+    if (argsStart > 0)
+      recordValue("macroargs", std::string(contents + argsStart,
+        argsEnd - argsStart));
+    if (defnStart < length)
+      recordValue("macrotext", std::string(contents + defnStart,
+        length - defnStart));
+#endif
+    *out << std::endl;
+  }
 };
 
+void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
+  real->MacroDefined(tok, MI);
+}
 class DXRIndexAction : public PluginASTAction {
 protected:
   ASTConsumer *CreateASTConsumer(CompilerInstance &CI, llvm::StringRef f) {
