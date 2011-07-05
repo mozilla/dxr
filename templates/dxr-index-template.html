@@ -4,55 +4,69 @@
 <title>Mozilla DXR Source Code Index</title>
 <link rel="shortcut icon" href="images/favicon.png" type="image/png" />
 <style type="text/css">
-body {background-color:white;color:black;font-family:Arial, sans-serif;margin:8px; margin-top:3px;}
-a:active{color:#f00}
-a:link{color:#00c}
-a:visited{color:#551a8b}
-.i, .i:link {color:#a90a08;font-size:small}
-img{border:0}
-.sm tr td {text-align:left;}
-.sm {font-size: .8em;}
+body {
+  background-color: white;
+  color: black;
+  font-family: Arial, sans-serif;
+  margin: 8px;
+  margin-top: 3px;
+  text-align: center;
+}
+a:active {
+  color: #f00;
+}
+a:link {
+  color: #00c;
+}
+a:visited {
+  color: #551a8b;
+}
+.i, .i:link {
+  color: #a90a08;
+  font-size: small
+}
+img {
+  border:0
+}
+.sm tr td {
+  text-align: left;
+}
+.sm {
+  font-size: .8em;
+}
+body > * {
+  margin: 0 auto;
+}
+form > div {
+  margin: 1em auto;
+}
+body > img {
+  margin: 2em auto;
+}
+footer {
+  display: block;
+  font-size: smaller;
+  margin-top: 3em;
+}
 </style>
-<script type="text/javascript">
+<script type="application/javascript">
   var tree = '$tree';
   var virtroot = '$virtroot';
 </script>
-<script type="text/javascript" src="js/search.js"></script>
+<script type="application/javascript" src="js/search.js"></script>
 </head>
 
-<body bgcolor="#ffffff" onload="document.getElementById('searchForm').string.focus()">
-<center>
-<br>
-<br>
+<body onload="document.getElementById('searchForm').string.focus()">
 <img src="images/powered-by-mozilla.png" alt="">
-<br>
 
-<form id="searchForm" method="get">
-<table cellspacing="5px" cellpadding="0">
-<tr>
-  <td width="25%">&nbsp;</td>
-  <td align=center nowrap><input maxlength=2048 size=55 name=string value="" title="">&nbsp;</td>
-  <td><input type="submit" value="Search" onclick="return doSearch('searchForm');"></td>
-  <td width="25%">&nbsp;</td>
-</tr>
-<br>
-
+<form id="searchForm" method="get"><div>
+  <input maxlength=2048 size=55 name=string value="" title="">&nbsp;
+  <input type="submit" value="Search" onclick="return doSearch('searchForm');">
 <!--
-<tr style="margin-top: 10px;">
-  <td width="25%">&nbsp;</td>
-  <td align=center colspan=2>
-    Available Trees: 
-    <select id="trees">
-      $OPTIONS
-    </select>
-  </td>
-  <td width="25%">&nbsp;</td>
-</tr>
+</div><div>
+  Available trees: <select id="trees">$OPTIONS</select>
 -->
-</table>
-</form>
-<p>
-</p>
+</div></form>
 <table>
 <tr>
   <td valign="top">
@@ -62,58 +76,56 @@ img{border:0}
       </tr>
       <tr>
         <td nowrap valign=top><font size=-1>simple string</font></td>
-        <td>Search for a word or list of words separated by spaces.<br>  Any bare words (e.g., not path:*) in the search are taken together.<br><a href="search.cgi?tree=mozilla-central&string=Open">Open</a> <a href="search.cgi?tree=mozilla-central&string=nsAccessible::SetParent">nsAccessible::SetParent</a> <a href="search.cgi?tree=mozilla-central&string=nsAccessible::">nsAccessible::</a></td>
+        <td>Search for a word or list of words separated by spaces.<br>  Any bare words (e.g., not path:*) in the search are taken together.<br><a href="search.cgi?tree=$tree&string=Open">Open</a> <a href="search.cgi?tree=$tree&string=nsAccessible::SetParent">nsAccessible::SetParent</a> <a href="search.cgi?tree=$tree&string=nsAccessible::">nsAccessible::</a></td>
       </tr>
 <!--
       <tr>
         <td nowrap valign=top><font size=-1>/regexp/</font></td>
-        <td>Use a regular expression to search.<br><a href="search.cgi?tree=mozilla-central&regexp=on&string=200[34]">/200[34]/</a></td>
+        <td>Use a regular expression to search.<br><a href="search.cgi?tree=$tree&regexp=on&string=200[34]">/200[34]/</a></td>
       </tr>
 -->
       <tr>
         <td nowrap valign=top>path:<i>name</i></td>
-        <td>Return only results containing <i>name</i> in the path. Can be paired with ext:.<br><a href="search.cgi?tree=mozilla-central&string=channel&path=netwerk">channel path:netwerk</a></td>
+        <td>Return only results containing <i>name</i> in the path. Can be paired with ext:.<br><a href="search.cgi?tree=$tree&string=channel&path=netwerk">channel path:netwerk</a></td>
       </tr>
 <!--
       <tr>
         <td nowrap valign=top>ext:<i>name</i></td>
-        <td>Return only resuls with an extension of <i>name</i>. Can be paired with path:.<br><a href="search.cgi?tree=mozilla-central&string=channel&ext=h">channel ext:h</a></td>
+        <td>Return only resuls with an extension of <i>name</i>. Can be paired with path:.<br><a href="search.cgi?tree=$tree&string=channel&ext=h">channel ext:h</a></td>
       </tr>
 -->
       <tr>
         <td nowrap valign=top>type:<i>name</i></td>
-        <td>Find types that begin with or match <i>name</i>. Can be paired with member:.<br>Bare words are not allowed when doing type: searches.<br><a href="search.cgi?tree=mozilla-central&type=nsIFile">type:nsIFile</a></td>
+        <td>Find types that begin with or match <i>name</i>. Can be paired with member:.<br>Bare words are not allowed when doing type: searches.<br><a href="search.cgi?tree=$tree&type=nsIFile">type:nsIFile</a></td>
       </tr>
       <tr>
         <td nowrap valign=top>derived:<i>name</i><br />derived:<i>name::type</i></td>
-        <td>Find types that derive from type named <i>name</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=mozilla-central&derived=nsIFile">derived:nsIFile</a> <a href="search.cgi?tree=mozilla-central&amp;derived=nsIFile%3A%3AAppend">derived:nsIFile::Append</a></td>
+        <td>Find types that derive from type named <i>name</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=$tree&derived=nsIFile">derived:nsIFile</a> <a href="search.cgi?tree=$tree&amp;derived=nsIFile%3A%3AAppend">derived:nsIFile::Append</a></td>
       </tr>
 <!--
       <tr>
         <td nowrap valign=top>member:<i>name</i></td>
-        <td>Find members that begin with or match <i>name</i>. Can be paired with type:.<br>Bare words are not allowed when doing member: searches.<br><a href="search.cgi?tree=mozilla-central&member=CopyTo">member:CopyTo</a> <a href="search.cgi?tree=mozilla-central&member=CopyTo&type=nsLocalFile">member:CopyTo type:nsLocalFile</a></td>
+        <td>Find members that begin with or match <i>name</i>. Can be paired with type:.<br>Bare words are not allowed when doing member: searches.<br><a href="search.cgi?tree=$tree&member=CopyTo">member:CopyTo</a> <a href="search.cgi?tree=$tree&member=CopyTo&type=nsLocalFile">member:CopyTo type:nsLocalFile</a></td>
       </tr>
       <tr>
         <td nowrap valign=top>callers:<i>type::member</i></td>
-        <td>Find callers (e.g., containing functions) of <i>type::member</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=mozilla-central&amp;callers=nsAccessible%3A%3ACacheChildren">callers:nsAccessible::CacheChildren</a></td>
+        <td>Find callers (e.g., containing functions) of <i>type::member</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=$tree&amp;callers=nsAccessible%3A%3ACacheChildren">callers:nsAccessible::CacheChildren</a></td>
       </tr>
 -->
       <tr>
         <td nowrap valign=top>macro:<i>name</i></td>
-        <td>Find macros that begin with or match <i>name</i>.<br><a href="search.cgi?tree=mozilla-central&macro=ns_ensure">macro:ns_ensure</a></td>
+        <td>Find macros that begin with or match <i>name</i>.<br><a href="search.cgi?tree=$tree&macro=ns_ensure">macro:ns_ensure</a></td>
       </tr>
       <tr>
         <td nowrap valign=top>warnings:<i>msg</i></td>
         <td>Find warnings that contain <i>msg</i>.<br>
-          If <i>msg</i> is <tt>*</tt>, then all warnings are returned.<a href="search.cgi?tree=mozilla-central&warnings=*">warnings:*</a></td>
+          If <i>msg</i> is <tt>*</tt>, then all warnings are returned.<a href="search.cgi?tree=$tree&warnings=*">warnings:*</a></td>
       </tr>
     </table>
 </td>
 </tr>
 </table>
-</center>
 
-<div><center><p><font size=-1>DXR was created by <a href="http://vocamus.net/dave/">David Humphrey</a> and is an experiment to use static analysis data from tools like<br><a href="https://developer.mozilla.org/en/Dehydra">Dehydra</a> in the context of a source code cross-reference.  It is an experimental system, and <br>feedback or fixes are welcome.</font></p></center></div>
-
+<footer>DXR is free software, <a href="http://wiki.mozilla.org/DXR">click here</a> to learn how to set it up for your project.</footer>
 </body>
 </html>
