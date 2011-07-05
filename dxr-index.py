@@ -108,7 +108,10 @@ def builddb(treecfg, dbdir):
   conn.executescript('\n'.join(schemata))
   conn.commit()
   for stmt in all_statements:
-    conn.execute(stmt)
+    if isinstance(stmt, tuple):
+      conn.execute(stmt[0], stmt[1])
+    else:
+      conn.execute(stmt)
   conn.commit()
   conn.close()
 

@@ -145,8 +145,19 @@ public:
     out = &f->info;
     *out << name;
   }
-  void recordValue(const char *key, std::string value) {
-    *out << "," << key << ",\"" << value << "\"";
+  void recordValue(const char *key, std::string value, bool needQuotes=false) {
+    *out << "," << key << ",\"";
+    int start = 0;
+    if (needQuotes) {
+      int quote = value.find('"');
+      while (quote != -1) {
+        // Need to repeat the "
+        *out << value.substr(start, quote - start + 1) << "\"";
+        start = quote + 1;
+        quote = value.find('"', start);
+      }
+    }
+    *out << value.substr(start) << "\"";
   }
 
   void printExtent(SourceLocation begin, SourceLocation end) {
@@ -363,11 +374,10 @@ public:
 
     llvm::SmallString<100> message;
     info.FormatDiagnostic(message);
-    // Replace all `"' quotes with `""'
 
     beginRecord("warning", info.getLocation());
     recordValue("wloc", locationToString(info.getLocation()));
-    recordValue("wmsg", message.c_str());
+    recordValue("wmsg", message.c_str(), true);
     *out << std::endl;
   }
 
@@ -378,15 +388,12 @@ public:
 
     // Yep, we're tokenizing this ourselves. Fun!
     SourceLocation nameStart = MI->getDefinitionLoc();
-#if 0
     SourceLocation textEnd = MI->getDefinitionEndLoc();
     unsigned int length =
       sm.getFileOffset(Lexer::getLocForEndOfToken(textEnd, 0, sm, features)) -
       sm.getFileOffset(nameStart);
-#endif
     const char *contents = sm.getCharacterData(nameStart);
     unsigned int nameLen = MacroNameTok.getIdentifierInfo()->getLength();
-#if 0
     unsigned int argsStart = 0, argsEnd = 0, defnStart;
     bool inArgs = false;
     for (defnStart = nameLen; defnStart < length; defnStart++) {
@@ -407,19 +414,15 @@ public:
       }
       break;
     }
-#endif
     beginRecord("macro", nameStart);
     recordValue("macroloc", locationToString(nameStart));
     recordValue("macroname", std::string(contents, nameLen));
-    // Bad code, since we may have embedded newlines
-#if 0
     if (argsStart > 0)
       recordValue("macroargs", std::string(contents + argsStart,
-        argsEnd - argsStart));
+        argsEnd - argsStart), true);
     if (defnStart < length)
       recordValue("macrotext", std::string(contents + defnStart,
-        length - defnStart));
-#endif
+        length - defnStart), true);
     *out << std::endl;
   }
   virtual void MacroExpands(const Token &tok, const MacroInfo *MI) {

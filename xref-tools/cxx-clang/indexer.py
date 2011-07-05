@@ -43,6 +43,8 @@ def process_warning(warning):
 
 def process_macro(macro):
   macros[macro['macroname'], macro['macroloc']] = macro
+  if 'macrotext' in macro:
+    macro['macrotext'] = macro['macrotext'].replace("\\\n", "\n").strip()
 
 def load_indexer_output(fname):
   f = open(fname, "rb")

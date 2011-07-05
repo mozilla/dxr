@@ -177,8 +177,9 @@ class SchemaTable:
     for row in it:
       # Only add the keys in the columns
       keys = colset.intersection(row.iterkeys())
-      yield 'INSERT OR IGNORE INTO %s (%s) VALUES (%s);' % (self.name,
-        ','.join(keys), ','.join(repr(row[k]) for k in keys))
+      args = tuple(row[k] for k in keys)
+      yield ('INSERT OR IGNORE INTO %s (%s) VALUES (%s);' % (self.name,
+        ','.join(keys), ','.join('?' for k in keys)), args)
 
 
 def make_get_schema_func(schema):
