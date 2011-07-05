@@ -197,10 +197,14 @@ def processDerived(derived):
         print GetLine(method[2])
 
 def processMacro(macro):
-    for m in conn.execute('select mname, mvalue from macros where mshortname like "' + macro + '%";').fetchall():
-        mname = cgi.escape(m[0])
-        mvalue = cgi.escape(m[1])
-        print '<h3>%s</h3><pre>%s</pre>' % (mname, mvalue)
+  for m in conn.execute('SELECT * FROM macros WHERE macroname LIKE "' +
+      macro + '%";').fetchall():
+    mname = m['macroname']
+    if m['macroargs']:
+      mname += m['macroargs']
+    mtext = m['macrotext'] and m['macrotext'] or ''
+    print '<h3>%s</h3><pre>%s</pre>' % (cgi.escape(mname), cgi.escape(mtext))
+    print GetLine(m['macroloc'])
 
 def processMember(member, type, printDecl):
     members = None
@@ -346,6 +350,7 @@ def collate_loc(str1, str2):
     parts2[i] = int(parts2[i])
   return cmp(parts1, parts2)
 conn.create_collation("loc", collate_loc)
+conn.row_factory = sqlite3.Row
 
 conn.execute('PRAGMA temp_store = MEMORY;')
 
