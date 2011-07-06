@@ -78,14 +78,13 @@ def processString(string):
 
   # Print smart sidebar
   print '<div id="sidebar">'
-  config = {
-    'types': ['tname', 'tloc', 'tname'],
-    #'macros': ['mshortname', 'mloc', 'mshortname'], XXX: need to fix table
-    'variables': ['vname', 'vloc', 'vname'],
-    'functions': ['flongname', 'floc', 'fname'],
-  }
-  for table in config:
-    cols = config[table]
+  config = [
+    ('types', ['tname', 'tloc', 'tname']),
+    ('macros', ['macroname', 'macroloc', 'macroname']),
+    ('variables', ['vname', 'vloc', 'vname']),
+    ('functions', ['flongname', 'floc', 'fname']),
+  ]
+  for table, cols in config:
     results = []
     for row in conn.execute('SELECT %s FROM %s WHERE %s %s;' % (
         ', '.join(cols[:-1]), table, cols[0], like_escape(string))).fetchall():
