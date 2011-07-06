@@ -11,9 +11,9 @@ tools like LXR and MXR.  DXR only runs on Linux for the moment.
 Prerequisites:
 --------------
 
-You need a copy of python, python-sqlite. If you want to use the output HTML,
-you will need a web-server of some kind. Individual tools have further
-requirements:
+You need a copy of python (at least 2.6), python-sqlite. If you want to use the
+output HTML, you will need a web-server of some kind. Individual tools have
+further requirements:
 
 cxx-clang: A copy of clang.
 
@@ -37,6 +37,11 @@ exported.
 
 5) Compile and build your program. It is recommended that you use a separate
 build directory from your source directory.
+
+If the variable DXR_INDEX_OUTPUT is set on the command line, this will be used
+to store the output csv files instead of the original source directory, so it
+should match the objdir specified in dxr.config. This can also be specified by
+passing it in as the last argument to setup-env.sh
 
 6) Run the cross-reference generator:
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config

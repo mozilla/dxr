@@ -228,7 +228,7 @@ def make_blob():
   return blob
 
 def post_process(srcdir, objdir):
-  os.path.walk(srcdir, collect_files, ".csv")
+  os.path.walk(objdir, collect_files, ".csv")
   for f in file_names:
     load_indexer_output(f)
   blob = make_blob()
@@ -430,8 +430,9 @@ class CxxHtmlifier:
     for df in self.blob_file["macros"]:
       yield make_link(df, "macroloc", "macroname", "m", rid=df['macroid'])
     for df in self.blob_file["refs"]:
-      start, end = df["extent"].split(':')
-      yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
+      if "extent" in df:
+        start, end = df["extent"].split(':')
+        yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
 
   def getLineAnnotations(self):
     if self.blob_file is None:
