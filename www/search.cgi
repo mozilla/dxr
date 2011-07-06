@@ -103,7 +103,7 @@ def processString(string):
         if printHeader:
           print '<div class=bubble><span class="title">Files</span><ul>'
           printHeader = False
-        filename = filename.replace(dxrconfig.wwwdir, vrootfix)
+        filename = vrootfix + '/' + tree + '/' + filename
         print '<li><a href="%s.html">%s</a></li>' % (filename, m.group(1))
     if not printHeader:
       print "</ul></div>"
@@ -271,11 +271,15 @@ def processWarnings(warnings):
   if warnings == '*':
     warnings = ''
 
+  num_warnings = 0
   for w in conn.execute("SELECT wloc, wmsg FROM warnings WHERE wmsg LIKE '%" +
       warnings + "%' ORDER BY wloc COLLATE loc;").fetchall():
     if not path or re.search(path, w[0]):
       print '<h3>%s</h3>' % w[1]
       print GetLine(w[0])
+      num_warnings += 1
+  if num_warnings == 0:
+    print '<h3>No warnings found.</h3>'
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode

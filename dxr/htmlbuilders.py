@@ -130,7 +130,7 @@ class HtmlBuilder:
         ' '.join([attr + '="' + str(l[1][attr]) + '"' for attr in l[1]])
     line_num = 2 # First line is special
     for ind in line_markers[1:]:
-      chars[ind] = '</div><div %s id="l%d"><a class="ln" href="l%d">%d</a>' % \
+      chars[ind] = '</div><div %s id="l%d"><a class="ln" href="#l%d">%d</a>' % \
         (chars[ind], line_num, line_num, line_num)
       line_num += 1
     out.write('<div %s id="l1"><a class="ln" href="l1">1</a>' % chars[-1])
