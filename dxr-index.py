@@ -76,7 +76,9 @@ def make_index(file_list, dbdir):
   # since we don't have the syscall penalties for opening and closing every
   # file.
   file_index = open(os.path.join(dbdir, "file_index.txt"), 'w')
+  offset_index = open(os.path.join(dbdir, "index_index.txt"), 'w')
   for fname in file_list:
+    offset_index.write('%s:%d\n' % (fname[0], file_index.tell()))
     f = open(fname[1], 'r')
     lineno = 1
     for line in f:
@@ -86,6 +88,7 @@ def make_index(file_list, dbdir):
     if line[-1] != '\n':
       file_index.write('\n');
     f.close()
+  offset_index.close()
   file_index.close()
 
 def builddb(treecfg, dbdir):

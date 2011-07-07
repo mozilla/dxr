@@ -18,21 +18,47 @@ def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
     .replace("%", "\\%") + '%" ESCAPE "\\"'
 
+offset_cache = None
 def GetLine(loc):
-    parts = loc.split(':')
-    file = dxr.readFile(os.path.join(dxrconfig.wwwdir, tree, parts[0]))
-    line = int(parts[1])
-    if file:
-        result  = '<div class="searchfile"><a href="%s/%s">%s</a></div><ul class="searchresults">' % (tree, parts[0] + '.html#l' + parts[1], loc)
-        lines = file.split('\n')
-        for i in [-1, 0, 1]:
-            num = int(parts[1]) + i
-            result += '<li class="searchresult"><a href="%s/%s">%s:</a>&nbsp;&nbsp;%s</li>' % (tree, parts[0] + '.html#l' + str(num), num, cgi.escape(lines[line+i-1]))
+  global offset_cache
+  # Load the offset cache
+  if not offset_cache:
+    f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
+    offset_cache = {}
+    try:
+      for line in f:
+        l = line.split(':')
+        offset_cache[l[0]] = int(l[-1])
+    finally:
+      f.close()
+  
+  # Load the parts
+  parts = loc.split(':')
+  fname, line = parts[0], int(parts[1])
+  if fname not in offset_cache:
+    return '<p>Error: Cannot find file %s</p>' % fname
 
-        result += '</ul>'
-        return result
-    else:
-        return ''
+  # Open up the master file
+  master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
+  master_text.seek(offset_cache[fname])
+
+  output = ('<div class="searchfile"><a href="%s/%s.html#l%d">' +
+    '%s</a></div><ul class="searchresults">\n') % (tree, fname, line, loc)
+  # Show [line - 1, line, line + 1] unless we see more
+  read = [line - 1, line, line + 1]
+  while True:
+    readname, readline, readtext = master_text.readline().split(':', 2)
+    line_num = int(readline)
+    if readname != fname or line_num > read[-1]:
+      break
+    if line_num not in read:
+      continue
+    output += ('<li class="searchresult"><a href="%s/%s.html#l%s">%s:</a>' +
+      '&nbsp;&nbsp;%s</li>\n') % (tree, fname, readline, readline,
+      cgi.escape(readtext))
+  output += '</ul>'
+  master_text.close()
+  return output
 
 def processString(string, path=None, ext=None):
   vrootfix = dxrconfig.virtroot
@@ -73,7 +99,7 @@ def processString(string, path=None, ext=None):
 
   # Print file sidebar
   printHeader = True
-  filenames = dxr.readFile(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_list.txt'))
+  filenames = dxr.readFile(os.path.join(treecfg.dbdir, 'file_list.txt'))
   if filenames:
     for filename in filenames.split('\n'):
       # Only check in leaf name
@@ -92,7 +118,7 @@ def processString(string, path=None, ext=None):
 
   # Text search results
   prevfile, first = None, True
-  index_file = open(os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', 'file_index.txt'))
+  index_file = open(os.path.join(treecfg.dbdir, 'file_index.txt'))
   for line in index_file:
     # The index file is <path>:<line>:<text>
     colon = line.find(':')
@@ -238,7 +264,7 @@ else:
 
 # Load the database
 dbname = tree + '.sqlite'
-dxrdb = os.path.join(dxrconfig.wwwdir, tree, '.dxr_xref', dbname)
+dxrdb = os.path.join(treecfg.dbdir, dbname)
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
