@@ -196,9 +196,6 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       if not os.path.exists(cpydir):
         os.makedirs(cpydir)
 
-      # XXX: For now, we need the file to be in the www-dir. We should figure
-      # out how to not need to do this
-      shutil.copyfile(srcpath, cpypath)
       p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
 
     p.apply_async(make_index, [file_list, dbdir])
