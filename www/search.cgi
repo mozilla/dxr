@@ -18,20 +18,7 @@ def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
     .replace("%", "\\%") + '%" ESCAPE "\\"'
 
-offset_cache = None
 def GetLine(loc):
-  global offset_cache
-  # Load the offset cache
-  if not offset_cache:
-    f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
-    offset_cache = {}
-    try:
-      for line in f:
-        l = line.split(':')
-        offset_cache[l[0]] = int(l[-1])
-    finally:
-      f.close()
-  
   # Load the parts
   parts = loc.split(':')
   fname, line = parts[0], int(parts[1])
@@ -39,7 +26,6 @@ def GetLine(loc):
     return '<p>Error: Cannot find file %s</p>' % fname
 
   # Open up the master file
-  master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
   master_text.seek(offset_cache[fname])
 
   output = ('<div class="searchfile"><a href="%s/%s.html#l%d">' +
@@ -57,7 +43,6 @@ def GetLine(loc):
       '&nbsp;&nbsp;%s</li>\n') % (tree, fname, readline, readline,
       cgi.escape(readtext))
   output += '</ul>'
-  master_text.close()
   return output
 
 def processString(string, path=None, ext=None):
@@ -118,8 +103,8 @@ def processString(string, path=None, ext=None):
 
   # Text search results
   prevfile, first = None, True
-  index_file = open(os.path.join(treecfg.dbdir, 'file_index.txt'))
-  for line in index_file:
+  master_text.seek(0)
+  for line in master_text:
     # The index file is <path>:<line>:<text>
     colon = line.find(':')
     colon2 = line.find(':', colon)
@@ -268,6 +253,17 @@ dxrdb = os.path.join(treecfg.dbdir, dbname)
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
+# Master text index, load it
+master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
+f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
+offset_cache = {}
+try:
+  for line in f:
+    l = line.split(':')
+    offset_cache[l[0]] = int(l[-1])
+finally:
+  f.close()
+
 # This makes results a lot more fun!
 def collate_loc(str1, str2):
   parts1 = str1.split(':')
@@ -307,5 +303,6 @@ else:
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: unknown search parameters</h3>'
 
+master_text.close()
 print dxrconfig.getTemplateFile("dxr-search-footer.html")
 
