@@ -52,9 +52,7 @@ def processString(string, path=None, ext=None):
   if ext is not None and ext[0] == '.':
     ext = ext[1:]
   def printSidebarResults(name, results):
-    if len(results) == 0:
-      return
-    print '<div class="bubble"><span class="title">%s</span><ul>' % name
+    outputtedResults = False
     for res in results:
       # Make sure we're not matching part of the scope
       colon = res[0].rfind(':')
@@ -63,17 +61,21 @@ def processString(string, path=None, ext=None):
       fixloc = res[1].split(':')
       if path and not re.search(path, fixloc[0]):
         continue
+      if not outputtedResults:
+        outputtedResults = True
+        print '<div class="bubble"><span class="title">%s</span><ul>' % name
       print '<li><a href="%s/%s/%s.html#l%s">%s</a></li>' % \
         (vrootfix, tree, fixloc[0], fixloc[1], res[0])
-    print '</ul></div>'
+    if outputtedResults:
+      print '</ul></div>'
 
   # Print smart sidebar
   print '<div id="sidebar">'
   config = [
     ('types', ['tname', 'tloc', 'tname']),
     ('macros', ['macroname', 'macroloc', 'macroname']),
-    ('variables', ['vname', 'vloc', 'vname']),
     ('functions', ['flongname', 'floc', 'fname']),
+    ('variables', ['vname', 'vloc', 'vname']),
   ]
   for table, cols in config:
     results = []
