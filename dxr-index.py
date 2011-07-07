@@ -127,10 +127,16 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     if os.path.isdir(currentroot):
       if os.path.exists(os.path.join(currentroot, '.dxr_xref', '.success')):
         # Move current -> old, change link to old
-        shutil.rmtree(oldroot)
-        shutil.move(currentroot, oldroot)
-        os.unlink(linkroot)
-        os.symlink(oldroot, linkroot)
+        try:
+          shutil.rmtree(oldroot)
+        except OSError:
+          pass
+        try:
+          shutil.move(currentroot, oldroot)
+          os.unlink(linkroot)
+          os.symlink(oldroot, linkroot)
+        except OSError:
+          pass
       else:
         # This current directory is bad, move it away
         shutil.rmtree(currentroot)
@@ -200,7 +206,11 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
   # If the database is live, we need to switch the live to the new version
   if treecfg.isdblive:
-    os.unlink(linkroot)
+    try:
+      os.unlink(linkroot)
+      shutil.rmtree(oldroot)
+    except OSError:
+      pass
     os.symlink(currentroot, linkroot)
 
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
