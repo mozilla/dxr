@@ -95,3 +95,10 @@ a:hover { cursor: pointer; text-decoration: underline; }
 .icon-decl { background-image: url("images/icons/page_white_code.png"); background-repeat: no-repeat; }
 .icon-def { background-image: url("images/icons/page_white_wrench.png"); background-repeat: no-repeat; }
 .icon-user { background-image: url("images/icons/brick_go.png"); background-repeat: no-repeat; }
+
+div[data-gcov-hits] {
+  background-color: #CAD7FE;
+}
+div[data-gcov-hits="0"] {
+  background-color: #FF6230;
+}

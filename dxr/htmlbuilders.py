@@ -157,6 +157,8 @@ def build_htmlifier_map(plugins):
     for x in ['get_sidebar_links', 'get_link_regions', 'get_line_annotations',
         'get_syntax_regions']:
       details = htmlifier_map[ending].setdefault(x, [None])
+      if x not in hmap:
+        continue
       if append:
         details.append((pluginname, hmap[x]))
       else:
@@ -164,11 +166,11 @@ def build_htmlifier_map(plugins):
   # Add/append details for each map
   for plug in plugins:
     plug_map = plug.get_htmlifiers()
-    nosquash = 'no-override' in plug_map
     for ending in plug_map:
       if ending not in htmlifier_map:
         ending_iterator.append(ending)
         htmlifier_map[ending] = {}
+      nosquash = 'no-override' in plug_map[ending]
       add_to_map(ending, plug_map[ending], plug.__name__, nosquash)
   # Sort the endings by maximum length, so that we can just find the first one
   # in the list
