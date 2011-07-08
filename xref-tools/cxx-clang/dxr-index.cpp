@@ -53,6 +53,12 @@ struct FileInfo {
     if (interesting) {
       // Remove the trailing `/' as well.
       realname.erase(0, srcdir.length() + 1);
+    } else if (rname.compare(0, output.length(), output) == 0) {
+      // We're in the output directory, so we are probably a generated header
+      // We use the escape character to indicate the objdir nature.
+      // Note that output also has the `/' already placed
+      interesting = true;
+      realname.replace(0, output.length(), "--GENERATED--/");
     }
   }
   std::string realname;
@@ -205,7 +211,9 @@ public:
       if (content.length() == 0)
         continue;
       std::string filename = output;
-      filename += it->second->realname;
+      // Hashing the filename allows us to not worry about the file structure
+      // not matching up.
+      filename += hash(it->second->realname);
       filename += ".";
       filename += hash(content);
       filename += ".csv";

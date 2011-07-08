@@ -2,6 +2,7 @@
 
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool as Pool
+from itertools import chain
 import os
 import sys
 import getopt
@@ -182,7 +183,21 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     index_list = open(os.path.join(dbdir, "file_list.txt"), 'w')
     file_list = []
 
-    for f in treecfg.getFileList():
+    def getOutputFiles():
+      for regular in treecfg.getFileList():
+        yield regular
+      filelist = set()
+      for plug in big_blob:
+        try:
+          filelist.update(big_blob[plug]["byfile"].keys())
+        except KeyError:
+          pass
+      for filename in filelist:
+        if filename.startswith("--GENERATED--/"):
+          relpath = filename[len("--GENERATED--/"):]
+          yield filename, os.path.join(treecfg.objdir, relpath)
+
+    for f in getOutputFiles():
       # In debug mode, we only care about some files
       if debugfile is not None and f[0] != debugfile: continue
 
