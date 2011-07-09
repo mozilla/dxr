@@ -133,7 +133,7 @@ def getFunction(funcinfo, refs=[]):
     funcinfo = conn.execute("SELECT * FROM functions WHERE funcid=?",
       (funcinfo,)).fetchone()
   funcbase = {
-    "label": funcinfo['flongname'],
+    "label": '%s %s%s' % (funcinfo['ftype'], funcinfo['fqualname'], funcinfo['fargs']),
     "icon": "icon-member",
     "children": [{
       "label": 'Definition at %s' % (funcinfo['floc']),

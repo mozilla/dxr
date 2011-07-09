@@ -74,7 +74,7 @@ def processString(string, path=None, ext=None):
   config = [
     ('types', ['tname', 'tloc', 'tname']),
     ('macros', ['macroname', 'macroloc', 'macroname']),
-    ('functions', ['flongname', 'floc', 'fname']),
+    ('functions', ['fqualname', 'floc', 'fname']),
     ('variables', ['vname', 'vloc', 'vname']),
   ]
   for table, cols in config:
@@ -171,7 +171,7 @@ def processDerived(derived, path=None):
         print GetLine(t[2])
   else:
     typeMaps = dict([(t[1], t[0]) for t in types])
-    for method in conn.execute('SELECT scopeid, flongname, floc FROM functions'+
+    for method in conn.execute('SELECT scopeid, fqualname, floc FROM functions'+
         ' WHERE scopeid IN (' + ','.join([str(t[1]) for t in types]) + ') AND' +
         ' fname = ?', (func,)).fetchall():
       tname = cgi.escape(typeMaps[method[0]])
@@ -191,9 +191,9 @@ def processMacro(macro):
     print GetLine(m['macroloc'])
 
 def processFunction(func):
-  for f in conn.execute('SELECT * FROM functions WHERE flongname LIKE "%' +
+  for f in conn.execute('SELECT * FROM functions WHERE fqualname LIKE "%' +
       func + '%";').fetchall():
-    print '<h3>%s</h3>' % cgi.escape(f['flongname'])
+    print '<h3>%s</h3>' % cgi.escape(f['fqualname'])
     print GetLine(f['floc'])
 
 def processVariable(var):

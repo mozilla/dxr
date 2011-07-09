@@ -283,7 +283,18 @@ public:
       return true;
     beginRecord("function", d->getLocation());
     recordValue("fname", d->getNameAsString());
-    recordValue("flongname", d->getQualifiedNameAsString());
+    recordValue("fqualname", d->getQualifiedNameAsString());
+    recordValue("ftype", d->getResultType().getAsString());
+    std::string args("(");
+    for (FunctionDecl::param_iterator it = d->param_begin();
+        it != d->param_end(); it++) {
+      args += ", ";
+      args += (*it)->getType().getAsString();
+    }
+    if (d->getNumParams() > 0)
+      args.erase(1, 2);
+    args += ")";
+    recordValue("fargs", args);
     recordValue("floc", locationToString(d->getLocation()));
     printScope(d);
     printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());

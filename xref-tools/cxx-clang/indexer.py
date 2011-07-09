@@ -25,7 +25,7 @@ def process_typedef(typeinfo):
   typeinfo['tkind'] = 'typedef'
 
 def process_function(funcinfo):
-  functions[(funcinfo['flongname'], funcinfo['floc'])] = funcinfo
+  functions[(funcinfo['fqualname'], funcinfo['floc'])] = funcinfo
 
 def process_impl(info):
   inheritance[info['tbname'], info['tbloc'], info['tcname'], info['tcloc']]=info
@@ -307,7 +307,9 @@ schema = dxr.plugins.Schema({
     ("funcid", "INTEGER", False),         # Function ID (also in scopes)
     ("scopeid", "INTEGER", False),        # Scope defined in
     ("fname", "VARCHAR(256)", False),     # Short name (no args)
-    ("flongname", "VARCHAR(512)", False), # Fully qualified name, including args
+    ("fqualname", "VARCHAR(512)", False), # Fully qualified name, excluding args
+    ("fargs", "VARCHAR(256)", False),     # Argument vector
+    ("ftype", "VARCHAR(256)", False),     # Full return type, as a string
     ("floc", "_location", True),          # Location of definition
     ("modifiers", "VARCHAR(256)", True),  # Modifiers (e.g., private)
     ("_key", "funcid")
@@ -341,12 +343,13 @@ schema = dxr.plugins.Schema({
     "defid": ("INTEGER", False),    # ID of the definition instance
     "declloc": ("_location", False) # Location of the declaration
   },
+  # Macros: this is a table of all of the macros we come across in the code.
   "macros": [
-     ("macroid", "INTEGER", False),
-     ("macroloc", "_location", False),
-     ("macroname", "VARCHAR(256)", False),
-     ("macroargs", "VARCHAR(256)", True),
-     ("macrotext", "TEXT", True),
+     ("macroid", "INTEGER", False),        # The macro id, for references
+     ("macroloc", "_location", False),     # The macro definition
+     ("macroname", "VARCHAR(256)", False), # The name of the macro
+     ("macroargs", "VARCHAR(256)", True),  # The args of the macro (if any)
+     ("macrotext", "TEXT", True),          # The macro contents
      ("_key", "macroid", "macroloc"),
   ]
 })
@@ -380,12 +383,12 @@ class CxxHtmlifier:
     for df in self.blob_file["types"]:
       yield make_tuple(df, "tqualname", "tloc", "scopeid")
     for df in self.blob_file["functions"]:
-      yield make_tuple(df, "flongname", "floc", "scopeid")
+      yield make_tuple(df, "fqualname", "floc", "scopeid")
     for df in self.blob_file["variables"]:
       if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
         continue
       yield make_tuple(df, "vname", "vloc", "scopeid")
-    tblmap = { "functions": "flongname", "types": "tqualname" }
+    tblmap = { "functions": "fqualname", "types": "tqualname" }
     for df in self.blob_file["decldef"]:
       table = df["table"]
       if table in tblmap:
