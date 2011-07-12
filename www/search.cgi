@@ -204,7 +204,7 @@ def processVariable(var):
       cgi.escape(v['vname']))
     print GetLine(v['vloc'])
 
-def processWarnings(warnings):
+def processWarnings(warnings, path=None):
   # Check for * which means user entered "warnings:" and wants to see all of them.
   if warnings == '*':
     warnings = ''

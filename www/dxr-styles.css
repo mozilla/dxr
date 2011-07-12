@@ -6,17 +6,10 @@ html, body { height: 100%;
 	     font-size: 13px !important
 }
 
+/* Formatting for the main code block. */
 body pre { padding:0; margin: 0 }
-
-.k { color: #0000FF; }
-.c { color: #008000; }
-.m { color: black; }
-.t { color: black; }
-.s { color: black; }
-.str { color: #A31515; }
-.s-not-found { color: black; }
-.s-fuzzy { color: black; }
-.p { color: #0000FF; }
+pre > div#linenumbers { position: absolute; left: 0; right: 0; }
+pre > div#code { position: relative; left: 5.5em; }
 .ln { display:inline-block;
       text-align: right;
       width: 3em;
@@ -27,11 +20,22 @@ body pre { padding:0; margin: 0 }
       padding-right: 3px;
       height: 16px;
 }
+pre > div#linenumbers > div:hover {
+  background-color: #eee;
+}
 .lnw { background-image: url("images/icons/error.png");
        background-repeat: no-repeat;
        height: 16px;
 }
-.lni { background-color: #eeeeee; height: 16px;}
+.k { color: #0000FF; }
+.c { color: #008000; }
+.m { color: black; }
+.t { color: black; }
+.s { color: black; }
+.str { color: #A31515; }
+.s-not-found { color: black; }
+.s-fuzzy { color: black; }
+.p { color: #0000FF; }
 .mem { color: black; }
 .highlighted { background-color: #ffffcc; }
 a { cursor: pointer; color: inherit; text-decoration: none; }
