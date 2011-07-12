@@ -158,10 +158,6 @@ function showSignature() {
 }
 
 function hoverLine(node) {
-  // Indicate the current source line
-  dojo.query(".lni").removeClass("lni");
-  dojo.addClass(node, "lni");
-
   // Try to indicate in the sidebar where we are now (e.g., which function).
   dojo.query(".sidebar-highlighted").removeClass("sidebar-highlighted");
   currentLine = node.id.replace('l', '');
