@@ -142,8 +142,13 @@ def make_blob():
     # Get all known relations
     subs = childMap.setdefault(child, [])
     supers = parentMap.setdefault(base, [])
-    inheritsTree.extend([build_inherits(base, sub, None) for sub in subs])
-    inheritsTree.extend([build_inherits(sup, child, None) for sup in supers])
+    # Use this information
+    for sub in subs:
+      inheritsTree.append(build_inherits(base, sub, None))
+      parentMap[sub].append(base)
+    for sup in supers:
+      inheritsTree.append(build_inherits(sup, child, None))
+      childMap[sup].append(child)
 
     # Carry through these relations
     newsubs = childMap.setdefault(base, [])
@@ -156,8 +161,11 @@ def make_blob():
   # Fix up (name, loc) pairs to ids
   def repairScope(info):
     if 'scopename' in info:
-      info['scopeid'] = scopes[canonicalize_decl(info.pop('scopename'),
-        info.pop('scopeloc'))]
+      try:
+        info['scopeid'] = scopes[canonicalize_decl(info.pop('scopename'),
+          info.pop('scopeloc'))]
+      except KeyError:
+        pass
     else:
       info['scopeid'] = 0
 
