@@ -169,8 +169,9 @@ public:
   void printExtent(SourceLocation begin, SourceLocation end) {
     if (begin.isMacroID() || end.isMacroID())
       return;
-    *out << ",extent," << sm.getFileOffset(begin) << ":" <<
-      sm.getFileOffset(Lexer::getLocForEndOfToken(end, 0, sm, features));
+    *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
+      sm.getDecomposedSpellingLoc(
+        Lexer::getLocForEndOfToken(end, 0, sm, features)).second;
   }
 
   void printScope(Decl *d) {
@@ -341,7 +342,8 @@ public:
     if (!TagDecl::classof(d) && !NamespaceDecl::classof(d) &&
         !FunctionDecl::classof(d) && !FieldDecl::classof(d) &&
         !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
-        !EnumConstantDecl::classof(d) && !AccessSpecDecl::classof(d))
+        !EnumConstantDecl::classof(d) && !AccessSpecDecl::classof(d) &&
+        !LinkageSpecDecl::classof(d))
       printf("Unprocessed kind %s\n", d->getDeclKindName());
     return true;
   }
@@ -420,6 +422,9 @@ public:
         case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
           continue;
         case '(':
+          // We already processed the arguments, so run along...
+          if (argsStart > 0)
+            break;
           inArgs = true;
           argsStart = defnStart;
           continue;

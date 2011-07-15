@@ -433,10 +433,13 @@ class CxxHtmlifier:
       kwargs['class'] = clazz
       return (start, end, kwargs)
     for df in self.blob_file["variables"]:
+      if 'extent' not in df: continue
       yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
     for df in self.blob_file["functions"]:
+      if 'extent' not in df: continue
       yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
     for df in self.blob_file["types"]:
+      if 'extent' not in df: continue
       yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
     for df in self.blob_file["macros"]:
       yield make_link(df, "macroloc", "macroname", "m", rid=df['macroid'])
