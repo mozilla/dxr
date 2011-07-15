@@ -75,7 +75,7 @@ a:hover { cursor: pointer; text-decoration: underline; }
 	     font-size: 13px;
 	     overflow: hidden; /* font-family: Arial,sans-serif; */
 }
-.info { margin-left: 5em;
+.info {
 	margin-top: 1em;
 	margin-bottom: 1em;
 	padding: 5px;

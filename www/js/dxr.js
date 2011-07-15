@@ -12,7 +12,8 @@ var infoDiv,
     signature,
     maincontent,
     sep = '/',
-    signatureVisible = false;
+    signatureVisible = false,
+    styleRule = -1;
 
 function closeInfo() {
   if (!infoDiv) {
@@ -27,7 +28,6 @@ function closeInfo() {
 
 function showInfo(node) {
   var name = node.textContent;
-  var line = node.parentNode.id.replace('l', '');
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
   var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot;
   url += "&tree=" + tree + "&div=" + infoDivID++;
@@ -53,8 +53,16 @@ function showInfo(node) {
   });
   infoDiv.placeAt(node, "after");
   infoDiv.attr('href', url); //"/dxr/getinfo2.cgi?tree-id=" + ); // /dxr/info-test.html?id=" + infoDivID);
-  location.hash = line + '/' + name;
   dojo.addClass(node, 'highlighted');
+  try {
+    if (styleRule >= 0)
+      document.styleSheets[0].deleteRule(styleRule);
+    styleRule = document.styleSheets[0].insertRule('a[rid="' +
+      node.getAttribute("rid") + '"] { background-color: #ffc; }',
+      document.styleSheets[0].length - 1);
+  } catch (e) {
+    styleRule = -1;
+  }
 
   // TODO: this needs to happen in an onLoad or onDownloadEnd event vs. here...
   dojo.fx.wipeIn({node: infoDiv.id, duration: 500}).play();
