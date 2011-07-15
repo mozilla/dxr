@@ -37,7 +37,7 @@ pre > div#linenumbers > div:hover {
 .s-fuzzy { color: black; }
 .p { color: #0000FF; }
 .mem { color: black; }
-.highlighted { background-color: #ffffcc; }
+div:target { background-color: #ffffcc; }
 a { cursor: pointer; color: inherit; text-decoration: none; }
 a:hover { cursor: pointer; text-decoration: underline; }
 
