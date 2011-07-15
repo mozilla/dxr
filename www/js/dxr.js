@@ -47,12 +47,11 @@ function showInfo(node) {
 
   var id = 'info-div-' + infoDivID;
   infoDiv = new dojox.layout.ContentPane({
-              id: id,
-              style: "margin:0; padding:0; white-space: normal !important;"
+    id: id,
+    style: "margin:0; padding:0; white-space: normal !important;" +
+           "position: absolute; width: 100%"
   });
-  var lineDiv = node.parentNode;
-  while (lineDiv.nodeName != 'DIV') lineDiv = lineDiv.parentNode;
-  infoDiv.placeAt(lineDiv, "after");
+  infoDiv.placeAt(node, "after");
   infoDiv.attr('href', url); //"/dxr/getinfo2.cgi?tree-id=" + ); // /dxr/info-test.html?id=" + infoDivID);
   location.hash = line + '/' + name;
   dojo.addClass(node, 'highlighted');
@@ -258,7 +257,7 @@ dojo.addOnLoad(function() {
         dojo.query(".highlighted").removeClass("highlighted");
         dojo.addClass(dojo.byId(link.href.split('#')[1]), 'highlighted');
       }
-    } else if (isLineDiv(e.target)) {
+    } else {
         closeInfo();
     }
   });

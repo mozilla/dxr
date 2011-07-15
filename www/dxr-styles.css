@@ -89,7 +89,9 @@ a:hover { cursor: pointer; text-decoration: underline; }
 	-webkit-border-radius: 6px;
 	border-radius: 6px;
 	overflow-y: scroll;
+  opacity: 0.7;
 }
+.info:hover { opacity: 1.0; }
 
 .padding { padding: 5px; }
 
