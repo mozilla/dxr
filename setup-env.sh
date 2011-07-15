@@ -34,17 +34,21 @@ echo ""
 
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
-  make -s -C ${tools[plugin]} prebuild
-  if [[ $? != 0 ]]; then
-    echo "Bailing!"
-    return 1
+  if [ -e ${tools[plugin]}/Makefile ]; then 
+    make -s -C ${tools[plugin]} prebuild
+    if [[ $? != 0 ]]; then
+      echo "Bailing!"
+      return 1
+    fi
   fi
   echo "done!"
 done
 
 echo -n "Preparing environment... "
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
-  . "${tools[plugin]}/set-env.sh"
+  if [ -e "${tools[plugin]}/set-env.sh" ]; then
+    . "${tools[plugin]}/set-env.sh"
+  fi
 done
 echo "done!"
 

@@ -23,11 +23,11 @@ import string
 # Note that either of these stages can be individually disabled.
 
 def usage():
-    print """Usage: run-dxr.py [options]
+    print """Usage: dxr-index.py [options]
 Options:
   -h, --help                              Show help information.
   -f, --file    FILE                      Use FILE as config file (default is ./dxr.config).
-  -t, --tree    TREE                      Indxe and Build only section TREE (default is all).
+  -t, --tree    TREE                      Index and Build only section TREE (default is all).
   -c, --create  [xref|html]               Create xref or html and index (default is all).
   -d, --debug   file                      Only generate HTML for the file."""
 

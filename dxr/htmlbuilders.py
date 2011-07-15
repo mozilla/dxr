@@ -159,9 +159,9 @@ def build_htmlifier_map(plugins):
   def add_to_map(ending, hmap, pluginname, append):
     for x in ['get_sidebar_links', 'get_link_regions', 'get_line_annotations',
         'get_syntax_regions']:
-      details = htmlifier_map[ending].setdefault(x, [None])
       if x not in hmap:
         continue
+      details = htmlifier_map[ending].setdefault(x, [None])
       if append:
         details.append((pluginname, hmap[x]))
       else:

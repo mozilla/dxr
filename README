@@ -64,7 +64,7 @@ up with the following structure:
       /index.html (auto-generated during dxr-index.py)
       /tree (symlink to tree-current)
       /tree-current
-		               /.dxr_xref
+                   /.dxr_xref
                              /tree.sqlite
                              /index_bob.dat  [A pickle file of plugin data]
                              /file_list.txt  [A list of source files]
