@@ -214,8 +214,10 @@ def make_blob():
         ('types', typedefs, 'tid'), ('variables', variables, 'varid') ]
       for tblname, tbl, key in tmap:
         if defn in tbl:
-          decldef.append({"declloc": decl[1], "defid": tbl[defn][key],
-            "table": tblname})
+          declo = {"declloc": decl[1],"defid": tbl[defn][key],"table": tblname}
+          if "extent" in tbl[decl]:
+            declo["extent"] = tbl[decl]["extent"]
+          decldef.append(declo)
           break
 
   # Ball it up for passing on
@@ -420,33 +422,33 @@ class CxxHtmlifier:
   def getLinkRegions(self):
     if self.blob_file is None:
       return
-    def make_link(obj, loc, name, clazz, **kwargs):
-      if 'extent' in obj:
-        start, end = obj['extent'].split(':')
-        start, end = int(start), int(end)
-      else:
-        line, col = obj[loc].split(':')[1:]
-        line, col = int(line), int(col)
-        start = line, col
-        end = line, col + len(obj[name])
-        kwargs['line'] =  line
+    def make_link(obj, clazz, rid):
+      start, end = obj['extent'].split(':')
+      start, end = int(start), int(end)
+      kwargs = {}
+      kwargs['rid'] = rid
       kwargs['class'] = clazz
       return (start, end, kwargs)
-    for df in self.blob_file["variables"]:
-      if 'extent' not in df: continue
-      yield make_link(df, 'vloc', 'vname', 'var', rid=df['varid'])
-    for df in self.blob_file["functions"]:
-      if 'extent' not in df: continue
-      yield make_link(df, 'floc', 'fname', 'func', rid=df['funcid'])
-    for df in self.blob_file["types"]:
-      if 'extent' not in df: continue
-      yield make_link(df, 'tloc', 'tqualname', 't', rid=df['tid'])
-    for df in self.blob_file["macros"]:
-      yield make_link(df, "macroloc", "macroname", "m", rid=df['macroid'])
-    for df in self.blob_file["refs"]:
-      if "extent" in df:
-        start, end = df["extent"].split(':')
-        yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
+    tblmap = {
+      "variables": ("var", "varid"),
+      "functions": ("func", "funcid"),
+      "types": ("t", "tid"),
+      "refs": ("ref", "refid"),
+    }
+    for tablename in tblmap:
+      tbl = self.blob_file[tablename]
+      kind, rid = tblmap[tablename]
+      for df in tbl:
+        if 'extent' in df:
+          yield make_link(df, kind, df[rid])
+    for decl in self.blob_file["decldef"]:
+      if 'extent' not in decl: continue
+      yield make_link(decl, tblmap[decl["table"]][0], decl["defid"])
+    for macro in self.blob_file["macros"]:
+      line, col = macro['macroloc'].split(':')[1:]
+      line, col = int(line), int(col)
+      yield ((line, col), (line, col + len(macro['macroname'])),
+        {'class': 'm', 'rid': macro['macroid']})
 
   def getLineAnnotations(self):
     if self.blob_file is None:
