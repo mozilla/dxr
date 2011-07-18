@@ -209,24 +209,12 @@ def printTree(jsonString):
 
 form = cgi.FieldStorage()
 
-name = ''
 type = ''
-file = ''
-line = ''
 tree = ''
 virtroot = ''
 
-if form.has_key('name'):
-  name = form['name'].value
-
 if form.has_key('type'):
   type = form['type'].value
-
-if form.has_key('line'):
-  line = form['line'].value
-
-if form.has_key('file'):
-  file = form['file'].value
 
 if form.has_key('tree'):
   tree = form['tree'].value
