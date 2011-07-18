@@ -29,7 +29,7 @@ function showInfo(node) {
   var name = node.textContent;
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
   var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot;
-  url += "&tree=" + tree + "&div=" + infoDivID++;
+  url += "&tree=" + tree;
   url += "&type=" + node.className + "&name=" + name;
   var attrs = node.attributes;
   for (var i = 0; i < attrs.length; i++) {
@@ -44,14 +44,29 @@ function showInfo(node) {
     closeInfo();
   }
 
-  var id = 'info-div-' + infoDivID;
+  var id = 'info-div-' + infoDivID++;
+  var treediv = 'tree-' + infoDivID;
   infoDiv = new dojox.layout.ContentPane({
     id: id,
+    content: '<div class="info"><div id="' + treediv + '"></div></div>',
     style: "margin:0; padding:0; white-space: normal !important;" +
            "position: absolute; width: 100%"
   });
   infoDiv.placeAt(node, "after");
-  infoDiv.attr('href', url); //"/dxr/getinfo2.cgi?tree-id=" + ); // /dxr/info-test.html?id=" + infoDivID);
+  dojo.xhrGet({ url: url,
+    load: function (response, ioArgs) {
+      try {
+        buildTree(JSON.parse(response), treediv);
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          infoDiv.set('content', response);
+        } else {
+          throw e;
+        }
+      }
+      return response;
+    }
+  });
   try {
     if (styleRule >= 0)
       document.styleSheets[0].deleteRule(styleRule);

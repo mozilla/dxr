@@ -201,17 +201,10 @@ def printReference():
   return dispatch[val]()
 
 def printTree(jsonString):
-  print """Content-Type: text/html
+  print """Content-Type: application/json
 
-<script type="text/javascript">
-  dojo.addOnLoad(function() {
-    buildTree(%s, "tree-%s");
-  });
-</script>
-<div class="info">
-<div id="tree-%s" style="margin:0"></div>
-</div>
-""" % (jsonString, div, div)
+%s
+""" % (jsonString)
 
 
 form = cgi.FieldStorage()
@@ -222,7 +215,6 @@ file = ''
 line = ''
 tree = ''
 virtroot = ''
-div = ''
 
 if form.has_key('name'):
   name = form['name'].value
@@ -241,9 +233,6 @@ if form.has_key('tree'):
 
 if form.has_key('virtroot'):
   virtroot = form['virtroot'].value
-
-if form.has_key('div'):
-  div = form['div'].value
 
 if form.has_key('rid'):
   refid = form['rid'].value
