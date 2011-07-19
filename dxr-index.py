@@ -12,6 +12,7 @@ import shutil
 import dxr
 import sqlite3
 import string
+import time
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -91,6 +92,80 @@ def make_index(file_list, dbdir):
     f.close()
   offset_index.close()
   file_index.close()
+
+def make_index_html(treecfg, dirname, fnames, htmlroot):
+  genroot = os.path.relpath(dirname, htmlroot)
+  if genroot.startswith('./'): genroot = genroot[2:]
+  if genroot.startswith('--GENERATED--'):
+    srcpath = treecfg.objdir
+    genroot = genroot[len("--GENERATED--") + 1:]
+  else:
+    srcpath = treecfg.sourcedir
+  srcpath = os.path.join(srcpath, genroot)
+  of = open(os.path.join(dirname, 'index.html'), 'w')
+  try:
+    of.write(treecfg.getTemplateFile("dxr-header.html"))
+    of.write('''<div id="maincontent" dojoType="dijit.layout.contentPane"
+      region="center"><table id="index-list">
+        <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
+      ''')
+    of.write('<tr><td><img src="%s/images/icons/folder.png"></td>' %
+      treecfg.virtroot)
+    of.write('<td><a href="..">Parent directory</a></td>')
+    of.write('<td></td><td>-</td></tr>')
+    torm = []
+    fnames.sort()
+    dirs, files = [], []
+    for fname in fnames:
+      # Ignore hidden files
+      if fname[0] == '.':
+        torm.append(fname)
+        continue
+      fullname = os.path.join(dirname, fname)
+
+      # Directory ?
+      if os.path.isdir(fullname):
+        img = 'folder.png'
+        link = fname
+        display = fname + '/'
+        if fname == '--GENERATED--':
+          stat = os.stat(treecfg.objdir) # Meh, good enough
+        else:
+          stat = os.stat(os.path.join(srcpath, fname))
+        size = '-'
+        add = dirs
+      else:
+        img = 'page_white.png'
+        link = fname
+        display = fname[:-5] # Remove .html
+        stat = os.stat(os.path.join(srcpath, display))
+        size = stat.st_size
+        if size > 2 ** 30:
+          size = str(size / 2 ** 30) + 'G'
+        elif size > 2 ** 20:
+          size = str(size / 2 ** 20) + 'M'
+        elif size > 2 ** 10:
+          size = str(size / 2 ** 10) + 'K'
+        else:
+          size = str(size)
+        add = files
+      add.append('<tr><td><img src="%s/images/icons/%s"></td>' %
+        (treecfg.virtroot, img))
+      add.append('<td><a href="%s">%s</a></td>' % (link, display))
+      add.append('<td>%s</td><td>%s</td>' % (
+        time.strftime('%Y-%b-%d %H:%m', time.gmtime(stat.st_mtime)), size))
+      add.append('</tr>')
+    of.write(''.join(dirs))
+    of.write(''.join(files))
+    of.flush()
+    of.write(treecfg.getTemplateFile("dxr-footer.html"))
+
+    for f in torm:
+      fnames.remove(f)
+  except:
+    sys.excepthook(sys.exc_info())
+  finally:
+    of.close()
 
 def builddb(treecfg, dbdir):
   """ Post-process the build and make the SQL directory """
@@ -218,6 +293,13 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     index_list.close()
     p.close()
     p.join()
+
+    # Generate index.html files
+    # XXX: This wants to be parallelized. However, I seem to run into problems
+    # if it isn't.
+    def genhtml(treecfg, dirname, fnames):
+      make_index_html(treecfg, dirname, fnames, htmlroot)
+    os.path.walk(htmlroot, genhtml, treecfg)
 
   # If the database is live, we need to switch the live to the new version
   if treecfg.isdblive:

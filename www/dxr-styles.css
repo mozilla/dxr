@@ -108,3 +108,15 @@ div[data-gcov-hits] {
 div[data-gcov-hits="0"] {
   background-color: #FF6230;
 }
+
+table#index-list a {
+  color: #00E;
+}
+
+table#index-list td {
+  padding: 0 0.3em;
+}
+
+table#index-list tr:nth-child(even) {
+  background-color: #f6f6f0;
+}
