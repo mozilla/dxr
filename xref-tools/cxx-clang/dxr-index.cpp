@@ -416,25 +416,24 @@ public:
     const char *contents = sm.getCharacterData(nameStart);
     unsigned int nameLen = MacroNameTok.getIdentifierInfo()->getLength();
     unsigned int argsStart = 0, argsEnd = 0, defnStart;
-    bool inArgs = false;
-    for (defnStart = nameLen; defnStart < length; defnStart++) {
+    
+    // Grab the macro arguments if it has some
+    if (nameLen < length && contents[nameLen] == '(') {
+      argsStart = nameLen;
+      for (argsEnd = nameLen + 1; argsEnd < length; argsEnd++)
+        if (contents[argsEnd] == ')') {
+          argsEnd++;
+          break;
+        }
+      defnStart = argsEnd;
+    } else {
+      defnStart = nameLen;
+    }
+    // Find the first non-whitespace character for the definition.
+    for (; defnStart < length; defnStart++) {
       switch (contents[defnStart]) {
         case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
           continue;
-        case '(':
-          // We already processed the arguments, so run along...
-          if (argsStart > 0)
-            break;
-          inArgs = true;
-          argsStart = defnStart;
-          continue;
-        case ')':
-          inArgs = false;
-          argsEnd = defnStart + 1;
-          continue;
-        default:
-          if (inArgs)
-            continue;
       }
       break;
     }
