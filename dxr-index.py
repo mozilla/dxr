@@ -163,7 +163,7 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
     for f in torm:
       fnames.remove(f)
   except:
-    sys.excepthook(sys.exc_info())
+    sys.excepthook(*sys.exc_info())
   finally:
     of.close()
 
@@ -184,6 +184,10 @@ def builddb(treecfg, dbdir):
 
   dbname = treecfg.tree + '.sqlite'
   conn = sqlite3.connect(os.path.join(dbdir, dbname))
+  conn.execute('PRAGMA synchronous=off')
+  conn.execute('PRAGMA page_size=65536')
+  # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
+  conn.text_factory = str
   conn.executescript('\n'.join(schemata))
   conn.commit()
   for stmt in all_statements:

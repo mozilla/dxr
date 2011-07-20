@@ -2,8 +2,9 @@ html, body { height: 100%;
 	     width: 100%;
 	     margin: 0;
 	     padding: 0;
-	     font-family: 'Courier New', courier !important;
-	     font-size: 13px !important
+	     font-size: 13px !important;
+       /* Fix the line-height, since C++ lacks good measurements for this */
+       line-height: 1.25 !important;
 }
 
 /* Formatting for the main code block. */
@@ -13,19 +14,18 @@ pre > div#code { position: relative; left: 5.5em; }
 .ln { display:inline-block;
       text-align: right;
       width: 3em;
-      color: #555555;
-      border-right: 1px dotted #cccccc;
+      color: #555;
+      border-right: 1px dotted #ccc;
       margin-right: 1em;
       margin-left: 16px;
       padding-right: 3px;
-      height: 16px;
+      height: 1.25em;
 }
 pre > div#linenumbers > div:hover {
   background-color: #eee;
 }
 .lnw { background-image: url("images/icons/error.png");
        background-repeat: no-repeat;
-       height: 16px;
 }
 .k { color: #0000FF; }
 .c { color: #008000; }
@@ -71,7 +71,7 @@ a:hover { cursor: pointer; text-decoration: underline; }
 	     width: 100%;
 	     padding-left: 10px;
 	     padding-top: 5px;
-	     font-family: 'Courier New', courier;
+	     font-family: monospace;
 	     font-size: 13px;
 	     overflow: hidden; /* font-family: Arial,sans-serif; */
 }
@@ -82,7 +82,7 @@ a:hover { cursor: pointer; text-decoration: underline; }
 	width: 90%;
 	height: 250px;
 	font-family: 'Helvetica Neue', Arial, sans-serif;
-	font-size: 9pt;
+	font-size: 0.92em;
 	white-space:normal; 
 	background-color: #eeffff; border: 1px solid #66cccc;
 	-moz-border-radius: 6px;

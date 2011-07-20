@@ -90,12 +90,6 @@ footer {
         <td nowrap valign=top>path:<i>name</i></td>
         <td>Return only results containing <i>name</i> in the path. Can be paired with ext:.<br><a href="search.cgi?tree=$tree&string=channel&path=netwerk">channel path:netwerk</a></td>
       </tr>
-<!--
-      <tr>
-        <td nowrap valign=top>ext:<i>name</i></td>
-        <td>Return only resuls with an extension of <i>name</i>. Can be paired with path:.<br><a href="search.cgi?tree=$tree&string=channel&ext=h">channel ext:h</a></td>
-      </tr>
--->
       <tr>
         <td nowrap valign=top>type:<i>name</i></td>
         <td>Find types that begin with or match <i>name</i>. Can be paired with member:.<br>Bare words are not allowed when doing type: searches.<br><a href="search.cgi?tree=$tree&type=nsIFile">type:nsIFile</a></td>
@@ -105,10 +99,6 @@ footer {
         <td>Find types that derive from type named <i>name</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=$tree&derived=nsIFile">derived:nsIFile</a> <a href="search.cgi?tree=$tree&amp;derived=nsIFile%3A%3AAppend">derived:nsIFile::Append</a></td>
       </tr>
 <!--
-      <tr>
-        <td nowrap valign=top>member:<i>name</i></td>
-        <td>Find members that begin with or match <i>name</i>. Can be paired with type:.<br>Bare words are not allowed when doing member: searches.<br><a href="search.cgi?tree=$tree&member=CopyTo">member:CopyTo</a> <a href="search.cgi?tree=$tree&member=CopyTo&type=nsLocalFile">member:CopyTo type:nsLocalFile</a></td>
-      </tr>
       <tr>
         <td nowrap valign=top>callers:<i>type::member</i></td>
         <td>Find callers (e.g., containing functions) of <i>type::member</i>.<br>Bare words are not allowed when doing derived: searches.<br><a href="search.cgi?tree=$tree&amp;callers=nsAccessible%3A%3ACacheChildren">callers:nsAccessible::CacheChildren</a></td>
