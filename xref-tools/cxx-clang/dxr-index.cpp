@@ -180,9 +180,18 @@ public:
     // organization
     while (NamespaceDecl::classof(ctxt))
       ctxt = Decl::castFromDeclContext(ctxt->getNonClosureContext());
+    // If the scope is an anonymous struct/class/enum/union, replace it with the
+    // typedef name here as well.
     if (NamedDecl::classof(ctxt)) {
       NamedDecl *scope = static_cast<NamedDecl*>(ctxt);
-      recordValue("scopename", scope->getQualifiedNameAsString());
+      NamedDecl *namesource = scope;
+      if (TagDecl::classof(scope)) {
+        TagDecl *tag = static_cast<TagDecl*>(scope);
+        NamedDecl *redecl = tag->getTypedefNameForAnonDecl();
+        if (redecl)
+          namesource = redecl;
+      }
+      recordValue("scopename", namesource->getQualifiedNameAsString());
       recordValue("scopeloc", locationToString(scope->getLocation()));
     }
   }
@@ -236,12 +245,17 @@ public:
       return true;
     // Information we need for types: kind, fqname, simple name, location
     beginRecord("type", d->getLocation());
-    recordValue("tname", d->getNameAsString());
-    recordValue("tqualname", d->getQualifiedNameAsString());
+    // We get the name from the typedef if it's an anonymous declaration...
+    NamedDecl *nd = d->getTypedefNameForAnonDecl();
+    if (!nd)
+      nd = d;
+    recordValue("tname", nd->getNameAsString());
+    recordValue("tqualname", nd->getQualifiedNameAsString());
     recordValue("tloc", locationToString(d->getLocation()));
     recordValue("tkind", d->getKindName());
     printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
+    // Linkify the name, not the `enum'
+    printExtent(nd->getLocation(), nd->getLocation());
     *out << std::endl;
 
     declDef(d, d->getDefinition());
@@ -318,7 +332,7 @@ public:
     *out << std::endl;
   }
 
-  bool VisitEnumConstandDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
+  bool VisitEnumConstantDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
   bool VisitFieldDecl(FieldDecl *d) { visitVariableDecl(d); return true; }
   bool VisitVarDecl(VarDecl *d) { visitVariableDecl(d); return true; }
 
