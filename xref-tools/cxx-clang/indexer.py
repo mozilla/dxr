@@ -300,6 +300,7 @@ schema = dxr.plugins.Schema({
     ("tqualname", "VARCHAR(256)", False), # Fully-qualified name of the type
     ("tloc", "_location", False),         # Location of canonical decl
     ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union)
+    ("ttypedef", "VARCHAR(256)", True),   # Type (if this is a typedef)
     ("_key", "tid")
   ],
   # Inheritance relations: note that we store the full transitive closure in

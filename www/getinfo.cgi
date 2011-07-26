@@ -34,6 +34,11 @@ def getType(typeinfo, refs=[], deep=False):
       "url": locUrl(typeinfo['tloc'])
     }]
   }
+  if typeinfo['ttypedef'] is not None:
+    typebase['children'].append({
+      "label": 'Real value %s' % (typeinfo['ttypedef']),
+      'icon': 'icon-def'
+    })
   typebase['children'].extend(getDeclarations(typeinfo['tid']))
   if not deep:
     return typebase
@@ -55,7 +60,7 @@ def getType(typeinfo, refs=[], deep=False):
     elif qual == 'v':
       member = getVariable(memid)
     members["children"].append(member)
-  if len(members) > 0:
+  if len(members["children"]) > 0:
     typebase["children"].append(members)
 
   basenode = {

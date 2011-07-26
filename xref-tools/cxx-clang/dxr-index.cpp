@@ -339,11 +339,22 @@ public:
   bool VisitTypedefNameDecl(TypedefNameDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
+    // If the underlying declaration is anonymous, the "real" name is already
+    // this typedef, so don't record ourselves as a typedef.
+    // XXX: this seems broken?
+#if 0
+    const Type *real = d->getUnderlyingType().getTypePtr();
+    if (TagType::classof(real)) {
+      if (static_cast<const TagType*>(real)->getDecl()->
+          getTypedefNameForAnonDecl() == d)
+        return true;
+    }
+#endif
     beginRecord("typedef", d->getLocation());
     recordValue("tname", d->getNameAsString());
     recordValue("tqualname", d->getQualifiedNameAsString());
     recordValue("tloc", locationToString(d->getLocation()));
-    // XXX: print*out the referent
+    recordValue("ttypedef", d->getUnderlyingType().getAsString());
     printScope(d);
     printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;

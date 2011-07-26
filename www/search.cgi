@@ -131,11 +131,14 @@ def processString(string, path=None, ext=None):
     print '</ul>'
 
 def processType(type, path=None):
-  for type in conn.execute('select tname, tloc, tkind from types where tname like "' + type + '%";').fetchall():
-    tname = cgi.escape(type[0])
-    if not path or re.search(path, type[1]):
-      print '<h3>%s (%s)</h3>' % (tname, type[2])
-      print GetLine(type[1])
+  for type in conn.execute('select * from types where tname like "' + type + '%";').fetchall():
+    tname = cgi.escape(type['tname'])
+    if not path or re.search(path, type['tloc']):
+      info = type['tkind']
+      if info == 'typedef':
+        info += ' ' + type['ttypedef']
+      print '<h3>%s (%s)</h3>' % (tname, info)
+      print GetLine(type['tloc'])
 
 def processDerived(derived, path=None):
   components = derived.split('::')
