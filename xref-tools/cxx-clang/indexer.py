@@ -223,7 +223,8 @@ def make_blob():
   blob["functions"] = dict([mdict(functions[f], "funcid") for f in funcKeys])
   blob["variables"] = dict([mdict(variables[v], "varid") for v in varKeys])
   blob["types"] = [types[t] for t in typeKeys]
-  blob["types"] += [typedefs[t] for t in typedefs]
+  blob["typedefs"] = [typedefs[t] for t in typedefs]
+  blob["types"] += blob["typedefs"]
   blob["impl"] = inheritsTree
   blob["refs"] = refs
   blob["warnings"] = warnings
@@ -276,16 +277,10 @@ def can_use(treecfg):
   return dxr.plugins.in_path('clang') and dxr.plugins.in_path('llvm-config')
 
 schema = dxr.plugins.Schema({
-  # Type definitions: anything that defines a type per the relevant specs.
-  "types": [
-    ("tid", "INTEGER", False),            # Unique ID for the type
-    ("scopeid", "INTEGER", False),        # Scope this type is defined in
-    ("tname", "VARCHAR(256)", False),     # Simple name of the type
-    ("tqualname", "VARCHAR(256)", False), # Fully-qualified name of the type
-    ("tloc", "_location", False),         # Location of canonical decl
-    ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union)
-    ("ttypedef", "VARCHAR(256)", True),   # Type (if this is a typedef)
-    ("language", "_language", True),      # Language of the type
+  # Typedef information in the tables
+  "typedefs": [
+    ("tid", "INTEGER", False),           # The typedef's tid (also in types)
+    ("ttypedef", "VARCHAR(256)", False), # The long name of the type
     ("_key", "tid")
   ],
   # References to functions, types, variables, etc.

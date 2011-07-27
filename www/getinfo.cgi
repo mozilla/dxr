@@ -34,9 +34,10 @@ def getType(typeinfo, refs=[], deep=False):
       "url": locUrl(typeinfo['tloc'])
     }]
   }
-  if typeinfo['ttypedef'] is not None:
+  for typedef in conn.execute("SELECT * FROM typedefs WHERE tid=?",
+      (typeinfo['tid'],)):
     typebase['children'].append({
-      "label": 'Real value %s' % (typeinfo['ttypedef']),
+      "label": 'Real value %s' % (typedef['ttypedef']),
       'icon': 'icon-def'
     })
   typebase['children'].extend(getDeclarations(typeinfo['tid']))

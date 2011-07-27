@@ -136,7 +136,9 @@ def processType(type, path=None):
     if not path or re.search(path, type['tloc']):
       info = type['tkind']
       if info == 'typedef':
-        info += ' ' + type['ttypedef']
+        typedef = conn.execute('SELECT ttypedef FROM typedefs WHERE tid=?',
+            (type['tid'],)).fetchone()[0]
+        info += ' ' + cgi.escape(typedef)
       print '<h3>%s (%s)</h3>' % (tname, info)
       print GetLine(type['tloc'])
 
