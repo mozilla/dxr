@@ -98,11 +98,11 @@ class Schema:
     """ Returns the SQL that creates the tables in this schema. """
     return '\n'.join([tbl.get_create_sql() for tbl in self.tables.itervalues()])
 
-  def get_data_sql(self, blob):
+  def get_data_sql(self, blob, language=''):
     """ Returns the SQL that inserts data into tables given a blob. """
     for tbl in self.tables:
       if tbl in blob:
-        sqliter = self.tables[tbl].get_data_sql(blob[tbl])
+        sqliter = self.tables[tbl].get_data_sql(blob[tbl], language)
         for sql in sqliter:
           yield sql
 
@@ -132,6 +132,7 @@ class SchemaTable:
     self.name = tblname
     self.key = None
     self.columns = []
+    self.needLang = False
     defaults = ['VARCHAR(256)', True]
     for col in tblschema:
       if isinstance(tblschema, tuple) or isinstance(tblschema, list):
@@ -154,12 +155,15 @@ class SchemaTable:
     sql += 'CREATE TABLE %s (\n  ' % (self.name)
     colstrs = []
     special_types = {
-      '_location': 'VARCHAR(256)'
+      '_location': 'VARCHAR(256)',
+      '_language': 'VARCHAR(32)'
     }
     for col, spec in self.columns:
       specsql = col + ' '
       if spec[0][0] == '_':
         specsql += special_types[spec[0]]
+        if spec[0] == '_language':
+          self.needLang = True
       else:
         specsql += spec[0]
       if len(spec) > 1 and spec[1] == False:
@@ -171,16 +175,16 @@ class SchemaTable:
     sql += '\n);\n'
     return sql
 
-  def get_data_sql(self, blobtbl):
+  def get_data_sql(self, blobtbl, language):
     it = isinstance(blobtbl, dict) and blobtbl.itervalues() or blobtbl
     colset = set(col[0] for col in self.columns)
     for row in it:
+      if self.needLang: row['language'] = language;
       # Only add the keys in the columns
       keys = colset.intersection(row.iterkeys())
       args = tuple(row[k] for k in keys)
       yield ('INSERT OR IGNORE INTO %s (%s) VALUES (%s);' % (self.name,
         ','.join(keys), ','.join('?' for k in keys)), args)
-
 
 def make_get_schema_func(schema):
   """ Returns a function that satisfies get_schema's contract from the given
@@ -193,3 +197,10 @@ def make_get_schema_func(schema):
 def required_exports():
   """ Returns the required exports for a module, for use as __all__. """
   return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema']
+
+last_id = 0
+def next_global_id():
+  """ Returns a unique identifier that is unique compared to other IDs. """
+  global last_id
+  last_id += 1
+  return last_id

@@ -3,15 +3,16 @@
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool as Pool
 from itertools import chain
-import os
-import sys
-import getopt
-import subprocess
-import dxr.htmlbuilders
-import shutil
 import dxr
+import dxr.htmlbuilders
+import dxr.languages
+import getopt
+import os
+import shutil
 import sqlite3
 import string
+import subprocess
+import sys
 import time
 
 # At this point in time, we've already compiled the entire build, so it is time
@@ -174,23 +175,35 @@ def builddb(treecfg, dbdir):
   print "Storing data..."
   dxr.store_big_blob(treecfg, big_blob)
 
+  # Build the sql for later queries. This is a combination of the main language
+  # schema as well as plugin-specific information. The pragmas that are
+  # executed should make the sql stage go faster.
   print "Building SQL..."
-  all_statements = []
-  schemata = []
-  for plugin in dxr.get_active_plugins(treecfg):
-    schemata.append(plugin.get_schema())
-    if plugin.__name__ in big_blob:
-      all_statements.extend(plugin.sqlify(big_blob[plugin.__name__]))
-
   dbname = treecfg.tree + '.sqlite'
   conn = sqlite3.connect(os.path.join(dbdir, dbname))
   conn.execute('PRAGMA synchronous=off')
   conn.execute('PRAGMA page_size=65536')
   # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
   conn.text_factory = str
+
+  # Import the schemata
+  schemata = [dxr.languages.get_standard_schema()]
+  for plugin in dxr.get_active_plugins(treecfg):
+    schemata.append(plugin.get_schema())
   conn.executescript('\n'.join(schemata))
   conn.commit()
-  for stmt in all_statements:
+
+  # Load and run the SQL
+  def sql_generator():
+    for plugin in dxr.get_active_plugins(treecfg):
+      if plugin.__name__ in big_blob:
+        plugblob = big_blob[plugin.__name__]
+        for statement in plugin.sqlify(plugblob):
+          yield statement
+        for statement in dxr.languages.get_sql_statements("native", plugblob):
+          yield statement
+
+  for stmt in sql_generator():
     if isinstance(stmt, tuple):
       conn.execute(stmt[0], stmt[1])
     else:

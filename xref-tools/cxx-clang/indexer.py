@@ -79,7 +79,6 @@ def make_blob():
 
   # Produce all scopes
   scopes = {}
-  nextIndex = 1
   typeKeys = set()
   for t in types:
     key = canonicalize_decl(t[0], t[1])
@@ -87,12 +86,10 @@ def make_blob():
       key = recanon_decl(t[0], t[1])
     if key not in scopes:
       typeKeys.add(key)
-      types[key]['tid'] = scopes[key] = nextIndex
-      nextIndex += 1
+      types[key]['tid'] = scopes[key] = dxr.plugins.next_global_id()
   # Typedefs need a tid, but they are not a scope
   for t in typedefs:
-    typedefs[t]['tid'] = nextIndex
-    nextIndex += 1
+    typedefs[t]['tid'] = dxr.plugins.next_global_id()
   funcKeys = set()
   for f in functions:
     key = canonicalize_decl(f[0], f[1])
@@ -100,8 +97,7 @@ def make_blob():
       key = recanon_decl(f[0], f[1])
     if key not in scopes:
       funcKeys.add(key)
-      functions[key]['funcid'] = scopes[key] = nextIndex
-      nextIndex += 1
+      functions[key]['funcid'] = scopes[key] = dxr.plugins.next_global_id()
 
   # Variables aren't scoped, but we still need to refer to them in the same
   # manner, so we'll unify variables with the scope ids
@@ -109,12 +105,10 @@ def make_blob():
   for v in variables:
     key = (v[0], v[1])
     if key not in varKeys:
-      varKeys[key] = variables[v]['varid'] = nextIndex
-      nextIndex += 1
+      varKeys[key] = variables[v]['varid'] = dxr.plugins.next_global_id()
 
   for m in macros:
-    macros[m]['macroid'] = nextIndex
-    nextIndex += 1
+    macros[m]['macroid'] = dxr.plugins.next_global_id()
 
   # Scopes are now defined, this allows us to modify structures for sql prep
 
@@ -282,16 +276,6 @@ def can_use(treecfg):
   return dxr.plugins.in_path('clang') and dxr.plugins.in_path('llvm-config')
 
 schema = dxr.plugins.Schema({
-  # Scope definitions: a scope is anything that is both interesting (i.e., not
-  # a namespace) and can contain other objects. The IDs for this scope should be
-  # IDs in other tables as well; the table its in can disambiguate which type of
-  # scope you're looking at.
-  "scopes": [
-    ("scopeid", "INTEGER", False),   # An ID for this scope
-    ("sname", "VARCHAR(256)", True), # Name of the scope
-    ("sloc", "_location", True),     # Location of the canonical decl
-    ("_key", "scopeid")
-  ],
   # Type definitions: anything that defines a type per the relevant specs.
   "types": [
     ("tid", "INTEGER", False),            # Unique ID for the type
@@ -301,41 +285,8 @@ schema = dxr.plugins.Schema({
     ("tloc", "_location", False),         # Location of canonical decl
     ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union)
     ("ttypedef", "VARCHAR(256)", True),   # Type (if this is a typedef)
+    ("language", "_language", True),      # Language of the type
     ("_key", "tid")
-  ],
-  # Inheritance relations: note that we store the full transitive closure in
-  # this table, so if A extends B and B extends C, we'd have (A, C) stored in
-  # the table as well; this is necessary to make SQL queries work, since there's
-  # no "transitive closure lookup expression".
-  "impl": [
-    ("tbase", "INTEGER", False),      # tid of base type
-    ("tderived", "INTEGER", False),   # tid of derived type
-    ("inhtype", "VARCHAR(32)", True), # Type of inheritance; NULL is indirect
-    ("_key", "tbase", "tderived")
-  ],
-  # Functions: functions, methods, constructors, operator overloads, etc.
-  "functions": [
-    ("funcid", "INTEGER", False),         # Function ID (also in scopes)
-    ("scopeid", "INTEGER", False),        # Scope defined in
-    ("fname", "VARCHAR(256)", False),     # Short name (no args)
-    ("fqualname", "VARCHAR(512)", False), # Fully qualified name, excluding args
-    ("fargs", "VARCHAR(256)", False),     # Argument vector
-    ("ftype", "VARCHAR(256)", False),     # Full return type, as a string
-    ("floc", "_location", True),          # Location of definition
-    ("modifiers", "VARCHAR(256)", True),  # Modifiers (e.g., private)
-    ("_key", "funcid")
-  ],
-  # Variables: class, global, local, enum constants; they're all in here
-  # Variables are of course not scopes, but for ease of use, they use IDs from
-  # the same namespace, no scope will have the same ID as a variable and v.v.
-  "variables": [
-    ("varid", "INTEGER", False),         # Variable ID
-    ("scopeid", "INTEGER", False),       # Scope defined in
-    ("vname", "VARCHAR(256)", False),    # Short name
-    ("vloc", "_location", True),         # Location of definition
-    ("vtype", "VARCHAR(256)", True),     # Full type (including pointer stuff)
-    ("modifiers", "VARCHAR(256)", True), # Modifiers for the declaration
-    ("_key", "varid")
   ],
   # References to functions, types, variables, etc.
   "refs": [

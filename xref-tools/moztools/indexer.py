@@ -49,11 +49,9 @@ def post_process(srcdir, objdir):
 
   blob = {}
   blob["interfaces"] = {}
-  nextNum = 2 ** 16
   for iface in interfaces:
     blob["interfaces"][iface] = interfaces[iface]
-    interfaces[iface]["iid"] = nextNum
-    nextNum += 1
+    interfaces[iface]["iid"] = dxr.plugins.next_global_id()
   tblmap = {
     "attributes": "attrid",
     "methods": "funcid",
@@ -63,10 +61,10 @@ def post_process(srcdir, objdir):
     blob[table] = {}
     things = globals()[table]
     for thing, tinfo in things.iteritems():
-      blob[table][nextNum] = tinfo
-      tinfo[tblmap[table]] = nextNum
+      id = dxr.plugins.next_global_id()
+      blob[table][id] = tinfo
+      tinfo[tblmap[table]] = id
       tinfo["iid"] = interfaces[tinfo["iface"]]["iid"]
-      nextNum += 1
 
   # File pivoting. Joy.
   def schema():
