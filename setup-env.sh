@@ -18,6 +18,8 @@ if [ -z "$DXRSRC" ]; then
   export DXRSRC=$(dirname $(readlink -f $scriptsrc))
 fi
 
+MAKE=${MAKE:-make}
+
 echo "Finding available DXR plugins..."
 tools=( $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
@@ -34,7 +36,7 @@ echo ""
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 
-    make -s -C ${tools[plugin]} prebuild
+    $MAKE -s -C ${tools[plugin]} prebuild
     if [[ $? != 0 ]]; then
       echo "Bailing!"
       return 1
