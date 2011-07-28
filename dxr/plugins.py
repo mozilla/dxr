@@ -1,3 +1,4 @@
+import dxr.languages
 import os
 
 def in_path(exe):
@@ -98,13 +99,17 @@ class Schema:
     """ Returns the SQL that creates the tables in this schema. """
     return '\n'.join([tbl.get_create_sql() for tbl in self.tables.itervalues()])
 
-  def get_data_sql(self, blob, language=''):
+  def get_data_sql(self, blob):
     """ Returns the SQL that inserts data into tables given a blob. """
     for tbl in self.tables:
       if tbl in blob:
-        sqliter = self.tables[tbl].get_data_sql(blob[tbl], language)
+        sqliter = self.tables[tbl].get_data_sql(blob[tbl])
         for sql in sqliter:
           yield sql
+
+  def get_empty_blob(self):
+    """ Returns an empty blob for this schema, using dicts for the table. """
+    return dict((name, {}) for name in self.tables)
 
 
 class SchemaTable:
@@ -162,8 +167,6 @@ class SchemaTable:
       specsql = col + ' '
       if spec[0][0] == '_':
         specsql += special_types[spec[0]]
-        if spec[0] == '_language':
-          self.needLang = True
       else:
         specsql += spec[0]
       if len(spec) > 1 and spec[1] == False:
@@ -175,11 +178,10 @@ class SchemaTable:
     sql += '\n);\n'
     return sql
 
-  def get_data_sql(self, blobtbl, language):
+  def get_data_sql(self, blobtbl):
     it = isinstance(blobtbl, dict) and blobtbl.itervalues() or blobtbl
     colset = set(col[0] for col in self.columns)
     for row in it:
-      if self.needLang: row['language'] = language;
       # Only add the keys in the columns
       keys = colset.intersection(row.iterkeys())
       args = tuple(row[k] for k in keys)
@@ -204,3 +206,42 @@ def next_global_id():
   global last_id
   last_id += 1
   return last_id
+
+language_by_file = None
+
+def break_into_files(blob, tablelocs):
+  global language_by_file
+
+  # The following method builds up the file table
+  def add_to_files(inblob, cols):
+    filetable = {}
+    for tblname, lockey in cols.iteritems():
+      intable = inblob[tblname]
+      tbliter = isinstance(intable, dict) and intable.itervalues() or intable
+      for row in tbliter:
+        fname = row[lockey].split(":")[0]
+        try:
+          tbl = filetable[fname]
+        except KeyError:
+          tbl = filetable[fname] = dict((col, []) for col in cols)
+        tbl[tblname].append(row)
+    return filetable
+
+  # Build the map for total stuff
+  standard_keys = {
+    'scopes': 'sloc',
+    'functions': 'floc',
+    'variables': 'vloc',
+    'types': 'tloc'
+  }
+  if language_by_file is None:
+    language_by_file = add_to_files(dxr.languages.language_data, standard_keys)
+
+  # Build our map for a specific plugin
+  perfile = add_to_files(blob, tablelocs)
+  for fname, table in perfile.iteritems():
+    if fname in language_by_file:
+      table.update(language_by_file[fname])
+    else:
+      table.update((key, []) for key in standard_keys)
+  return perfile

@@ -35,16 +35,6 @@ Options:
 
 big_blob = None
 
-def post_process(treeconfig):
-  global big_blob
-  big_blob = {}
-  srcdir = treeconfig.sourcedir
-  objdir = treeconfig.objdir
-  for plugin in dxr.get_active_plugins(treeconfig):
-    if 'post_process' in plugin.__all__:
-      big_blob[plugin.__name__] = plugin.post_process(srcdir, objdir)
-  return big_blob
-
 def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
   try:
     fp = open(os.path.join(wwwdir, 'opensearch-' + name + '.xml'), 'w')
@@ -170,8 +160,23 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
 
 def builddb(treecfg, dbdir):
   """ Post-process the build and make the SQL directory """
+  global big_blob
+
+  # We use this all over the place, cache it here.
+  plugins = dxr.get_active_plugins(treecfg)
+
+  # Building the database--this happens as multiple phases. In the first phase,
+  # we basically collect all of the information and organizes it. In the second
+  # phase, we link the data across multiple languages.
   print "Post-processing the source files..."
-  big_blob = post_process(treecfg)
+  big_blob = {}
+  srcdir = treecfg.sourcedir
+  objdir = treecfg.objdir
+  for plugin in plugins:
+    if 'post_process' in plugin.__all__:
+      big_blob[plugin.__name__] = plugin.post_process(srcdir, objdir)
+
+  # Save off the raw data blob
   print "Storing data..."
   dxr.store_big_blob(treecfg, big_blob)
 
@@ -188,19 +193,19 @@ def builddb(treecfg, dbdir):
 
   # Import the schemata
   schemata = [dxr.languages.get_standard_schema()]
-  for plugin in dxr.get_active_plugins(treecfg):
+  for plugin in plugins:
     schemata.append(plugin.get_schema())
   conn.executescript('\n'.join(schemata))
   conn.commit()
 
   # Load and run the SQL
   def sql_generator():
-    for plugin in dxr.get_active_plugins(treecfg):
+    for statement in dxr.languages.get_sql_statements():
+      yield statement
+    for plugin in plugins:
       if plugin.__name__ in big_blob:
         plugblob = big_blob[plugin.__name__]
         for statement in plugin.sqlify(plugblob):
-          yield statement
-        for statement in dxr.languages.get_sql_statements("native", plugblob):
           yield statement
 
   for stmt in sql_generator():

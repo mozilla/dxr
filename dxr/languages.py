@@ -66,12 +66,48 @@ language_schema = dxr.plugins.Schema({
     ("canonid", "INTEGER", False),
     ("otherid", "INTEGER", False),
     ("otherlanguage", "VARCHAR(32)", False),
+    ("_key", "otherid")
   ],
 })
 
+# Build the blob for the language data
+# All of the tables are lists of rows, except for crosslang which is a dict of
+# ref id -> canonical id
+language_data = language_schema.get_empty_blob()
+tableids = {
+  'scopes': 'scopeid',
+  'types': 'tid',
+  'functions': 'funcid',
+  'variables': 'varid',
+  'crosslang': 'canonid'
+}
+for table in language_data:
+  if table not in tableids:
+    language_data[table] = []
 
 def get_standard_schema():
+  ''' Returns the standard schema for multiple language support. '''
   return language_schema.get_create_sql()
 
-def get_sql_statements(lang_name, plugin_blob):
-  return language_schema.get_data_sql(plugin_blob, lang_name)
+def register_language_table(language, tablename, table):
+  ''' Add the rows in the table to the language schema. '''
+  tableit = isinstance(table, dict) and table.itervalues() or table
+  dest = language_data[tablename]
+  key = tableids.get(tablename, None)
+  if key is not None:
+    for row in tableit:
+      row["language"] = language
+      dest[row[key]] = row
+  else:
+    dest.extend(tableit)
+
+def get_row_for_id(table, key, canonical=False):
+  ''' Retrieves the row for the given id and language. If the key is not found,
+      returns None'''
+  if canonical and key in language_data['crosslang']:
+    key = language_data['crosslang']['canonid']
+  return language_data[table].get(key, None)
+
+def get_sql_statements():
+  ''' Get sql statements for the global language data. '''
+  return language_schema.get_data_sql(language_data)

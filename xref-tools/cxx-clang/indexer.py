@@ -1,4 +1,5 @@
 import csv
+from dxr.languages import register_language_table
 import dxr.plugins
 import os
 
@@ -218,18 +219,21 @@ def make_blob():
   blob = {}
   def mdict(info, key):
     return (info[key], info)
-  blob["scopes"] = dict([mdict({"scopeid": scopes[s], "sname": s[0],
-    "sloc": s[1]}, "scopeid") for s in scopes])
-  blob["functions"] = dict([mdict(functions[f], "funcid") for f in funcKeys])
-  blob["variables"] = dict([mdict(variables[v], "varid") for v in varKeys])
-  blob["types"] = [types[t] for t in typeKeys]
   blob["typedefs"] = [typedefs[t] for t in typedefs]
-  blob["types"] += blob["typedefs"]
-  blob["impl"] = inheritsTree
   blob["refs"] = refs
   blob["warnings"] = warnings
   blob["decldef"] = decldef
   blob["macros"] = macros
+  # Add to the languages table
+  register_language_table("native", "scopes", dict((scopes[s],
+    {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}) for s in scopes))
+  register_language_table("native", "types", (types[t] for t in typeKeys))
+  register_language_table("native", "types", blob["typedefs"])
+  register_language_table("native", "functions",
+    dict(mdict(functions[f], "funcid") for f in funcKeys))
+  register_language_table("native", "variables",
+    dict(mdict(variables[v], "varid") for v in varKeys))
+  register_language_table("native", "impl", inheritsTree)
   return blob
 
 def post_process(srcdir, objdir):
@@ -237,36 +241,13 @@ def post_process(srcdir, objdir):
   for f in file_names:
     load_indexer_output(f)
   blob = make_blob()
-  
-  # Reindex everything by file
-  def schema():
-    return { "scopes": [], "functions": [], "variables": [], "types": [],
-      "refs": [], "warnings": [], "decldef": [], "macros": [] }
-  files = {}
-  def add_to_files(table, loc):
-    iskey = isinstance(blob[table], dict)
-    for row in blob[table]:
-      if iskey:
-        row = blob[table][row]
-      f = row[loc].split(":")[0]
-      files.setdefault(f, schema())[table].append(row)
-  add_to_files("scopes", "sloc")
-  add_to_files("functions", "floc")
-  add_to_files("variables", "vloc")
-  add_to_files("types", "tloc")
-  add_to_files("refs", "refloc")
-  add_to_files("warnings", "wloc")
-  add_to_files("decldef", "declloc")
-  add_to_files("macros", "macroloc")
 
-  # Normalize path names
-  blob["byfile"] = {}
-  while len(files) > 0:
-    f, oldtbl = files.popitem()
-    real = os.path.relpath(os.path.realpath(os.path.join(srcdir, f)), srcdir)
-    realtbl = blob["byfile"].setdefault(real, schema())
-    for table in oldtbl:
-      realtbl[table].extend(oldtbl[table])
+  blob["byfile"] = dxr.plugins.break_into_files(blob, {
+    "refs": "refloc",
+    "warnings": "wloc",
+    "decldef": "declloc",
+    "macros": "macroloc"
+  })
   return blob
 
 def sqlify(blob):
@@ -320,7 +301,6 @@ class CxxHtmlifier:
     self.source = dxr.readFile(srcpath)
     self.srcpath = srcpath.replace(treecfg.sourcedir + '/', '')
     self.blob_file = blob["byfile"].get(self.srcpath, None)
-    self.blob = blob
 
   def collectSidebar(self):
     if self.blob_file is None:
@@ -335,21 +315,21 @@ class CxxHtmlifier:
         img = 'images/icons/page_white_wrench.png'
       if scope in df and df[scope] > 0:
         return (df[name], loc.split(':')[1], df[name], img,
-          self.blob["scopes"][df[scope]]["sname"])
+          dxr.languages.get_row_for_id("scopes", df[scope])["sname"])
       return (df[name], loc.split(':')[1], df[name], img)
     for df in self.blob_file["types"]:
       yield make_tuple(df, "tqualname", "tloc", "scopeid")
     for df in self.blob_file["functions"]:
       yield make_tuple(df, "fqualname", "floc", "scopeid")
     for df in self.blob_file["variables"]:
-      if "scopeid" in df and df["scopeid"] in self.blob["functions"]:
+      if "scopeid" in df and dxr.languages.get_row_for_id("functions", df["scopeid"]) is not None:
         continue
       yield make_tuple(df, "vname", "vloc", "scopeid")
     tblmap = { "functions": "fqualname", "types": "tqualname" }
     for df in self.blob_file["decldef"]:
       table = df["table"]
       if table in tblmap:
-        yield make_tuple(self.blob[table][df["defid"]], tblmap[table],
+        yield make_tuple(dxr.languages.get_row_for_id(table, df["defid"]), tblmap[table],
           df["declloc"], "scopeid", True)
     for df in self.blob_file["macros"]:
       yield make_tuple(df, "macroname", "macroloc")

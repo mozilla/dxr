@@ -1,6 +1,7 @@
 import marshal as cPickle
 from ConfigParser import ConfigParser
 from hashlib import sha1
+import dxr.languages
 import imp
 import os, sys
 import string
@@ -66,7 +67,7 @@ def store_big_blob(tree, blob):
   #    pass
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'wb')
   try:
-    cPickle.dump(blob, f, 2)
+    cPickle.dump((blob, dxr.languages.language_data), f, 2)
   finally:
     f.close()
   #for fname in filelist:
@@ -85,7 +86,8 @@ def load_big_blob(tree):
   dbdir = os.path.join(htmlroot, '.dxr_xref')
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'rb')
   try:
-    return cPickle.load(f)
+    big_blob, dxr.languages.language_data = cPickle.load(f)
+    return big_blob
   finally:
     f.close()
 
