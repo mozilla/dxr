@@ -28,12 +28,12 @@ print ' '.join([x[:x.find('/indexer.py')] for x in files])
 HEREDOC
 ) )
 echo -n "Found:"
-for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+for plugin in $(seq 1 $((${#tools[@]}))); do
   echo -n " $(basename ${tools[plugin]})"
 done
 echo ""
 
-for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+for plugin in $(seq 1 $((${#tools[@]}))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 
     $MAKE -s -C ${tools[plugin]} prebuild
