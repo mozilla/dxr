@@ -1,8 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ -z "$1" ]; then
   echo "Usage: . $0 <srcdir> [<datadir>]"
-  return 1
   exit 1
 fi
 SRCDIR="$1"
