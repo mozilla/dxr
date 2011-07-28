@@ -36,6 +36,13 @@ def load_indexer_output(fname):
   finally:
     f.close()
 
+location_keys = {
+  'interfaces': 'iloc',
+  'attributes': 'loc',
+  'methods': 'loc',
+  'consts': 'loc'
+}
+
 def post_process(srcdir, objdir):
   file_names = []
   def collect_files(arg, dirname, fnames):
@@ -65,31 +72,16 @@ def post_process(srcdir, objdir):
       blob[table][id] = tinfo
       tinfo[tblmap[table]] = id
       tinfo["iid"] = interfaces[tinfo["iface"]]["iid"]
-
-  # File pivoting. Joy.
-  def schema():
-    return { "interfaces": [], "attributes": [], "consts": [], "methods": [] }
-  files = {}
-  def add_to_files(table, loc):
-    iskey = isinstance(blob[table], dict)
-    for row in blob[table]:
-      if iskey:
-        row = blob[table][row]
-      f = row[loc].split(":")[0]
-      row[loc] = os.path.relpath(row[loc], srcdir)
-      files.setdefault(f, schema())[table].append(row)
-  add_to_files("interfaces", "iloc")
-  add_to_files("attributes", "loc")
-  add_to_files("consts", "loc")
-  add_to_files("methods", "loc")
-  blob["byfile"] = {}
-  while len(files) > 0:
-    f, oldtbl = files.popitem()
-    real = os.path.relpath(os.path.realpath(os.path.join(srcdir, f)), srcdir)
-    realtbl = blob["byfile"].setdefault(real, schema())
-    for table in oldtbl:
-      realtbl[table].extend(oldtbl[table])
+  for tblname, lockey in location_keys.iteritems():
+    # Fix absolute/relative path issues
+    for row in blob[tblname].itervalues():
+      parts = row[lockey].split(":")
+      parts[0] = os.path.relpath(parts[0], srcdir)
+      row[lockey] = ':'.join(parts)
   return blob
+
+def pre_html_process(treecfg, blob):
+  blob["byfile"] = dxr.plugins.break_into_files(blob, location_keys)
 
 def sqlify(blob):
   #return schema.get_data_sql(blob)

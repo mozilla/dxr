@@ -54,6 +54,7 @@ def can_use(treecfg):
 def get_schema():
   return ''
 sqlify = dxr.plugins.default_sqlify
+pre_html_process = dxr.plugins.default_pre_html_process
 
 def get_line_annotations(blob, srcpath, treecfg):
   if srcpath in blob and 'lines' in blob[srcpath]:

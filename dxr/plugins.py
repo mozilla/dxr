@@ -28,6 +28,10 @@ def default_can_use(treecfg):
   """ Returns True if this plugin can be used for the given tree."""
   return True
 
+def default_pre_html_process(treecfg, blob):
+  """ Called immediately before htmlifiers are first run. """
+  return True
+
 def default_get_htmlifiers():
   """ Returns source code htmlifiers that this plugin uses.
       
@@ -70,8 +74,6 @@ def default_get_htmlifiers():
       In addition, any htmlifier that contains the key 'no-override' will be
       run in addition to the first htmlifier found.
       """
-  def noop(blob, srcpath, treecfg):
-    return []
   return {}
 
 class Schema:
@@ -198,7 +200,8 @@ def make_get_schema_func(schema):
 
 def required_exports():
   """ Returns the required exports for a module, for use as __all__. """
-  return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema']
+  return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema',
+    'pre_html_process']
 
 last_id = 0
 def next_global_id():

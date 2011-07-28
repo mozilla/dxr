@@ -241,14 +241,15 @@ def post_process(srcdir, objdir):
   for f in file_names:
     load_indexer_output(f)
   blob = make_blob()
+  return blob
 
+def pre_html_process(treecfg, blob):
   blob["byfile"] = dxr.plugins.break_into_files(blob, {
     "refs": "refloc",
     "warnings": "wloc",
     "decldef": "declloc",
     "macros": "macroloc"
   })
-  return blob
 
 def sqlify(blob):
   return schema.get_data_sql(blob)

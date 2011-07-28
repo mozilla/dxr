@@ -267,6 +267,10 @@ def indextree(treecfg, doxref, dohtml, debugfile):
   if dohtml:
     if not doxref:
       big_blob = dxr.load_big_blob(treecfg)
+    # Do we need to do file pivoting?
+    for plugin in dxr.get_active_plugins(treecfg):
+      if plugin.__name__ in big_blob:
+        plugin.pre_html_process(treecfg, big_blob[plugin.__name__])
     dxr.htmlbuilders.build_htmlifier_map(dxr.get_active_plugins(treecfg))
     treecfg.database = os.path.join(dbdir, dbname)
 
