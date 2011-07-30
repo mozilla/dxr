@@ -12,6 +12,7 @@ variables = {}
 references = {}
 warnings = []
 macros = {}
+calls = {}
 
 def process_decldef(args):
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
@@ -46,6 +47,13 @@ def process_macro(macro):
   macros[macro['macroname'], macro['macroloc']] = macro
   if 'macrotext' in macro:
     macro['macrotext'] = macro['macrotext'].replace("\\\n", "\n").strip()
+
+def process_call(call):
+  if 'callername' in call:
+    calls[call['callername'], call['callerloc'],
+          call['calleename'], call['calleeloc']] = call
+  else:
+    calls[call['calleename'], call['calleeloc']] = call
 
 def load_indexer_output(fname):
   f = open(fname, "rb")
@@ -215,6 +223,22 @@ def make_blob():
           decldef.append(declo)
           break
 
+  # Callgraph futzing
+  callgraph = []
+  for callkey in calls:
+    call = calls[callkey]
+    if 'callername' in call:
+      source = canonicalize_decl(call.pop("callername"), call.pop("callerloc"))
+      call['callerid'] = functions[source]['funcid']
+    else:
+      call['callerid'] = 0
+    target = canonicalize_decl(call.pop("calleename"), call.pop("calleeloc"))
+    if target in functions:
+      call['targetid'] = functions[target]['funcid']
+    elif target in variables:
+      call['targetid'] = variables[target]['varid']
+    callgraph.append(call)
+
   # Ball it up for passing on
   blob = {}
   def mdict(info, key):
@@ -224,6 +248,7 @@ def make_blob():
   blob["warnings"] = warnings
   blob["decldef"] = decldef
   blob["macros"] = macros
+  blob["callers"] = callgraph
   # Add to the languages table
   register_language_table("native", "scopes", dict((scopes[s],
     {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}) for s in scopes))
@@ -290,6 +315,23 @@ schema = dxr.plugins.Schema({
      ("macroargs", "VARCHAR(256)", True),  # The args of the macro (if any)
      ("macrotext", "TEXT", True),          # The macro contents
      ("_key", "macroid", "macroloc"),
+  ],
+  # The following two tables are combined to form the callgraph implementation.
+  # In essence, the callgraph can be viewed as a kind of hypergraph, where the
+  # edges go from functions to sets of functions and variables. For use in the
+  # database, we are making some big assumptions: the targetid is going to be
+  # either a function or variable (the direct thing we called); if the function
+  # is virtual or the target is a variable, we use the targets table to identify
+  # what the possible implementations could be.
+  "callers": [
+    ("callerid", "INTEGER", False), # The function in which the call occurs
+    ("targetid", "INTEGER", False), # The target of the call
+    ("_key", "callerid", "targetid")
+  ],
+  "targets": [
+    ("targetid", "INTEGER", False), # The target of the call
+    ("funcid", "INTEGER", False),   # One of the functions in the target set
+    ("_key", "targetid", "funcid")
   ]
 })
 

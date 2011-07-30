@@ -134,7 +134,7 @@ def getVariable(varinfo, refs=[]):
     varbase['children'].append(refnode)
   return varbase
 
-def getFunction(funcinfo, refs=[]):
+def getFunction(funcinfo, refs=[], useCallgraph=False):
   if isinstance(funcinfo, int):
     funcinfo = conn.execute("SELECT * FROM functions WHERE funcid=?",
       (funcinfo,)).fetchone()
@@ -160,6 +160,20 @@ def getFunction(funcinfo, refs=[]):
     })
   if len(refnode['children']) > 0:
     funcbase['children'].append(refnode)
+  if useCallgraph:
+    caller = { "label": "Calls", "children": [] }
+    callee = { "label": "Called by", "children": [] }
+    # This means that we want to display callee/caller information
+    for info in conn.execute("SELECT callerid FROM callers WHERE targetid=?",
+        (funcinfo['funcid'],)):
+      callee['children'].append(getFunction(info[0]))
+    for info in conn.execute("SELECT targetid FROM callers WHERE callerid=?",
+        (funcinfo['funcid'],)):
+      caller['children'].append(getFunction(info[0]))
+    if len(caller['children']) > 0:
+      funcbase['children'].append(caller)
+    if len(callee['children']) > 0:
+      funcbase['children'].append(callee)
   return funcbase
 
 def printError():
@@ -196,7 +210,7 @@ def printFunction():
   row = conn.execute("SELECT * FROM functions" +
     " WHERE funcid=?", (refid,)).fetchone()
   refs = conn.execute("SELECT * FROM refs WHERE refid=?",(refid,))
-  printTree(json.dumps(getFunction(row, refs)))
+  printTree(json.dumps(getFunction(row, refs, True)))
 
 def printReference():
   val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +

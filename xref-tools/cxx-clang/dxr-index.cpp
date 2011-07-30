@@ -111,7 +111,8 @@ private:
   }
 public:
   IndexConsumer(CompilerInstance &ci) :
-      sm(ci.getSourceManager()), features(ci.getLangOpts()) {
+      sm(ci.getSourceManager()), features(ci.getLangOpts()),
+      m_currentFunction(NULL) {
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
     ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
@@ -397,6 +398,45 @@ public:
   bool VisitDeclRefExpr(DeclRefExpr *e) {
     printReference(e->getDecl(), e->hasQualifier() ?
       e->getQualifierLoc().getBeginLoc() : e->getLocation(), e->getNameInfo().getEndLoc());
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *e) {
+    if (!interestingLocation(e->getLocStart()))
+      return true;
+
+    Decl *callee = e->getCalleeDecl();
+    if (!callee || !interestingLocation(callee->getLocation()) ||
+        !NamedDecl::classof(callee))
+      return true;
+
+    // Fun facts about call exprs:
+    // 1. callee isn't necessarily a function. Think function pointers.
+    // 2. We might not be in a function. Think global function decls
+    // 3. Virtual functions need not be called virtually!
+    beginRecord("call", e->getLocStart());
+    if (m_currentFunction) {
+      recordValue("callername", m_currentFunction->getQualifiedNameAsString());
+      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
+    }
+    recordValue("calleename", dyn_cast<NamedDecl>(callee)->getQualifiedNameAsString());
+    recordValue("calleeloc", locationToString(callee->getLocation()));
+    *out << std::endl;
+    return true;
+  }
+
+  // For binding stuff inside the directory, we need to find the containing
+  // function. Unfortunately, there is no way to do this in clang, so we have
+  // to maintain the function stack ourselves. Why is it a stack? Consider:
+  // void foo() { class A { A() { } }; } <-- nested function
+  FunctionDecl *m_currentFunction;
+  bool TraverseDecl(Decl *d) {
+    FunctionDecl *parent = m_currentFunction;
+    if (d && FunctionDecl::classof(d)) {
+      m_currentFunction = dyn_cast<FunctionDecl>(d);
+    }
+    RecursiveASTVisitor::TraverseDecl(d);
+    m_currentFunction = parent;
     return true;
   }
 
