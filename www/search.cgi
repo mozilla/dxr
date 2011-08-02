@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.6
 
-#import cgitb; cgitb.enable()
+import cgitb; cgitb.enable()
 import cgi
 import sqlite3
 import sys
@@ -224,6 +224,39 @@ def processWarnings(warnings, path=None):
   if num_warnings == 0:
     print '<h3>No warnings found.</h3>'
 
+def processCallers(caller, path=None, funcid=None):
+  # I could handle this with a single call, but that gets a bit complicated.
+  # Instead, let's first find the function that we're trying to find.
+  cur = conn.cursor()
+  if funcid is None:
+    cur.execute('SELECT * FROM functions WHERE fqualname %s' %
+      like_escape(caller))
+    funcinfos = cur.fetchall()
+    if len(funcinfos) == 0:
+      print '<h2>No results found</h2>'
+      return
+    elif len(funcinfos) > 1:
+      print '<h3>Ambiguous function:</h3><ul>'
+      for funcinfo in funcinfos:
+        print ('<li><a href="search.cgi?callers=%s&funcid=%d&tree=%s">%s</a>' +
+          ' at %s</li>') % (caller, funcinfo['funcid'], tree,
+          funcinfo['fqualname'], funcinfo['floc'])
+      print '</ul>'
+      return
+    funcid = funcinfos[0]['funcid']
+  # We have two cases: direct calls or we're in targets
+  cur = conn.cursor()
+  for info in cur.execute("SELECT functions.* FROM functions " +
+      "LEFT JOIN callers ON (callers.callerid = funcid) WHERE targetid=? " +
+      "UNION SELECT functions.* FROM functions LEFT JOIN callers " +
+      "ON (callers.callerid = functions.funcid) LEFT JOIN targets USING " +
+      "(targetid) WHERE targets.funcid=?", (funcid, funcid)):
+    if not path or re.search(path, info['floc']):
+      print '<h3>%s</h3>' % info['fqualname']
+      print GetLine(info['floc'])
+  if cur.rowcount == 0:
+    print '<h3>No results found</h3>'
+
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
 # and 0 as the buffer size (unbuffered)
@@ -295,6 +328,7 @@ searches = [
   ('derived', processDerived, False, 'Derived from %s', ['path']),
   ('macro', processMacro, False, 'Macros %s', []),
   ('warnings', processWarnings, False, 'Warnings %s', ['path']),
+  ('callers', processCallers, False, 'Callers of %s', ['path', 'funcid']),
   ('string', processString, True, '%s', ['path', 'ext'])
 ]
 for param, dispatch, hasSidebar, titlestr, optargs in searches:
