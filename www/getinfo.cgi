@@ -134,6 +134,20 @@ def getVariable(varinfo, refs=[]):
     varbase['children'].append(refnode)
   return varbase
 
+def getCallee(targetid):
+  cur = conn.cursor()
+  cur.execute("SELECT * FROM functions WHERE funcid=?", (targetid,))
+  if cur.rowcount > 0:
+    return getFunction(cur.fetchone())
+  cur.execute("SELECT * FROM variables WHERE varid=?", (targetid,))
+  if cur.rowcount > 0:
+    return getVariable(cur.fetchone())
+  cur.execute("SELECT funcid FROM targets WHERE targetid=?", (targetid,))
+  refnode = { "label": "Dynamic call", "children": [] }
+  for row in cur:
+    refnode['children'].append(getFunction(row[0]))
+  return refnode
+
 def getFunction(funcinfo, refs=[], useCallgraph=False):
   if isinstance(funcinfo, int):
     funcinfo = conn.execute("SELECT * FROM functions WHERE funcid=?",
@@ -147,7 +161,21 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
       "url": locUrl(funcinfo['floc'])
     }]
   }
+  # Reimplementations
+  for row in conn.execute("SELECT * FROM functions LEFT JOIN targets ON " +
+      "targets.funcid = functions.funcid WHERE targetid=? AND " +
+      "targets.funcid != ?",
+      (-funcinfo['funcid'], funcinfo['funcid'])):
+    funcbase['children'].append({
+      "label": 'Reimplemented by %s%s at %s' % (row['fqualname'], row['fargs'],
+        row['floc']),
+      "icon": "icon-def",
+      "url": locUrl(row['floc'])
+    })
   funcbase['children'].extend(getDeclarations(funcinfo['funcid']))
+
+
+  # References
   refnode = {
     "label": "References",
     "children": []
@@ -160,16 +188,20 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
     })
   if len(refnode['children']) > 0:
     funcbase['children'].append(refnode)
+
+  # Callgraph
   if useCallgraph:
     caller = { "label": "Calls", "children": [] }
     callee = { "label": "Called by", "children": [] }
     # This means that we want to display callee/caller information
-    for info in conn.execute("SELECT callerid FROM callers WHERE targetid=?",
-        (funcinfo['funcid'],)):
+    for info in conn.execute("SELECT callerid FROM callers WHERE targetid=? " +
+        "UNION SELECT callerid FROM callers LEFT JOIN targets " +
+        "ON (callers.targetid = targets.targetid) WHERE funcid=?",
+        (funcinfo['funcid'], funcinfo['funcid'])):
       callee['children'].append(getFunction(info[0]))
     for info in conn.execute("SELECT targetid FROM callers WHERE callerid=?",
         (funcinfo['funcid'],)):
-      caller['children'].append(getFunction(info[0]))
+      caller['children'].append(getCallee(info[0]))
     if len(caller['children']) > 0:
       funcbase['children'].append(caller)
     if len(callee['children']) > 0:

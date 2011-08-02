@@ -239,6 +239,41 @@ def make_blob():
       call['targetid'] = variables[target]['varid']
     callgraph.append(call)
 
+  overridemap = {}
+  for func in funcKeys:
+    funcinfo = functions[func]
+    if "overridename" not in funcinfo:
+      continue
+    base = canonicalize_decl(funcinfo.pop("overridename"),
+      funcinfo.pop("overrideloc"))
+    if base not in functions:
+      continue
+    basekey = functions[base]['funcid']
+    subkey = funcinfo['funcid']
+    overridemap.setdefault(basekey, set()).add(subkey)
+
+  rescan = [x for x in overridemap]
+  while len(rescan) > 0:
+    base = rescan.pop(0)
+    childs = overridemap[base]
+    prev = len(childs)
+    temp = childs.union(*(overridemap.get(sub, []) for sub in childs))
+    childs.update(temp)
+    if len(childs) != prev:
+      rescan.append(base)
+  targets = []
+  for base, childs in overridemap.iteritems():
+    targets.append({"targetid": -base, "funcid": base})
+    for child in childs:
+      targets.append({"targetid": -base, "funcid": child})
+  for call in callgraph:
+    if call['calltype'] == 'virtual':
+      targetid = call['targetid']
+      call['targetid'] = -targetid
+      if targetid not in overridemap:
+        overridemap[targetid] = set()
+        targets.append({'targetid': -targetid, 'funcid': targetid})
+
   # Ball it up for passing on
   blob = {}
   def mdict(info, key):
@@ -249,6 +284,7 @@ def make_blob():
   blob["decldef"] = decldef
   blob["macros"] = macros
   blob["callers"] = callgraph
+  blob["targets"] = targets
   # Add to the languages table
   register_language_table("native", "scopes", dict((scopes[s],
     {"scopeid": scopes[s], "sname": s[0], "sloc": s[1]}) for s in scopes))

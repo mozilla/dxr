@@ -314,6 +314,15 @@ public:
     recordValue("floc", locationToString(d->getLocation()));
     printScope(d);
     printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+    // Print out overrides
+    if (CXXMethodDecl::classof(d)) {
+      CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
+      CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
+      if (iter) {
+        recordValue("overridename", (*iter)->getQualifiedNameAsString());
+        recordValue("overrideloc", locationToString((*iter)->getLocation()));
+      }
+    }
     *out << std::endl;
     const FunctionDecl *def;
     if (d->isDefined(def))
@@ -421,6 +430,21 @@ public:
     }
     recordValue("calleename", dyn_cast<NamedDecl>(callee)->getQualifiedNameAsString());
     recordValue("calleeloc", locationToString(callee->getLocation()));
+    // Determine the type of call
+    const char *type = "static";
+    if (CXXMethodDecl::classof(callee)) {
+      CXXMethodDecl *cxxcallee = dyn_cast<CXXMethodDecl>(callee);
+      if (cxxcallee->isVirtual()) {
+        // If it's a virtual function, we need the MemberExpr to be unqualified
+        if (!MemberExpr::classof(e->getCallee()) ||
+            !dyn_cast<MemberExpr>(e->getCallee())->hasQualifier())
+          type = "virtual";
+      }
+    } else if (!FunctionDecl::classof(callee)) {
+      // Assume not a function -> function pointer of some type.
+      type = "funcptr";
+    }
+    recordValue("calltype", type);
     *out << std::endl;
     return true;
   }
