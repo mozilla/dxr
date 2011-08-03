@@ -1,8 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ -z "$1" ]; then
   echo "Usage: . $0 <srcdir> [<datadir>]"
-  return 1
   exit 1
 fi
 SRCDIR="$1"
@@ -19,6 +18,8 @@ if [ -z "$DXRSRC" ]; then
   export DXRSRC=$(dirname $(readlink -f $scriptsrc))
 fi
 
+MAKE=${MAKE:-make}
+
 echo "Finding available DXR plugins..."
 tools=( $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
@@ -27,15 +28,15 @@ print ' '.join([x[:x.find('/indexer.py')] for x in files])
 HEREDOC
 ) )
 echo -n "Found:"
-for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+for plugin in $(seq 1 $((${#tools[@]}))); do
   echo -n " $(basename ${tools[plugin]})"
 done
 echo ""
 
-for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+for plugin in $(seq 1 $((${#tools[@]}))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 
-    make -s -C ${tools[plugin]} prebuild
+    $MAKE -s -C ${tools[plugin]} prebuild
     if [[ $? != 0 ]]; then
       echo "Bailing!"
       return 1
