@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
 if [ -z "$1" ]; then
-  echo "Usage: . $0 <srcdir> [<datadir>]"
+  name="${BASH_SOURCE[0]}"
+  if [ -z "$name" ]; then
+	  name=$0
+  fi
+  echo "Usage: . $name <srcdir> [<datadir>]"
+  return 0 &>/dev/null
   exit 1
 fi
 SRCDIR="$1"
