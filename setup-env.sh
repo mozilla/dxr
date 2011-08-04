@@ -38,6 +38,14 @@ for plugin in $(seq 0 $((${#tools[@]} - 1))); do
 done
 echo ""
 
+echo -n "Cleaning up environment variables from previous runs... "
+for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+  if [ -e "${tools[plugin]}/unset-env.sh" ]; then
+    . "${tools[plugin]}/unset-env.sh"
+  fi
+done
+echo ""
+
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 

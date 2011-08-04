@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if "x${DXR_ENV_SET}" = "xtrue"; then
+if [ -n "${DXR_ENV_SET}" ]; then
   unset CC
   unset CXX
 fi
