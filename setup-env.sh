@@ -9,7 +9,7 @@ if [ -z "$1" ]; then
   return 0 &>/dev/null
   exit 1
 fi
-SRCDIR="$1"
+SRCDIR=`(cd "$1"; pwd)`
 
 if [ -z "$2" ]; then
   export OBJDIR="$1"
