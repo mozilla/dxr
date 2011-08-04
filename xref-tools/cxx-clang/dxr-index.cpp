@@ -459,7 +459,7 @@ public:
     if (d && FunctionDecl::classof(d)) {
       m_currentFunction = dyn_cast<FunctionDecl>(d);
     }
-    RecursiveASTVisitor::TraverseDecl(d);
+    RecursiveASTVisitor<IndexConsumer>::TraverseDecl(d);
     m_currentFunction = parent;
     return true;
   }
