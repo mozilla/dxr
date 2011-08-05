@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION}" ]; then
+  echo -e "\n\n\n\nYour environment is not correctly set up.\n"
+  echo "You need to source $DXRSRC/setup-env.sh into a running bash:"
+  echo ". $DXRSRC/setup-env.sh"
+  return 0 &>/dev/null
+  exit 1
+fi
+
 if [ -z "$1" ]; then
   echo "Usage: . $0 <srcdir> [<datadir>]"
+  return 0 &>/dev/null
   exit 1
 fi
 SRCDIR="$1"
@@ -21,19 +30,19 @@ fi
 MAKE=${MAKE:-make}
 
 echo "Finding available DXR plugins..."
-tools=( $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
+tools=($(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
 files = [x.__file__ for x in dxr.get_active_plugins(None, '$DXRSRC')]
 print ' '.join([x[:x.find('/indexer.py')] for x in files])
 HEREDOC
 ) )
 echo -n "Found:"
-for plugin in $(seq 1 $((${#tools[@]}))); do
+for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n " $(basename ${tools[plugin]})"
 done
 echo ""
 
-for plugin in $(seq 1 $((${#tools[@]}))); do
+for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 
     $MAKE -s -C ${tools[plugin]} prebuild
