@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION}" ]; then
+  echo -e "\n\n\n\nYour environment is not correctly set up.\n"
+  echo "You need to source $DXRSRC/setup-env.sh into a running bash:"
+  echo ". $DXRSRC/setup-env.sh"
+  return 0 &>/dev/null
+  exit 1
+fi
+
 if [ -z "$1" ]; then
   name="${BASH_SOURCE[0]}"
   if [ -z "$name" ]; then
@@ -26,7 +34,7 @@ fi
 MAKE=${MAKE:-make}
 
 echo "Finding available DXR plugins..."
-tools=( $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
+tools=($(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
 files = [x.__file__ for x in dxr.get_active_plugins(None, '$DXRSRC')]
 print ' '.join([x[:x.find('/indexer.py')] for x in files])
