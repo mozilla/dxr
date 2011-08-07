@@ -9,7 +9,7 @@ if [ -z "$1" ]; then
   return 0 &>/dev/null
   exit 1
 fi
-SRCDIR="$1"
+SRCDIR=`(cd "$1"; pwd)`
 
 if [ -z "$2" ]; then
   export OBJDIR="$1"
@@ -35,6 +35,14 @@ HEREDOC
 echo -n "Found:"
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n " $(basename ${tools[plugin]})"
+done
+echo ""
+
+echo -n "Cleaning up environment variables from previous runs... "
+for plugin in $(seq 0 $((${#tools[@]} - 1))); do
+  if [ -e "${tools[plugin]}/unset-env.sh" ]; then
+    . "${tools[plugin]}/unset-env.sh"
+  fi
 done
 echo ""
 
