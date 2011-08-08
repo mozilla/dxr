@@ -92,7 +92,7 @@ class HtmlBuilder:
     # So, we have a minor issue with writing out the main body. Some of our
     # information is (line, col) information and others is file offset. Also,
     # we don't necessarily have the information in sorted order. This means we
-    # have to hope that all ranges are in a strict tree hierarchy, otherwis
+    # have to hope that all ranges are in a strict tree hierarchy, otherwise
     # things will blow up.
     syntax_regions = self._zipper("get_syntax_regions")
     links = self._zipper("get_link_regions")
