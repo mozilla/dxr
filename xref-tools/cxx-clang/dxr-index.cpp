@@ -581,12 +581,28 @@ protected:
       return false;
     }
     // Load our directories
-    srcdir = realpath(args[0].c_str(), NULL);
+    char *abs_src = realpath(args[0].c_str(), NULL);
+    if (!abs_src) {
+      DiagnosticsEngine &D = CI.getDiagnostics();
+      unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
+        "Source directory '" + args[0] + "' does not exist");
+      D.Report(DiagID);
+      return false;
+    }
+    srcdir = abs_src;
     const char *env = getenv("DXR_INDEX_OUTPUT");
     if (env)
       output = env;
     else
       output = srcdir;
+    char *abs_output = realpath (output.c_str(), NULL);
+    if (!abs_output) {
+      DiagnosticsEngine &D = CI.getDiagnostics();
+      unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
+        "Output directory '" + output + "' does not exist");
+      D.Report(DiagID);
+      return false;
+    }
     output = realpath(output.c_str(), NULL);
     output += "/";
     return true;
