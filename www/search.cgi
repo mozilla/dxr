@@ -111,7 +111,7 @@ def processString(string, path=None, ext=None):
     colon = line.find(':')
     colon2 = line.find(':', colon)
     if path and line.find(path, 0, colon) == -1: continue # Not our file
-    if line.find(string, colon2 + 1) != -1:
+    if line.find(string, colon2 + 1) != -1 or (string in line and not (prevfile and prevfile in line)):
       # We have a match!
       (filepath, linenum, text) = line.split(':', 2)
       text = cgi.escape(text)
