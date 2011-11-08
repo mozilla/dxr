@@ -293,9 +293,16 @@ dxrdb = os.path.join(treecfg.dbdir, dbname)
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 
+print 'Content-Type: text/html\n'
+
 # Master text index, load it
-master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
-f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
+try:
+  master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
+  f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
+except:
+  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  print '<h3>Error: file_index.txt or index_index.txt not found</h3>'
+  sys.exit (0)
 offset_cache = {}
 try:
   for line in f:
@@ -318,7 +325,6 @@ conn.row_factory = sqlite3.Row
 
 # Output the text results.
 
-print 'Content-Type: text/html\n'
 
 # XXX... plugins!
 searches = [
