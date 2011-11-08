@@ -136,7 +136,7 @@ class DxrConfig(object):
 
   def getFileList(self):
     """ Returns an iterator of (relative, absolute) paths for the tree. """
-    exclusions = self.__dict__.get("exclusions", ".hg\n.git\nCVS\n.svn")
+    exclusions = self.__dict__.get("exclusions", ".hg\n.git\nCVS\n.svn\n.bzr\n.deps\n.libs")
     exclusions = exclusions.split()
     for root, dirs, files in os.walk(self.sourcedir, True):
       # Get the relative path to the source dir
