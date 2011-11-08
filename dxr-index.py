@@ -7,6 +7,7 @@ import dxr
 import dxr.htmlbuilders
 import dxr.languages
 import getopt
+import glob
 import os
 import shutil
 import sqlite3
@@ -31,7 +32,7 @@ Options:
   -f, --file    FILE                      Use FILE as config file (default is ./dxr.config).
   -t, --tree    TREE                      Index and Build only section TREE (default is all).
   -c, --create  [xref|html]               Create xref or html and index (default is all).
-  -d, --debug   file                      Only generate HTML for the file."""
+  -d, --debug   glob                      Only generate HTML for the file(s)."""
 
 big_blob = None
 
@@ -298,9 +299,16 @@ def indextree(treecfg, doxref, dohtml, debugfile):
           relpath = filename[len("--GENERATED--/"):]
           yield filename, os.path.join(treecfg.objdir, relpath)
 
+    if debugfile:
+      output_files = glob.glob (treecfg.sourcedir + '/' + debugfile)
+      if output_files == []:
+        print 'Error: Glob %s doesn\'t match any files' % debugfile
+        sys.exit (1)
+    last_dir = None
+
     for f in getOutputFiles():
       # In debug mode, we only care about some files
-      if debugfile is not None and f[0] != debugfile: continue
+      if debugfile and not treecfg.sourcedir + '/' + f[0] in output_files: continue
 
       index_list.write(f[0] + '\n')
       cpypath = os.path.join(htmlroot, f[0])
@@ -313,6 +321,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         os.makedirs(cpydir)
 
       p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
+
 
     p.apply_async(make_index, [file_list, dbdir])
 
