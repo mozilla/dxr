@@ -1,0 +1,18 @@
+Plugin developer and/or hacker README:
+
+The xref-tools directory contains a set of the standard usable plugins for DXR.
+To be usable, a plugin at the least needs to contain an indexer.py file, which
+is the entry point into the plugin from the indexer and web CGI locations.
+
+If a Makefile is present, the root setup-env.sh will attempt to make the
+prebuild target.
+
+If the file set-env.sh is present, it will be sourced from setup-env.sh for use
+in building. Important environment variables are:
+SRCDIR     The source directory of the tree being built
+OBJDIR     The build directory of the tree being built
+DXRSRC     The directory that contains setup-env.sh
+
+Note that set-env.sh is sourced in the shell, so tricks like export will work
+properly.
+

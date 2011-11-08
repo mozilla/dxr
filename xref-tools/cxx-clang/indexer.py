@@ -237,6 +237,8 @@ def make_blob():
       call['targetid'] = functions[target]['funcid']
     elif target in variables:
       call['targetid'] = variables[target]['varid']
+    else:
+      continue
     callgraph.append(call)
 
   overridemap = {}
