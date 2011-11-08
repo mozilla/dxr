@@ -322,6 +322,9 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
       p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
 
+    if file_list == []:
+        print 'Error: No files found to index'
+        sys.exit (0)
 
     p.apply_async(make_index, [file_list, dbdir])
 
