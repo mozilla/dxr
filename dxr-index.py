@@ -106,7 +106,8 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   srcpath = os.path.join(srcpath, genroot)
   of = open(os.path.join(dirname, 'index.html'), 'w')
   try:
-    of.write(treecfg.getTemplateFile("dxr-header.html"))
+    html_header = treecfg.getTemplateFile("dxr-header.html")
+    of.write(html_header.replace('${sidebarActions}', '\n'))
     of.write('''<div id="maincontent" dojoType="dijit.layout.ContentPane"
       region="center"><table id="index-list">
         <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>

@@ -4,6 +4,9 @@ import os
 import dxr
 import cgi
 import itertools
+import sys
+import subprocess
+from ConfigParser import ConfigParser
 
 class HtmlBuilder:
   def _zipper(self, func):
@@ -38,9 +41,54 @@ class HtmlBuilder:
     # Config info used by dxr.js
     self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
 
+  def getSidebarActions(self):
+    html = ''
+    config = ConfigParser ()
+    config.read('dxr.config')
+    blameLinks = { \
+      'Log': 'http://hg.mozilla.org/mozilla-central/filelog/$rev/$filename', \
+      'Blame': 'http://hg.mozilla.org/mozilla-central/annotate/$rev/$filename', \
+      'Diff': 'http://hg.mozilla.org/mozilla-central/diff/$rev/$filename', \
+      'Raw': 'http://hg.mozilla.org/mozilla-central/raw-diff/$rev/$filename' }
+    html+=('<div id="sidebarActions"><b>Actions</b>\n')
+    # Pick up revision command and URLs from config file
+    source_dir = self.srcroot
+    if 'revision' in globals():
+      revision = globals()['revision']
+    else:
+      try:
+        revision_command = config.get(self.treename, 'revision')
+        revision_command = revision_command.replace('$source', source_dir)
+        revision_process = subprocess.Popen ([revision_command], stdout=subprocess.PIPE, shell=True)
+        revision = revision_process.stdout.readline().strip()
+      except:
+        if not 'config-notice' in globals():
+          globals()['config-notice'] = True
+          msg = sys.exc_info()[1] # Python 2/3 compatibility
+          print '\033[93mError: %s\033[0m' % msg
+        revision = ''
+      globals()['revision'] = revision
+    if revision == '':
+      blameLinks = {}
+    for link in blameLinks:
+      try:
+        customLink = config.get(self.treename, link)
+      except:
+        if not 'log-notice' + link in globals():
+          globals()['log-notice' + link] = True
+          print '\033[93mNotice: Missing %s config key\033[0m' % link
+        customLink = blameLinks[link]
+      realLink = customLink \
+        .replace('$rev', revision) \
+        .replace('$filename', self.srcpath)
+      html+=('<a href="%s">%s</a> &nbsp;\n' % (realLink, link))
+    html+=('</div>')
+    return html
+
   def toHTML(self):
     out = open(self.dstpath, 'w')
-    out.write(self.html_header + '\n')
+    sidebarActions = self.getSidebarActions()
+    out.write(self.html_header.replace('${sidebarActions}', sidebarActions) + '\n')
     self.writeSidebar(out)
     self.writeMainContent(out)
     self.writeGlobalScript(out)
