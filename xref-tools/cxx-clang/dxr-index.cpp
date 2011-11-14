@@ -73,19 +73,20 @@ class PreprocThunk : public PPCallbacks {
 public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
   virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
-  virtual void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI);
+  virtual void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI, SourceRange Range);
 };
 
 class IndexConsumer : public ASTConsumer,
     public RecursiveASTVisitor<IndexConsumer>,
     public PPCallbacks,
-    public DiagnosticClient {
+    public DiagnosticConsumer {
 private:
+  CompilerInstance &ci;
   SourceManager &sm;
   std::ostream *out;
   std::map<std::string, FileInfo *> relmap;
   LangOptions &features;
-  DiagnosticClient *inner;
+  DiagnosticConsumer *inner;
 
   FileInfo *getFileInfo(std::string &filename) {
     std::map<std::string, FileInfo *>::iterator it;
@@ -111,11 +112,16 @@ private:
   }
 public:
   IndexConsumer(CompilerInstance &ci) :
-      sm(ci.getSourceManager()), features(ci.getLangOpts()),
+    ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()),
       m_currentFunction(NULL) {
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
     ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
+  }
+
+  virtual DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
+    return new IndexConsumer(ci);
+
   }
   
   // Helpers for processing declarations
@@ -264,7 +270,7 @@ public:
   }
 
   bool VisitCXXRecordDecl(CXXRecordDecl *d) {
-    if (!interestingLocation(d->getLocation()) || !d->isDefinition())
+    if (!interestingLocation(d->getLocation()) || !d->isCompleteDefinition())
       return true;
 
     // TagDecl already did decldef and type outputting; we just need impl
@@ -474,11 +480,11 @@ public:
   }
 
   // Warnings!
-  virtual void HandleDiagnostic(Diagnostic::Level level,
-      const DiagnosticInfo &info) {
-    DiagnosticClient::HandleDiagnostic(level, info);
+  virtual void HandleDiagnostic(DiagnosticsEngine::Level level,
+      const Diagnostic &info) {
+    DiagnosticConsumer::HandleDiagnostic(level, info);
     inner->HandleDiagnostic(level, info);
-    if (level != Diagnostic::Warning ||
+    if (level != DiagnosticsEngine::Warning ||
         !interestingLocation(info.getLocation()))
       return;
 
@@ -537,7 +543,7 @@ public:
         length - defnStart), true);
     *out << std::endl;
   }
-  virtual void MacroExpands(const Token &tok, const MacroInfo *MI) {
+  virtual void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
     if (MI->isBuiltinMacro()) return;
     if (!interestingLocation(tok.getLocation())) return;
 
@@ -556,8 +562,8 @@ public:
 void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
   real->MacroDefined(tok, MI);
 }
-void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI) {
-  real->MacroExpands(tok, MI);
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+  real->MacroExpands(tok, MI, Range);
 }
 class DXRIndexAction : public PluginASTAction {
 protected:
@@ -568,8 +574,8 @@ protected:
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string>& args) {
     if (args.size() != 1) {
-      Diagnostic &D = CI.getDiagnostics();
-      unsigned DiagID = D.getCustomDiagID(Diagnostic::Error,
+      DiagnosticsEngine &D = CI.getDiagnostics();
+      unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
         "Need an argument for the source directory");
       D.Report(DiagID);
       return false;
