@@ -9,7 +9,6 @@
   <script type="text/javascript" src="${virtroot}/js/search.js"></script>
   <script type="text/javascript">
     var virtroot = '${virtroot}';
-    var tree = '${tree}';
   </script>
 </head>
 <body onload="parseQS('search-box');">
@@ -18,6 +17,7 @@
   <form id="searchForm" method="get">
     <input id="search-box" name="string" type="text" size="31" maxlength="2048" title="Search">
     <input type="submit" value="Search" onclick="return doSearch('searchForm');">
+    <input type="hidden" name="tree" value="${tree}">
   </form>
 </div>
 <div id="results">
