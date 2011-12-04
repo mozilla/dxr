@@ -13,13 +13,14 @@ if [ -z "$1" ]; then
   if [ -z "$name" ]; then
 	  name=$0
   fi
-  echo "Usage: . $name <srcdir> [<datadir>]"
+  echo "Usage: . $name <srcdir> [<objdir>]"
   return 0 &>/dev/null
   exit 1
 fi
 SRCDIR=`(cd "$1"; pwd)`
 
 if [ -z "$2" ]; then
+  echo -e "\e[1;33mThe object dir equals source dir (not recommended).\e[0m\n"
   export OBJDIR="$1"
 else
   export OBJDIR="$2"
