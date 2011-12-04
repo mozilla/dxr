@@ -13,7 +13,7 @@ if [ -z "$1" ]; then
   if [ -z "$name" ]; then
 	  name=$0
   fi
-  echo "Usage: . $name <srcdir> [<datadir>]"
+  echo "Usage: . $name <srcdir> [<objdir>]"
   return 0 &>/dev/null
   exit 1
 fi
