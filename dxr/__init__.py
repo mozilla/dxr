@@ -165,7 +165,7 @@ def readFile(filename):
     print('Error reading %s: %s' % (filename, sys.exc_info()[1]))
     return None
 
-def load_config(path):
+def load_config(path=['/etc/dxr/dxr.config', './dxr.config']):
   config = ConfigParser()
   config.read(path)
 
