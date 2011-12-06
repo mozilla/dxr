@@ -48,12 +48,17 @@ function showInfo(node) {
   var treediv = 'tree-' + infoDivID;
   infoDiv = new dojox.layout.ContentPane({
     id: id,
-    content: '<div class="info"><div id="' + treediv + '"></div></div>',
+    content: '<div class="info"><div id="' + treediv + '">Loading info...</div></div>',
     style: "margin:0; padding:0; white-space: normal !important;" +
            "position: absolute; width: 100%"
   });
   infoDiv.placeAt(node, "after");
   dojo.xhrGet({ url: url,
+    error: function (error) {
+      infoDiv.set('content',
+        '<div class="info" style="width:50%;height:100px"><div id="' + treediv + '">' +
+        '<b>Error</b><p>' + error + '</p></div></div>');
+    },
     load: function (response, ioArgs) {
       try {
         buildTree(JSON.parse(response), treediv);
