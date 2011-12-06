@@ -10,8 +10,15 @@ import re
 
 # Get the DXR installation point from dxr.config
 config = ConfigParser.ConfigParser()
-config.read('dxr.config')
-sys.path.append(config.get('DXR', 'dxrroot'))
+try:
+  config.read(['/etc/dxr/dxr.config', './dxr.config'])
+  sys.path.append(config.get('DXR', 'dxrroot'))
+except:
+  msg = sys.exc_info()[1] # Python 2/3 compatibility
+  print 'Content-Type: text/html\n'
+  print '<body><h3>Error: Failed to open either %s/dxr.config ' \
+        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
+  sys.exit (0)
 import dxr
 
 def like_escape(val):
@@ -266,42 +273,45 @@ sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 fieldStorage = cgi.FieldStorage()
 form = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
 
-# Which tree are we searching
-if 'tree' in form:
-  tree = form['tree']
-else:
-  # XXX: all trees? default trees? What to do?
-  tree = ''
-
-# XXX: We're assuming dxr.config is in the same place as the web directory.
-# May want to assume standard system location or something for easier large
-# deployments
-
-# Load the configuration files
-dxrconfig = dxr.load_config('./dxr.config')
-for treecfg in dxrconfig.trees:
-  if treecfg.tree == tree:
-    dxrconfig = treecfg
-    break
-else:
-  # XXX: no tree, we're defaulting to the last one
-  dxrconfig = treecfg
-
-# Load the database
-dbname = tree + '.sqlite'
-dxrdb = os.path.join(treecfg.dbdir, dbname)
-conn = sqlite3.connect(dxrdb)
-conn.execute('PRAGMA temp_store = MEMORY;')
-
 print 'Content-Type: text/html\n'
 
-# Master text index, load it
+# Load the configuration files
 try:
-  master_text = open(os.path.join(treecfg.dbdir, 'file_index.txt'), 'r')
-  f = open(os.path.join(treecfg.dbdir, 'index_index.txt'), 'r')
+  dxrconfig = dxr.load_config()
 except:
+  msg = sys.exc_info()[1] # Python 2/3 compatibility
+  print '<body><h3>Error: Failed to parse dxr.config ' \
+        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
+  sys.exit (0)
+
+tree = 'undefined'
+for treecfg in dxrconfig.trees:
+  if 'tree' in form and treecfg.tree != form['tree']:
+    continue
+  dxrconfig = treecfg
+  tree = treecfg.tree
+  break
+
+if tree == 'undefined':
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
-  print '<h3>Error: file_index.txt or index_index.txt not found</h3>'
+  print '<h3>Error: Specified tree %s is invalid</h3>' % \
+    ('tree' in form and form['tree'] or tree)
+  sys.exit (0)
+
+try:
+  # Load the database
+  filename = os.path.join(treecfg.dbdir, tree + '.sqlite')
+  conn = sqlite3.connect(filename)
+  conn.execute('PRAGMA temp_store = MEMORY;')
+  # Master text index, load it
+  filename = os.path.join(treecfg.dbdir, 'file_index.txt')
+  master_text = open(filename, 'r')
+  filename = os.path.join(treecfg.dbdir, 'index_index.txt')
+  f = open(filename, 'r')
+except:
+  msg = sys.exc_info()[1] # Python 2/3 compatibility
+  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  print '<h3>Error: Failed to open %s</h3><p>%s' % (filename, msg)
   sys.exit (0)
 offset_cache = {}
 try:

@@ -6,6 +6,7 @@ import cgi
 import sqlite3
 import ConfigParser
 import os
+import sys
 
 def locUrl(loc):
   path, line = loc.split(':')[:2]
@@ -208,10 +209,8 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
       funcbase['children'].append(callee)
   return funcbase
 
-def printError():
-  print """Content-Type: text/html
-
-<div class="info">Um, this isn't right...</div>"""
+def printError(msg='Unknown error'):
+  print 'Content-Type: text/html\n\n<div class="info">%s</div>' % msg
 
 def printMacro():
   value = conn.execute('select * from macros where macroid=?;', (refid,)).fetchone()
@@ -277,11 +276,16 @@ if form.has_key('virtroot'):
 if form.has_key('rid'):
   refid = form['rid'].value
 
-config = ConfigParser.ConfigParser()
-config.read('dxr.config')
+try:
+  config = ConfigParser.ConfigParser()
+  config.read(['/etc/dxr/dxr.config', os.getcwd() + '/dxr.config'])
+  wwwdir = config.get('Web', 'wwwdir')
+except:
+  msg = sys.exc_info()[1] # Python 2/3 compatibility
+  printError('Error loading dxr.config: %s' % msg)
+  sys.exit(0)
 
-dxrdb = os.path.join(config.get('Web', 'wwwdir'), tree, '.dxr_xref', tree  + '.sqlite');
-
+dxrdb = os.path.join(wwwdir, tree, '.dxr_xref', tree  + '.sqlite');
 conn = sqlite3.connect(dxrdb)
 conn.execute('PRAGMA temp_store = MEMORY;')
 conn.row_factory = sqlite3.Row
