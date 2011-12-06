@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python2
 
 # Tokenizer code adapted by David Humphrey from Neal Norwitz's C++ tokenizer:
 #
