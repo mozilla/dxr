@@ -351,7 +351,8 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links
   # for all trees encountered.
-  options = ''
+  browsetree = ''
+  options = '<select id="tree">'
   opensearch = ''
 
   dxrconfig = dxr.load_config(filename)
@@ -361,6 +362,7 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
     if tree and treecfg.tree != tree:
         continue
 
+    browsetree += '<a href="%s">Browse <b>%s</b> source</a> ' % (treecfg.tree, treecfg.tree)
     options += '<option value="' + treecfg.tree + '">' + treecfg.tree + '</option>'
     opensearch += '<link rel="search" href="opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '
     opensearch += 'title="' + treecfg.tree + '" />\n'
@@ -370,6 +372,11 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Generate index page with drop-down + opensearch links for all trees
   indexhtml = dxrconfig.getTemplateFile('dxr-index-template.html')
   indexhtml = string.Template(indexhtml).safe_substitute(**treecfg.__dict__)
+  indexhtml = indexhtml.replace('$BROWSETREE', browsetree)
+  if len(dxrconfig.trees) > 1:
+    options += '</select>'
+  else:
+    options = ''
   indexhtml = indexhtml.replace('$OPTIONS', options)
   indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
   index = open(os.path.join(dxrconfig.wwwdir, 'index.html'), 'w')
