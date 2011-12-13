@@ -20,9 +20,10 @@
   <div id="header" dojoType="dijit.layout.ContentPane" region="top">
     <div id="logo"><a href="${virtroot}/index.html"><img src="${virtroot}/images/powered-by-mozilla-small.png" border="0"></a></div>
     <div id="search">
-      <form id="searchForm" method="post">
+      <form id="searchForm" method="get" action="${virtroot}/search.cgi">
         <input id="search-box" name="string" type="text" size="31" maxlength="2048" title="Search">
         <input type="submit" value="Search" onclick="return doSearch('searchForm');">
+        <input type="hidden" name="tree" value="${tree}">
       </form>
     </div>
     <div id="sidebarActions">

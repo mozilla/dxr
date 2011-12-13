@@ -382,8 +382,9 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links
   # for all trees encountered.
+  # Note: id for CSS, name for form "get" value in query
   browsetree = ''
-  options = '<select id="tree">'
+  options = '<select id="tree" name="tree">'
   opensearch = ''
 
   dxrconfig = dxr.load_config(filename)
@@ -407,7 +408,7 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
   if len(dxrconfig.trees) > 1:
     options += '</select>'
   else:
-    options = ''
+    options = '<input type="hidden" id="tree" value="' + treecfg.tree + '">'
   indexhtml = indexhtml.replace('$OPTIONS', options)
   indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
   index = open(os.path.join(dxrconfig.wwwdir, 'index.html'), 'w')
