@@ -339,6 +339,17 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       if not os.path.exists(cpydir):
         os.makedirs(cpydir)
 
+      def is_text(srcpath):
+        # xdg.Mime considers .lo as text, which is technically true but useless
+        if srcpath[-3:] == '.lo': return False
+        import xdg.Mime
+        mimetype = str(xdg.Mime.get_type (srcpath))
+        for valid in ['text', 'xml', 'shellscript', 'perl', 'm4', 'xbel', 'javascript']:
+          if valid in mimetype:
+            return True
+        return False
+      if not is_text(srcpath):
+        continue
       p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
 
     if file_list == []:
