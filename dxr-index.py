@@ -63,27 +63,36 @@ def async_toHTML(treeconfig, srcpath, dstfile):
     import traceback
     traceback.print_exc()
 
-def make_index(file_list, dbdir):
-  # For ease of searching, we follow something akin to
-  # <http://vocamus.net/dave/?p=138>. This means that we now spit out the whole
-  # contents of the sourcedir into a single file... it makes grep very fast,
-  # since we don't have the syscall penalties for opening and closing every
-  # file.
-  file_index = open(os.path.join(dbdir, "file_index.txt"), 'w')
-  offset_index = open(os.path.join(dbdir, "index_index.txt"), 'w')
+def make_index(file_list, dbdir, treecfg):
+  conn = getdbconn(treecfg, dbdir)
+
+  conn.execute('DROP TABLE IF EXISTS fts')
+  conn.execute('CREATE VIRTUAL TABLE fts USING fts4 (basename, content)')
+
+  conn.execute('DROP TABLE IF EXISTS files')
+  conn.execute('CREATE TABLE files (ID INTEGER PRIMARY KEY, path VARCHAR(1024))')
+
+  conn.execute('CREATE INDEX IF NOT EXISTS files_index ON files (path)')
+
+  cur = conn.cursor();
+
   for fname in file_list:
-    offset_index.write('%s:%d\n' % (fname[0], file_index.tell()))
-    f = open(fname[1], 'r')
-    lineno = 1
-    for line in f:
-      if len(line.strip()) > 0:
-        file_index.write(fname[0] + ":" + str(lineno) + ":" + line)
-      lineno += 1
-    if line[-1] != '\n':
-      file_index.write('\n');
-    f.close()
-  offset_index.close()
-  file_index.close()
+    try:
+      f = open(fname[1], 'r')
+
+      cur.execute('INSERT INTO fts (basename,content) VALUES (?, ?)', (os.path.basename (fname[0]), f.read ()))
+      cur.execute('INSERT INTO files (id, path) VALUES (?, ?)', (cur.lastrowid, fname[0]))
+      f.close()
+
+      if cur.lastrowid % 100 == 0:
+        conn.commit()
+    except:
+      print "Error inserting FTS for file '%s': %s" % (fname[0], sys.exc_info()[1])
+
+  cur.close()
+  conn.commit()
+  conn.close()
+
 
 def make_index_html(treecfg, dirname, fnames, htmlroot):
   genroot = os.path.relpath(dirname, htmlroot)
@@ -159,6 +168,17 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   finally:
     of.close()
 
+def getdbconn(treecfg, dbdir):
+  dbname = treecfg.tree + '.sqlite'
+  conn = sqlite3.connect(os.path.join(dbdir, dbname))
+  conn.execute('PRAGMA synchronous=off')
+  conn.execute('PRAGMA page_size=65536')
+  # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
+  conn.text_factory = str
+
+  return conn
+
+
 def builddb(treecfg, dbdir):
   """ Post-process the build and make the SQL directory """
   global big_blob
@@ -185,12 +205,7 @@ def builddb(treecfg, dbdir):
   # schema as well as plugin-specific information. The pragmas that are
   # executed should make the sql stage go faster.
   print "Building SQL..."
-  dbname = treecfg.tree + '.sqlite'
-  conn = sqlite3.connect(os.path.join(dbdir, dbname))
-  conn.execute('PRAGMA synchronous=off')
-  conn.execute('PRAGMA page_size=65536')
-  # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
-  conn.text_factory = str
+  conn = getdbconn(treecfg, dbdir)
 
   # Import the schemata
   schemata = [dxr.languages.get_standard_schema()]
@@ -326,7 +341,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         print 'Error: No files found to index'
         sys.exit (0)
 
-    p.apply_async(make_index, [file_list, dbdir])
+    p.apply_async(make_index, [file_list, dbdir, treecfg])
 
     index_list.close()
     p.close()
