@@ -29,30 +29,38 @@ def GetLine(loc):
   # Load the parts
   parts = loc.split(':')
   fname, line = parts[0], int(parts[1])
-  if fname not in offset_cache:
-    return '<p>Error: Cannot find file %s</p>' % fname
-
-  # Open up the master file
-  master_text.seek(offset_cache[fname])
 
   output = ('<div class="searchfile"><a href="%s/%s.html#l%d">' +
-    '%s</a></div><ul class="searchresults">\n') % (tree, fname, line, loc)
+            '%s</a></div><ul class="searchresults">\n') % (tree, fname, line, loc)
+
+  text = conn.execute('SELECT fts.content FROM fts where fts.rowid = (select ID from files where path = \'%s\')' % fname).fetchone()[0]
+  text_start = 0
+
   # Show [line - 1, line, line + 1] unless we see more
-  read = [line - 1, line, line + 1]
-  while True:
-    readname, readline, readtext = master_text.readline().split(':', 2)
-    line_num = int(readline)
-    if readname != fname or line_num > read[-1]:
-      break
-    if line_num not in read:
-      continue
+  for i in xrange (line - 1):
+    text_start = text.find ("\n", text_start) + 1
+
+  for i in xrange (3):
+    text_end = text.find ("\n", text_start);
+
     output += ('<li class="searchresult"><a href="%s/%s.html#l%s">%s:</a>' +
-      '&nbsp;&nbsp;%s</li>\n') % (tree, fname, readline, readline,
-      cgi.escape(readtext))
+               '&nbsp;&nbsp;%s</li>\n') % (tree, fname,
+                                           line + i,
+                                           line + i,
+                                           cgi.escape(text[text_start:text_end]))
+    text_start = text_end + 1
+
   output += '</ul>'
   return output
 
-def processString(string, path=None, ext=None):
+def regexp(expr, item):
+  reg = re.compile(expr)
+  try:
+    return reg.search(item) is not None
+  except:
+    return False
+
+def processString(string, path=None, ext=None, regexp=None):
   vrootfix = dxrconfig.virtroot
   if vrootfix == '/':
     vrootfix = ''
@@ -93,49 +101,75 @@ def processString(string, path=None, ext=None):
 
   # Print file sidebar
   printHeader = True
-  filenames = dxr.readFile(os.path.join(treecfg.dbdir, 'file_list.txt'))
-  if filenames:
-    for filename in filenames.split('\n'):
-      # Only check in leaf name
-      pattern = '/([^/]*' + string + '[^/]*\.[^\.]+)$' if not ext else '/([^/]*' + string + '[^/]*\.' + ext + ')$'
-      m = re.search(pattern, filename, re.IGNORECASE)
-      if m:
-        if printHeader:
-          print '<div class=bubble><span class="title">Files</span><ul>'
-          printHeader = False
-        filename = vrootfix + '/' + tree + '/' + filename
-        print '<li><a href="%s.html">%s</a></li>' % (filename, m.group(1))
-    if not printHeader:
-      print "</ul></div>"
+
+  for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), fts.basename ' +
+                          'FROM fts where fts.basename MATCH \'%s\'' % string).fetchall():
+    if printHeader:
+      print '<div class=bubble><span class="title">Files</span><ul>'
+      printHeader = False
+    filename = vrootfix + '/' + tree + '/' + row[0]
+    print '<li><a href="%s.html">%s</a></li>' % (filename, row[1])
+
+  if not printHeader:
+    print "</ul></div>"
 
   print '</div><div id="content">'
 
   # Text search results
-  prevfile, first = None, True
-  master_text.seek(0)
-  for line in master_text:
-    # The index file is <path>:<line>:<text>
-    colon = line.find(':')
-    colon2 = line.find(':', colon)
-    if path and line.find(path, 0, colon) == -1: continue # Not our file
-    if line.find(string, colon2 + 1) != -1 or (string in line and not (prevfile and prevfile in line)):
-      # We have a match!
-      (filepath, linenum, text) = line.split(':', 2)
-      text = cgi.escape(text)
-      text = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', text)
-      if filepath != prevfile:
-        prevfile = filepath
-        if not first:
-          print "</ul>"
-        first = False
-        print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, filepath, filepath)
+  if regexp is None:
+    for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
+                            ' fts.content, offsets(fts) FROM fts where fts.content ' +
+                            'MATCH \'%s\'' % (string)).fetchall():
+      print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
 
-      print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, filepath, linenum, linenum, text)
+      line_count = 0
+      last_pos = 0
+
+      content = row[1]
+      offsets = row[2].split();
+      offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]
+
+      for off in offsets:
+        line_count += content.count ("\n", last_pos, int (off[2]))
+        last_pos = int (off[2])
+
+        line_str = content [content.rfind ("\n", 0, int (off[2]) + 1) :
+                            content.find ("\n", int (off[2]))]
+
+        line_str = cgi.escape(line_str)
+        line_str = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', line_str)
+
+        print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
+
+      print '</ul>'
+
+  else:
+    for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid),' +
+                            'fts.content FROM fts where fts.content REGEXP (\'%s\')' % (string)).fetchall():
+      print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
+
+      line_count = 0
+      last_pos = 0
+      content = row[1]
+
+      for m in re.finditer (string, row[1]):
+        offset = m.start ()
+
+        line_count += content.count ("\n", last_pos, offset)
+        last_pos = offset
+
+        line_str = content [content.rfind ("\n", 0, offset + 1) :
+                            content.find ("\n", offset)]
+
+        line_str = cgi.escape(line_str)
+        line_str = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', line_str)
+
+        print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
+
+      print '</ul>'
 
   if first:
     print '<p>No files match your search parameters.</p>'
-  else:
-    print '</ul>'
 
 def processType(type, path=None):
   for type in conn.execute('select * from types where tname like "' + type + '%";').fetchall():
@@ -300,26 +334,17 @@ if tree == 'undefined':
 
 try:
   # Load the database
-  filename = os.path.join(treecfg.dbdir, tree + '.sqlite')
-  conn = sqlite3.connect(filename)
+  dbname = tree + '.sqlite'
+  dxrdb = os.path.join(treecfg.dbdir, dbname)
+  conn = sqlite3.connect(dxrdb)
+  conn.text_factory = str
+  conn.create_function ('REGEXP', 2, regexp)
   conn.execute('PRAGMA temp_store = MEMORY;')
-  # Master text index, load it
-  filename = os.path.join(treecfg.dbdir, 'file_index.txt')
-  master_text = open(filename, 'r')
-  filename = os.path.join(treecfg.dbdir, 'index_index.txt')
-  f = open(filename, 'r')
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: Failed to open %s</h3><p>%s' % (filename, msg)
   sys.exit (0)
-offset_cache = {}
-try:
-  for line in f:
-    l = line.split(':')
-    offset_cache[l[0]] = int(l[-1])
-finally:
-  f.close()
 
 # This makes results a lot more fun!
 def collate_loc(str1, str2):
@@ -345,7 +370,7 @@ searches = [
   ('macro', processMacro, False, 'Macros %s', []),
   ('warnings', processWarnings, False, 'Warnings %s', ['path']),
   ('callers', processCallers, False, 'Callers of %s', ['path', 'funcid']),
-  ('string', processString, True, '%s', ['path', 'ext'])
+  ('string', processString, True, '%s', ['path', 'ext', 'regexp'])
 ]
 for param, dispatch, hasSidebar, titlestr, optargs in searches:
   if param in form:
@@ -360,6 +385,5 @@ else:
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: unknown search parameters</h3>'
 
-master_text.close()
 print dxrconfig.getTemplateFile("dxr-search-footer.html")
 
