@@ -42,6 +42,13 @@ Formatting: %.2f%%, Sidebar contents: %.2f%%, Uncharted: %.2f%%)
                ((sidebar * 100) / total),
                ((remaining * 100) / total))
 
+def print_user_timing():
+  print """<br/><small>Total request time (as seen by the user):
+  <script type="text/javascript">
+    printRequestTime();
+  </script>
+</small>"""
+
 def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
     .replace("%", "\\%") + '%" ESCAPE "\\"'
@@ -433,5 +440,8 @@ else:
 
 watch.stop('total')
 print_timing(watch)
+
+if 'request_time' in form:
+  print_user_timing()
 
 print dxrconfig.getTemplateFile("dxr-search-footer.html")
