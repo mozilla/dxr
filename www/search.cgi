@@ -20,6 +20,27 @@ except:
         'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
   sys.exit (0)
 import dxr
+import dxr.stopwatch
+
+watch = dxr.stopwatch.StopWatch()
+
+def print_timing(watch):
+  total = watch.elapsed('total')
+  query = watch.elapsed('query')
+  formatting = watch.elapsed('formatting')
+  sidebar = watch.elapsed('sidebar')
+
+  remaining = total - (query + formatting + sidebar)
+
+  if total > 0:
+    print """<small>
+It took %.3fs to generate this content (Query: %.2f%%,
+Formatting: %.2f%%, Sidebar contents: %.2f%%, Uncharted: %.2f%%)
+</small>""" % (total,
+               ((query * 100) / total),
+               ((formatting * 100) / total),
+               ((sidebar * 100) / total),
+               ((remaining * 100) / total))
 
 def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
@@ -61,6 +82,8 @@ def regexp(expr, item):
     return False
 
 def processString(string, path=None, ext=None, regexp=None):
+  global watch
+
   vrootfix = dxrconfig.virtroot
   if vrootfix == '/':
     vrootfix = ''
@@ -83,6 +106,8 @@ def processString(string, path=None, ext=None, regexp=None):
         (vrootfix, tree, fixloc[0], fixloc[1], res[0])
     if outputtedResults:
       print '</ul></div>'
+
+  watch.start('sidebar')
 
   # Print smart sidebar
   print '<div id="sidebar">'
@@ -113,15 +138,25 @@ def processString(string, path=None, ext=None, regexp=None):
   if not printHeader:
     print "</ul></div>"
 
+  watch.stop('sidebar')
   print '</div><div id="content">'
 
   # Text search results
+  first = True
+  watch.start('query')
+
   if regexp is None:
     for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                             ' fts.content, offsets(fts) FROM fts where fts.content ' +
                             'MATCH \'%s\'' % (string)).fetchall():
+      if first:
+        # The first iteration in the resultset fetches all the values
+        watch.stop('query')
+
+      first = False
       print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
 
+      watch.start('formatting')
       line_count = 0
       last_pos = 0
 
@@ -141,13 +176,20 @@ def processString(string, path=None, ext=None, regexp=None):
 
         print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
 
+      watch.stop('formatting')
       print '</ul>'
 
   else:
     for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid),' +
                             'fts.content FROM fts where fts.content REGEXP (\'%s\')' % (string)).fetchall():
+      if first:
+        # The first iteration in the resultset fetches all the values
+        watch.stop('query')
+
+      first = False
       print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
 
+      watch.start('formatting')
       line_count = 0
       last_pos = 0
       content = row[1]
@@ -166,6 +208,7 @@ def processString(string, path=None, ext=None, regexp=None):
 
         print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
 
+      watch.stop('formatting')
       print '</ul>'
 
   if first:
@@ -372,6 +415,9 @@ searches = [
   ('callers', processCallers, False, 'Callers of %s', ['path', 'funcid']),
   ('string', processString, True, '%s', ['path', 'ext', 'regexp'])
 ]
+
+watch.start('total')
+
 for param, dispatch, hasSidebar, titlestr, optargs in searches:
   if param in form:
     titlestr = cgi.escape(titlestr % form[param])
@@ -385,5 +431,7 @@ else:
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: unknown search parameters</h3>'
 
-print dxrconfig.getTemplateFile("dxr-search-footer.html")
+watch.stop('total')
+print_timing(watch)
 
+print dxrconfig.getTemplateFile("dxr-search-footer.html")
