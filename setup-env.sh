@@ -55,6 +55,14 @@ for plugin in $(seq 0 $((${#tools[@]} - 1))); do
 done
 echo ""
 
+echo -n "Building sqlite tokenizer... "
+$MAKE -C sqlite
+if [[ $? != 0 ]]; then
+  echo "Bailing!"
+  return 1
+fi
+echo "done!"
+
 for plugin in $(seq 0 $((${#tools[@]} - 1))); do
   echo -n "Prebuilding $(basename ${tools[plugin]})... "
   if [ -e ${tools[plugin]}/Makefile ]; then 
