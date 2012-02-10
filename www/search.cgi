@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
 import cgitb; cgitb.enable()
+import ctypes
 import cgi
 import sqlite3
 import sys
@@ -21,6 +22,14 @@ except:
   sys.exit (0)
 import dxr
 import dxr.stopwatch
+
+try:
+  ctypes_init_tokenizer = ctypes.CDLL(config.get('DXR', 'dxrroot') + "/sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+  ctypes_init_tokenizer ()
+except:
+  msg = sys.exc_info()[1] # Python 2/3 compatibility
+  print "Could not load tokenizer: %s" % msg
+  sys.exit (0)
 
 watch = dxr.stopwatch.StopWatch()
 
@@ -365,7 +374,7 @@ try:
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
   print '<body><h3>Error: Failed to parse dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
+        'or /etc/dxr/dxr.config</h3><p>%s</body>' % msg
   sys.exit (0)
 
 tree = 'undefined'
@@ -390,6 +399,7 @@ try:
   conn.text_factory = str
   conn.create_function ('REGEXP', 2, regexp)
   conn.execute('PRAGMA temp_store = MEMORY;')
+  conn.execute('SELECT initialize_tokenizer()')
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
