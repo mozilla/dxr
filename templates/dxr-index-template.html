@@ -59,7 +59,7 @@ footer {
 <body onload="document.getElementById('searchForm').string.focus()">
 <img src="images/powered-by-mozilla.png" alt="">
 
-<form id="searchForm" method="get"><div>
+<form id="searchForm" method="get" action="search.cgi"><div>
   $OPTIONS
   <input maxlength=2048 size=55 name=string value="" title="">&nbsp;
   <input type="submit" value="Search" onclick="return doSearch('searchForm');">

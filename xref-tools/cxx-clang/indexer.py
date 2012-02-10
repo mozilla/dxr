@@ -301,6 +301,8 @@ def make_blob():
 
 def post_process(srcdir, objdir):
   os.path.walk(objdir, collect_files, ".csv")
+  if file_names == []:
+    raise IndexError('No .csv files in %s' % objdir)
   for f in file_names:
     load_indexer_output(f)
   blob = make_blob()

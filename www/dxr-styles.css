@@ -56,9 +56,17 @@ a:hover { cursor: pointer; text-decoration: underline; }
 	  background-color:#eeeeee;
 	 /* white-space:nowrap; */
 }
+#sidebarActions {
+  float: right;
+  padding: .5em;
+}
+#sidebarActions a {
+  font-weight: bold;
+  color: #ee2d28;
+}
 #source-outline { border-bottom: solid 1px #cccccc; }
 #header { width:100%; height:70px; overflow:hidden; }
-#logo { position:absolute; top:1.8ex; left:10px; right:10px; }
+#logo { position:absolute; top:1.8ex; left:10px; }
 #search { position:absolute; top:40px; right:10px; left:215px; font-size:82%; }
 #maincontent { border:solid 1px #cccccc; }
 #signature { background-color: #eeffff;

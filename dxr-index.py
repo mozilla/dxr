@@ -15,6 +15,7 @@ import string
 import subprocess
 import sys
 import time
+import ctypes
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -63,27 +64,36 @@ def async_toHTML(treeconfig, srcpath, dstfile):
     import traceback
     traceback.print_exc()
 
-def make_index(file_list, dbdir):
-  # For ease of searching, we follow something akin to
-  # <http://vocamus.net/dave/?p=138>. This means that we now spit out the whole
-  # contents of the sourcedir into a single file... it makes grep very fast,
-  # since we don't have the syscall penalties for opening and closing every
-  # file.
-  file_index = open(os.path.join(dbdir, "file_index.txt"), 'w')
-  offset_index = open(os.path.join(dbdir, "index_index.txt"), 'w')
+def make_index(file_list, dbdir, treecfg):
+  conn = getdbconn(treecfg, dbdir)
+
+  conn.execute('DROP TABLE IF EXISTS fts')
+  conn.execute('CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)')
+
+  conn.execute('DROP TABLE IF EXISTS files')
+  conn.execute('CREATE TABLE files (ID INTEGER PRIMARY KEY, path VARCHAR(1024))')
+
+  conn.execute('CREATE INDEX IF NOT EXISTS files_index ON files (path)')
+
+  cur = conn.cursor();
+
   for fname in file_list:
-    offset_index.write('%s:%d\n' % (fname[0], file_index.tell()))
-    f = open(fname[1], 'r')
-    lineno = 1
-    for line in f:
-      if len(line.strip()) > 0:
-        file_index.write(fname[0] + ":" + str(lineno) + ":" + line)
-      lineno += 1
-    if line[-1] != '\n':
-      file_index.write('\n');
-    f.close()
-  offset_index.close()
-  file_index.close()
+    try:
+      f = open(fname[1], 'r')
+
+      cur.execute('INSERT INTO fts (basename,content) VALUES (?, ?)', (os.path.basename (fname[0]), f.read ()))
+      cur.execute('INSERT INTO files (id, path) VALUES (?, ?)', (cur.lastrowid, fname[0]))
+      f.close()
+
+      if cur.lastrowid % 100 == 0:
+        conn.commit()
+    except:
+      print "Error inserting FTS for file '%s': %s" % (fname[0], sys.exc_info()[1])
+
+  cur.close()
+  conn.commit()
+  conn.close()
+
 
 def make_index_html(treecfg, dirname, fnames, htmlroot):
   genroot = os.path.relpath(dirname, htmlroot)
@@ -96,7 +106,8 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   srcpath = os.path.join(srcpath, genroot)
   of = open(os.path.join(dirname, 'index.html'), 'w')
   try:
-    of.write(treecfg.getTemplateFile("dxr-header.html"))
+    html_header = treecfg.getTemplateFile("dxr-header.html")
+    of.write(html_header.replace('${sidebarActions}', '\n'))
     of.write('''<div id="maincontent" dojoType="dijit.layout.ContentPane"
       region="center"><table id="index-list">
         <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
@@ -159,6 +170,20 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   finally:
     of.close()
 
+def getdbconn(treecfg, dbdir):
+  dbname = treecfg.tree + '.sqlite'
+  conn = sqlite3.connect(os.path.join(dbdir, dbname))
+  conn.execute('PRAGMA synchronous=off')
+  conn.execute('PRAGMA page_size=65536')
+  # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
+  conn.text_factory = str
+
+  # Initialize code tokenizer
+  conn.execute('SELECT initialize_tokenizer()')
+
+  return conn
+
+
 def builddb(treecfg, dbdir):
   """ Post-process the build and make the SQL directory """
   global big_blob
@@ -185,12 +210,7 @@ def builddb(treecfg, dbdir):
   # schema as well as plugin-specific information. The pragmas that are
   # executed should make the sql stage go faster.
   print "Building SQL..."
-  dbname = treecfg.tree + '.sqlite'
-  conn = sqlite3.connect(os.path.join(dbdir, dbname))
-  conn.execute('PRAGMA synchronous=off')
-  conn.execute('PRAGMA page_size=65536')
-  # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
-  conn.text_factory = str
+  conn = getdbconn(treecfg, dbdir)
 
   # Import the schemata
   schemata = [dxr.languages.get_standard_schema()]
@@ -320,13 +340,24 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       if not os.path.exists(cpydir):
         os.makedirs(cpydir)
 
+      def is_text(srcpath):
+        # xdg.Mime considers .lo as text, which is technically true but useless
+        if srcpath[-3:] == '.lo': return False
+        import xdg.Mime
+        mimetype = str(xdg.Mime.get_type (srcpath))
+        for valid in ['text', 'xml', 'shellscript', 'perl', 'm4', 'xbel', 'javascript']:
+          if valid in mimetype:
+            return True
+        return False
+      if not is_text(srcpath):
+        continue
       p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
 
     if file_list == []:
         print 'Error: No files found to index'
         sys.exit (0)
 
-    p.apply_async(make_index, [file_list, dbdir])
+    p.apply_async(make_index, [file_list, dbdir, treecfg])
 
     index_list.close()
     p.close()
@@ -351,8 +382,9 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links
   # for all trees encountered.
+  # Note: id for CSS, name for form "get" value in query
   browsetree = ''
-  options = '<select id="tree">'
+  options = '<select id="tree" name="tree">'
   opensearch = ''
 
   dxrconfig = dxr.load_config(filename)
@@ -376,7 +408,7 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
   if len(dxrconfig.trees) > 1:
     options += '</select>'
   else:
-    options = ''
+    options = '<input type="hidden" id="tree" value="' + treecfg.tree + '">'
   indexhtml = indexhtml.replace('$OPTIONS', options)
   indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
   index = open(os.path.join(dxrconfig.wwwdir, 'index.html'), 'w')
@@ -390,6 +422,14 @@ def main(argv):
   dohtml = True
   tree = None
   debugfile = None
+
+  try:
+    ctypes_init_tokenizer = ctypes.CDLL("sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+    ctypes_init_tokenizer()
+  except:
+    msg = sys.exc_info()[1] # Python 2/3 compatibility
+    print "Could not load tokenizer: %s" % msg
+    sys.exit(2)
 
   try:
     opts, args = getopt.getopt(argv, "hc:f:t:d:",
