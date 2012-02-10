@@ -15,6 +15,7 @@ import string
 import subprocess
 import sys
 import time
+import ctypes
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -67,7 +68,7 @@ def make_index(file_list, dbdir, treecfg):
   conn = getdbconn(treecfg, dbdir)
 
   conn.execute('DROP TABLE IF EXISTS fts')
-  conn.execute('CREATE VIRTUAL TABLE fts USING fts4 (basename, content)')
+  conn.execute('CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)')
 
   conn.execute('DROP TABLE IF EXISTS files')
   conn.execute('CREATE TABLE files (ID INTEGER PRIMARY KEY, path VARCHAR(1024))')
@@ -175,6 +176,9 @@ def getdbconn(treecfg, dbdir):
   conn.execute('PRAGMA page_size=65536')
   # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
   conn.text_factory = str
+
+  # Initialize code tokenizer
+  conn.execute('SELECT initialize_tokenizer()')
 
   return conn
 
@@ -405,6 +409,14 @@ def main(argv):
   dohtml = True
   tree = None
   debugfile = None
+
+  try:
+    ctypes_init_tokenizer = ctypes.CDLL("sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+    ctypes_init_tokenizer()
+  except:
+    msg = sys.exc_info()[1] # Python 2/3 compatibility
+    print "Could not load tokenizer: %s" % msg
+    sys.exit(2)
 
   try:
     opts, args = getopt.getopt(argv, "hc:f:t:d:",
