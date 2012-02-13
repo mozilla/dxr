@@ -66,9 +66,9 @@ def load_indexer_output(fname):
       for i in range(1, len(line), 2):
         argobj[line[i]] = line[i + 1]
       globals()['process_' + line[0]](argobj)
-  except IndexError, e:
-    print line
-    raise e
+  except:
+    print fname, line
+    raise
   finally:
     f.close()
 
