@@ -55,31 +55,25 @@ def load_plugins(dxrsrc=None):
 def store_big_blob(tree, blob):
   htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
   dbdir = os.path.join(htmlroot, '.dxr_xref')
-  # Commented out code: serialize byfile stuff independently, to avoid memory
-  # wastage on very very large systems.
-  #byfile = {}
-  #filelist = set()
-  #for plug in blob:
-  #  try:
-  #    byfile[plug] = blob[plug].pop("byfile")
-  #    filelist.update(byfile[plug].keys())
-  #  except KeyError:
-  #    pass
-  f = open(os.path.join(dbdir, 'index_blob.dat'), 'wb')
-  try:
-    cPickle.dump((blob, dxr.languages.language_data), f, 2)
-  finally:
-    f.close()
-  #for fname in filelist:
-  #  datname = 'fileindex_%s.dat' % (sha1(fname).hexdigest())
-  #  f = open(os.path.join(dbdir, datname), 'wb')
-  #  fdir = dict((p, byfile[p][fname]) for p in byfile if fname in byfile[p])
-  #  try:
-  #    cPickle.dump(fdir, f, 2)
-  #  finally:
-  #    f.close()
-  #for plug in byfile:
-  #  blob[plug]["byfile"] = byfile[plug]
+  # serialize byfile stuff independently, to avoid excessive memory use
+  byfile = {}
+  filelist = set()
+  for plug in blob:
+    try:
+      byfile[plug] = blob[plug].pop("byfile")
+      filelist.update(byfile[plug].keys())
+    except KeyError:
+      pass
+  for fname in filelist:
+    datname = 'fileindex_%s.dat' % (sha1(fname).hexdigest())
+    f = open(os.path.join(dbdir, datname), 'wb')
+    fdir = dict((p, byfile[p][fname]) for p in byfile if fname in byfile[p])
+    try:
+      cPickle.dump(fdir, f, 2)
+    finally:
+      f.close()
+  for plug in byfile:
+    blob[plug]["byfile"] = byfile[plug]
 
 def load_big_blob(tree):
   htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
