@@ -52,9 +52,8 @@ def load_plugins(dxrsrc=None):
       pass
   return all_plugins
 
-def store_big_blob(tree, blob):
-  htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
-  dbdir = os.path.join(htmlroot, '.dxr_xref')
+def store_big_blob(tree, blob, tmproot):
+  dbdir = os.path.join(tmproot, '.dxr_xref')
   # Commented out code: serialize byfile stuff independently, to avoid memory
   # wastage on very very large systems.
   #byfile = {}
@@ -81,9 +80,8 @@ def store_big_blob(tree, blob):
   #for plug in byfile:
   #  blob[plug]["byfile"] = byfile[plug]
 
-def load_big_blob(tree):
-  htmlroot = os.path.join(tree.wwwdir, tree.tree + '-current')
-  dbdir = os.path.join(htmlroot, '.dxr_xref')
+def load_big_blob(tree, tmproot):
+  dbdir = os.path.join(tmproot, '.dxr_xref')
   f = open(os.path.join(dbdir, 'index_blob.dat'), 'rb')
   try:
     big_blob, dxr.languages.language_data = cPickle.load(f)
