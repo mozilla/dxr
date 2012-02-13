@@ -7,6 +7,7 @@
   <link href="${virtroot}/dxr-search-styles.css" rel="stylesheet" type="text/css"></link>
   <script type="text/javascript" src="${virtroot}/js/searchParser.js"></script>
   <script type="text/javascript" src="${virtroot}/js/search.js"></script>
+  <script type="text/javascript" src="${virtroot}/js/timing.js"></script>
   <script type="text/javascript">
     var virtroot = '${virtroot}';
   </script>
@@ -14,7 +15,7 @@
 <body onload="parseQS('search-box');">
   <div id="logo"><a href="${virtroot}/index.html"><img src="${virtroot}/images/powered-by-mozilla-small.png" border="0"></a></div>
 <div id="search">
-  <form id="searchForm" method="get">
+  <form id="searchForm" method="get" action="search.cgi">
     <input id="search-box" name="string" type="text" size="31" maxlength="2048" title="Search">
     <input type="submit" value="Search" onclick="return doSearch('searchForm');">
     <input type="hidden" name="tree" value="${tree}">

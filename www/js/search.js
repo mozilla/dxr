@@ -5,6 +5,9 @@ function doSearch(id) {
   // Figure out the right path separator to use with virtroot
   sep = virtroot[virtroot.length - 1] === '/' ? '' : '/';
   var url = virtroot + sep + 'search.cgi?tree=' + f.tree.value;
+  var date = new Date ();
+
+  url += "&request_time=" + date.getTime ();
 
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];
