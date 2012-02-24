@@ -1,48 +1,61 @@
 #!/usr/bin/env python2
+import sys
 
 class JsonOutput:
   need_separator = False
-  content = ''
+  outfd = sys.stdout
+
+  def __init__(self, outfd):
+    self.outfd = outfd
 
   def open(self):
-    self.content += '{'
+    if self.need_separator is True:
+      self.outfd.write(',')
+
+    self.outfd.write('{')
     self.need_separator = False
 
   def close(self):
-    self.content += '}'
+    self.outfd.write('}')
     self.need_separator = True
 
   def open_list(self):
-    self.content += '['
+    if self.need_separator is True:
+      self.outfd.write(',')
+
+    self.outfd.write('[')
     self.need_separator = False
 
   def close_list(self):
-    self.content += ']'
+    self.outfd.write(']')
     self.need_separator = True
 
-  def key_value(self, key, value, quote_value):
+  def key(self, key):
     if self.need_separator is True:
-      self.content += ','
+      self.outfd.write(',')
 
     if key is not None:
-      self.content += '"' + key + '"'
-      self.content += ' : '
+      self.outfd.write('"')
+      self.outfd.write(key)
+      self.outfd.write('":')
+
+    self.need_separator = False
+
+  def key_value(self, key, value, quote_value):
+    self.key(key)
 
     if quote_value is True:
-      self.content += '"' + value + '"'
-    else:
-      self.content += value
+      self.outfd.write('"')
+
+    self.outfd.write(value)
+
+    if quote_value is True:
+      self.outfd.write('"')
 
     self.need_separator = True
 
   def key_dict(self, key, nested_values):
-    if self.need_separator is True:
-      self.content += ','
-
-    if key is not None:
-      self.content += '"' + key + '"'
-      self.content += ' : '
-
+    self.key(key)
     self.open()
 
     for subkey in nested_values.keys():
@@ -52,12 +65,7 @@ class JsonOutput:
     self.need_separator = True
 
   def key_list(self, key, values):
-    if self.need_separator is True:
-      self.content += ','
-
-    self.content += '"' + key + '"'
-    self.content += ' : '
-
+    self.key(key)
     self.open_list()
 
     for subvalue in values:
@@ -76,8 +84,8 @@ class JsonOutput:
     else:
       self.key_value(key, str(value), True)
 
-  def print_str(self):
-    return '{' + self.content + '}'
+#  def print_str(self):
+#    return '{' + self.content + '}'
 
 #if __name__ == '__main__':
 #  json = JsonOutput()
