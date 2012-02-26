@@ -8,22 +8,52 @@ if [ -z "${BASH_VERSION}" ]; then
   exit 1
 fi
 
-if [ -z "$1" ]; then
+if [ -z "$2" ]; then
   name="${BASH_SOURCE[0]}"
   if [ -z "$name" ]; then
 	  name=$0
   fi
-  echo "Usage: . $name <srcdir> [<objdir>]"
+  echo "Usage: . $name <dxr.config> <treename>"
   return 0 &>/dev/null
   exit 1
 fi
-SRCDIR=`(cd "$1"; pwd)`
 
-if [ -z "$2" ]; then
+DXRCONFIG="$1"
+TREENAME="$2"
+
+function get_var()
+{
+echo $(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
+import dxr
+cfg=dxr.load_config("$DXRCONFIG")
+found=False
+for treecfg in cfg.trees:
+  if treecfg.tree == "$1":
+    found=True
+    break
+
+if found == False:
+  raise BaseException("Tree[$1] not found in config[$DXRCONFIG]")
+
+try:
+  print("%s" % treecfg.$2)
+except:
+  raise BaseException("Variable[$2] not found in Tree[$1]")
+HEREDOC
+)
+}
+
+SRCDIR=$(get_var "$TREENAME" "sourcedir")
+OBJDIR=$(get_var "$TREENAME" "objdir")
+
+if [ -z "$SRCDIR" ]; then
+  return 0 &>/dev/null
+  exit 1
+fi
+
+if [ -z "$OBJDIR" ]; then
   echo -e "\e[1;33mThe object dir equals source dir (not recommended).\e[0m\n"
-  export OBJDIR="$1"
-else
-  export OBJDIR="$2"
+  export OBJDIR="$SRCDIR"
 fi
 
 if [ -z "$DXRSRC" ]; then
@@ -37,7 +67,11 @@ MAKE=${MAKE:-make}
 echo "Finding available DXR plugins..."
 tools=($(PYTHONPATH=$DXRSRC:$PYTHONPATH python - <<HEREDOC
 import dxr
-files = [x.__file__ for x in dxr.get_active_plugins(None, '$DXRSRC')]
+cfg=dxr.load_config("$DXRCONFIG")
+for treecfg in cfg.trees:
+  if treecfg.tree == "$TREENAME":
+    files = [x.__file__ for x in dxr.get_active_plugins(treecfg, "$DXRSRC")]
+    break
 print ' '.join([x[:x.find('/indexer.py')] for x in files])
 HEREDOC
 ) )

@@ -35,7 +35,7 @@ test "`command -v clang`" == "" && echo Failed: clang not found && exit 1
 python -c 'import xdg.Mime, sqlite3, subprocess' || (echo Failed: Missing Python modules && exit 1)
 
 # Source
-. $DXRROOT/setup-env.sh $SOURCE $BUILD || exit 1
+. $DXRROOT/setup-env.sh $DXRCONFIG $TREE || exit 1
 echo ' '
 
 cd $SOURCE
