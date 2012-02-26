@@ -90,7 +90,7 @@ done
 echo ""
 
 echo -n "Building sqlite tokenizer... "
-$MAKE -C sqlite
+$MAKE -C ${DXRSRC}/sqlite
 if [[ $? != 0 ]]; then
   echo "Bailing!"
   return 1

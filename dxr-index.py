@@ -402,7 +402,13 @@ def main(argv):
   debugfile = None
 
   try:
-    ctypes_init_tokenizer = ctypes.CDLL("sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+    if os.getenv("DXRSRC") is not None:
+      dll_base = os.getenv("DXRSRC")
+    else:
+      dll_base = os.path.dirname(sys.argv[0])
+
+    dll_path = os.path.join(dll_base, "sqlite", "libdxr-code-tokenizer.so")
+    ctypes_init_tokenizer = ctypes.CDLL(dll_path).dxr_code_tokenizer_init
     ctypes_init_tokenizer()
   except:
     msg = sys.exc_info()[1] # Python 2/3 compatibility
