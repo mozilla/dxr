@@ -127,6 +127,9 @@ class DxrConfig(object):
         if opt.endswith('dir'):
           self.__dict__[opt] = os.path.abspath(self.__dict__[opt])
 
+  def getOption(self, key):
+    return self.__dict__[key]
+
   def getTemplateFile(self, name):
     tmpl = readFile(os.path.join(self.templates, name))
     tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
