@@ -340,7 +340,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     # if it isn't.
     def genhtml(treecfg, dirname, fnames):
       make_index_html(treecfg, dirname, fnames, tmproot)
-    os.path.walk(htmlroot, genhtml, treecfg)
+    os.path.walk(tmproot, genhtml, treecfg)
 
   if os.path.exists(oldroot):
     shutil.rmtree(oldroot)
