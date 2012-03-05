@@ -12,7 +12,7 @@ import ctypes
 # Get the DXR installation point from dxr.config
 config = ConfigParser.ConfigParser()
 try:
-  config.read(['/etc/dxr/dxr.config', './dxr.config'])
+  config.read(['/etc/dxr/dxr.config', './dxr.config', '/srv/dxr/html/dxr.config'])
   sys.path.append(config.get('DXR', 'dxrroot'))
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
@@ -115,4 +115,61 @@ if 'string' in form:
       json.add(None, row[0])
 
     json.close_list()
-    
+  elif querytype == 'macros':
+    json.open_list()
+
+    for row in queries.getMacroMatches(conn, form['string']):
+      json.open()
+      json.add('def', row[0])
+      json.add('path', row[1])
+      json.add('line', row[2])
+      json.close()
+
+    json.close_list()
+  elif querytype == 'functions':
+    json.open_list()
+
+    for row in queries.getFunctionMatches(conn, form['string']):
+      json.open()
+      json.add('def', row[0])
+      json.add('args', row[1])
+      json.add('type', row[2])
+      json.add('path', row[3])
+      json.add('line', row[4])
+      json.close()
+
+    json.close_list()
+  elif querytype == 'variables':
+    json.open_list()
+
+    for row in queries.getVariableMatches(conn, form['string']):
+      json.open()
+      json.add('name', row[0])
+      json.add('type', row[1])
+      json.add('path', row[2])
+      json.add('line', row[3])
+      json.close()
+
+    json.close_list()
+  elif querytype == 'warnings':
+    json.open_list()
+
+    for row in queries.getWarningMatches(conn, form['string']):
+      json.open()
+      json.add('message', row[0])
+      json.add('path', row[1])
+      json.add('line', row[2])
+      json.close()
+
+    json.close_list()
+  elif querytype == 'callers':
+    json.open_list()
+
+    for row in queries.getCallers(conn, form['string']):
+      json.open()
+      json.add('name', row[0])
+      json.add('path', row[1])
+      json.add('line', row[2])
+      json.close()
+
+    json.close_list()
