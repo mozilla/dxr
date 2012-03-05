@@ -23,10 +23,10 @@ Setup:
 DXR is primarily a database of source code information.  You need a lot of
 space to do this, and a fast computer helps a lot.
 
-1) DXR uses config info from an INI style config file. Alter the variables in
-dxrsrc/www/dxr.config for your environment.
+1) Create a wwwdir (e.g., /var/www/html/dxr) for the DXR interface.
 
-2) Create the wwwdir (e.g., /var/www/html/dxr) you specified in your dxr.config
+2) DXR uses config info from an INI style config file. Copy dxrsrc/dxr.config
+to your wwwdir and alter for your environment.
 
 3) Copy (or symlink) the contents of dxrsrc/www to your web dir.
 

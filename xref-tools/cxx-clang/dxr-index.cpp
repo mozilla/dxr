@@ -342,7 +342,7 @@ public:
     beginRecord("variable", d->getLocation());
     recordValue("vname", d->getQualifiedNameAsString());
     recordValue("vloc", locationToString(d->getLocation()));
-    recordValue("vtype", d->getType().getAsString());
+    recordValue("vtype", d->getType().getAsString(), true);
     printScope(d);
     printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
