@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 import ctypes
+import tempfile
 
 # At this point in time, we've already compiled the entire build, so it is time
 # to collect the data. This process can be viewed as a pipeline.
@@ -184,7 +185,7 @@ def getdbconn(treecfg, dbdir):
   return conn
 
 
-def builddb(treecfg, dbdir):
+def builddb(treecfg, dbdir, tmproot):
   """ Post-process the build and make the SQL directory """
   global big_blob
 
@@ -204,7 +205,7 @@ def builddb(treecfg, dbdir):
 
   # Save off the raw data blob
   print "Storing data..."
-  dxr.store_big_blob(treecfg, big_blob)
+  dxr.store_big_blob(treecfg, big_blob, tmproot)
 
   # Build the sql for later queries. This is a combination of the main language
   # schema as well as plugin-specific information. The pragmas that are
@@ -240,54 +241,25 @@ def builddb(treecfg, dbdir):
 def indextree(treecfg, doxref, dohtml, debugfile):
   global big_blob
 
-  # If we're live, we'll need to move -current to -old; we'll move it back
-  # after we're done.
-  if treecfg.isdblive:
-    currentroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-current')
-    oldroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
-    linkroot = os.path.join(treecfg.wwwdir, treecfg.tree)
-    if os.path.isdir(currentroot):
-      if os.path.exists(os.path.join(currentroot, '.dxr_xref', '.success')):
-        # Move current -> old, change link to old
-        try:
-          shutil.rmtree(oldroot)
-        except OSError:
-          pass
-        try:
-          shutil.move(currentroot, oldroot)
-          os.unlink(linkroot)
-          os.symlink(oldroot, linkroot)
-        except OSError:
-          pass
-      else:
-        # This current directory is bad, move it away
-        shutil.rmtree(currentroot)
-
   # dxr xref files (index + sqlitedb) go in wwwdir/treename-current/.dxr_xref
   # and we'll symlink it to wwwdir/treename later
   htmlroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-current')
-  dbdir = os.path.join(htmlroot, '.dxr_xref')
+  oldroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
+  tmproot = tempfile.mkdtemp(prefix = (os.path.join(treecfg.wwwdir, '.' + treecfg.tree + '.')))
+  linkroot = os.path.join(treecfg.wwwdir, treecfg.tree)
+
+  dbdir = os.path.join(tmproot, '.dxr_xref')
   os.makedirs(dbdir, 0755)
   dbname = treecfg.tree + '.sqlite'
 
   retcode = 0
   if doxref:
-    builddb(treecfg, dbdir)
-    if treecfg.isdblive:
-      f = open(os.path.join(dbdir, '.success'), 'w')
-      f.close()
-  elif treecfg.isdblive:
-    # If the database is live, we need to copy database info from the old
-    # version of the code
-    oldhtml = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
-    olddbdir = os.path.join(oldhtml, '.dxr_xref')
-    shutil.rmtree(dbdir)
-    shutil.copytree(olddbdir, dbdir)
+    builddb(treecfg, dbdir, tmproot)
 
   # Build static html
   if dohtml:
     if not doxref:
-      big_blob = dxr.load_big_blob(treecfg)
+      big_blob = dxr.load_big_blob(treecfg, tmproot)
     # Do we need to do file pivoting?
     for plugin in dxr.get_active_plugins(treecfg):
       if plugin.__name__ in big_blob:
@@ -331,7 +303,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       if debugfile and not treecfg.sourcedir + '/' + f[0] in output_files: continue
 
       index_list.write(f[0] + '\n')
-      cpypath = os.path.join(htmlroot, f[0])
+      cpypath = os.path.join(tmproot, f[0])
       srcpath = f[1]
       file_list.append(f)
 
@@ -367,17 +339,23 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     # XXX: This wants to be parallelized. However, I seem to run into problems
     # if it isn't.
     def genhtml(treecfg, dirname, fnames):
-      make_index_html(treecfg, dirname, fnames, htmlroot)
-    os.path.walk(htmlroot, genhtml, treecfg)
+      make_index_html(treecfg, dirname, fnames, tmproot)
+    os.path.walk(tmproot, genhtml, treecfg)
 
-  # If the database is live, we need to switch the live to the new version
-  if treecfg.isdblive:
-    try:
-      os.unlink(linkroot)
-      shutil.rmtree(oldroot)
-    except OSError:
-      pass
-    os.symlink(currentroot, linkroot)
+  if os.path.exists(oldroot):
+    shutil.rmtree(oldroot)
+
+  if os.path.exists(htmlroot):
+    shutil.move(htmlroot, oldroot)
+
+  os.chmod(tmproot, 0755)
+  shutil.move(tmproot, htmlroot)
+
+  try:
+    os.unlink(linkroot)
+    os.symlink(htmlroot, linkroot)
+  except:
+    pass
 
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links
@@ -424,7 +402,13 @@ def main(argv):
   debugfile = None
 
   try:
-    ctypes_init_tokenizer = ctypes.CDLL("sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+    if os.getenv("DXRSRC") is not None:
+      dll_base = os.getenv("DXRSRC")
+    else:
+      dll_base = os.path.dirname(sys.argv[0])
+
+    dll_path = os.path.join(dll_base, "sqlite", "libdxr-code-tokenizer.so")
+    ctypes_init_tokenizer = ctypes.CDLL(dll_path).dxr_code_tokenizer_init
     ctypes_init_tokenizer()
   except:
     msg = sys.exc_info()[1] # Python 2/3 compatibility

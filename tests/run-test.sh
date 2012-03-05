@@ -22,7 +22,7 @@ set -e
 
 # Environment setup
 echo "Setting up the environment:"
-. ../setup-env.sh $dir $dir
+. ../setup-env.sh $dxrconfig $testname
 
 # Clean up any failing runs and then build everything
 echo -e "\n\nBuilding:"
