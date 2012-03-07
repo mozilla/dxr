@@ -43,8 +43,6 @@ class HtmlBuilder:
 
   def getSidebarActions(self):
     html = ''
-    config = ConfigParser ()
-    config.read('dxr.config')
     blameLinks = { \
       'Log': 'http://hg.mozilla.org/mozilla-central/filelog/$rev/$filename', \
       'Blame': 'http://hg.mozilla.org/mozilla-central/annotate/$rev/$filename', \
@@ -57,7 +55,7 @@ class HtmlBuilder:
       revision = globals()['revision']
     else:
       try:
-        revision_command = config.get(self.treename, 'revision')
+        revision_command = self.tree.getOption('revision')
         revision_command = revision_command.replace('$source', source_dir)
         revision_process = subprocess.Popen ([revision_command], stdout=subprocess.PIPE, shell=True)
         revision = revision_process.stdout.readline().strip()
@@ -72,7 +70,7 @@ class HtmlBuilder:
       blameLinks = {}
     for link in blameLinks:
       try:
-        customLink = config.get(self.treename, link)
+        customLink = self.tree.getOption(link)
       except:
         if not 'log-notice' + link in globals():
           globals()['log-notice' + link] = True

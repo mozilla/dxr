@@ -22,6 +22,7 @@ except:
   sys.exit (0)
 import dxr
 import dxr.stopwatch
+from dxr import queries
 
 try:
   ctypes_init_tokenizer = ctypes.CDLL(config.get('DXR', 'dxrroot') + "/sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
@@ -143,8 +144,7 @@ def processString(string, path=None, ext=None, regexp=None):
   # Print file sidebar
   printHeader = True
 
-  for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), fts.basename ' +
-                          'FROM fts where fts.basename MATCH \'%s\'' % string).fetchall():
+  for row in queries.getFileMatches(conn, string):
     if printHeader:
       print '<div class=bubble><span class="title">Files</span><ul>'
       printHeader = False
@@ -159,76 +159,38 @@ def processString(string, path=None, ext=None, regexp=None):
 
   # Text search results
   first = True
+  prevpath = None
   watch.start('query')
 
   if regexp is None:
-    for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
-                            ' fts.content, offsets(fts) FROM fts where fts.content ' +
-                            'MATCH \'%s\'' % (string)).fetchall():
-      if first:
-        # The first iteration in the resultset fetches all the values
-        watch.stop('query')
-
-      first = False
-      print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
-
-      watch.start('formatting')
-      line_count = 0
-      last_pos = 0
-
-      content = row[1]
-      offsets = row[2].split();
-      offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]
-
-      for off in offsets:
-        line_count += content.count ("\n", last_pos, int (off[2]))
-        last_pos = int (off[2])
-
-        line_str = content [content.rfind ("\n", 0, int (off[2]) + 1) :
-                            content.find ("\n", int (off[2]))]
-
-        line_str = cgi.escape(line_str)
-        line_str = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', line_str)
-
-        print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
-
-      watch.stop('formatting')
-      print '</ul>'
-
+    matches = queries.getFTSMatches(conn, string)
   else:
-    for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid),' +
-                            'fts.content FROM fts where fts.content REGEXP (\'%s\')' % (string)).fetchall():
-      if first:
-        # The first iteration in the resultset fetches all the values
-        watch.stop('query')
+    matches = queries.getRegexMatches(conn, string)
 
+  for row in matches:
+    if first:
+      # The first iteration in the resultset fetches all the values
+      watch.stop('query')
+      watch.start('formatting')
       first = False
+
+    if prevpath is None or prevpath != row[0]:
+      if prevpath is not None:
+        print '</ul>'
       print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
 
-      watch.start('formatting')
-      line_count = 0
-      last_pos = 0
-      content = row[1]
+    line_str = cgi.escape(row[2])
+    line_str = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', line_str)
 
-      for m in re.finditer (string, row[1]):
-        offset = m.start ()
+    print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], row[1] + 1, row[1] + 1, line_str)
+    prevpath = row[0]
 
-        line_count += content.count ("\n", last_pos, offset)
-        last_pos = offset
+  watch.stop('formatting')
 
-        line_str = content [content.rfind ("\n", 0, offset + 1) :
-                            content.find ("\n", offset)]
-
-        line_str = cgi.escape(line_str)
-        line_str = re.sub(r'(?i)(' + string + ')', '<b>\\1</b>', line_str)
-
-        print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], line_count + 1, line_count + 1, line_str)
-
-      watch.stop('formatting')
-      print '</ul>'
-
-  if first:
+  if first is True:
     print '<p>No files match your search parameters.</p>'
+  else:
+    print '</ul>'
 
 def processType(type, path=None):
   for type in conn.execute('select * from types where tname like "' + type + '%";').fetchall():

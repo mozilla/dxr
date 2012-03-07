@@ -30,23 +30,26 @@ to your wwwdir and alter for your environment.
 
 3) Copy (or symlink) the contents of dxrsrc/www to your web dir.
 
-4) Run . dxrsrc/setup-env.sh srcdir to set up your environment, where srcdir is
-the root source directory of your codebase. The single `.' at the beginning is
-very important; otherwise, your shell will not have the necessary variables
-exported.
+4) Run . dxrsrc/setup-env.sh <config> <tree-name> to set up your 
+environment, where <config> is the path to the dxr.config file to use, and
+<tree-name> is the name of the source tree to index as specified in the
+configuration file. The single `.' at the beginning is very important; 
+otherwise, your shell will not have the necessary variables exported.
 
 5) Compile and build your program. It is recommended that you use a separate
 build directory from your source directory.
 
 If the variable DXR_INDEX_OUTPUT is set on the command line, this will be used
 to store the output csv files instead of the original source directory, so it
-should match the objdir specified in dxr.config. This can also be specified by
-passing it in as the last argument to setup-env.sh
+should match the objdir specified in dxr.config. This can also be specified in
+the objdir key for the project entry in dxr.config
 
 6) Run the cross-reference generator:
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
-7) You can optionally install sqlite 3 if it is not already installed on your system.  You don't strictly need it, but it makes accessing the database manually eaiser.
+7) You can optionally install the sqlite3 command line interface if it is not 
+already installed on your system.  You don't strictly need it, but it makes 
+accessing the database manually easier.
 
 Running:
 -------
