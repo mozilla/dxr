@@ -32,7 +32,9 @@ struct MxrCodeCursor
 
   const char *parsed_string;
   const char *cursor;
-  const char *subword_cursor;
+
+  char *token;
+  int allocated_token_len;
 
   unsigned int parsed_string_len;
   unsigned int current_token_cursor;
@@ -112,6 +114,7 @@ dxrCodeTokenizerClose(sqlite3_tokenizer_cursor *pCursor)
 {
   MxrCodeCursor *pCsr = (MxrCodeCursor *)pCursor;
 
+  sqlite3_free(pCsr->token);
   sqlite3_free(pCsr);
 
   return SQLITE_OK;
@@ -133,7 +136,9 @@ dxrCodeTokenizerNext(sqlite3_tokenizer_cursor  *pCursor,       /* Cursor returne
 
   if (pCsr->split_word)
     {
-      int i;
+      int i, start;
+
+      start = pCsr->current_token_cursor;
 
       for (i = pCsr->current_token_cursor + 1; i <= pCsr->current_word_end; i++)
         {
@@ -147,7 +152,8 @@ dxrCodeTokenizerNext(sqlite3_tokenizer_cursor  *pCursor,       /* Cursor returne
               *piEndOffset = i;
               *piPosition = pCsr->position;
 
-              *ppToken = &pCsr->parsed_string[*piStartOffset];
+              *ppToken = &pCsr->token[pCsr->current_token_cursor - start];
+
               pCsr->current_token_cursor = i;
               pCsr->position++;
 
@@ -173,12 +179,39 @@ dxrCodeTokenizerNext(sqlite3_tokenizer_cursor  *pCursor,       /* Cursor returne
 
           if ( pCsr->state == PARSER_STATE_TOKEN )
             {
+              int token_len, i;
+
               *pnBytes = pCsr->current_word_end - pCsr->current_word_start + 1;
               *piStartOffset = pCsr->current_word_start;
               *piEndOffset = pCsr->current_word_end + 1;
               *piPosition = pCsr->position;
 
-              *ppToken = &pCsr->parsed_string[*piStartOffset];
+              token_len = *piEndOffset - *piStartOffset;
+
+              if (token_len > pCsr->allocated_token_len)
+                {
+                  char *str;
+
+                  pCsr->allocated_token_len = token_len + 32;
+                  str = sqlite3_realloc(pCsr->token, pCsr->allocated_token_len);
+
+                  if (!str)
+                    return SQLITE_NOMEM;
+
+                  pCsr->token = str;
+                }
+
+              for (i=0; i<token_len;i++)
+                {
+                  char c = pCsr->parsed_string[*piStartOffset + i];
+
+                  if (c >= 'A' && c <= 'Z')
+                    c = c - 'A' + 'a';
+
+                  pCsr->token[i] = c;
+                }
+
+              *ppToken = pCsr->token;
 
               pCsr->state = PARSER_STATE_BLANK;
               pCsr->position++;
