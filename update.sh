@@ -5,7 +5,16 @@
 DXRCONFIG=$1
 TREE="$2"
 REMOTE="$3"
-test -z "$DXRCONFIG" && (test -f /etc/dxr/dxr.config && DXRCONFIG=/etc/dxr/dxr.config) || DXRCONFIG=dxr.config
+
+if [ ! -f $DXRCONFIG ]; then
+  if [ -f /etc/dxr/dxr.config ]; then
+    DXRCONFIG=/etc/dxr/dxr.config
+  else
+    DXRCONFIG=dxr.config
+  fi
+fi
+
+echo $DXRCONFIG
 
 readconfig() {
   echo -c "reading $2 from section '$1'" >&2
