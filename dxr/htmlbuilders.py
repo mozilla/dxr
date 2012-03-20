@@ -168,8 +168,13 @@ class HtmlBuilder:
     for syn in syntax_regions:
       chars[off(syn[0])] = '<span class="%s">%s' % (syn[2], chars[off(syn[0])])
       chars[off(syn[1]) - 1] += '</span>'
+
+    href_prefix = self.virtroot + "/search.cgi?tree=" + self.treename + '&string='
+
     for link in links:
-      chars[off(link[0])] = '<a aria-haspopup="true" %s>%s' % (
+      item = ''.join(chars[off(link[0]):off(link[1])])
+      chars[off(link[0])] = '<a aria-haspopup="true" href="%s%s" %s>%s' % (
+        href_prefix, item,
         ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
         chars[off(link[0])])
       chars[off(link[1]) - 1] += '</a>'

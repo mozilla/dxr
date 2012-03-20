@@ -372,6 +372,7 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
     if tree and treecfg.tree != tree:
         continue
 
+    treecfg.virtroot = dxrconfig.virtroot
     browsetree += '<a href="%s">Browse <b>%s</b> source</a> ' % (treecfg.tree, treecfg.tree)
     options += '<option value="' + treecfg.tree + '">' + treecfg.tree + '</option>'
     opensearch += '<link rel="search" href="opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '

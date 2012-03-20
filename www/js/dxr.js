@@ -249,7 +249,7 @@ dojo.addOnLoad(function() {
   dojo.connect(dojo.body(), "onclick", function(e) {
     var target = e.target;
     while (target.nodeName === 'SPAN') target = target.parentNode;
-    if (target.nodeName === 'A') {
+    if (target.nodeName === 'A' && e.button == 0) {
       var link = target;
 
       if (link.getAttribute("aria-haspopup")) {
