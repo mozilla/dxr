@@ -49,34 +49,33 @@ def getRegexMatches(conn, match_string):
       yield [row[0], line_count, line_str]
 
 def getMacroMatches(conn, match_string):
-  for row in conn.execute('SELECT macroname, macroloc FROM macros WHERE macroname LIKE ?', ('%s%%' % match_string,)).fetchall():
-    loc = row[1].split(':')
-    yield [row[0], loc[0], int(loc[1])]
+  for row in conn.execute('SELECT macroname, file_line, (SELECT path FROM files where files.ID = macros.file_id) FROM macros WHERE macroname LIKE ?', ('%s%%' % match_string,)).fetchall():
+    yield [row[0], row[2], row[1]]
 
 def getFunctionMatches(conn, match_string):
-  for row in conn.execute('SELECT fqualname, fargs, ftype, floc FROM functions WHERE fqualname LIKE ?', ('%%%s%%' % match_string,)).fetchall():
-    loc = row[3].split(':')
-    yield [row[0], row[1], row[2], loc[0], int(loc[1])]
+  for row in conn.execute('SELECT fqualname, fargs, ftype, file_line, (SELECT path FROM files WHERE files.ID = functions.file_id) FROM functions WHERE fqualname LIKE ?', ('%%%s%%' % match_string,)).fetchall():
+    yield [row[0], row[1], row[2], row[4], row[3]]
 
 def getVariableMatches(conn, match_string):
-  for row in conn.execute('SELECT vname, vtype, vloc FROM variables WHERE vname LIKE ?', ('%%%s%%' % match_string,)).fetchall():
-    loc = row[2].split(':')
-    yield [row[0], row[1], loc[0], int(loc[1])]
+  for row in conn.execute('SELECT vname, vtype, file_line, (SELECT path FROM files WHERE files.ID = variables.file_id) FROM variables WHERE vname LIKE ?', ('%%%s%%' % match_string,)).fetchall():
+    yield [row[0], row[1], row[3], row[2]]
 
 def getWarningMatches(conn, match_string):
-  for row in conn.execute("SELECT wmsg, wloc FROM warnings WHERE wmsg LIKE ?", ('%%%s%%' % match_string,)).fetchall():
-    loc = row[1].split(':')
-    yield [row[0], loc[0], int(loc[1])]
+  for row in conn.execute("SELECT wmsg, file_line, (SELECT path FROM files WHERE files.ID = warnings.file_id) FROM warnings WHERE wmsg LIKE ?", ('%%%s%%' % match_string,)).fetchall():
+    yield [row[0], row[2], row[1]]
 
 def getCallers(conn, match_string):
-  for row in conn.execute("SELECT functions.fqualname, functions.floc FROM functions " +
+  for row in conn.execute("SELECT functions.fqualname, functions.file_line, " +
+                          " (SELECT path FROM files WHERE files.ID = functions.file_id) " +
+                          "FROM functions " +
                           "LEFT JOIN callers ON (callers.callerid = funcid) " +
                           "WHERE callers.targetid = (SELECT funcid FROM functions where fname = ?) " +
                           "UNION " +
-                          "SELECT functions.fqualname, functions.floc FROM functions " +
+                          "SELECT functions.fqualname, functions.file_line, " +
+                          " (SELECT path FROM files WHERE files.ID = functions.file_id) " +
+                          "FROM functions " +
                           "LEFT JOIN callers ON (callers.callerid = functions.funcid) " +
                           "LEFT JOIN targets USING (targetid) " +
                           "WHERE targets.funcid = (SELECT funcid FROM functions where fname = ?)",
                           (match_string, match_string)):
-    loc = row[1].split(':')
-    yield [row[0], loc[0], int(loc[1])]
+    yield [row[0], row[2], row[1]]

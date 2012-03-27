@@ -63,16 +63,14 @@ def like_escape(val):
   return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
     .replace("%", "\\%") + '%" ESCAPE "\\"'
 
-def GetLine(loc):
-  # Load the parts
-  parts = loc.split(':')
-  fname, line = parts[0], int(parts[1])
+def GetLine(rowid, line, col):
+  row = conn.execute('SELECT fts.content, (SELECT path FROM files where files.ID = fts.rowid) FROM fts where fts.rowid = ?', (rowid,)).fetchone()
+  text = row[0]
+  fname = row[1]
+  text_start = 0
 
   output = ('<div class="searchfile"><a href="%s/%s.html#l%d">' +
-            '%s</a></div><ul class="searchresults">\n') % (tree, fname, line, loc)
-
-  text = conn.execute('SELECT fts.content FROM fts where fts.rowid = (select ID from files where path = \'%s\')' % fname).fetchone()[0]
-  text_start = 0
+            '%s:%d:%d</a></div><ul class="searchresults">\n') % (tree, fname, line, fname, line, col)
 
   # Show [line - 1, line, line + 1] unless we see more
   for i in xrange (line - 1):
@@ -113,14 +111,13 @@ def processString(string, path=None, ext=None, regexp=None):
       colon = res[0].rfind(':')
       if colon != -1 and res[0][colon:].find(string) == -1:
         continue
-      fixloc = res[1].split(':')
-      if path and not re.search(path, fixloc[0]):
+      if path and not re.search(path, res[1]):
         continue
       if not outputtedResults:
         outputtedResults = True
         print '<div class="bubble"><span class="title">%s</span><ul>' % name
-      print '<li><a href="%s/%s/%s.html#l%s">%s</a></li>' % \
-        (vrootfix, tree, fixloc[0], fixloc[1], res[0])
+      print '<li><a href="%s/%s/%s.html#l%d">%s</a></li>' % \
+        (vrootfix, tree, res[1], res[2], res[0])
     if outputtedResults:
       print '</ul></div>'
 
@@ -129,16 +126,21 @@ def processString(string, path=None, ext=None, regexp=None):
   # Print smart sidebar
   print '<div id="sidebar">'
   config = [
-    ('types', ['tname', 'tloc', 'tname']),
-    ('macros', ['macroname', 'macroloc', 'macroname']),
-    ('functions', ['fqualname', 'floc', 'fname']),
-    ('variables', ['vname', 'vloc', 'vname']),
+    ('types', ['tname']),
+    ('macros', ['macroname']),
+    ('functions', ['fqualname', 'fname']),
+    ('variables', ['vname']),
   ]
   for table, cols in config:
     results = []
-    for row in conn.execute('SELECT %s FROM %s WHERE %s %s;' % (
-        ', '.join(cols[:-1]), table, cols[0], like_escape(string))).fetchall():
-      results.append((row[0], row[1]))
+    if len(cols) > 1:
+      search_col = cols[1]
+    else:
+      search_col = cols[0]
+
+    for row in conn.execute('SELECT %s , (SELECT path FROM files WHERE files.ID = %s.file_id), file_line, file_col FROM %s WHERE %s %s;' % (
+        cols[0], table, table, search_col, like_escape(string))).fetchall():
+      results.append((row[0], row[1], row[2], row[3]))
     printSidebarResults(str.capitalize(table), results)
 
   # Print file sidebar
@@ -193,16 +195,16 @@ def processString(string, path=None, ext=None, regexp=None):
     print '</ul>'
 
 def processType(type, path=None):
-  for type in conn.execute('select * from types where tname like "' + type + '%";').fetchall():
+  for type in conn.execute('select *, (SELECT path FROM files WHERE files.ID=types.file_id) AS file_path from types where tname like "' + type + '%";').fetchall():
     tname = cgi.escape(type['tname'])
-    if not path or re.search(path, type['tloc']):
+    if not path or re.search(path, type['file_path']):
       info = type['tkind']
       if info == 'typedef':
         typedef = conn.execute('SELECT ttypedef FROM typedefs WHERE tid=?',
             (type['tid'],)).fetchone()[0]
         info += ' ' + cgi.escape(typedef)
       print '<h3>%s (%s)</h3>' % (tname, info)
-      print GetLine(type['tloc'])
+      print GetLine(type['file_id'], type['file_line'], type['file_col'])
 
 def processDerived(derived, path=None):
   components = derived.split('::')
@@ -226,26 +228,30 @@ def processDerived(derived, path=None):
 
   print '<h2>Results for %s:</h2>\n' % (cgi.escape(tname))
   # Find everyone who inherits this class
-  types = conn.execute('SELECT tqualname, tid, tloc, inhtype FROM impl ' +
+  types = conn.execute('SELECT tqualname, tid, inhtype, file_id, file_line, file_col,' +
+    '(SELECT path FROM files WHERE files.ID=types.file_id) AS file_path ' +
+    'FROM impl ' +
     'LEFT JOIN types ON (tderived = tid) WHERE tbase=? ORDER BY inhtype DESC',
     (tid,)).fetchall()
 
   if func is None:
     for t in types:
-      direct = 'Direct' if t[3] is not None else 'Indirect'
-      if not path or re.search(path, t[2]):
+      direct = 'Direct' if t[2] is not None else 'Indirect'
+      if not path or re.search(path, t[6]):
         print '<h3>%s (%s)</h3>' % (cgi.escape(t[0]), direct)
-        print GetLine(t[2])
+        print GetLine(t[3], t[4], t[5])
   else:
     typeMaps = dict([(t[1], t[0]) for t in types])
-    for method in conn.execute('SELECT scopeid, fqualname, floc FROM functions'+
+    for method in conn.execute('SELECT scopeid, fqualname, file_id, file_line, file_col,' +
+        ' (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path ' +
+        ' FROM functions'+
         ' WHERE scopeid IN (' + ','.join([str(t[1]) for t in types]) + ') AND' +
         ' fname = ?', (func,)).fetchall():
       tname = cgi.escape(typeMaps[method[0]])
       mname = cgi.escape(method[1])
-      if not path or re.search(path, method[2]):
+      if not path or re.search(path, method[5]):
         print '<h3>%s::%s</h3>' % (tname, mname)
-        print GetLine(method[2])
+        print GetLine(method[2], method[3], method[4])
 
 def processMacro(macro):
   for m in conn.execute('SELECT * FROM macros WHERE macroname LIKE "' +
@@ -255,13 +261,13 @@ def processMacro(macro):
       mname += m['macroargs']
     mtext = m['macrotext'] and m['macrotext'] or ''
     print '<h3>%s</h3><pre>%s</pre>' % (cgi.escape(mname), cgi.escape(mtext))
-    print GetLine(m['macroloc'])
+    print GetLine(m['file_id'], m['file_line'], m['file_col'])
 
 def processFunction(func):
   for f in conn.execute('SELECT * FROM functions WHERE fqualname LIKE "%' +
       func + '%";').fetchall():
     print '<h3>%s</h3>' % cgi.escape(f['fqualname'])
-    print GetLine(f['floc'])
+    print GetLine(f['file_id'], f['file_line'], f['file_col'])
 
 def processVariable(var):
   for v in conn.execute('SELECT * FROM variables WHERE vname LIKE "%' +
@@ -269,7 +275,7 @@ def processVariable(var):
     qual = v['modifiers'] and v['modifiers'] or ''
     print '<h3>%s %s %s</h3>' % (cgi.escape(qual), cgi.escape(v['vtype']),
       cgi.escape(v['vname']))
-    print GetLine(v['vloc'])
+    print GetLine(v['file_id'], v['file_line'], v['file_id'])
 
 def processWarnings(warnings, path=None):
   # Check for * which means user entered "warnings:" and wants to see all of them.
@@ -277,11 +283,11 @@ def processWarnings(warnings, path=None):
     warnings = ''
 
   num_warnings = 0
-  for w in conn.execute("SELECT wloc, wmsg FROM warnings WHERE wmsg LIKE '%" +
-      warnings + "%' ORDER BY wloc COLLATE loc;").fetchall():
-    if not path or re.search(path, w[0]):
-      print '<h3>%s</h3>' % w[1]
-      print GetLine(w[0])
+  for w in conn.execute("SELECT file_id, file_line, file_col, (SELECT path FROM files WHERE files.ID=warnings.file_id), wmsg FROM warnings WHERE wmsg LIKE '%" +
+      warnings + "%'").fetchall():
+    if not path or re.search(path, w[3]):
+      print '<h3>%s</h3>' % w[4]
+      print GetLine(w[0], w[1], w[2])
       num_warnings += 1
   if num_warnings == 0:
     print '<h3>No warnings found.</h3>'
@@ -291,7 +297,7 @@ def processCallers(caller, path=None, funcid=None):
   # Instead, let's first find the function that we're trying to find.
   cur = conn.cursor()
   if funcid is None:
-    cur.execute('SELECT * FROM functions WHERE fqualname %s' %
+    cur.execute('SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path FROM functions WHERE fqualname %s' %
       like_escape(caller))
     funcinfos = cur.fetchall()
     if len(funcinfos) == 0:
@@ -301,21 +307,23 @@ def processCallers(caller, path=None, funcid=None):
       print '<h3>Ambiguous function:</h3><ul>'
       for funcinfo in funcinfos:
         print ('<li><a href="search.cgi?callers=%s&funcid=%d&tree=%s">%s</a>' +
-          ' at %s</li>') % (caller, funcinfo['funcid'], tree,
-          funcinfo['fqualname'], funcinfo['floc'])
+          ' at %s:%d:%d</li>') % (caller, funcinfo['funcid'], tree,
+          funcinfo['fqualname'], funcinfo['file_path'], funcinfo['file_line'], funcinfo['file_col'])
       print '</ul>'
       return
     funcid = funcinfos[0]['funcid']
   # We have two cases: direct calls or we're in targets
   cur = conn.cursor()
-  for info in cur.execute("SELECT functions.* FROM functions " +
+  for info in cur.execute("SELECT functions.*, " +
+      "(SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path " +
+      "FROM functions " +
       "LEFT JOIN callers ON (callers.callerid = funcid) WHERE targetid=? " +
       "UNION SELECT functions.* FROM functions LEFT JOIN callers " +
       "ON (callers.callerid = functions.funcid) LEFT JOIN targets USING " +
       "(targetid) WHERE targets.funcid=?", (funcid, funcid)):
-    if not path or re.search(path, info['floc']):
+    if not path or re.search(path, info['file_path']):
       print '<h3>%s</h3>' % info['fqualname']
-      print GetLine(info['floc'])
+      print GetLine(info['file_id'], info['file_line'], info['file_col'])
   if cur.rowcount == 0:
     print '<h3>No results found</h3>'
 
