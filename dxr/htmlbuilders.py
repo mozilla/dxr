@@ -13,10 +13,10 @@ class HtmlBuilder:
     """ Returns all contents from all plugins. """
     if func not in self.resmap:
       return []
-    return itertools.chain(*[f(self.blob[name], self.filepath, self.tree)
+    return itertools.chain(*[f(self.blob.get(name, None), self.filepath, self.tree, self.conn)
       for name, f in self.resmap[func]])
 
-  def __init__(self, tree, filepath, dstpath, blob, resmap):
+  def __init__(self, tree, filepath, dstpath, blob, resmap, conn = None):
     # Read and expand all templates
     self.html_header = tree.getTemplateFile("dxr-header.html")
     self.html_footer = tree.getTemplateFile("dxr-footer.html")
@@ -37,6 +37,7 @@ class HtmlBuilder:
     self.blob = blob
     self.resmap = resmap
     self.tree = tree
+    self.conn = conn
 
     # Config info used by dxr.js
     self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
@@ -230,7 +231,7 @@ def build_htmlifier_map(plugins):
   # in the list
   ending_iterator.sort(lambda x, y: cmp(len(y), len(x)))
 
-def make_html(srcpath, dstfile, treecfg, blob):
+def make_html(srcpath, dstfile, treecfg, blob, conn = None):
   # Match the file in srcpath
   result_map = {}
   signalStop = False
@@ -245,5 +246,5 @@ def make_html(srcpath, dstfile, treecfg, blob):
           signalStop = True
     if signalStop:
       break
-  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map)
+  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map, conn)
   builder.toHTML()

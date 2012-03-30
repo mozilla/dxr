@@ -101,6 +101,9 @@ class Schema:
     """ Returns the SQL that creates the tables in this schema. """
     return '\n'.join([tbl.get_create_sql() for tbl in self.tables.itervalues()])
 
+  def get_insert_sql(self, tblname, args):
+    return self.tables[tblname].get_insert_sql(args)
+
   def get_data_sql(self, blob):
     """ Returns the SQL that inserts data into tables given a blob. """
     for tbl in self.tables:
@@ -138,8 +141,11 @@ class SchemaTable:
   def __init__(self, tblname, tblschema):
     self.name = tblname
     self.key = None
+    self.index = None
+    self.fkeys = []
     self.columns = []
     self.needLang = False
+    self.needFileKey = False
     defaults = ['VARCHAR(256)', True]
     for col in tblschema:
       if isinstance(tblschema, tuple) or isinstance(tblschema, list):
@@ -150,6 +156,20 @@ class SchemaTable:
         spec = (spec,)
       if col == '_key':
         self.key = spec
+      elif col == '_fkey':
+        self.fkeys.append(spec)
+      elif col == '_index':
+        self.index = spec
+      elif col == '_location':
+        if len(spec) <= 1:
+          prefix = ''
+        else:
+          prefix = spec[1] + "_"
+
+        self.columns.append((prefix + "file_id", ["INTEGER", True]))
+        self.columns.append((prefix + "file_line", ["INTEGER", True]))
+        self.columns.append((prefix + "file_col", ["INTEGER", True]))
+        self.needFileKey = spec[0]
       elif col[0] != '_':
         # if spec is deficient, we need to full it in with default tuples
         values = list(spec)
@@ -162,7 +182,6 @@ class SchemaTable:
     sql += 'CREATE TABLE %s (\n  ' % (self.name)
     colstrs = []
     special_types = {
-      '_location': 'VARCHAR(256)',
       '_language': 'VARCHAR(32)'
     }
     for col, spec in self.columns:
@@ -174,10 +193,20 @@ class SchemaTable:
       if len(spec) > 1 and spec[1] == False:
         specsql += ' NOT NULL'
       colstrs.append(specsql)
+
+    if self.needFileKey is True:
+      colstrs.append('FOREIGN KEY (file_id) REFERENCES files(ID)')
+
+    for spec in self.fkeys:
+      colstrs.append('FOREIGN KEY (%s) REFERENCES %s(%s)' % (spec[0], spec[1], spec[2]))
     if self.key is not None:
       colstrs.append('PRIMARY KEY (%s)' % ', '.join(self.key))
     sql += ',\n  '.join(colstrs)
     sql += '\n);\n'
+    if self.index is not None:
+      sql += 'CREATE UNIQUE INDEX %s_index on %s (%s);\n' % (self.name, self.name, ','.join(self.index))
+    if self.needFileKey is True:
+      sql += 'CREATE UNIQUE INDEX %s_file_index on %s (file_id, file_line, file_col);' % (self.name, self.name)
     return sql
 
   def get_data_sql(self, blobtbl):
@@ -190,6 +219,22 @@ class SchemaTable:
       yield ('INSERT OR IGNORE INTO %s (%s) VALUES (%s);' % (self.name,
         ','.join(keys), ','.join('?' for k in keys)), args)
 
+  def get_insert_sql(self, args):
+    colset = set(col[0] for col in self.columns)
+    unwanted = []
+
+    # Only add the keys in the columns
+    for key in args.iterkeys():
+      if key not in colset:
+        unwanted.append(key)
+
+    for key in unwanted:
+      del args[key]
+
+    return ('INSERT OR IGNORE INTO %s (%s) VALUES (%s)' %
+            (self.name, ','.join(args.keys()), ','.join('?' for k in range(0, len(args)))),
+            args.values())
+
 def make_get_schema_func(schema):
   """ Returns a function that satisfies get_schema's contract from the given
       schema object. """
@@ -200,7 +245,7 @@ def make_get_schema_func(schema):
 
 def required_exports():
   """ Returns the required exports for a module, for use as __all__. """
-  return ['post_process', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema',
+  return ['post_process', 'build_database', 'sqlify', 'can_use', 'get_htmlifiers', 'get_schema',
     'pre_html_process']
 
 last_id = 0

@@ -56,34 +56,40 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
     return None
 
-def async_toHTML(treeconfig, srcpath, dstfile):
+def async_toHTML(treeconfig, srcpath, dstfile, dbdir):
+  conn = getdbconn(treeconfig, dbdir)
+
   """Wrapper function to allow doing this async without an instance method."""
   try:
-    dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob)
+    dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob, conn)
   except Exception, e:
     print 'Error on file %s:' % srcpath
     import traceback
     traceback.print_exc()
+  finally:
+    conn.close()
 
 def make_index(file_list, dbdir, treecfg):
   conn = getdbconn(treecfg, dbdir)
 
   conn.execute('DROP TABLE IF EXISTS fts')
   conn.execute('CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)')
-
-  conn.execute('DROP TABLE IF EXISTS files')
-  conn.execute('CREATE TABLE files (ID INTEGER PRIMARY KEY, path VARCHAR(1024))')
-
-  conn.execute('CREATE INDEX IF NOT EXISTS files_index ON files (path)')
-
   cur = conn.cursor();
 
   for fname in file_list:
     try:
       f = open(fname[1], 'r')
 
-      cur.execute('INSERT INTO fts (basename,content) VALUES (?, ?)', (os.path.basename (fname[0]), f.read ()))
-      cur.execute('INSERT INTO files (id, path) VALUES (?, ?)', (cur.lastrowid, fname[0]))
+      row = cur.execute("SELECT ID FROM files WHERE path = ?", (fname[0],)).fetchone()
+
+      if row is None:
+        cur.execute ("INSERT INTO files (path) VALUES (?)", (fname[0],))
+        rowid = cur.lastrowid
+      else:
+        rowid = row[0]
+
+      cur.execute('INSERT INTO fts (rowid, basename, content) VALUES (?, ?, ?)',
+                  (rowid, os.path.basename (fname[0]), f.read ()))
       f.close()
 
       if cur.lastrowid % 100 == 0:
@@ -178,6 +184,7 @@ def getdbconn(treecfg, dbdir):
   conn.execute('PRAGMA page_size=65536')
   # Safeguard against non-ASCII text. Let's just hope everyone uses UTF-8
   conn.text_factory = str
+  conn.row_factory = sqlite3.Row
 
   # Initialize code tokenizer
   conn.execute('SELECT initialize_tokenizer()')
@@ -189,29 +196,14 @@ def builddb(treecfg, dbdir, tmproot):
   """ Post-process the build and make the SQL directory """
   global big_blob
 
-  # We use this all over the place, cache it here.
-  plugins = dxr.get_active_plugins(treecfg)
-
-  # Building the database--this happens as multiple phases. In the first phase,
-  # we basically collect all of the information and organizes it. In the second
-  # phase, we link the data across multiple languages.
-  print "Post-processing the source files..."
-  big_blob = {}
-  srcdir = treecfg.sourcedir
-  objdir = treecfg.objdir
-  for plugin in plugins:
-    if 'post_process' in plugin.__all__:
-      big_blob[plugin.__name__] = plugin.post_process(srcdir, objdir)
-
-  # Save off the raw data blob
-  print "Storing data..."
-  dxr.store_big_blob(treecfg, big_blob, tmproot)
-
   # Build the sql for later queries. This is a combination of the main language
   # schema as well as plugin-specific information. The pragmas that are
   # executed should make the sql stage go faster.
   print "Building SQL..."
   conn = getdbconn(treecfg, dbdir)
+
+  # We use this all over the place, cache it here.
+  plugins = dxr.get_active_plugins(treecfg)
 
   # Import the schemata
   schemata = [dxr.languages.get_standard_schema()]
@@ -220,21 +212,40 @@ def builddb(treecfg, dbdir, tmproot):
   conn.executescript('\n'.join(schemata))
   conn.commit()
 
-  # Load and run the SQL
-  def sql_generator():
-    for statement in dxr.languages.get_sql_statements():
-      yield statement
-    for plugin in plugins:
-      if plugin.__name__ in big_blob:
-        plugblob = big_blob[plugin.__name__]
-        for statement in plugin.sqlify(plugblob):
-          yield statement
+  # Building the database--this happens as multiple phases. In the first phase,
+  # we basically collect all of the information and organizes it. In the second
+  # phase, we link the data across multiple languages.
+  big_blob = {}
+  srcdir = treecfg.sourcedir
+  objdir = treecfg.objdir
+  for plugin in plugins:
+    cache = None
 
-  for stmt in sql_generator():
-    if isinstance(stmt, tuple):
-      conn.execute(stmt[0], stmt[1])
-    else:
-      conn.execute(stmt)
+    if 'post_process' in plugin.__all__:
+      big_blob[plugin.__name__] = cache = plugin.post_process(srcdir, objdir)
+
+    if 'build_database' in plugin.__all__:
+      plugin.build_database(conn, srcdir, objdir, cache)
+
+  # Save off the raw data blob
+#  print "Storing data..."
+#  dxr.store_big_blob(treecfg, big_blob, tmproot)
+
+  # Load and run the SQL
+#  def sql_generator():
+#    for statement in dxr.languages.get_sql_statements():
+#      yield statement
+#    for plugin in plugins:
+#      if plugin.__name__ in big_blob:
+#        plugblob = big_blob[plugin.__name__]
+#        for statement in plugin.sqlify(plugblob):
+#          yield statement
+#
+#  for stmt in sql_generator():
+#    if isinstance(stmt, tuple):
+#      conn.execute(stmt[0], stmt[1])
+#    else:
+#      conn.execute(stmt)
   conn.commit()
   conn.close()
 
@@ -258,8 +269,8 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
   # Build static html
   if dohtml:
-    if not doxref:
-      big_blob = dxr.load_big_blob(treecfg, tmproot)
+#    if not doxref:
+#      big_blob = dxr.load_big_blob(treecfg, tmproot)
     # Do we need to do file pivoting?
     for plugin in dxr.get_active_plugins(treecfg):
       if plugin.__name__ in big_blob:
@@ -286,6 +297,8 @@ def indextree(treecfg, doxref, dohtml, debugfile):
           filelist.update(big_blob[plug]["byfile"].keys())
         except KeyError:
           pass
+        except TypeError:
+          pass
       for filename in filelist:
         if filename.startswith("--GENERATED--/"):
           relpath = filename[len("--GENERATED--/"):]
@@ -297,6 +310,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         print 'Error: Glob %s doesn\'t match any files' % debugfile
         sys.exit (1)
     last_dir = None
+    conn = getdbconn(treecfg, dbdir)
 
     for f in getOutputFiles():
       # In debug mode, we only care about some files
@@ -323,7 +337,13 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         return False
       if not is_text(srcpath):
         continue
-      p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html"])
+#      p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html", dbdir])
+      try:
+        dxr.htmlbuilders.make_html(srcpath, cpypath + ".html", treecfg, big_blob, conn)
+      except Exception, e:
+        print 'Error on file %s:' % srcpath
+        import traceback
+        traceback.print_exc()
 
     if file_list == []:
         print 'Error: No files found to index'

@@ -83,14 +83,6 @@ def post_process(srcdir, objdir):
 def pre_html_process(treecfg, blob):
   blob["byfile"] = dxr.plugins.break_into_files(blob, location_keys)
 
-def sqlify(blob):
-  #return schema.get_data_sql(blob)
-  # Hack: recollect information from CXX
-  for iface in interfaces:
-    info = interfaces[iface]
-    yield ("UPDATE types SET tloc='%(iloc)s', tkind='interface' WHERE " +
-      "tname='%(name)s'") % info
-
 def can_use(treecfg):
   # Don't know? just guess!
   if treecfg is None:
@@ -99,6 +91,41 @@ def can_use(treecfg):
   if os.path.exists(os.path.join(treecfg.sourcedir, 'config', 'rules.mk')):
     return True
   return False
+
+file_cache = {}
+
+def getFileID(conn, path):
+  global file_cache
+
+  file_id = file_cache.get(path)
+
+  if file_id is not None:
+    return file_id
+
+  cur = conn.cursor()
+  file_id = cur.execute("SELECT ID FROM files where path=?", (path,)).fetchone()
+
+  if file_id is None:
+    cur.execute("INSERT INTO files (path) VALUES (?)", (path,))
+    file_id = cur.lastrowid
+
+  file_cache[path] = file_id
+  return file_id
+
+
+def build_database(conn, srcdir, objdir, cache=None):
+  for iface, info in interfaces.iteritems():
+    loc = info['iloc'].split(':')
+
+    if len(loc) != 2:
+      continue
+
+    file_id = getFileID(conn,loc[0])
+    conn.execute("UPDATE OR IGNORE types SET file_id = ?, file_line = ?," +
+                 "file_col=0, tkind='interface' WHERE tname = ?",
+                 (file_id, int(loc[1]), info['name']))
+
+  conn.commit()
 
 schema = dxr.plugins.Schema({
   # Scope definitions: a scope is anything that is both interesting (i.e., not
@@ -240,15 +267,15 @@ class IdlHtmlifier:
       start, end = df["extent"].split(':')
       yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
 
-def get_sidebar_links(blob, srcpath, treecfg):
+def get_sidebar_links(blob, srcpath, treecfg, conn=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].collectSidebar()
-def get_link_regions(blob, srcpath, treecfg):
+def get_link_regions(blob, srcpath, treecfg, conn=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].getLinkRegions()
-def get_syntax_regions(blob, srcpath, treecfg):
+def get_syntax_regions(blob, srcpath, treecfg, conn=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].getSyntaxRegions()
