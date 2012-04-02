@@ -10,9 +10,11 @@ def getFileMatches(conn, match_string):
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
 def getFTSMatches(conn, match_string):
+  terms = match_string.split(' ')
+
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                           ' fts.content, offsets(fts) FROM fts where fts.content ' +
-                          'MATCH \'%s\'' % match_string).fetchall():
+                          'MATCH ?', (' NEAR '.join(terms),)).fetchall():
     line_count = 0
     last_pos = 0
 
