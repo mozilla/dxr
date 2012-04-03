@@ -71,8 +71,8 @@ echo ' '
 
 # Index
 cd $WWWROOT
-$DXRROOT/dxr-index.py -t $TREE
-NTBL=`echo '.tables' | sqlite3 -init /dev/stdin /$WWWROOT/$TREE/.dxr_xref/*.sqlite | wc -w` && test "$NTBL" != "20" && echo Failed: Missing tables && exit 1
+$DXRROOT/dxr-index.py -f $DXRCONFIG -t $TREE
+NTBL=`echo '.tables' | sqlite3 -init /dev/stdin /$WWWROOT/$TREE/.dxr_xref/$TREE.sqlite | wc -w` && test "$NTBL" != "20" && echo Failed: Missing tables && exit 1
 
 # Split use case
 test -n $REMOTE && rsync -aHPz {$WWWROOT,$REMOTE:$WWWROOT}/$TREE-current/
