@@ -145,6 +145,9 @@ class HtmlBuilder:
     links = self._zipper("get_link_regions")
     line_notes = self._zipper("get_line_annotations")
 
+    if self.source is None:
+      return
+
     # Blow the contents of the file up into an array; we escape the source and
     # build the line map at the same time.
     line_map = [0]
@@ -167,12 +170,16 @@ class HtmlBuilder:
     # Produce all of the syntax regions and links. Sincerely hope that the two
     # do not produce partially-overlapping results.
     for syn in syntax_regions:
+      if syn[0] is None or syn[1] is None:
+        continue
       chars[off(syn[0])] = '<span class="%s">%s' % (syn[2], chars[off(syn[0])])
       chars[off(syn[1]) - 1] += '</span>'
 
     href_prefix = self.virtroot + "/search.cgi?tree=" + self.treename + '&string='
 
     for link in links:
+      if link[0] is None or link[1] is None:
+        continue
       item = ''.join(chars[off(link[0]):off(link[1])])
       chars[off(link[0])] = '<a aria-haspopup="true" href="%s%s" %s>%s' % (
         href_prefix, item,
