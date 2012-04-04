@@ -271,10 +271,6 @@ def fixup_scope(conn):
                 "scopes.file_id = variables.file_id AND scopes.file_line = variables.file_line " +
                 "AND scopes.file_col = variables.file_col) WHERE scopeid IS NULL")
 
-  conn.execute("DELETE FROM functions WHERE scopeid IS NULL")
-  conn.execute("DELETE FROM variables WHERE scopeid IS NULL")
-  conn.execute("DELETE FROM types WHERE scopeid IS NULL OR tid NOT IN (SELECT scopeid FROM variables)")
-
 
 def build_inherits(base, child, direct):
   db = { 'tbase': base, 'tderived': child }

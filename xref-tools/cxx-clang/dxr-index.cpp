@@ -248,19 +248,29 @@ public:
 
   // Tag declarations: class, struct, union, enum
   bool VisitTagDecl(TagDecl *d) {
+    TagDecl *definition;
     if (!interestingLocation(d->getLocation()))
       return true;
+
+    if (d->isClass()) {
+      definition = d->getDefinition();
+
+      if (!definition)
+        return true;
+    } else
+      definition = d;
+
     // Information we need for types: kind, fqname, simple name, location
-    beginRecord("type", d->getLocation());
+    beginRecord("type", definition->getLocation());
     // We get the name from the typedef if it's an anonymous declaration...
-    NamedDecl *nd = d->getTypedefNameForAnonDecl();
+    NamedDecl *nd = definition->getTypedefNameForAnonDecl();
     if (!nd)
-      nd = d;
+      nd = definition;
     recordValue("tname", nd->getNameAsString());
     recordValue("tqualname", nd->getQualifiedNameAsString());
-    recordValue("tloc", locationToString(d->getLocation()));
-    recordValue("tkind", d->getKindName());
-    printScope(d);
+    recordValue("tloc", locationToString(definition->getLocation()));
+    recordValue("tkind", definition->getKindName());
+    printScope(definition);
     // Linkify the name, not the `enum'
     printExtent(nd->getLocation(), nd->getLocation());
     *out << std::endl;
