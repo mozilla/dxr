@@ -34,6 +34,45 @@ except:
 
 watch = dxr.stopwatch.StopWatch()
 
+def redirect_to(str, path, line=None):
+  url = '%s/%s/%s.html' % (dxrconfig.virtroot, tree, path)
+  url += '?string=' + cgi.escape(str)
+
+  if line is not None:
+    url += '#l%d' % (line,)
+
+  print '<html><head><meta http-equiv="REFRESH" content="0;url=%s"></head></html>' % (url,)
+
+def maybe_redirect(string):
+  # we only match on 1 term
+  if ' ' in string:
+    return False
+
+  # match for filenames
+  row = conn.execute("SELECT path FROM files where path like ?", ("%%/%s" % (string,),)).fetchall()
+
+  if row is not None and len(row) == 1:
+    redirect_to(string, row[0][0]);
+    return True
+
+  #match for type names
+  row = conn.execute("SELECT (SELECT path FROM files WHERE files.ID=types.file_id), " +
+                     "file_line FROM types where tname=?", (string,)).fetchall()
+
+  if row is not None and len(row) == 1:
+    redirect_to(string, row[0][0], row[0][1])
+    return True
+
+  #match for function fqnames
+  row = conn.execute("SELECT (SELECT path FROM files WHERE files.ID=functions.file_id), " +
+                     "file_line FROM functions where fname=?", (string,)).fetchall()
+
+  if row is not None and len(row) == 1:
+    redirect_to(string, row[0][0], row[0][1])
+    return True
+
+  return False
+
 def print_timing(watch):
   total = watch.elapsed('total')
   query = watch.elapsed('query')
@@ -392,8 +431,12 @@ def collate_loc(str1, str2):
 conn.create_collation("loc", collate_loc)
 conn.row_factory = sqlite3.Row
 
-# Output the text results.
+# Check whether we automatically redirect to a location
+if 'string' in form and 'noredirect' not in form:
+  if maybe_redirect(form['string']) is True:
+    sys.exit(0)
 
+# Output the text results.
 
 # XXX... plugins!
 searches = [
