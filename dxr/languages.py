@@ -29,6 +29,8 @@ language_schema = dxr.plugins.Schema({
     ("tqualname", "VARCHAR(256)", False), # Fully-qualified name of the type
     ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union)
     ("language", "_language", True),     # Language of the type
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "tid"),
     ("_fkey", "scopeid", "scopes", "scopeid")
@@ -54,6 +56,8 @@ language_schema = dxr.plugins.Schema({
     ("ftype", "VARCHAR(256)", False),     # Full return type, as a string
     ("modifiers", "VARCHAR(256)", True),  # Modifiers (e.g., private)
     ("language", "_language", True),     # Language of the function
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "funcid"),
     ("_fkey", "scopeid", "scopes", "scopeid"),
@@ -69,6 +73,8 @@ language_schema = dxr.plugins.Schema({
     ("vtype", "VARCHAR(256)", True),     # Full type (including pointer stuff)
     ("modifiers", "VARCHAR(256)", True), # Modifiers for the declaration
     ("language", "_language", True),    # Language of the function
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "varid"),
     ("_fkey", "scopeid", "scopes", "scopeid"),

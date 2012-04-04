@@ -47,6 +47,9 @@ def fixupEntryPath(args, file_key, conn, prefix=None):
   args[prefix + 'file_col'] = loc[2]
 
 def fixupExtent(args, extents_key):
+  if extents_key not in args:
+    return
+
   value = args[extents_key]
   arr = value.split(':')
 
@@ -122,12 +125,14 @@ def process_type(args, conn):
     addScope(args, conn, 'tname', 'tid')
 
   handleScope(args, conn)
+  fixupExtent(args, 'extent')
 
   return language_schema.get_insert_sql('types', args)
 
 def process_typedef(args, conn):
   args['tid'] = dxr.plugins.next_global_id()
   fixupEntryPath(args, 'tloc', conn)
+  fixupExtent(args, 'extent')
 #  handleScope(args, conn)
   return schema.get_insert_sql('typedefs', args)
 
@@ -145,6 +150,7 @@ def process_function(args, conn):
     overrides[args['funcid']] = (args['overridename'], args['overrideloc'])
 
   handleScope(args, conn)
+  fixupExtent(args, 'extent')
   return language_schema.get_insert_sql('functions', args)
 
 def process_impl(args, conn):
@@ -155,6 +161,7 @@ def process_variable(args, conn):
   args['varid'] = dxr.plugins.next_global_id()
   fixupEntryPath(args, 'vloc', conn)
   handleScope(args, conn)
+  fixupExtent(args, 'extent')
   return language_schema.get_insert_sql('variables', args)
 
 def process_ref(args, conn):
@@ -495,6 +502,8 @@ schema = dxr.plugins.Schema({
   "typedefs": [
     ("tid", "INTEGER", False),           # The typedef's tid (also in types)
     ("ttypedef", "VARCHAR(256)", False), # The long name of the type
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "tid"),
     ("_index", "ttypedef")
@@ -608,24 +617,21 @@ class CxxHtmlifier:
       kwargs['rid'] = rid
       kwargs['class'] = clazz
       return (start, end, kwargs)
-#    tblmap = {
-#      "variables": ("var", "varid"),
-#      "functions": ("func", "funcid"),
-#      "types": ("t", "tid"),
-#      "refs": ("ref", "refid"),
-#    }
-#    for tablename in tblmap:
-#      tbl = self.blob_file[tablename]
-#      kind, rid = tblmap[tablename]
-#      for df in tbl:
-#        if 'extent' in df:
-#          yield make_link(df, kind, df[rid])
-#    for decl in self.blob_file["decldef"]:
-#      if 'extent' not in decl: continue
-#      yield make_link(decl, tblmap[decl["table"]][0], decl["defid"])
 
     for row in self.conn.execute("SELECT refid, extent_start, extent_end FROM refs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
       yield make_link(row, "ref", row['refid'])
+
+    for row in self.conn.execute("SELECT varid, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+      yield make_link(row, "var", row['varid'])
+
+    for row in self.conn.execute("SELECT funcid, extent_start, extent_end FROM functions WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+      yield make_link(row, "func", row['funcid'])
+
+    for row in self.conn.execute("SELECT tid, extent_start, extent_end FROM types WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+      yield make_link(row, "t", row['tid'])
+
+    for row in self.conn.execute("SELECT tid, extent_start, extent_end FROM typedefs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+      yield make_link(row, "t", row['tid'])
 
     for row in self.conn.execute("SELECT macroid, macroname, file_line, file_col FROM macros WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
       line = row['file_line']
