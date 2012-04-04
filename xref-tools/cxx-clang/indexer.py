@@ -573,8 +573,14 @@ class CxxHtmlifier:
       else:
         img = 'images/icons/page_white_wrench.png'
 
-      if 'sname' in df:
-        return (df[name], df[loc], df[name], img, df['sname'])
+      try:
+        sname = df['sname']
+      except:
+        sname = None
+        pass
+
+      if sname is not None and len(sname) > 0:
+        return (df[name], df[loc], df[name], img, sname)
       return (df[name], df[loc], df[name], img)
     for row in self.conn.execute("SELECT tqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
