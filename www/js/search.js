@@ -1,13 +1,24 @@
+function getSearchUrlBase(tree, noredirect) {
+  // Figure out the right path separator to use with virtroot
+  sep = virtroot[virtroot.length - 1] === '/' ? '' : '/';
+  var url = virtroot + sep + 'search.cgi?tree=' + tree;
+  var date = new Date ();
+
+  url += "&request_time=" + date.getTime ();
+
+  if (noredirect == true) {
+    url += "&noredirect=1"
+  }
+
+  return url;
+}
+
 function doSearch(id) {
   var f = document.getElementById(id);
   var args = f.string.value.split(/ +/);
   var string = "";
-  // Figure out the right path separator to use with virtroot
-  sep = virtroot[virtroot.length - 1] === '/' ? '' : '/';
-  var url = virtroot + sep + 'search.cgi?tree=' + f.tree.value;
-  var date = new Date ();
 
-  url += "&request_time=" + date.getTime ();
+  var url = getSearchUrlBase (f.tree.value, false);
 
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];
@@ -51,4 +62,34 @@ function doSearch(id) {
 
   window.location = url;
   return false;
+}
+
+function checkShowHintBox(form_id, div_id, link_id) {
+  var url = window.location.href;
+  var pattern = /string=([^&#]+)/;
+  var match = url.match (pattern);
+  var search = RegExp.$1;
+
+  if (search.length > 0) {
+    showHintBox(form_id, div_id, link_id, search);
+  }
+}
+
+
+function showHintBox(form_id, id, link_id, string) {
+  var form = document.getElementById(form_id)
+  var div = document.getElementById(id);
+  var link = document.getElementById(link_id);
+  var url = getSearchUrlBase(form.tree.value, true);
+
+  url += "&string=" + encodeURIComponent(string);
+
+  link.innerHTML = string;
+  link.href= url
+  div.style.display = "block";
+}
+
+function hideHintBox(id) {
+  var div = document.getElementById(id);
+  div.style.display='none'
 }

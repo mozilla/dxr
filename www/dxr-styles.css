@@ -128,3 +128,20 @@ table#index-list td {
 table#index-list tr:nth-child(even) {
   background-color: #f6f6f0;
 }
+
+#hintBox {
+  display: none;
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  right: 20px;
+  padding: 10px;
+  background-color: #FFE066;
+  border: 1px solid #000;
+  border-radius: 6px;
+  z-index: 99;
+}
+
+#hintBox a {
+  color: #00b;
+}

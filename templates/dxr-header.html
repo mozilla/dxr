@@ -15,7 +15,10 @@
   <script type="text/javascript" src="${virtroot}/js/search.js"></script>
   <script type="text/javascript" src="${virtroot}/js/dxr.js"></script>
 </head>
-<body class="tundra" style="overflow: hidden;">
+<body class="tundra" style="overflow: hidden;" onload="checkShowHintBox('searchForm', 'hintBox', 'hintLink');">
+<div id="hintBox" onclick="hideHintBox('hintBox')">
+  A direct result has been selected. Do you mean to search on '<a id='hintLink'></a>' instead?
+</div>
 <div id="bc" dojoType="dijit.layout.BorderContainer" design="headline" gutters="false" style="width: 100%; height: 100%">
   <div id="header" dojoType="dijit.layout.ContentPane" region="top">
     <div id="logo"><a href="${virtroot}/index.html"><img src="${virtroot}/images/powered-by-mozilla-small.png" border="0"></a></div>
