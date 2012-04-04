@@ -152,9 +152,9 @@ def processString(string, path=None, ext=None, regexp=None):
     for res in results:
       # Make sure we're not matching part of the scope
       colon = res[0].rfind(':')
-      if colon != -1 and res[0][colon:].find(string) == -1:
+      if colon != -1 and res[0].lower()[colon:].find(string.lower()) == -1:
         continue
-      if path and not re.search(path, res[1]):
+      if path and path.lower() != res[1].lower():
         continue
       if not outputtedResults:
         outputtedResults = True
