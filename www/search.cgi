@@ -65,6 +65,10 @@ def like_escape(val):
 
 def GetLine(rowid, line, col):
   row = conn.execute('SELECT fts.content, (SELECT path FROM files where files.ID = fts.rowid) FROM fts where fts.rowid = ?', (rowid,)).fetchone()
+
+  if row is None:
+    return ''
+
   text = row[0]
   fname = row[1]
   text_start = 0
