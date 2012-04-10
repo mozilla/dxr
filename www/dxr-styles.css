@@ -145,3 +145,10 @@ table#index-list tr:nth-child(even) {
 #hintBox a {
   color: #00b;
 }
+
+#toggleLeftSidebar {
+  position: absolute;
+  bottom: -6px;
+  left: 0px;
+}
+

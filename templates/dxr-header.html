@@ -15,7 +15,7 @@
   <script type="text/javascript" src="${virtroot}/js/search.js"></script>
   <script type="text/javascript" src="${virtroot}/js/dxr.js"></script>
 </head>
-<body class="tundra" style="overflow: hidden;" onload="checkShowHintBox('searchForm', 'hintBox', 'hintLink');">
+<body class="tundra" style="overflow: hidden;" onload="checkShowHintBox('searchForm', 'hintBox', 'hintLink'); initLeftPane('toggleLeftSidebarImg', 'sidebar', ${showLeftSidebar});">
 <div id="hintBox" onclick="hideHintBox('hintBox')">
   A direct result has been selected. Do you mean to search on '<a id='hintLink'></a>' instead?
 </div>
@@ -31,5 +31,8 @@
     </div>
     <div id="sidebarActions">
       ${sidebarActions}
+    </div>
+    <div id="toggleLeftSidebar">
+      <img id="toggleLeftSidebarImg" src="${virtroot}/images/icons/bullet_toggle_minus.png" onclick="toggleLeftPaneVisibility()" />
     </div>
   </div>

@@ -278,3 +278,33 @@ dojo.addOnLoad(function() {
 
   init();
 });
+
+function paneVisibility() {
+  var img = document.getElementById(paneVisibility.img_id);
+  var pane = document.getElementById(paneVisibility.pane_id);
+
+  if (paneVisibility.visible == true) {
+    pane.style.display = 'block';
+    img.src = '/images/icons/bullet_toggle_minus.png';
+    img.title = 'Hide type list';
+  } else {
+    pane.style.display = 'none';
+    img.src = '/images/icons/bullet_toggle_plus.png';
+    img.title = 'Show type list';
+  }
+
+  dijit.byId('bc').resize();
+}
+
+function toggleLeftPaneVisibility() {
+  paneVisibility.visible = !paneVisibility.visible;
+  paneVisibility();
+}
+
+function initLeftPane(img_id, pane_id, visible) {
+  paneVisibility.img_id = img_id;
+  paneVisibility.pane_id = pane_id;
+  paneVisibility.visible = visible;
+
+  paneVisibility();
+}

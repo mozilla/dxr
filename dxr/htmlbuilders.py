@@ -33,6 +33,7 @@ class HtmlBuilder:
     self.srcroot = tree.sourcedir
     self.dstpath = os.path.normpath(dstpath)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
+    self.show_sidebar = False
 
     self.blob = blob
     self.resmap = resmap
@@ -84,10 +85,18 @@ class HtmlBuilder:
     html+=('</div>')
     return html
 
-  def toHTML(self):
+  def toHTML(self, inhibit_sidebar):
     out = open(self.dstpath, 'w')
     sidebarActions = self.getSidebarActions()
-    out.write(self.html_header.replace('${sidebarActions}', sidebarActions) + '\n')
+    self.html_header = self.html_header.replace('${sidebarActions}', sidebarActions);
+
+    if inhibit_sidebar is True:
+      str = 'false'
+    else:
+      str = 'true'
+    self.html_header = self.html_header.replace('${showLeftSidebar}', str)
+
+    out.write(self.html_header + '\n')
     self.writeSidebar(out)
     self.writeMainContent(out)
     self.writeGlobalScript(out)
@@ -214,6 +223,8 @@ class HtmlBuilder:
 
 htmlifier_map = {}
 ending_iterator = []
+inhibit_sidebar = {}
+
 def build_htmlifier_map(plugins):
   def add_to_map(ending, hmap, pluginname, append):
     for x in ['get_sidebar_links', 'get_link_regions', 'get_line_annotations',
@@ -225,6 +236,10 @@ def build_htmlifier_map(plugins):
         details.append((pluginname, hmap[x]))
       else:
         details[0] = (pluginname, hmap[x])
+
+    if 'get_inhibit_sidebar' in hmap and hmap['get_inhibit_sidebar'] is True:
+      inhibit_sidebar[ending] = True
+
   # Add/append details for each map
   for plug in plugins:
     plug_map = plug.get_htmlifiers()
@@ -242,6 +257,8 @@ def make_html(srcpath, dstfile, treecfg, blob, conn = None):
   # Match the file in srcpath
   result_map = {}
   signalStop = False
+  inhibit = False
+
   for end in ending_iterator:
     if srcpath.endswith(end):
       for func in htmlifier_map[end]:
@@ -251,7 +268,9 @@ def make_html(srcpath, dstfile, treecfg, blob, conn = None):
         if flist[0] is not None:
           reslist[0] = flist[0]
           signalStop = True
+      if end in inhibit_sidebar:
+        inhibit = True
     if signalStop:
       break
   builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map, conn)
-  builder.toHTML()
+  builder.toHTML(inhibit)
