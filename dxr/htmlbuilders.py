@@ -129,7 +129,8 @@ class HtmlBuilder:
     for cont in contKeys:
       if cont is not None:
         out.write('<b>%s</b>\n<div>\n' % cgi.escape(str(cont)))
-      containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
+      #containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
+      containers[cont].sort(lambda x, y: cmp(x[0], y[0]))
       for e in containers[cont]:
         img = len(e) > 3 and e[3] or "images/icons/page_white_code.png"
         title = len(e) > 2 and e[2] or e[0]
