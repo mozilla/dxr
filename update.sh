@@ -5,6 +5,7 @@
 DXRCONFIG=$1
 TREE="$2"
 REMOTE="$3"
+CURRENTDIR=`pwd`
 
 if [ ! -f $DXRCONFIG ]; then
   if [ -f /etc/dxr/dxr.config ]; then
@@ -44,6 +45,7 @@ test "`command -v clang`" == "" && echo Failed: clang not found && exit 1
 python -c 'import xdg.Mime, sqlite3, subprocess' || (echo Failed: Missing Python modules && exit 1)
 
 # Source
+cd $CURRENTDIR
 . $DXRROOT/setup-env.sh $DXRCONFIG $TREE || exit 1
 echo ' '
 
@@ -70,7 +72,7 @@ NCSV=`find $BUILD -name "*.csv" | wc -l` && test "$NCSV" == "0" && echo Failed: 
 echo ' '
 
 # Index
-cd $WWWROOT
+cd $CURRENTDIR
 $DXRROOT/dxr-index.py -f $DXRCONFIG -t $TREE
 NTBL=`echo '.tables' | sqlite3 -init /dev/stdin /$WWWROOT/$TREE/.dxr_xref/$TREE.sqlite | wc -w` && test "$NTBL" != "20" && echo Failed: Missing tables && exit 1
 
