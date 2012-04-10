@@ -682,6 +682,9 @@ for f in ('.c', '.cc', '.cpp', '.h', '.hpp'):
       'get_line_annotations': get_line_annotations,
       'get_syntax_regions': get_syntax_regions}
 
+  if f[1] == 'c':
+    htmlifier[f]['get_inhibit_sidebar'] = True
+
 def get_htmlifiers():
   return htmlifier
 
