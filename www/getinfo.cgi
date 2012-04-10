@@ -213,18 +213,19 @@ def printError(msg='Unknown error'):
   print 'Content-Type: text/html\n\n<div class="info">%s</div>' % msg
 
 def printMacro():
-  value = conn.execute('select * from macros where macroid=?;', (refid,)).fetchone()
+  value = conn.execute('select *, (select path from files where id=macros.file_id) as path from macros where macroid=?;', (refid,)).fetchone()
   macrotext = value['macrotext'] and value['macrotext'] or ''
   macroargs = value['macroargs'] and value['macroargs'] or ''
+  url = locUrl(value['path'], value['file_line'])
   print """Content-Type: text/html
 
 <div class="info">
-<div>%s%s</div>
+<div><a href="%s">%s</a>%s</div>
 <pre style="margin-top:5px">
 %s
 </pre>
 </div>
-""" % (value['macroname'], macroargs, cgi.escape(macrotext))
+""" % (url, value['macroname'], macroargs, cgi.escape(macrotext))
 
 def printType():
   row = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) " +
