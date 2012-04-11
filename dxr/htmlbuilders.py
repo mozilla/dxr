@@ -191,8 +191,20 @@ class HtmlBuilder:
       if link[0] is None or link[1] is None:
         continue
       item = self.source[off(link[0]):off(link[1])]
-      chars[off(link[0])] = '<a aria-haspopup="true" href="%s%s" %s>%s' % (
-        href_prefix, item,
+      if 'href' in link[2]:
+        href = link[2]['href']
+        if ':/' not in href:
+          #href is not fully qualified, set it underneath the indexed tree
+          href = "%s/%s/%s" % (self.virtroot, self.treename, href)
+        del link[2]['href']
+      else:
+        href = "%s%s" % (href_prefix, item)
+
+      if 'rid' in link[2]:
+        link[2]['aria-haspopup'] = 'true'
+
+      chars[off(link[0])] = '<a href="%s" %s>%s' % (
+        href,
         ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
         chars[off(link[0])])
       chars[off(link[1]) - 1] += '</a>'

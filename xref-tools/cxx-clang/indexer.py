@@ -4,6 +4,7 @@ from dxr.languages import language_schema
 import dxr.plugins
 import os
 import mmap
+import re
 
 file_cache = {}
 decl_master = {}
@@ -604,7 +605,6 @@ class CxxHtmlifier:
       yield make_tuple(row, "macroname", "file_line")
 
   def getSyntaxRegions(self):
-    self.tokenizer = CppTokenizer(self.source)
     for token in self.tokenizer.getTokens():
       if token.token_type == self.tokenizer.KEYWORD:
         yield (token.start, token.end, 'k')
@@ -623,6 +623,20 @@ class CxxHtmlifier:
       kwargs['rid'] = rid
       kwargs['class'] = clazz
       return (start, end, kwargs)
+
+    pattern = re.compile('\#[\s]*include[\s]*[<"](\S+)[">]')
+
+    for token in self.tokenizer.getTokens():
+      if token.token_type == self.tokenizer.PREPROCESSOR and 'include' in token.name:
+        match = pattern.match (token.name)
+        if match is None:
+          continue
+        rows = self.conn.execute("SELECT path FROM files WHERE path LIKE ?", ("%%%s" % (match.group(1)),)).fetchall()
+
+        if rows is not None and len(rows) == 1:
+          yield (token.start + match.start(1), token.start + match.end(1), {"href" : rows[0][0] })
+      else:
+        continue
 
     for row in self.conn.execute("SELECT refid, extent_start, extent_end FROM refs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
       yield make_link(row, "ref", row['refid'])
@@ -659,6 +673,7 @@ def ensureHtmlifier(blob, srcpath, treecfg, conn=None):
   if srcpath != htmlifier_current_path:
     htmlifier_current_path = srcpath
     htmlifier_current = CxxHtmlifier(blob, srcpath, treecfg, conn)
+    htmlifier_current.tokenizer = CppTokenizer(htmlifier_current.source)
 
   return htmlifier_current
 
