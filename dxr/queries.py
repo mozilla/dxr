@@ -10,7 +10,7 @@ def getFileMatches(conn, match_string):
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
 def getFTSMatches(conn, match_string):
-  terms = match_string.split(' ')
+  terms = match_string.strip().split(' ')
 
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                           ' fts.content, offsets(fts) FROM fts where fts.content ' +
