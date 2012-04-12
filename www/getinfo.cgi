@@ -210,7 +210,7 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
   return funcbase
 
 def printError(msg='Unknown error'):
-  print 'Content-Type: text/html\n\n<div class="info">%s</div>' % msg
+  print 'Content-Type: text/html\n\n<div>%s</div>' % msg
 
 def printMacro():
   value = conn.execute('select *, (select path from files where id=macros.file_id) as path from macros where macroid=?;', (refid,)).fetchone()
@@ -251,12 +251,21 @@ def printFunction():
   printTree(json.dumps(getFunction(row, refs, True)))
 
 def printReference():
-  val = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
-                     " UNION SELECT 'func' FROM functions WHERE funcid=?" +
-                     " UNION SELECT 't' FROM types WHERE tid=?" +
-                     " UNION SELECT 't' FROM typedefs WHERE tid=?" +
-                     " UNION SELECT 'm' FROM macros WHERE macroid=?",
-                     (refid,refid,refid,refid,refid)).fetchone()[0]
+  row = None
+  stmt = conn.execute("SELECT 'var' FROM variables WHERE varid=?" +
+                      " UNION SELECT 'func' FROM functions WHERE funcid=?" +
+                      " UNION SELECT 't' FROM types WHERE tid=?" +
+                      " UNION SELECT 't' FROM typedefs WHERE tid=?" +
+                      " UNION SELECT 'm' FROM macros WHERE macroid=?",
+                      (refid,refid,refid,refid,refid))
+
+  if stmt is not None:
+    row = stmt.fetchone()
+
+  if row is None:
+    return printError("This reference is not defined in the indexed code");
+
+  val = row[0]
   return dispatch[val]()
 
 def printTree(jsonString):
