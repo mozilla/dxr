@@ -152,3 +152,47 @@ table#index-list tr:nth-child(even) {
   left: 0px;
 }
 
+#infoBox {
+  position: absolute;
+/*  position: fixed; */
+  overflow: auto;
+  width: 80%;
+  height: auto;
+  max-height: 300px;
+  z-index: 99;
+  border-radius: 6px;
+  border: 1px solid #6cc;
+  background-color: #eff;
+  padding: 0;
+}
+
+#infoBox #infoHeader {
+  padding: 2px;
+  background-color: #dee;
+}
+
+#infoBox .listHeader:hover {
+  background-color: #d9d7e0;
+}
+
+#infoBox > ul {
+  padding: 0;
+  margin: 0;
+}
+
+#infoBox ul {
+  list-style-type: none;
+}
+
+#infoBox ul li {
+  padding: 0;
+  margin: 0;
+}
+
+#infoBox ul li:hover {
+  background-color: #dee;
+}
+
+#infoBox ul li p {
+  padding-left: 20px;
+}

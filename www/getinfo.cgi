@@ -219,7 +219,7 @@ def printMacro():
   url = locUrl(value['path'], value['file_line'])
   print """Content-Type: text/html
 
-<div class="info">
+<div>
 <div><a href="%s">%s</a>%s</div>
 <pre style="margin-top:5px">
 %s
