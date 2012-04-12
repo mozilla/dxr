@@ -351,7 +351,7 @@ dojo.addOnLoad(function() {
   dojo.connect(dojo.body(), "onclick", function(e) {
     var target = e.target;
 
-    if (target.nodeName == 'SPAN' && target.className == 'c') {
+    if (target.nodeName == 'SPAN' && (target.className == 'c' || target.className == 'str')) {
       var s = window.getSelection();
 
       if (s.anchorNode) {
