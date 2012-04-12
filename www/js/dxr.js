@@ -15,6 +15,24 @@ var infoDiv,
     signatureVisible = false,
     styleRule = -1;
 
+function isChar(c) {
+  return 'A' <= c && c <= 'z'
+}
+
+function searchWord(text,offset) {
+  if (text.length <= offset)
+    return;
+
+  var preoffset = offset;
+  var postoffset = offset;
+  while(preoffset && isChar(text[preoffset-1])) preoffset--;
+  while(postoffset < text.length && isChar(text[postoffset])) postoffset++;
+
+  search = text.substring(preoffset, postoffset)
+  url = virtroot + '/search.cgi?tree=' + tree + '&string=' + encodeURIComponent(search);
+  window.location.assign(url);
+}
+
 function closeInfo() {
   if (!infoDiv) {
     return;
@@ -332,6 +350,16 @@ dojo.addOnLoad(function() {
 
   dojo.connect(dojo.body(), "onclick", function(e) {
     var target = e.target;
+
+    if (target.nodeName == 'SPAN' && target.className == 'c') {
+      var s = window.getSelection();
+
+      if (s.anchorNode) {
+        searchWord(s.anchorNode.nodeValue, s.focusOffset);
+        return;
+      }
+    }
+
     while (target.nodeName === 'SPAN') target = target.parentNode;
     if (target.nodeName === 'A' && e.button == 0) {
       var link = target;
