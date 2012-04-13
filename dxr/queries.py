@@ -5,16 +5,21 @@ import re
 # Returns tuples with [ path, basename ] for the given match string
 def getFileMatches(conn, match_string):
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), fts.basename ' +
-                          'FROM fts where fts.basename MATCH \'%s\'' % match_string).fetchall():
+                          'FROM fts where fts.basename MATCH ?', ('"%s"' % match_string,)).fetchall():
     yield row
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
 def getFTSMatches(conn, match_string):
   terms = match_string.strip().split(' ')
 
+  if len(terms) > 1:
+    str = '"%s"' % ('" NEAR "'.join(terms),)
+  else:
+    str = '"%s"' % (terms[0],)
+
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                           ' fts.content, offsets(fts) FROM fts where fts.content ' +
-                          'MATCH ?', (' NEAR '.join(terms),)).fetchall():
+                          'MATCH ?', (str,)).fetchall():
     line_count = 0
     last_pos = 0
 
