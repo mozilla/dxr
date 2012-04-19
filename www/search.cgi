@@ -357,11 +357,14 @@ def processCallers(caller, path=None, funcid=None):
     funcid = funcinfos[0]['funcid']
   # We have two cases: direct calls or we're in targets
   cur = conn.cursor()
-  for info in cur.execute("SELECT functions.*, " +
+  for info in cur.execute(
+      "SELECT functions.*, " +
       "(SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path " +
       "FROM functions " +
       "LEFT JOIN callers ON (callers.callerid = funcid) WHERE targetid=? " +
-      "UNION SELECT functions.* FROM functions LEFT JOIN callers " +
+      "UNION SELECT functions.*," +
+      "(SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path " +
+      "FROM functions LEFT JOIN callers " +
       "ON (callers.callerid = functions.funcid) LEFT JOIN targets USING " +
       "(targetid) WHERE targets.funcid=?", (funcid, funcid)):
     if not path or re.search(path, info['file_path']):
