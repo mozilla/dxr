@@ -11,9 +11,9 @@ tools like LXR and MXR.  DXR only runs on Linux for the moment.
 Prerequisites:
 --------------
 
-You need a copy of python (at least 2.6), python-sqlite. If you want to use the
-output HTML, you will need a web-server of some kind. Individual tools have
-further requirements:
+You need a copy of python (at least 2.6), python-sqlite, and sqlite 3.7+.
+If you want to use the output HTML, you will need a web-server of some kind.
+Individual tools have further requirements:
 
 cxx-clang: A copy of clang.
 
