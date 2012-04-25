@@ -17,7 +17,7 @@ def getFTSMatches(conn, match_string):
   elif terms[0].find('-') != -1:
     str = '"%s"' % (terms[0],)
   else:
-    str = '%s' % (terms[0],)
+    str = '%s*' % (terms[0],)
 
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                           ' fts.content, offsets(fts) FROM fts where fts.content ' +
