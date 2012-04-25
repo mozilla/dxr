@@ -13,10 +13,10 @@ class HtmlBuilder:
     """ Returns all contents from all plugins. """
     if func not in self.resmap:
       return []
-    return itertools.chain(*[f(self.blob.get(name, None), self.filepath, self.tree, self.conn)
+    return itertools.chain(*[f(self.blob.get(name, None), self.filepath, self.tree, self.conn, self.dbpath)
       for name, f in self.resmap[func]])
 
-  def __init__(self, tree, filepath, dstpath, blob, resmap, conn = None):
+  def __init__(self, tree, filepath, dstpath, blob, resmap, conn = None, dbpath=None):
     # Read and expand all templates
     self.html_header = tree.getTemplateFile("dxr-header.html")
     self.html_footer = tree.getTemplateFile("dxr-footer.html")
@@ -33,6 +33,8 @@ class HtmlBuilder:
     self.srcroot = tree.sourcedir
     self.dstpath = os.path.normpath(dstpath)
     self.srcpath = filepath.replace(self.srcroot + '/', '')
+    self.dbpath = dbpath
+
     self.show_sidebar = False
 
     self.blob = blob
@@ -266,7 +268,7 @@ def build_htmlifier_map(plugins):
   # in the list
   ending_iterator.sort(lambda x, y: cmp(len(y), len(x)))
 
-def make_html(srcpath, dstfile, treecfg, blob, conn = None):
+def make_html(srcpath, dstfile, treecfg, blob, conn = None, dbpath=None):
   # Match the file in srcpath
   result_map = {}
   signalStop = False
@@ -285,5 +287,9 @@ def make_html(srcpath, dstfile, treecfg, blob, conn = None):
         inhibit = True
     if signalStop:
       break
-  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map, conn)
+
+  if dbpath is None:
+    dbpath = srcpath
+
+  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map, conn, dbpath)
   builder.toHTML(inhibit)

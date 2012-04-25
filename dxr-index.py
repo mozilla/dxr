@@ -288,21 +288,13 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     index_list = open(os.path.join(dbdir, "file_list.txt"), 'w')
     file_list = []
 
-    def getOutputFiles():
+    def getOutputFiles(conn):
       for regular in treecfg.getFileList():
         yield regular
-      filelist = set()
-      for plug in big_blob:
-        try:
-          filelist.update(big_blob[plug]["byfile"].keys())
-        except KeyError:
-          pass
-        except TypeError:
-          pass
-      for filename in filelist:
-        if filename.startswith("--GENERATED--/"):
-          relpath = filename[len("--GENERATED--/"):]
-          yield filename, os.path.join(treecfg.objdir, relpath)
+      for row in conn.execute("SELECT path FROM files WHERE path LIKE '--GENERATED--/%'").fetchall():
+        filename = row[0]
+        relpath = filename[len('--GENERATED--/'):]
+        yield (filename, os.path.join(treecfg.objdir, relpath), row[0])
 
     if debugfile:
       output_files = glob.glob (treecfg.sourcedir + '/' + debugfile)
@@ -312,7 +304,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     last_dir = None
     conn = getdbconn(treecfg, dbdir)
 
-    for f in getOutputFiles():
+    for f in getOutputFiles(conn):
       # In debug mode, we only care about some files
       if debugfile and not treecfg.sourcedir + '/' + f[0] in output_files: continue
 
@@ -320,6 +312,11 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       cpypath = os.path.join(tmproot, f[0])
       srcpath = f[1]
       file_list.append(f)
+
+      if len(f) > 2:
+        dbpath = f[2]
+      else:
+        dbpath = None
 
       # Make output directory
       cpydir = os.path.dirname(cpypath)
@@ -339,7 +336,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         continue
 #      p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html", dbdir])
       try:
-        dxr.htmlbuilders.make_html(srcpath, cpypath + ".html", treecfg, big_blob, conn)
+        dxr.htmlbuilders.make_html(srcpath, cpypath + ".html", treecfg, big_blob, conn, dbpath)
       except Exception, e:
         print 'Error on file %s:' % srcpath
         import traceback

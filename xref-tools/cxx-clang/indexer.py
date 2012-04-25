@@ -562,7 +562,6 @@ import dxr
 from dxr.tokenizers import CppTokenizer
 class CxxHtmlifier:
   def __init__(self, blob, srcpath, treecfg, conn):
-    self.source = dxr.readFile(srcpath)
     self.srcpath = srcpath.replace(treecfg.sourcedir + '/', '')
     self.blob_file = None #blob["byfile"].get(self.srcpath, None)
     self.conn = conn
@@ -666,28 +665,32 @@ class CxxHtmlifier:
 htmlifier_current = None
 htmlifier_current_path = None
 
-def ensureHtmlifier(blob, srcpath, treecfg, conn=None):
+def ensureHtmlifier(blob, srcpath, treecfg, conn=None, dbpath=None):
   global htmlifier_current_path
   global htmlifier_current
 
   if srcpath != htmlifier_current_path:
     htmlifier_current_path = srcpath
-    htmlifier_current = CxxHtmlifier(blob, srcpath, treecfg, conn)
-    htmlifier_current.tokenizer = CppTokenizer(htmlifier_current.source)
+
+    if dbpath is None:
+      dbpath = srcpath
+
+    htmlifier_current = CxxHtmlifier(blob, dbpath, treecfg, conn)
+    htmlifier_current.tokenizer = CppTokenizer(dxr.readFile(srcpath))
 
   return htmlifier_current
 
-def get_sidebar_links(blob, srcpath, treecfg, conn=None):
-  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn)
+def get_sidebar_links(blob, srcpath, treecfg, conn=None, dbpath=None):
+  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn, dbpath)
   return htmlifier.collectSidebar()
-def get_link_regions(blob, srcpath, treecfg, conn=None):
-  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn)
+def get_link_regions(blob, srcpath, treecfg, conn=None, dbpath=None):
+  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn, dbpath)
   return htmlifier.getLinkRegions()
-def get_line_annotations(blob, srcpath, treecfg, conn=None):
-  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn)
+def get_line_annotations(blob, srcpath, treecfg, conn=None, dbpath=None):
+  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn, dbpath)
   return htmlifier.getLineAnnotations()
-def get_syntax_regions(blob, srcpath, treecfg, conn=None):
-  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn)
+def get_syntax_regions(blob, srcpath, treecfg, conn=None, dbpath=None):
+  htmlifier = ensureHtmlifier(blob, srcpath, treecfg, conn, dbpath)
   return htmlifier.getSyntaxRegions()
 
 htmlifier = {}

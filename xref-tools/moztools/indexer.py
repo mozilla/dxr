@@ -267,15 +267,15 @@ class IdlHtmlifier:
       start, end = df["extent"].split(':')
       yield (int(start), int(end), {'class': 'ref', 'rid': df['refid']})
 
-def get_sidebar_links(blob, srcpath, treecfg, conn=None):
+def get_sidebar_links(blob, srcpath, treecfg, conn=None, dbpath=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].collectSidebar()
-def get_link_regions(blob, srcpath, treecfg, conn=None):
+def get_link_regions(blob, srcpath, treecfg, conn=None, dbpath=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].getLinkRegions()
-def get_syntax_regions(blob, srcpath, treecfg, conn=None):
+def get_syntax_regions(blob, srcpath, treecfg, conn=None, dbpath=None):
   if srcpath not in htmlifier_store:
     htmlifier_store[srcpath] = IdlHtmlifier(blob, srcpath, treecfg)
   return htmlifier_store[srcpath].getSyntaxRegions()
