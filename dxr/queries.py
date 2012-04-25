@@ -14,8 +14,10 @@ def getFTSMatches(conn, match_string):
 
   if len(terms) > 1:
     str = '"%s"' % ('" NEAR "'.join(terms),)
-  else:
+  elif terms[0].find('-') != -1:
     str = '"%s"' % (terms[0],)
+  else:
+    str = '%s' % (terms[0],)
 
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), ' +
                           ' fts.content, offsets(fts) FROM fts where fts.content ' +
@@ -28,9 +30,12 @@ def getFTSMatches(conn, match_string):
     offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]
 
     for off in offsets:
-      line_count += content.count ("\n", last_pos, int (off[2]))
-      last_pos = int (off[2])
+      line_diff = content.count("\n", last_pos, int (off[2]))
+      last_pos = int(off[2])
+      if line_diff == 0:
+        continue
 
+      line_count += line_diff
       line_str = content [content.rfind ("\n", 0, int (off[2]) + 1) :
                           content.find ("\n", int (off[2]))]
 
@@ -47,9 +52,13 @@ def getRegexMatches(conn, match_string):
     for m in re.finditer (match_string, row[1]):
       offset = m.start ()
 
-      line_count += content.count ("\n", last_pos, offset)
+      line_diff = content.count("\n", last_pos, offset)
       last_pos = offset
 
+      if line_diff == 0:
+        continue
+
+      line_count += line_diff
       line_str = content [content.rfind ("\n", 0, offset + 1) :
                           content.find ("\n", offset)]
 
