@@ -19,7 +19,7 @@ function isChar(c) {
   return 'A' <= c && c <= 'z'
 }
 
-function searchWord(text,offset) {
+function getWordAtOffset(text,offset) {
   if (text.length <= offset)
     return;
 
@@ -28,9 +28,11 @@ function searchWord(text,offset) {
   while(preoffset && isChar(text[preoffset-1])) preoffset--;
   while(postoffset < text.length && isChar(text[postoffset])) postoffset++;
 
-  search = text.substring(preoffset, postoffset)
-  url = virtroot + '/search.cgi?tree=' + tree + '&string=' + encodeURIComponent(search);
-  window.location.assign(url);
+  return text.substring(preoffset, postoffset);
+}
+
+function getSearchURL(term) {
+  return virtroot + '/search.cgi?tree=' + tree + '&string=' + encodeURIComponent(term);
 }
 
 function closeInfo() {
@@ -42,9 +44,32 @@ function closeInfo() {
   infoDiv.innerHTML = '';
 }
 
-function showInfoDiv(div, content) {
-  div.innerHTML = content;
-  div.style.display = 'block';
+function showInfoDiv(anchor_node, search_term, content, offset) {
+  if (!infoDiv) {
+    infoDiv = document.createElement('div');
+    infoDiv.id = "infoBox";
+    infoDiv.style.left = "3px";
+
+    var parent = document.getElementById('code');
+    parent.appendChild(infoDiv);
+  }
+
+  if (offset != -1)
+    infoDiv.style.top = offset + "px";
+  else
+    infoDiv.style.top = (anchor_node.offsetTop + anchor_node.offsetHeight) + "px";
+  div_content = '';
+
+  if (search_term != null) {
+    div_content += '<p>Search for "<a href="' + getSearchURL(search_term) + '">' + search_term + '</a>"...</p>';
+  }
+
+  if (content != null) {
+    div_content += content;
+  }
+
+  infoDiv.innerHTML = div_content;
+  infoDiv.style.display = 'block';
 }
 
 function toggleSubList(elem) {
@@ -115,16 +140,16 @@ function asyncRequestFinished() {
   if (req.readyState == 4 && req.status == 200) {
     if (req.responseText[0] == '<') {
       // embedded HTML response
-      showInfoDiv(req.div, req.responseText);
+      showInfoDiv(req.anchor_node, req.anchor_node.innerHTML, req.responseText, -1);
       currentRequest = null;
     } else {
       data = eval("(" + req.responseText + ")");
-      showInfoDiv(req.div, jsonToHtml(data));
+      showInfoDiv(req.anchor_node, req.anchor_node.innerHTML, jsonToHtml(data), - 1);
     }
   }
 }
 
-function asyncRequest(url, div) {
+function asyncRequest(url, anchor_node) {
   if (currentRequest) {
     currentRequest.abort();
     currentRequest = null;
@@ -132,14 +157,14 @@ function asyncRequest(url, div) {
 
   req = new XMLHttpRequest();
   req.onreadystatechange = asyncRequestFinished;
-  req.div = div;
+  req.anchor_node = anchor_node;
 
   try {
     req.open("GET", url, true);
     req.send(null);
     currentRequest = req;
   } catch (e) {
-    showInfoDiv(div, "Could not retrieve reference data");
+    showInfoDiv(anchor_node, null, "Could not retrieve reference data", -1);
   }
 }
 
@@ -158,20 +183,8 @@ function queryInfo(node) {
     url += '&' + aname + '=' + encodeURIComponent(value);
   }
 
-  if (!infoDiv) {
-    infoDiv = document.createElement('div');
-    infoDiv.id = "infoBox";
-    infoDiv.style.left = "60px";
-
-    var parent = document.getElementById('maincontent');
-    parent.appendChild(infoDiv);
-  }
-
-  infoDiv.style.top = (node.offsetTop + node.offsetHeight) + "px";
-
-  infoDiv.innerHTML = 'Loading...';
-  infoDiv.style.display = 'block';
-  asyncRequest(url, infoDiv);
+  showInfoDiv (node, node.innerHTML, "Loading...", -1);
+  asyncRequest(url, node);
 }
 
 function init() {
@@ -351,11 +364,23 @@ dojo.addOnLoad(function() {
   dojo.connect(dojo.body(), "onclick", function(e) {
     var target = e.target;
 
-    if (target.nodeName == 'SPAN' && (target.className == 'c' || target.className == 'str')) {
+    if (infoDiv != null &&
+        infoDiv.style.display == 'block' &&
+        !isEqualOrDescendant(infoDiv, target)) {
+      closeInfo();
+      e.preventDefault();
+      return;
+    }
+
+    if ((target.nodeName == 'DIV' && target.id == 'code') ||
+        (target.nodeName == 'SPAN' && target.className != 'k' && target.className != 'p')) {
       var s = window.getSelection();
 
       if (s.anchorNode) {
-        searchWord(s.anchorNode.nodeValue, s.focusOffset);
+        word = getWordAtOffset(s.anchorNode.nodeValue, s.focusOffset);
+
+        if (word.length > 0)
+          showInfoDiv(target, word, null, e.layerY + 15);
         return;
       }
     }
@@ -376,9 +401,6 @@ dojo.addOnLoad(function() {
         // Remove signature if visible, or it will cover this
         hideSignature();
       }
-    } else if (!isEqualOrDescendant(infoDiv, target)) {
-        closeInfo();
-        e.preventDefault();
     }
   });
 
