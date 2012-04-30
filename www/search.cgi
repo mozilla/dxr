@@ -419,7 +419,7 @@ try:
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
-  print '<h3>Error: Failed to open %s</h3><p>%s' % (filename, msg)
+  print '<h3>Error: Failed to open %s</h3><p>%s' % (dbname, msg)
   sys.exit (0)
 
 # This makes results a lot more fun!
