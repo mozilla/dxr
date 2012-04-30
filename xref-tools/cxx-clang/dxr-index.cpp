@@ -203,7 +203,7 @@ public:
     }
   }
 
-  void declDef(const NamedDecl *decl, const NamedDecl *def) {
+  void declDef(const NamedDecl *decl, const NamedDecl *def, SourceLocation begin, SourceLocation end) {
     if (!def)
       return;
 
@@ -211,6 +211,7 @@ public:
     recordValue("name", decl->getQualifiedNameAsString());
     recordValue("declloc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));
+    printExtent(begin, end);
     *out << std::endl;
   }
 
@@ -275,7 +276,7 @@ public:
     printExtent(nd->getLocation(), nd->getLocation());
     *out << std::endl;
 
-    declDef(d, d->getDefinition());
+    declDef(d, d->getDefinition(), d->getLocation(), d->getLocation());
     return true;
   }
 
@@ -311,8 +312,13 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *d) {
+    const FunctionDecl *def;
+
     if (!interestingLocation(d->getLocation()))
       return true;
+    else if (!d->isDefined())
+      return true;
+
     beginRecord("function", d->getLocation());
     recordValue("fname", d->getNameAsString());
     recordValue("fqualname", d->getQualifiedNameAsString());
@@ -340,9 +346,10 @@ public:
       }
     }
     *out << std::endl;
-    const FunctionDecl *def;
-    if (d->isDefined(def))
-      declDef(d, def);
+
+    if (d->isDefined(def) && def != d)
+      declDef(d, def, d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+
     return true;
   }
 
