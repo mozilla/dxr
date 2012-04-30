@@ -12,13 +12,20 @@ def locUrl(path, line):
   return '%s/%s/%s.html#l%s' % (virtroot, tree, path, line)
 
 def getDeclarations(defid):
-  cur = conn.execute("SELECT (SELECT path FROM files WHERE files.ID=decldef.file_id) AS file_path, file_line, file_col FROM decldef WHERE defid=?",(defid,))
+  row = conn.execute("SELECT (SELECT path FROM files WHERE files.ID=decldef.file_id) AS file_path, file_line, file_col FROM decldef WHERE defid=?",(defid,)).fetchone()
+
+  if row is None:
+    row = conn.execute("SELECT (SELECT path FROM files WHERE files.ID = functions.file_id) AS file_path, file_line, file_col FROM functions where funcid = ?", (defid,)).fetchone()
+
+  if row is None:
+    return {}
+
   decls = []
-  for declpath, declline, declcol in cur:
-    decls.append({ "label": "Declared at %s:%d:%d" % (declpath, declline, declcol),
-      "icon": "icon-decl",
-      "url": locUrl(declpath, declline)
-    })
+  declpath, declline, declcol = row
+  decls.append({ "label": "Declared at %s:%d:%d" % (declpath, declline, declcol),
+    "icon": "icon-decl",
+    "url": locUrl(declpath, declline)
+  })
   return decls
 
 def getType(typeinfo, refs=[], deep=False):
@@ -136,12 +143,14 @@ def getVariable(varinfo, refs=[]):
 
 def getCallee(targetid):
   cur = conn.cursor()
-  cur.execute("SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path FROM functions WHERE funcid=?", (targetid,))
-  if cur.rowcount > 0:
-    return getFunction(cur.fetchone())
-  cur.execute("SELECT *, (SELECT path FROM files WHERE files.ID=variables.file_id) AS file_path FROM variables WHERE varid=?", (targetid,))
-  if cur.rowcount > 0:
-    return getVariable(cur.fetchone())
+  row = cur.execute("SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path FROM functions WHERE funcid=?", (targetid,)).fetchone()
+
+  if row is not None:
+    return getFunction(row)
+
+  row = cur.execute("SELECT *, (SELECT path FROM files WHERE files.ID=variables.file_id) AS file_path FROM variables WHERE varid=?", (targetid,)).fetchone()
+  if row is not None:
+    return getVariable(row)
   cur.execute("SELECT funcid FROM targets WHERE targetid=?", (targetid,))
   refnode = { "label": "Dynamic call", "children": [] }
   for row in cur:
@@ -150,8 +159,17 @@ def getCallee(targetid):
 
 def getFunction(funcinfo, refs=[], useCallgraph=False):
   if isinstance(funcinfo, int):
+    defid = funcinfo
+    row = conn.execute("SELECT defid FROM decldef, functions WHERE decldef.file_id = functions.file_id AND " +
+                       "decldef.file_line = functions.file_line AND decldef.file_col = functions.file_col AND funcid = ?",
+                       (funcinfo,)).fetchone()
+    if row is not None:
+      funcinfo = row[0]
+
     funcinfo = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path FROM functions WHERE funcid=?",
       (funcinfo,)).fetchone()
+  else:
+    defid = funcinfo['funcid']
   funcbase = {
     "label": '%s %s%s' % (funcinfo['ftype'], funcinfo['fqualname'], funcinfo['fargs']),
     "icon": "icon-member",
@@ -161,6 +179,7 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
       "url": locUrl(funcinfo['file_path'], funcinfo['file_line'])
     }]
   }
+
   # Reimplementations
   for row in conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path " +
       "FROM functions LEFT JOIN targets ON " +
@@ -198,10 +217,10 @@ def getFunction(funcinfo, refs=[], useCallgraph=False):
     for info in conn.execute("SELECT callerid FROM callers WHERE targetid=? " +
         "UNION SELECT callerid FROM callers LEFT JOIN targets " +
         "ON (callers.targetid = targets.targetid) WHERE funcid=?",
-        (funcinfo['funcid'], funcinfo['funcid'])):
+        (defid, defid)):
       callee['children'].append(getFunction(info[0]))
     for info in conn.execute("SELECT targetid FROM callers WHERE callerid=?",
-        (funcinfo['funcid'],)):
+         (defid,)):
       caller['children'].append(getCallee(info[0]))
     if len(caller['children']) > 0:
       funcbase['children'].append(caller)
@@ -243,12 +262,9 @@ def printVariable():
   printTree(json.dumps(getVariable(row, refs)))
 
 def printFunction():
-  row = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) " +
-                     " AS file_path FROM functions" +
-                     " WHERE funcid=?", (refid,)).fetchone()
   refs = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=refs.file_id) " +
                       "AS file_path FROM refs WHERE refid=?", (refid,))
-  printTree(json.dumps(getFunction(row, refs, True)))
+  printTree(json.dumps(getFunction(int(refid), refs, True)))
 
 def printReference():
   row = None
