@@ -101,17 +101,23 @@ def handleScope(args, conn, canonicalize=False):
     stmt = language_schema.get_insert_sql('scopes', scope)
     conn.execute(stmt[0], stmt[1])
 
-  args['scopeid'] = scopeid
+  if scopeid is not None:
+    args['scopeid'] = scopeid
 
 def process_decldef(args, conn):
-  # Wait for post-processing
+  # Store declaration map basics on memory
   name, defloc, declloc = args['name'], args['defloc'], args['declloc']
   defid, defline, defcol = splitLoc(conn, args['defloc'])
   declid, declline, declcol = splitLoc (conn, args['declloc'])
 
   decl_master[(name, declid, declline, declcol)] = (defid, defline, defcol)
   decl_master[(name, defid, defline, defcol)] = (defid, defline, defcol)
-  return None
+
+  fixupEntryPath(args, 'declloc', conn)
+  fixupEntryPath(args, 'defloc', conn, 'definition')
+  fixupExtent(args, 'extent')
+  
+  return schema.get_insert_sql('decldef', args)
 
 def process_type(args, conn):
   fixupEntryPath(args, 'tloc', conn)
@@ -417,32 +423,13 @@ def generate_callgraph(conn):
     conn.execute("INSERT OR IGNORE INTO callers (callerid, targetid) VALUES (?, ?)",
                   (call['callerid'], call['targetid']))
 
-def remap_declarations(conn):
-  tmap = [ ('types', ['tname', 'tid']),
-           ('functions', ['fname', 'funcid']),
-           ('typedefs', ['ttypedef', 'tid']),
-           ('variables', ['vname', 'varid']) ]
-
-  for tblname, cols in tmap:
-    cache = {}
-
-    for row in conn.execute("SELECT %s,file_id, file_line, file_col FROM %s" % (','.join(cols), tblname)).fetchall():
-      cache[(row[0], row[2], row[3], row[4])] = row[1]
-
-    for decl in decl_master:
-      decl_value = decl_master[decl]
-      defn = (decl[0], decl_value[0], decl_value[1], decl_value[2])
-
-      if defn == decl:
-        continue
-
-      def_id = cache.get(defn)
-
-      if def_id is not None:
-        conn.execute ("INSERT OR IGNORE INTO decldef (file_id, file_line, file_col, defid) VALUES (?, ?, ?, ?)",
-                      (decl[1], decl[2], decl[3], def_id));
-
-    del cache
+def update_defids(conn):
+  print "Updating definition IDs..."
+  conn.execute ("UPDATE decldef SET defid = (" +
+                "SELECT tid FROM types WHERE types.file_id = decldef.definition_file_id AND " +
+                "types.file_line = decldef.definition_file_line AND types.file_col = decldef.definition_file_col UNION " +
+                "SELECT funcid FROM functions WHERE functions.file_id = decldef.definition_file_id AND " +
+                "functions.file_line = decldef.definition_file_line AND functions.file_col = decldef.definition_file_col)")
 
 def update_refs(conn):
   print "Updating refs..."
@@ -453,6 +440,8 @@ def update_refs(conn):
                 "types.file_line = refs.referenced_file_line AND types.file_col = refs.referenced_file_col UNION " +
                 "SELECT funcid FROM functions WHERE functions.file_id = refs.referenced_file_id AND " +
                 "functions.file_line = refs.referenced_file_line AND functions.file_col = refs.referenced_file_col UNION " +
+                "SELECT defid FROM decldef WHERE decldef.file_id = refs.referenced_file_id AND " +
+                "decldef.file_line = refs.referenced_file_line AND decldef.file_col = refs.referenced_file_col UNION " +
                 "SELECT varid FROM variables WHERE variables.file_id = refs.referenced_file_id AND " +
                 "variables.file_line = refs.referenced_file_line AND variables.file_col = refs.referenced_file_col)")
 
@@ -479,8 +468,7 @@ def build_database(conn, srcdir, objdir, cache=None):
   generate_callgraph(conn)
   print "Generating inheritances..."
   generate_inheritance(conn)
-  print "Remapping declarations-definitions..."
-  remap_declarations(conn);
+  update_defids(conn)
   update_refs(conn)
 
   conn.commit()
@@ -524,8 +512,12 @@ schema = dxr.plugins.Schema({
   ],
   # Declaration/definition mapping
   "decldef": [
-    ("defid", "INTEGER", False),    # ID of the definition instance
+    ("defid", "INTEGER", True),    # ID of the definition instance
     ("_location", True),
+    ("_location", True, 'definition'),
+    # Extents of the declaration
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True)
   ],
   # Macros: this is a table of all of the macros we come across in the code.
   "macros": [
@@ -567,7 +559,7 @@ class CxxHtmlifier:
     self.conn = conn
 
   def collectSidebar(self):
-    def make_tuple(df, name, loc, scope="scopeid", decl=False):
+    def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
       if decl:
         img = 'images/icons/page_white_code.png'
       else:
@@ -579,18 +571,32 @@ class CxxHtmlifier:
         sname = None
         pass
 
-      if sname is not None and len(sname) > 0:
-        return (df[name], df[loc], df[name], img, sname)
-      return (df[name], df[loc], df[name], img)
+      try:
+        path = df['path']
+        if path == srcpath:
+          path = None
+      except:
+        path = None
+        pass
+
+      if sname is not None and (len(sname) == 0 or sname == name):
+        sname = None
+
+      return (df[name], df[loc], df[name], img, sname, path)
     for row in self.conn.execute("SELECT tqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
       yield make_tuple(row, "tqualname", "file_line", "scopeid")
-    for row in self.conn.execute("SELECT fqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = functions.scopeid) AS sname " +
-                                 "FROM functions WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "fqualname", "file_line", "scopeid")
+    for row in self.conn.execute("SELECT fqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
+                                 "(SELECT path from files where id=f1.file_id) AS path FROM functions f1 WHERE funcid IN " +
+                                 "(SELECT coalesce((SELECT defid FROM decldef dd WHERE dd.file_id = f2.file_id AND dd.file_line = f2.file_line " +
+                                 " AND dd.file_col = f2.file_col), f2.funcid) FROM functions f2 " +
+                                 "WHERE f2.file_id = (SELECT id FROM files WHERE path = ?))", (self.srcpath,)).fetchall():
+      yield make_tuple(row, "fqualname", "file_line", "scopeid", False, self.srcpath)
+
     for row in self.conn.execute("SELECT vname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = variables.scopeid) AS sname " +
                                  "FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) AND " +
-                                 "scopeid NOT IN (SELECT funcid FROM functions WHERE functions.file_id = variables.file_id)",
+                                 "scopeid NOT IN (SELECT funcid FROM functions WHERE functions.file_id = variables.file_id UNION " +
+                                 "  SELECT defid FROM decldef WHERE decldef.file_id = variables.file_id)",
                                  (self.srcpath,)).fetchall():
       yield make_tuple(row, "vname", "file_line", "scopeid")
 
