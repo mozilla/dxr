@@ -559,7 +559,7 @@ class CxxHtmlifier:
     self.conn = conn
 
   def collectSidebar(self):
-    def make_tuple(df, name, loc, scope="scopeid", decl=False):
+    def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
       if decl:
         img = 'images/icons/page_white_code.png'
       else:
@@ -571,15 +571,28 @@ class CxxHtmlifier:
         sname = None
         pass
 
-      if sname is not None and len(sname) > 0:
-        return (df[name], df[loc], df[name], img, sname)
-      return (df[name], df[loc], df[name], img)
+      try:
+        path = df['path']
+        if path == srcpath:
+          path = None
+      except:
+        path = None
+        pass
+
+      if sname is not None and (len(sname) == 0 or sname == name):
+        sname = None
+
+      return (df[name], df[loc], df[name], img, sname, path)
     for row in self.conn.execute("SELECT tqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
       yield make_tuple(row, "tqualname", "file_line", "scopeid")
-    for row in self.conn.execute("SELECT fqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = functions.scopeid) AS sname " +
-                                 "FROM functions WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "fqualname", "file_line", "scopeid")
+    for row in self.conn.execute("SELECT fqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
+                                 "(SELECT path from files where id=f1.file_id) AS path FROM functions f1 WHERE funcid IN " +
+                                 "(SELECT coalesce((SELECT defid FROM decldef dd WHERE dd.file_id = f2.file_id AND dd.file_line = f2.file_line " +
+                                 " AND dd.file_col = f2.file_col), f2.funcid) FROM functions f2 " +
+                                 "WHERE f2.file_id = (SELECT id FROM files WHERE path = ?))", (self.srcpath,)).fetchall():
+      yield make_tuple(row, "fqualname", "file_line", "scopeid", False, self.srcpath)
+
     for row in self.conn.execute("SELECT vname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = variables.scopeid) AS sname " +
                                  "FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) AND " +
                                  "scopeid NOT IN (SELECT funcid FROM functions WHERE functions.file_id = variables.file_id UNION " +

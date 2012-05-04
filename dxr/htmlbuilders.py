@@ -136,9 +136,13 @@ class HtmlBuilder:
       for e in containers[cont]:
         img = len(e) > 3 and e[3] or "images/icons/page_white_code.png"
         title = len(e) > 2 and e[2] or e[0]
+        if len(e) > 5 and e[5]:
+          path = "%s/%s/%s.html" % (self.virtroot, self.treename, e[5])
+        else:
+          path = ''
         out.write('<img src="%s/%s" class="sidebarimage">' % (self.virtroot, img))
-        out.write('<a class="sidebarlink" title="%s" href="#l%d">%s</a><br>\n' %
-          (cgi.escape(title), int(e[1]), cgi.escape(e[0])))
+        out.write('<a class="sidebarlink" title="%s" href="%s#l%d">%s</a><br>\n' %
+          (cgi.escape(title), path, int(e[1]), cgi.escape(e[0])))
       if cont is not None:
         out.write('</div><br />\n')
 
