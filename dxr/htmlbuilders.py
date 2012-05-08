@@ -6,6 +6,7 @@ import cgi
 import itertools
 import sys
 import subprocess
+from string import Template
 from ConfigParser import ConfigParser
 
 class HtmlBuilder:
@@ -90,13 +91,16 @@ class HtmlBuilder:
   def toHTML(self, inhibit_sidebar):
     out = open(self.dstpath, 'w')
     sidebarActions = self.getSidebarActions()
-    self.html_header = self.html_header.replace('${sidebarActions}', sidebarActions);
 
     if inhibit_sidebar is True:
       str = 'false'
     else:
       str = 'true'
-    self.html_header = self.html_header.replace('${showLeftSidebar}', str)
+
+    t = Template(self.html_header)
+    self.html_header = t.substitute(sidebarActions = sidebarActions,
+                                    title = self.filename,
+                                    showLeftSidebar = str)
 
     out.write(self.html_header + '\n')
     self.writeSidebar(out)
