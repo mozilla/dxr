@@ -195,7 +195,8 @@ class IdlLexer(object):
     r'[A-Za-z_][A-Za-z0-9]*'
     t.type = t.value in self.keywords and 'KEYWORD' or 'IDENTIFIER'
     return t
-  t_NUMBER = r'-?(?:0(?:[0-7]*|[Xx][0-9A-Fa-f]+)|[1-9][0-9]*)'
+
+  t_NUMBER = r'-?(?:0(?:[0-7]*|[Xx][0-9A-Fa-f]+)|[1-9][0-9]*\.?[0-9]*)'
   t_INCLUDE = r'\#include[ \t]+"[^"\n]+"'
   t_CODEFRAG = '(?s)%{[^\n]*\n.*?\n%}[^\n]*$'
   t_STRING = r'(""|"[^"]*[^\\]")'
