@@ -181,7 +181,7 @@ from ply import lex
 
 class IdlLexer(object):
   keywords = dict([(x, 'KEYWORD') for x in ['attribute', 'boolean', 'const',
-    'double', 'float', 'implements', 'in', 'interface', 'long', 'octet',
+    'double', 'float', 'implements', 'in', 'interface', 'import', 'long', 'octet',
     'raises', 'sequence', 'short', 'typedef', 'unsigned', 'void', 'readonly',
     'out', 'inout', 'readonly', 'native', 'string', 'wstring', 'char',
     'wchar']])
