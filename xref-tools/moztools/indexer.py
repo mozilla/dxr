@@ -192,7 +192,8 @@ class IdlLexer(object):
 
   t_COMMENT = r'(?m)//.*?$|/\*(?s).*?\*/'
   def t_IDENTIFIER(self, t):
-    r'[A-Za-z_][A-Za-z0-9]*'
+    r'[A-Za-z_][A-Za-z0-9_]*'
+
     t.type = t.value in self.keywords and 'KEYWORD' or 'IDENTIFIER'
     return t
 
