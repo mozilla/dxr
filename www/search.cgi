@@ -142,6 +142,7 @@ def regexp(expr, item):
 def processString(string, path=None, ext=None, regexp=None):
   global watch
 
+  string = string.strip()
   vrootfix = dxrconfig.virtroot
   if vrootfix == '/':
     vrootfix = ''
