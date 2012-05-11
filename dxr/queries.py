@@ -8,13 +8,20 @@ def getFileMatches(conn, match_string):
                           'FROM fts where fts.basename MATCH ?', ('"%s"' % match_string,)).fetchall():
     yield row
 
-def filterByPath(query_str, args, path, col='file_id'):
+def filterByPath(query_str, args, path, col='file_id', ext=None):
+  if ext is not None and path is not None:
+    like_str = '%s/%%%s' % (path, ext)
+  elif ext is not None:
+    like_str = '%%%s' % (ext,)
+  else:
+    like_str = '%s/%%' % (path,)
+
   query_str += 'AND %s IN (SELECT ID FROM files WHERE path like ?)' % (col,)
-  args.append('%s/%%' % (path,))
+  args.append(like_str)
   return query_str, args
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
-def getFTSMatches(conn, match_string, path=None):
+def getFTSMatches(conn, match_string, path=None, ext=None):
   terms = match_string.strip().split(' ')
 
   if len(terms) > 1:
@@ -29,8 +36,8 @@ def getFTSMatches(conn, match_string, path=None):
                  MATCH ? """
   args = [str]
 
-  if path is not None:
-    query_str, args = filterByPath(query_str, args, path, "fts.rowid")
+  if path is not None or ext is not None:
+    query_str, args = filterByPath(query_str, args, path, "fts.rowid", ext)
 
   for row in conn.execute(query_str, args).fetchall():
     line_count = 0
@@ -53,13 +60,13 @@ def getFTSMatches(conn, match_string, path=None):
       yield [row[0], line_count, line_str]
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
-def getRegexMatches(conn, match_string, path=None):
+def getRegexMatches(conn, match_string, path=None, ext=None):
   query_str = """SELECT (SELECT path from files where ID = fts.rowid),
                  fts.content FROM fts where fts.content REGEXP (?) """
   args = [match_string]
 
-  if path is not None:
-    query_str, args = filterByPath(query_str, args, path, "fts.rowid")
+  if path is not None or ext is not None:
+    query_str, args = filterByPath(query_str, args, path, "fts.rowid", ext)
 
   for row in conn.execute(query_str, args).fetchall():
     line_count = 0

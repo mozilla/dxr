@@ -209,9 +209,9 @@ def processString(string, path=None, ext=None, regexp=None):
   watch.start('query')
 
   if regexp is None:
-    matches = queries.getFTSMatches(conn, string, path)
+    matches = queries.getFTSMatches(conn, string, path, ext)
   else:
-    matches = queries.getRegexMatches(conn, string, path)
+    matches = queries.getRegexMatches(conn, string, path, ext)
 
   for row in matches:
     if first:
