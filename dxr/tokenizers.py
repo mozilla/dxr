@@ -190,15 +190,28 @@ class CppTokenizer(BaseTokenizer):
                 if source[i] == '*' and source[i+1] == '/':
                     in_comment = -1
                     i += 2
-            elif in_macro > -1:                        # Deal with being in macros (report each macro line)
+
+                    if i >= end:
+                        return
+            elif in_macro > -1 and c not in '/"\'':    # Deal with being in macros (report each macro line)
                 token_type = self.PREPROCESSOR
                 while i < end and source[i] != '\n':
+                    # Handle comments within preprocessor lines
+                    if i < end - 1 and source[i] == '/' and (source[i+1] == '/' or source[i+1] == '*'):
+                        break
+
+                    if i < end and not source.startswith('#include', in_macro) and source[i] in '"\'':
+                        break
+
+                    if not source[i].isspace():
+                        last_char = source[i]
+
                     i += 1
 
                 if i >= end:
                     return
 
-                if source[i-1] != '\\' and source[i] == '\n':
+                if last_char is None or last_char != '\\':
                     in_macro = -1
             elif c.isalpha() or c == '_':              # Find a string token.
                 token_type = self.NAME
@@ -287,7 +300,7 @@ class CppTokenizer(BaseTokenizer):
                 raise RuntimeError('unexpected token')
 
             if i <= 0:
-                print('Invalid index, exiting now.')
+                print('Invalid index, exiting now. Started on %d: "...%s..."' % (start, source[start:start+100]))
                 return
 
             # if we get a NEWLINE, bump line number, but don't report

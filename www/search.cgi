@@ -142,6 +142,7 @@ def regexp(expr, item):
 def processString(string, path=None, ext=None, regexp=None):
   global watch
 
+  string = string.strip()
   vrootfix = dxrconfig.virtroot
   if vrootfix == '/':
     vrootfix = ''
@@ -208,9 +209,9 @@ def processString(string, path=None, ext=None, regexp=None):
   watch.start('query')
 
   if regexp is None:
-    matches = queries.getFTSMatches(conn, string)
+    matches = queries.getFTSMatches(conn, string, path, ext)
   else:
-    matches = queries.getRegexMatches(conn, string)
+    matches = queries.getRegexMatches(conn, string, path, ext)
 
   for row in matches:
     if first:
@@ -238,16 +239,22 @@ def processString(string, path=None, ext=None, regexp=None):
     print '</ul>'
 
 def processType(type, path=None):
-  for type in conn.execute('select *, (SELECT path FROM files WHERE files.ID=types.file_id) AS file_path from types where tname like "' + type + '%";').fetchall():
+  query_str = """select *, (SELECT path FROM files WHERE files.ID=types.file_id)
+                 AS file_path from types where tname like ? """
+  args = ['%s%%' % (type)]
+
+  if path is not None:
+    query_str, args = queries.filterByPath(query_str, args, path)
+
+  for type in conn.execute(query_str, args).fetchall():
     tname = cgi.escape(type['tname'])
-    if not path or re.search(path, type['file_path']):
-      info = type['tkind']
-      if info == 'typedef':
-        typedef = conn.execute('SELECT ttypedef FROM typedefs WHERE tid=?',
-            (type['tid'],)).fetchone()[0]
-        info += ' ' + cgi.escape(typedef)
-      print '<h3>%s (%s)</h3>' % (tname, info)
-      print GetLine(type['file_id'], type['file_line'], type['file_col'])
+    info = type['tkind']
+    if info == 'typedef':
+      typedef = conn.execute('SELECT ttypedef FROM typedefs WHERE tid=?',
+          (type['tid'],)).fetchone()[0]
+      info += ' ' + cgi.escape(typedef)
+    print '<h3>%s (%s)</h3>' % (tname, info)
+    print GetLine(type['file_id'], type['file_line'], type['file_col'])
 
 def processDerived(derived, path=None):
   components = derived.split('::')
@@ -326,12 +333,18 @@ def processWarnings(warnings, path=None):
     warnings = ''
 
   num_warnings = 0
-  for w in conn.execute("SELECT file_id, file_line, file_col, (SELECT path FROM files WHERE files.ID=warnings.file_id), wmsg FROM warnings WHERE wmsg LIKE '%" +
-      warnings + "%'").fetchall():
-    if not path or re.search(path, w[3]):
-      print '<h3>%s</h3>' % w[4]
-      print GetLine(w[0], w[1], w[2])
-      num_warnings += 1
+  query_str = """SELECT file_id, file_line, file_col, (SELECT path FROM files 
+                 WHERE files.ID=warnings.file_id), wmsg FROM warnings 
+                 WHERE wmsg LIKE ? """
+  args = [ '%%%s%%' % (warnings,) ]
+
+  if path is not None:
+    query_str, args = queries.filterByPath(query_str, args, path)
+
+  for w in conn.execute(query_str, args).fetchall():
+    print '<h3>%s</h3>' % w[4]
+    print GetLine(w[0], w[1], w[2])
+    num_warnings += 1
   if num_warnings == 0:
     print '<h3>No warnings found.</h3>'
 

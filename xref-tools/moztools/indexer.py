@@ -181,23 +181,26 @@ from ply import lex
 
 class IdlLexer(object):
   keywords = dict([(x, 'KEYWORD') for x in ['attribute', 'boolean', 'const',
-    'double', 'float', 'implements', 'in', 'interface', 'long', 'octet',
+    'double', 'float', 'implements', 'in', 'interface', 'import', 'long', 'octet',
     'raises', 'sequence', 'short', 'typedef', 'unsigned', 'void', 'readonly',
     'out', 'inout', 'readonly', 'native', 'string', 'wstring', 'char',
     'wchar']])
 
-  tokens = ['KEYWORD', 'COMMENT', 'IDENTIFIER', 'NUMBER', 'INCLUDE', 'CODEFRAG']
-  literals = '"(){}[],;:=|+-*<>'
+  tokens = ['KEYWORD', 'COMMENT', 'IDENTIFIER', 'NUMBER', 'INCLUDE', 'STRING', 'CODEFRAG']
+  literals = '"(){}[],;:=|+-*<>?'
   t_ignore = ' \t\n\r'
 
   t_COMMENT = r'(?m)//.*?$|/\*(?s).*?\*/'
   def t_IDENTIFIER(self, t):
-    r'[A-Za-z_][A-Za-z0-9]*'
+    r'[A-Za-z_][A-Za-z0-9_]*'
+
     t.type = t.value in self.keywords and 'KEYWORD' or 'IDENTIFIER'
     return t
-  t_NUMBER = r'-?(?:0(?:[0-7]*|[Xx][0-9A-Fa-f]+)|[1-9][0-9]*)'
+
+  t_NUMBER = r'-?(?:0(?:[0-7]*|[Xx][0-9A-Fa-f]+)|[1-9][0-9]*\.?[0-9]*)'
   t_INCLUDE = r'\#include[ \t]+"[^"\n]+"'
   t_CODEFRAG = '(?s)%{[^\n]*\n.*?\n%}[^\n]*$'
+  t_STRING = r'(""|"[^"]*[^\\]")'
 
   def t_error(self, err):
     pass
@@ -243,7 +246,7 @@ class IdlHtmlifier:
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'k')
       elif tok.type == 'COMMENT':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'c')
-      elif tok.type == 'NUMBER':
+      elif tok.type == 'NUMBER' or tok.type == 'STRING':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'str')
       elif tok.type == 'INCLUDE':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'p')
