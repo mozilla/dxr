@@ -187,7 +187,7 @@ class IdlLexer(object):
     'wchar']])
 
   tokens = ['KEYWORD', 'COMMENT', 'IDENTIFIER', 'NUMBER', 'INCLUDE', 'STRING', 'CODEFRAG']
-  literals = '"(){}[],;:=|+-*<>'
+  literals = '"(){}[],;:=|+-*<>?'
   t_ignore = ' \t\n\r'
 
   t_COMMENT = r'(?m)//.*?$|/\*(?s).*?\*/'
