@@ -186,7 +186,7 @@ class IdlLexer(object):
     'out', 'inout', 'readonly', 'native', 'string', 'wstring', 'char',
     'wchar']])
 
-  tokens = ['KEYWORD', 'COMMENT', 'IDENTIFIER', 'NUMBER', 'INCLUDE', 'CODEFRAG']
+  tokens = ['KEYWORD', 'COMMENT', 'IDENTIFIER', 'NUMBER', 'INCLUDE', 'STRING', 'CODEFRAG']
   literals = '"(){}[],;:=|+-*<>'
   t_ignore = ' \t\n\r'
 
@@ -198,6 +198,7 @@ class IdlLexer(object):
   t_NUMBER = r'-?(?:0(?:[0-7]*|[Xx][0-9A-Fa-f]+)|[1-9][0-9]*)'
   t_INCLUDE = r'\#include[ \t]+"[^"\n]+"'
   t_CODEFRAG = '(?s)%{[^\n]*\n.*?\n%}[^\n]*$'
+  t_STRING = r'(""|"[^"]*[^\\]")'
 
   def t_error(self, err):
     pass
@@ -243,7 +244,7 @@ class IdlHtmlifier:
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'k')
       elif tok.type == 'COMMENT':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'c')
-      elif tok.type == 'NUMBER':
+      elif tok.type == 'NUMBER' or tok.type == 'STRING':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'str')
       elif tok.type == 'INCLUDE':
         yield (tok.lexpos, tok.lexpos + len(tok.value), 'p')
