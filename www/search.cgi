@@ -418,7 +418,7 @@ for treecfg in dxrconfig.trees:
 if tree == 'undefined':
   print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: Specified tree %s is invalid</h3>' % \
-    ('tree' in form and form['tree'] or tree)
+    ('tree' in form and cgi.escape(form['tree']) or tree)
   sys.exit (0)
 
 try:
