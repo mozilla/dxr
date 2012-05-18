@@ -7,6 +7,7 @@ import sqlite3
 import ConfigParser
 import os
 import sys
+import re
 
 def locUrl(path, line):
   return '%s/%s/%s.html#l%s' % (virtroot, tree, path, line)
@@ -293,21 +294,27 @@ def printTree(jsonString):
 
 form = cgi.FieldStorage()
 
-type = ''
-tree = ''
-virtroot = ''
+type = None
+tree = None
+virtroot = None
+refid = None
+forbidden = r'[^0-9a-zA-Z-_]'
 
-if form.has_key('type'):
+if form.has_key('type') and not re.search(forbidden, form['type'].value):
   type = form['type'].value
 
-if form.has_key('tree'):
+if form.has_key('tree') and not re.search(forbidden, form['tree'].value):
   tree = form['tree'].value
 
-if form.has_key('virtroot'):
+if form.has_key('virtroot') and not re.search(forbidden, form['virtroot'].value):
   virtroot = form['virtroot'].value
 
 if form.has_key('rid'):
-  refid = form['rid'].value
+  refid = int(form['rid'].value)
+
+if type is None or tree is None or refid is None:
+  printError('Invalid parameters')
+  sys.exit(0)
 
 try:
   config = ConfigParser.ConfigParser()
