@@ -99,8 +99,8 @@ def print_user_timing():
 </small>"""
 
 def like_escape(val):
-  return 'LIKE "%' + val.replace("\\", "\\\\").replace("_", "\\_") \
-    .replace("%", "\\%") + '%" ESCAPE "\\"'
+  return '%' + val.replace("\\", "\\\\").replace("_", "\\_") \
+    .replace("%", "\\%") + '%'
 
 def GetLine(rowid, line, col):
   row = conn.execute('SELECT fts.content, (SELECT path FROM files where files.ID = fts.rowid) FROM fts where fts.rowid = ?', (rowid,)).fetchone()
@@ -182,8 +182,8 @@ def processString(string, path=None, ext=None, regexp=None):
     else:
       search_col = cols[0]
 
-    for row in conn.execute('SELECT %s , (SELECT path FROM files WHERE files.ID = %s.file_id), file_line, file_col FROM %s WHERE %s %s;' % (
-        cols[0], table, table, search_col, like_escape(string))).fetchall():
+    for row in conn.execute('SELECT %s , (SELECT path FROM files WHERE files.ID = %s.file_id), file_line, file_col FROM %s WHERE %s LIKE ? ESCAPE "\\";' % (
+        cols[0], table, table, search_col), (like_escape(string),)).fetchall():
       results.append((row[0], row[1], row[2], row[3]))
     printSidebarResults(str.capitalize(table), results)
 
@@ -304,8 +304,8 @@ def processDerived(derived, path=None):
         print GetLine(method[2], method[3], method[4])
 
 def processMacro(macro):
-  for m in conn.execute('SELECT * FROM macros WHERE macroname LIKE "' +
-      macro + '%";').fetchall():
+  for m in conn.execute('SELECT * FROM macros WHERE macroname LIKE ?',
+                        ("%%%s%%" % (macro),)).fetchall():
     mname = m['macroname']
     if m['macroargs']:
       mname += m['macroargs']
@@ -314,14 +314,14 @@ def processMacro(macro):
     print GetLine(m['file_id'], m['file_line'], m['file_col'])
 
 def processFunction(func):
-  for f in conn.execute('SELECT * FROM functions WHERE fqualname LIKE "%' +
-      func + '%";').fetchall():
+  for f in conn.execute('SELECT * FROM functions WHERE fqualname LIKE ?',
+                        ("%%%s%%" % (func),)).fetchall():
     print '<h3>%s</h3>' % cgi.escape(f['fqualname'])
     print GetLine(f['file_id'], f['file_line'], f['file_col'])
 
 def processVariable(var):
-  for v in conn.execute('SELECT * FROM variables WHERE vname LIKE "%' +
-      var + '%";').fetchall():
+  for v in conn.execute('SELECT * FROM variables WHERE vname LIKE ?',
+                        ("%%%s%%" % (var),)).fetchall():
     qual = v['modifiers'] and v['modifiers'] or ''
     print '<h3>%s %s %s</h3>' % (cgi.escape(qual), cgi.escape(v['vtype']),
       cgi.escape(v['vname']))
@@ -353,8 +353,9 @@ def processCallers(caller, path=None, funcid=None):
   # Instead, let's first find the function that we're trying to find.
   cur = conn.cursor()
   if funcid is None:
-    cur.execute('SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) AS file_path FROM functions WHERE fqualname %s' %
-      like_escape(caller))
+    cur.execute('SELECT *, (SELECT path FROM files WHERE files.ID=functions.file_id) ' + 
+                'AS file_path FROM functions WHERE fqualname LIKE ? ESCAPE "\\"',
+                (like_escape(caller),))
     funcinfos = cur.fetchall()
     if len(funcinfos) == 0:
       print '<h2>No results found</h2>'
