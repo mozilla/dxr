@@ -52,7 +52,7 @@ class HtmlBuilder:
       'Log': 'http://hg.mozilla.org/mozilla-central/filelog/$rev/$filename', \
       'Blame': 'http://hg.mozilla.org/mozilla-central/annotate/$rev/$filename', \
       'Diff': 'http://hg.mozilla.org/mozilla-central/diff/$rev/$filename', \
-      'Raw': 'http://hg.mozilla.org/mozilla-central/raw-diff/$rev/$filename' }
+      'Raw': 'http://hg.mozilla.org/mozilla-central/raw-file/$rev/$filename' }
     html+=('<div id="sidebarActions"><b>Actions</b>\n')
     # Pick up revision command and URLs from config file
     source_dir = self.srcroot
