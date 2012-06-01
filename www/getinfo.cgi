@@ -296,7 +296,7 @@ form = cgi.FieldStorage()
 
 type = None
 tree = None
-virtroot = None
+virtroot = ''
 refid = None
 forbidden = r'[^0-9a-zA-Z-_]'
 
