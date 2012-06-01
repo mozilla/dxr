@@ -33,8 +33,15 @@ def getType(typeinfo, refs=[], deep=False):
   if isinstance(typeinfo, int):
     typeinfo = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) AS file_path FROM types WHERE tid=?",
       (typeinfo,)).fetchone()
+
+  try:
+    label = '%s %s' % (typeinfo['tkind'], typeinfo['tqualname'])
+  except:
+    label = 'Typedef to %s' % (typeinfo['ttypedef'],)
+    pass
+
   typebase = {
-    "label": '%s %s' % (typeinfo['tkind'], typeinfo['tqualname']),
+    "label": label,
     "icon": "icon-type",
     "children": [{
       "label": 'Definition at %s:%d:%d' % (typeinfo['file_path'], typeinfo['file_line'], typeinfo['file_col']),
@@ -250,6 +257,10 @@ def printMacro():
 def printType():
   row = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) " +
                      "AS file_path FROM types WHERE tid=?", (refid,)).fetchone()
+  if row is None:
+    row = conn.execute ("SELECT *, (SELECT path FROM files WHERE files.ID=typedefs.file_id) " +
+                        "AS file_path FROM typedefs WHERE tid=?", (refid,)).fetchone()
+
   refs = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=refs.file_id) " +
                       "AS file_path FROM refs WHERE refid=?", (refid,))
   printTree(json.dumps(getType(row, refs, True)))
