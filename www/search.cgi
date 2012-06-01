@@ -273,8 +273,13 @@ def processDerived(derived, path=None):
     func = None
 
   # Find the class in the first place
-  tname, tid = conn.execute('SELECT tqualname, tid FROM types WHERE ' +
-    'tqualname LIKE ? OR tqualname=?', ('%::' + base, base)).fetchall()[0]
+  row = conn.execute('SELECT tqualname, tid FROM types WHERE ' +
+    'tqualname LIKE ? OR tqualname=?', ('%::' + base, base)).fetchone()
+
+  if row is None:
+    return
+
+  tname, tid = row
 
   print '<h2>Results for %s:</h2>\n' % (cgi.escape(tname))
   # Find everyone who inherits this class
