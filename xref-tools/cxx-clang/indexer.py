@@ -643,7 +643,9 @@ class CxxHtmlifier:
       else:
         continue
 
-    for row in self.conn.execute("SELECT refid, extent_start, extent_end FROM refs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+    for row in self.conn.execute("""SELECT refid, extent_start, extent_end FROM refs WHERE refid IS NOT NULL
+                                    AND file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start""",
+                                 (self.srcpath,)).fetchall():
       yield make_link(row, "ref", row['refid'])
 
     for row in self.conn.execute("SELECT varid, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
