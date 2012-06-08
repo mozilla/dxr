@@ -30,6 +30,8 @@ def getDeclarations(defid):
   return decls
 
 def getType(typeinfo, refs=[], deep=False):
+  typedef = None
+
   if isinstance(typeinfo, int):
     typeinfo = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) AS file_path FROM types WHERE tid=?",
       (typeinfo,)).fetchone()
@@ -37,7 +39,8 @@ def getType(typeinfo, refs=[], deep=False):
   try:
     label = '%s %s' % (typeinfo['tkind'], typeinfo['tqualname'])
   except:
-    label = 'Typedef to %s' % (typeinfo['ttypedef'],)
+    typedef = typeinfo['ttypedef']
+    label = 'Typedef to %s' % (typedef,)
     pass
 
   typebase = {
@@ -49,12 +52,20 @@ def getType(typeinfo, refs=[], deep=False):
       "url": locUrl(typeinfo['file_path'], typeinfo['file_line'])
     }]
   }
-  for typedef in conn.execute("SELECT * FROM typedefs WHERE tid=?",
-      (typeinfo['tid'],)):
-    typebase['children'].append({
-      "label": 'Real value %s' % (typedef['ttypedef']),
-      'icon': 'icon-def'
-    })
+
+  if typedef is not None:
+    words = typedef.split(' ', 2)
+    row = conn.execute ("""SELECT *, (SELECT path FROM files WHERE files.ID=decldef.definition_file_id)
+                           AS file_path FROM decldef WHERE defid IN (SELECT tid FROM types WHERE tkind=? AND tname=?)""",
+                        (words[0], words[1])).fetchone()
+
+    if row is not None:
+      typebase['children'].append({
+        "label": "Real value defined at %s:%d:%d" % (row['file_path'], row['definition_file_line'], row['definition_file_col']),
+        "icon": 'icon-def',
+        "url": locUrl(row['file_path'], row['definition_file_line'])
+      })
+
   typebase['children'].extend(getDeclarations(typeinfo['tid']))
   if not deep:
     return typebase
