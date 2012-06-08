@@ -638,6 +638,10 @@ class CxxHtmlifier:
           continue
         rows = self.conn.execute("SELECT path FROM files WHERE path NOT LIKE '/%' AND path LIKE ?", ("%%%s" % (match.group(1)),)).fetchall()
 
+        if rows is None or len(rows) == 0:
+          basename = os.path.basename (match.group(1))
+          rows = self.conn.execute("SELECT path FROM files WHERE path LIKE ?", ("%%/%s" % (basename),)).fetchall()
+
         if rows is not None and len(rows) == 1:
           yield (token.start + match.start(1), token.start + match.end(1), {"href" : rows[0][0] })
       else:
