@@ -49,7 +49,7 @@ def maybe_redirect(string):
     return False
 
   # match for filenames
-  row = conn.execute("SELECT path FROM files where path like ?", ("%%/%s" % (string,),)).fetchall()
+  row = conn.execute("SELECT path FROM files WHERE path NOT LIKE '/%' AND path LIKE ?", ("%%/%s" % (string,),)).fetchall()
 
   if row is not None and len(row) == 1:
     redirect_to(string, row[0][0]);
