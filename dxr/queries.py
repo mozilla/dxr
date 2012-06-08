@@ -4,6 +4,7 @@ import re
 
 # Returns tuples with [ path, basename ] for the given match string
 def getFileMatches(conn, match_string):
+  match_string = re.sub('["\']', '', match_string)
   for row in conn.execute('SELECT (SELECT path from files where ID = fts.rowid), fts.basename ' +
                           'FROM fts where fts.basename MATCH ?', ('"%s"' % match_string,)).fetchall():
     yield row
@@ -22,6 +23,7 @@ def filterByPath(query_str, args, path, col='file_id', ext=None):
 
 # Returns tuples with [ path, lineno, linestr ] for the given match string
 def getFTSMatches(conn, match_string, path=None, ext=None):
+  match_string = re.sub('["\']', '', match_string)
   terms = match_string.strip().split(' ')
 
   if len(terms) > 1:

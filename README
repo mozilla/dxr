@@ -23,6 +23,10 @@ Setup:
 DXR is primarily a database of source code information.  You need a lot of
 space to do this, and a fast computer helps a lot.
 
+DXR uses a configuration file to specify the different build trees and
+specifying the commands needed to build those. Check the sample.config
+file in the DXR source root directory for examples.
+
 1) Create a wwwdir (e.g., /var/www/html/dxr) for the DXR interface.
 
 2) DXR uses config info from an INI style config file. Copy dxrsrc/dxr.config
@@ -30,13 +34,22 @@ to your wwwdir and alter for your environment.
 
 3) Copy (or symlink) the contents of dxrsrc/www to your web dir.
 
-4) Run . dxrsrc/setup-env.sh <config> <tree-name> to set up your 
+4) Copy sample.config and modify to fit your setup
+
+From here on there are 2 ways to build your source tree:
+
+5a) Run dxrsrc/update.sh <config> <tree-name> (eg. update.sh my.config
+mozilla-central), this script will pull, build and index the source tree.
+
+Or alternatively, do this step by step:
+
+5b) Run . dxrsrc/setup-env.sh <config> <tree-name> to set up your
 environment, where <config> is the path to the dxr.config file to use, and
 <tree-name> is the name of the source tree to index as specified in the
 configuration file. The single `.' at the beginning is very important; 
 otherwise, your shell will not have the necessary variables exported.
 
-5) Compile and build your program. It is recommended that you use a separate
+6b) Compile and build your program. It is recommended that you use a separate
 build directory from your source directory.
 
 If the variable DXR_INDEX_OUTPUT is set on the command line, this will be used
@@ -44,10 +57,10 @@ to store the output csv files instead of the original source directory, so it
 should match the objdir specified in dxr.config. This can also be specified in
 the objdir key for the project entry in dxr.config
 
-6) Run the cross-reference generator:
+7b) Run the cross-reference generator:
 dxrsrc/dxr-index.py -f /path/to/web/dir/dxr.config
 
-7) You can optionally install the sqlite3 command line interface if it is not 
+You can optionally install the sqlite3 command line interface if it is not
 already installed on your system.  You don't strictly need it, but it makes 
 accessing the database manually easier.
 

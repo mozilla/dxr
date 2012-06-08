@@ -30,11 +30,21 @@ def getDeclarations(defid):
   return decls
 
 def getType(typeinfo, refs=[], deep=False):
+  typedef = None
+
   if isinstance(typeinfo, int):
     typeinfo = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) AS file_path FROM types WHERE tid=?",
       (typeinfo,)).fetchone()
+
+  try:
+    label = '%s %s' % (typeinfo['tkind'], typeinfo['tqualname'])
+  except:
+    typedef = typeinfo['ttypedef']
+    label = 'Typedef to %s' % (typedef,)
+    pass
+
   typebase = {
-    "label": '%s %s' % (typeinfo['tkind'], typeinfo['tqualname']),
+    "label": label,
     "icon": "icon-type",
     "children": [{
       "label": 'Definition at %s:%d:%d' % (typeinfo['file_path'], typeinfo['file_line'], typeinfo['file_col']),
@@ -42,12 +52,20 @@ def getType(typeinfo, refs=[], deep=False):
       "url": locUrl(typeinfo['file_path'], typeinfo['file_line'])
     }]
   }
-  for typedef in conn.execute("SELECT * FROM typedefs WHERE tid=?",
-      (typeinfo['tid'],)):
-    typebase['children'].append({
-      "label": 'Real value %s' % (typedef['ttypedef']),
-      'icon': 'icon-def'
-    })
+
+  if typedef is not None:
+    words = typedef.split(' ', 2)
+    row = conn.execute ("""SELECT *, (SELECT path FROM files WHERE files.ID=decldef.definition_file_id)
+                           AS file_path FROM decldef WHERE defid IN (SELECT tid FROM types WHERE tkind=? AND tname=?)""",
+                        (words[0], words[1])).fetchone()
+
+    if row is not None:
+      typebase['children'].append({
+        "label": "Real value defined at %s:%d:%d" % (row['file_path'], row['definition_file_line'], row['definition_file_col']),
+        "icon": 'icon-def',
+        "url": locUrl(row['file_path'], row['definition_file_line'])
+      })
+
   typebase['children'].extend(getDeclarations(typeinfo['tid']))
   if not deep:
     return typebase
@@ -250,6 +268,10 @@ def printMacro():
 def printType():
   row = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=types.file_id) " +
                      "AS file_path FROM types WHERE tid=?", (refid,)).fetchone()
+  if row is None:
+    row = conn.execute ("SELECT *, (SELECT path FROM files WHERE files.ID=typedefs.file_id) " +
+                        "AS file_path FROM typedefs WHERE tid=?", (refid,)).fetchone()
+
   refs = conn.execute("SELECT *, (SELECT path FROM files WHERE files.ID=refs.file_id) " +
                       "AS file_path FROM refs WHERE refid=?", (refid,))
   printTree(json.dumps(getType(row, refs, True)))
@@ -296,7 +318,7 @@ form = cgi.FieldStorage()
 
 type = None
 tree = None
-virtroot = None
+virtroot = ''
 refid = None
 forbidden = r'[^0-9a-zA-Z-_]'
 
