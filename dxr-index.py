@@ -331,6 +331,11 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         for valid in ['text', 'xml', 'shellscript', 'perl', 'm4', 'xbel', 'javascript']:
           if valid in mimetype:
             return True
+
+        # Force indexing of nsis files
+        if srcpath[-4:] == '.nsh' or srcpath[-4:] == '.nsi':
+          return True
+
         return False
       if not is_text(srcpath):
         continue

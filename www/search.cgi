@@ -49,7 +49,7 @@ def maybe_redirect(string):
     return False
 
   # match for filenames
-  row = conn.execute("SELECT path FROM files where path like ?", ("%%/%s" % (string,),)).fetchall()
+  row = conn.execute("SELECT path FROM files WHERE path NOT LIKE '/%' AND path LIKE ?", ("%%/%s" % (string,),)).fetchall()
 
   if row is not None and len(row) == 1:
     redirect_to(string, row[0][0]);
@@ -273,8 +273,13 @@ def processDerived(derived, path=None):
     func = None
 
   # Find the class in the first place
-  tname, tid = conn.execute('SELECT tqualname, tid FROM types WHERE ' +
-    'tqualname LIKE ? OR tqualname=?', ('%::' + base, base)).fetchall()[0]
+  row = conn.execute('SELECT tqualname, tid FROM types WHERE ' +
+    'tqualname LIKE ? OR tqualname=?', ('%::' + base, base)).fetchone()
+
+  if row is None:
+    return
+
+  tname, tid = row
 
   print '<h2>Results for %s:</h2>\n' % (cgi.escape(tname))
   # Find everyone who inherits this class

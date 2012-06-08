@@ -636,14 +636,20 @@ class CxxHtmlifier:
         match = pattern.match (token.name)
         if match is None:
           continue
-        rows = self.conn.execute("SELECT path FROM files WHERE path LIKE ?", ("%%%s" % (match.group(1)),)).fetchall()
+        rows = self.conn.execute("SELECT path FROM files WHERE path NOT LIKE '/%' AND path LIKE ?", ("%%%s" % (match.group(1)),)).fetchall()
+
+        if rows is None or len(rows) == 0:
+          basename = os.path.basename (match.group(1))
+          rows = self.conn.execute("SELECT path FROM files WHERE path LIKE ?", ("%%/%s" % (basename),)).fetchall()
 
         if rows is not None and len(rows) == 1:
           yield (token.start + match.start(1), token.start + match.end(1), {"href" : rows[0][0] })
       else:
         continue
 
-    for row in self.conn.execute("SELECT refid, extent_start, extent_end FROM refs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
+    for row in self.conn.execute("""SELECT refid, extent_start, extent_end FROM refs WHERE refid IS NOT NULL
+                                    AND file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start""",
+                                 (self.srcpath,)).fetchall():
       yield make_link(row, "ref", row['refid'])
 
     for row in self.conn.execute("SELECT varid, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():

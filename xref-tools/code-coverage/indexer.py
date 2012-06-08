@@ -61,6 +61,9 @@ def get_line_annotations(blob, srcpath, treecfg):
     for line, hits in blob[srcpath]['lines'].iteritems():
       yield (line, { "data-gcov-hits": str(hits) })
 
+def build_database(conn, srcdir, objdir, cache=None):
+  return
+
 htmlifier = {}
 for f in ('.c', '.cc', '.cpp', '.h', '.hpp'):
   htmlifier[f] = {
