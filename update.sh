@@ -56,7 +56,7 @@ echo ' '
 rm -Rf $BUILD # clear, including CSV and configure caches
 
 # Mozilla IDL files need special treatment
-if [ "$BUILDCMD" == "make -f client.mk build" ]; then
+if [[ "$BUILDCMD" =~ "make -f client.mk build" ]]; then
   make -f client.mk configure
   cd $BUILD
   for f in $(find -name 'autoconf.mk'); do
