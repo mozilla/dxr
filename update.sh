@@ -18,7 +18,7 @@ fi
 echo $DXRCONFIG
 
 readconfig() {
-  echo -c "reading $2 from section '$1'" >&2
+  echo "reading $2 from section '$1'" >&2
   cat $DXRCONFIG | sed -n "/^\[$1\]/,/^\[.*\]/p" | grep "^[[:space:]]*$2[[:space:]]*=" | sed "s/.*=[:space:]*//"
 }
 SOURCE=`readconfig $TREE sourcedir`
