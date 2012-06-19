@@ -32,7 +32,11 @@ file in the DXR source root directory for examples.
 2) DXR uses config info from an INI style config file. Copy dxrsrc/dxr.config
 to your wwwdir and alter for your environment.
 
-3) Copy (or symlink) the contents of dxrsrc/www to your web dir.
+3) Copy (or symlink) the contents of dxrsrc/www to your web dir. If $DXRSRC
+is the path to the DXR source code and $WWWDIR is the path to the wwwdir,
+you can do:
+
+ln -s -t $WWWDIR $DXRSRC/www/*
 
 4) Copy sample.config and modify to fit your setup
 
@@ -85,3 +89,8 @@ up with the following structure:
                              /index_bob.dat  [A pickle file of plugin data]
                              /file_list.txt  [A list of source files]
                              /file_index.txt [An index of the source files]
+
+More Information:
+-----------------
+
+For more information, please see https://wiki.mozilla.org/DXR.
