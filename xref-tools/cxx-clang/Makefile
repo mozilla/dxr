@@ -8,7 +8,7 @@ prebuild: libclang-index-plugin.so
 
 can-use:
 	@if [ -z "$$(which llvm-config)" -o \
-			! -d $(shell llvm-config --src-root)/tools/clang/include ]; then \
+			! -d $(shell llvm-config --includedir) ]; then \
 		echo "no"; \
 	else \
 		echo "yes"; \
