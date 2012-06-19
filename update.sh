@@ -46,7 +46,7 @@ python -c 'import xdg.Mime, sqlite3, subprocess' || (echo Failed: Missing Python
 
 # Source
 cd $CURRENTDIR
-$DXRROOT/setup-env.sh $DXRCONFIG $TREE || exit 1
+. $DXRROOT/setup-env.sh $DXRCONFIG $TREE || exit 1
 echo ' '
 
 cd $SOURCE
