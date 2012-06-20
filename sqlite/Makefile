@@ -5,7 +5,7 @@ LDFLAGS := `pkg-config --libs sqlite3`
 	$(CC) $(CFLAGS) -c $^ -o $@ -fPIC
 
 libdxr-code-tokenizer.so: code-tokenizer.o
-	$(CC) $(LDFLAGS) $^ -o $@ -shared
+	$(CC) $^ $(LDFLAGS) -o $@ -shared
 
 clean:
 	rm -rf *.o libdxr-code-tokenizer.so
