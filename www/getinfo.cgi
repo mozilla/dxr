@@ -328,9 +328,6 @@ if form.has_key('type') and not re.search(forbidden, form['type'].value):
 if form.has_key('tree') and not re.search(forbidden, form['tree'].value):
   tree = form['tree'].value
 
-if form.has_key('virtroot') and not re.search(forbidden, form['virtroot'].value):
-  virtroot = form['virtroot'].value
-
 if form.has_key('rid'):
   refid = int(form['rid'].value)
 
