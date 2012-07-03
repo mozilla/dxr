@@ -101,7 +101,7 @@ a:hover { cursor: pointer; text-decoration: underline; }
 }
 .info:hover { opacity: 1.0; }
 
-.padding { padding: 5px; }
+.padding { padding: 5px; white-space: nowrap; }
 
 .icon-type { background-image: url("images/icons/bricks.png"); background-repeat: no-repeat;}
 .icon-base { background-image: url("images/icons/brick_link.png"); background-repeat: no-repeat; }

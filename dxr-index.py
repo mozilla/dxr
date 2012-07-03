@@ -373,11 +373,9 @@ def indextree(treecfg, doxref, dohtml, debugfile):
   os.chmod(tmproot, 0755)
   shutil.move(tmproot, htmlroot)
 
-  try:
+  if os.path.exists(linkroot):
     os.unlink(linkroot)
-    os.symlink(htmlroot, linkroot)
-  except:
-    pass
+  os.symlink(htmlroot, linkroot)
 
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links

@@ -171,7 +171,7 @@ function asyncRequest(url, anchor_node) {
 function queryInfo(node) {
   var name = node.textContent;
   var file = location.pathname.replace(virtroot + '/' + tree + '/', '').replace('.html', '');
-  var url = virtroot + sep + "getinfo.cgi?virtroot=" + virtroot;
+  var url = virtroot + sep + "getinfo.cgi?";
   url += "&tree=" + tree;
   url += "&type=" + node.className + "&name=" + name;
   var attrs = node.attributes;
@@ -420,11 +420,11 @@ function paneVisibility() {
 
   if (paneVisibility.visible == true) {
     pane.style.display = 'block';
-    img.src = '/images/icons/bullet_toggle_minus.png';
+    img.src = virtroot + '/images/icons/bullet_toggle_minus.png';
     img.title = 'Hide type list';
   } else {
     pane.style.display = 'none';
-    img.src = '/images/icons/bullet_toggle_plus.png';
+    img.src = virtroot + '/images/icons/bullet_toggle_plus.png';
     img.title = 'Show type list';
   }
 

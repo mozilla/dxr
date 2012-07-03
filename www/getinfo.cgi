@@ -342,6 +342,7 @@ try:
   config = ConfigParser.ConfigParser()
   config.read(['/etc/dxr/dxr.config', os.getcwd() + '/dxr.config'])
   wwwdir = config.get('Web', 'wwwdir')
+  virtroot = config.get('Web', 'virtroot') #Good reason for passing virtroot as querystring?
 except:
   msg = sys.exc_info()[1] # Python 2/3 compatibility
   printError('Error loading dxr.config: %s' % msg)
