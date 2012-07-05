@@ -223,7 +223,7 @@ class IdlHtmlifier:
     if self.blob_file is None:
       return
     def make_tuple(df, name, loc):
-      img = 'images/icons/page_white_wrench.png'
+      img = 'page_white_wrench.png'
       if 'iface' in df and df['iface'] > 0:
         return (df[name], df[loc].split(':')[1], df[name], img,
           self.blob["interfaces"][df['iface']]["name"])

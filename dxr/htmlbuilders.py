@@ -25,7 +25,7 @@ class HtmlBuilder:
     self.html_sidebar_footer = tree.getTemplateFile("dxr-sidebar-footer.html")
     self.html_main_header = tree.getTemplateFile("dxr-main-header.html")
     self.html_main_footer = tree.getTemplateFile("dxr-main-footer.html")
-    
+
     self.source = dxr.readFile(filepath)
     self.virtroot = tree.virtroot
     self.treename = tree.tree
@@ -43,6 +43,9 @@ class HtmlBuilder:
     self.tree = tree
     self.conn = conn
 
+    if len(self.virtroot) > 0 and not self.virtroot.startswith("/"):
+      print '\033[93mError: %s\033[0m' % "internal error, virtroot must start with / or be empty."
+
     # Config info used by dxr.js
     self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
 
@@ -57,6 +60,7 @@ class HtmlBuilder:
     # Pick up revision command and URLs from config file
     source_dir = self.srcroot
     if 'revision' in globals():
+      #TODO: This doesn't work for multiple trees!!!
       revision = globals()['revision']
     else:
       try:
@@ -138,10 +142,10 @@ class HtmlBuilder:
       #containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
       containers[cont].sort(lambda x, y: cmp(x[0], y[0]))
       for e in containers[cont]:
-        img = len(e) > 3 and e[3] or "images/icons/page_white_code.png"
+        img = "static/images/icons/" + (len(e) > 3 and e[3] or "page_white_code.png")
         title = len(e) > 2 and e[2] or e[0]
         if len(e) > 5 and e[5]:
-          path = "%s/%s/%s.html" % (self.virtroot, self.treename, e[5])
+          path = "%s/%s/%s" % (self.virtroot, self.treename, e[5])
         else:
           path = ''
         out.write('<img src="%s/%s" class="sidebarimage">' % (self.virtroot, img))
@@ -167,6 +171,10 @@ class HtmlBuilder:
 
     if self.source is None:
       return
+
+    # TODO: Debug hack remove this
+    #if self.filename.endswith("sha1.h"):
+    #  print list(links)
 
     # Blow the contents of the file up into an array; we escape the source and
     # build the line map at the same time.
@@ -195,7 +203,7 @@ class HtmlBuilder:
       chars[off(syn[0])] = '<span class="%s">%s' % (syn[2], chars[off(syn[0])])
       chars[off(syn[1]) - 1] += '</span>'
 
-    href_prefix = self.virtroot + "/search.cgi?tree=" + self.treename + '&string='
+    href_prefix = self.virtroot + "/search?tree=" + self.treename + '&q='
 
     for link in links:
       if link[0] is None or link[1] is None:
@@ -249,6 +257,11 @@ ending_iterator = []
 inhibit_sidebar = {}
 
 def build_htmlifier_map(plugins):
+  # This looks like it would be smart :)
+  global htmlifier_map, ending_iterator, inhibit_sidebar
+  htmlifier_map = {}
+  ending_iterator = []
+  inhibit_sidebar = {}
   def add_to_map(ending, hmap, pluginname, append):
     for x in ['get_sidebar_links', 'get_link_regions', 'get_line_annotations',
         'get_syntax_regions']:

@@ -2,8 +2,8 @@
 <html lang="en-US">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <link rel="shortcut icon" href="${virtroot}/images/favicon.png" type="image/png" />
-  <link href="${virtroot}/dxr-styles.css" rel="stylesheet" type="text/css"></link>
+  <link rel="shortcut icon" href="${virtroot}/favicon.png" type="image/png" />
+  <link href="${virtroot}/static/dxr-styles.css" rel="stylesheet" type="text/css"></link>
   <style type="text/css">@import "http://ajax.googleapis.com/ajax/libs/dojo/1.5/dijit/themes/tundra/tundra.css";</style>
   <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojo/dojo.xd.js" type="text/javascript"
           djConfig="parseOnLoad:true, isDebug:false">
@@ -12,8 +12,8 @@
     dojo.require("dijit.layout.ContentPane");
     dojo.require("dijit.layout.BorderContainer");
   </script>
-  <script type="text/javascript" src="${virtroot}/js/search.js"></script>
-  <script type="text/javascript" src="${virtroot}/js/dxr.js"></script>
+  <script type="text/javascript" src="${virtroot}/static/js/search.js"></script>
+  <script type="text/javascript" src="${virtroot}/static/js/dxr.js"></script>
   <title>${title}</title>
 </head>
 <body class="tundra" style="overflow: hidden;" onload="checkShowHintBox('searchForm', 'hintBox', 'hintLink'); initLeftPane('toggleLeftSidebarImg', 'sidebar', ${showLeftSidebar});">
@@ -22,11 +22,11 @@
 </div>
 <div id="bc" dojoType="dijit.layout.BorderContainer" design="headline" gutters="false" style="width: 100%; height: 100%">
   <div id="header" dojoType="dijit.layout.ContentPane" region="top">
-    <div id="logo"><a href="${virtroot}/index.html"><img src="${virtroot}/images/powered-by-mozilla-small.png" border="0"></a></div>
+    <div id="logo"><a href="${virtroot}/"><img src="${virtroot}/static/images/powered-by-mozilla-small.png" border="0"></a></div>
     <div id="search">
-      <form id="searchForm" method="get" action="${virtroot}/search.cgi">
-        <input id="search-box" name="string" type="text" size="31" maxlength="2048" title="Search">
-        <input type="submit" value="Search" onclick="return doSearch('searchForm');">
+      <form method="get" action="${virtroot}/search">
+        <input id="search-box" name="q" type="text" size="31" maxlength="2048" title="Search">
+        <input type="submit" value="Search">
         <input type="hidden" name="tree" value="${tree}">
       </form>
     </div>
@@ -34,6 +34,6 @@
       ${sidebarActions}
     </div>
     <div id="toggleLeftSidebar">
-      <img id="toggleLeftSidebarImg" src="${virtroot}/images/icons/bullet_toggle_minus.png" onclick="toggleLeftPaneVisibility()" />
+      <img id="toggleLeftSidebarImg" src="${virtroot}/static/images/icons/bullet_toggle_minus.png" onclick="toggleLeftPaneVisibility()" />
     </div>
   </div>

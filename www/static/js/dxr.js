@@ -420,11 +420,11 @@ function paneVisibility() {
 
   if (paneVisibility.visible == true) {
     pane.style.display = 'block';
-    img.src = virtroot + '/images/icons/bullet_toggle_minus.png';
+    img.src = virtroot + '/static/images/icons/bullet_toggle_minus.png';
     img.title = 'Hide type list';
   } else {
     pane.style.display = 'none';
-    img.src = virtroot + '/images/icons/bullet_toggle_plus.png';
+    img.src = virtroot + '/static/images/icons/bullet_toggle_plus.png';
     img.title = 'Show type list';
   }
 

@@ -40,7 +40,7 @@ big_blob = None
 
 def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
   try:
-    fp = open(os.path.join(wwwdir, 'opensearch-' + name + '.xml'), 'w')
+    fp = open(os.path.join(wwwdir, 'static/opensearch-' + name + '.xml'), 'w')
     try:
       fp.write("""<?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
@@ -48,7 +48,7 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
  <Description>Search DXR %s</Description>
  <Tags>mozilla dxr %s</Tags>
  <Url type="text/html"
-      template="%s%s/search.cgi?tree=%s&amp;string={searchTerms}"/>
+      template="%s%s/search?tree=%s&q={searchTerms}"/>
 </OpenSearchDescription>""" % (name[:16], name, name, hosturl, virtroot, name))
     finally:
       fp.close()
@@ -119,7 +119,7 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
       region="center"><table id="index-list">
         <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
       ''')
-    of.write('<tr><td><img src="%s/images/icons/folder.png"></td>' %
+    of.write('<tr><td><img src="%s/static/images/icons/folder.png"></td>' %
       treecfg.virtroot)
     of.write('<td><a href="..">Parent directory</a></td>')
     of.write('<td></td><td>-</td></tr>')
@@ -146,7 +146,7 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
         add = dirs
       else:
         img = 'page_white.png'
-        link = fname
+        link = fname[:-5]
         display = fname[:-5] # Remove .html
         stat = os.stat(os.path.join(srcpath, display))
         size = stat.st_size
@@ -159,7 +159,7 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
         else:
           size = str(size)
         add = files
-      add.append('<tr><td><img src="%s/images/icons/%s"></td>' %
+      add.append('<tr><td><img src="%s/static/images/icons/%s"></td>' %
         (treecfg.virtroot, img))
       add.append('<td><a href="%s">%s</a></td>' % (link, display))
       add.append('<td>%s</td><td>%s</td>' % (
@@ -387,20 +387,20 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
 
   dxrconfig = dxr.load_config(filename)
 
+  # Copy in the config file... And all the static stuff
+  shutil.rmtree(dxrconfig.wwwdir, True)
+  shutil.copytree(dxrconfig.dxrroot + "/www", dxrconfig.wwwdir,  False)
+  shutil.copyfile(filename, dxrconfig.wwwdir + "/dxr.config")
+
   for treecfg in dxrconfig.trees:
     # if tree is set, only index/build this section if it matches
     if tree and treecfg.tree != tree:
         continue
     
-    # Delete current www folder for tree, and copy a clean one from www    
-    shutil.rmtree(treecfg.wwwdir, True)
-    shutil.copytree(dxrconfig.dxrroot + "/www/", treecfg.wwwdir)
-    shutil.copyfile(filename, treecfg.wwwdir + "/dxr.config")
-
     treecfg.virtroot = dxrconfig.virtroot
     browsetree += '<a href="%s">Browse <b>%s</b> source</a> ' % (treecfg.tree, treecfg.tree)
     options += '<option value="' + treecfg.tree + '">' + treecfg.tree + '</option>'
-    opensearch += '<link rel="search" href="opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '
+    opensearch += '<link rel="search" href="static/opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '
     opensearch += 'title="' + treecfg.tree + '" />\n'
     WriteOpenSearch(treecfg.tree, treecfg.hosturl, treecfg.virtroot, treecfg.wwwdir)
     indextree(treecfg, doxref, dohtml, debugfile)

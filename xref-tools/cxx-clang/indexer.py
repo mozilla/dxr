@@ -451,7 +451,9 @@ def post_process(srcdir, objdir):
 
 
 def build_database(conn, srcdir, objdir, cache=None):
+  global file_names
   count = 0
+  file_names = []
   os.path.walk(objdir, collect_files, ".csv")
 
   if file_names == []:
@@ -561,9 +563,9 @@ class CxxHtmlifier:
   def collectSidebar(self):
     def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
       if decl:
-        img = 'images/icons/page_white_code.png'
+        img = 'page_white_code.png'
       else:
-        img = 'images/icons/page_white_wrench.png'
+        img = 'page_white_wrench.png'
 
       try:
         sname = df['sname']
@@ -646,12 +648,12 @@ class CxxHtmlifier:
           yield (token.start + match.start(1), token.start + match.end(1), {"href" : rows[0][0] })
       else:
         continue
-
+    
     for row in self.conn.execute("""SELECT refid, extent_start, extent_end FROM refs WHERE refid IS NOT NULL
                                     AND file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start""",
                                  (self.srcpath,)).fetchall():
       yield make_link(row, "ref", row['refid'])
-
+      
     for row in self.conn.execute("SELECT varid, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
       yield make_link(row, "var", row['varid'])
 
@@ -680,7 +682,7 @@ htmlifier_current_path = None
 def ensureHtmlifier(blob, srcpath, treecfg, conn=None, dbpath=None):
   global htmlifier_current_path
   global htmlifier_current
-
+  
   if srcpath != htmlifier_current_path:
     htmlifier_current_path = srcpath
 

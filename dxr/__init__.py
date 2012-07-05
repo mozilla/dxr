@@ -101,6 +101,8 @@ class DxrConfig(object):
 
     self.wwwdir = os.path.abspath(config.get('Web', 'wwwdir'))
     self.virtroot = os.path.abspath(config.get('Web', 'virtroot'))
+    if not self.virtroot.startswith('/'):
+      self.virtroot = "/" + self.virtroot
     if self.virtroot.endswith('/'):
       self.virtroot = self.virtroot[:-1]
     self.hosturl = config.get('Web', 'hosturl')

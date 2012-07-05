@@ -24,7 +24,7 @@ pre > div#code { position: relative; left: 5.5em; }
 pre > div#linenumbers > div:hover {
   background-color: #eee;
 }
-.lnw { background-image: url("images/icons/error.png");
+.lnw { background-image: url("/static/images/icons/error.png");
        background-repeat: no-repeat;
 }
 .k { color: #0000FF; }
@@ -103,12 +103,12 @@ a:hover { cursor: pointer; text-decoration: underline; }
 
 .padding { padding: 5px; white-space: nowrap; }
 
-.icon-type { background-image: url("images/icons/bricks.png"); background-repeat: no-repeat;}
-.icon-base { background-image: url("images/icons/brick_link.png"); background-repeat: no-repeat; }
-.icon-member { background-image: url("images/icons/brick.png"); background-repeat: no-repeat; }
-.icon-decl { background-image: url("images/icons/page_white_code.png"); background-repeat: no-repeat; }
-.icon-def { background-image: url("images/icons/page_white_wrench.png"); background-repeat: no-repeat; }
-.icon-user { background-image: url("images/icons/brick_go.png"); background-repeat: no-repeat; }
+.icon-type { background-image: url("/static/images/icons/bricks.png"); background-repeat: no-repeat;}
+.icon-base { background-image: url("/static/images/icons/brick_link.png"); background-repeat: no-repeat; }
+.icon-member { background-image: url("/static/images/icons/brick.png"); background-repeat: no-repeat; }
+.icon-decl { background-image: url("/static/images/icons/page_white_code.png"); background-repeat: no-repeat; }
+.icon-def { background-image: url("/static/images/icons/page_white_wrench.png"); background-repeat: no-repeat; }
+.icon-user { background-image: url("/static/images/icons/brick_go.png"); background-repeat: no-repeat; }
 
 div[data-gcov-hits] {
   background-color: #CAD7FE;
