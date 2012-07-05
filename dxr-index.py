@@ -391,6 +391,11 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
     # if tree is set, only index/build this section if it matches
     if tree and treecfg.tree != tree:
         continue
+    
+    # Delete current www folder for tree, and copy a clean one from www    
+    shutil.rmtree(treecfg.wwwdir, True)
+    shutil.copytree(dxrconfig.dxrroot + "/www/", treecfg.wwwdir)
+    shutil.copyfile(filename, treecfg.wwwdir + "/dxr.config")
 
     treecfg.virtroot = dxrconfig.virtroot
     browsetree += '<a href="%s">Browse <b>%s</b> source</a> ' % (treecfg.tree, treecfg.tree)
