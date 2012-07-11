@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
 import cgitb; cgitb.enable()
-import ConfigParser
 import sqlite3
 import cgi
 import sys
@@ -9,68 +8,22 @@ import os
 import re
 import ctypes
 
-# Get the DXR installation point from dxr.config
-config = ConfigParser.ConfigParser()
-try:
-  config.read(['/etc/dxr/dxr.config', './dxr.config', '/srv/dxr/html/dxr.config'])
-  sys.path.append(config.get('DXR', 'dxrroot'))
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print 'Content-Type: text/html\n'
-  print '<body><h3>Error: Failed to open either %s/dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
-  sys.exit (0)
-import dxr
-from dxr import queries
-from dxr import json
-
-try:
-  ctypes_init_tokenizer = ctypes.CDLL(config.get('DXR', 'dxrroot') + "/sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
-  ctypes_init_tokenizer ()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print "Could not load tokenizer: %s" % msg
-  sys.exit (0)
-
-def regexp(expr, item):
-  reg = re.compile(expr)
-  try:
-    return reg.search(item) is not None
-  except:
-    return False
+import dxr_server
+from dxr_server import queries
+from dxr_server import json
 
 # Load query parameters
 fieldStorage = cgi.FieldStorage()
 form = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
 
-try:
-  dxrconfig = dxr.load_config()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print '<body><h3>Error: Failed to parse dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % msg
-  sys.exit (0)
 
-for treecfg in dxrconfig.trees:
-  if 'tree' in form and treecfg.tree != form['tree']:
+for treecfg in dxr_server.trees:
+  if 'tree' in form and treecfg != form['tree']:
     continue
-  dxrconfig = treecfg
-  tree = treecfg.tree
+  tree = treecfg
   break
 
-try:
-  # Load the database
-  dbname = tree + '.sqlite'
-  dxrdb = os.path.join(treecfg.dbdir, dbname)
-  conn = sqlite3.connect(dxrdb)
-  conn.text_factory = str
-  conn.create_function ('REGEXP', 2, regexp)
-  conn.execute('PRAGMA temp_store = MEMORY;')
-  conn.execute('SELECT initialize_tokenizer()')
-except:
-  print 'Countent-Type: text/html\n'
-  print '<body><h3>Error, failed to open database</h3><p>%s</body>' % (sys.exc_info()[1])
-  sys.exit(0)
+conn = dxr_server.connect_db(tree)
 
 print 'Content-Type: application/json\n'
 

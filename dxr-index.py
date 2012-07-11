@@ -113,8 +113,11 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   srcpath = os.path.join(srcpath, genroot)
   of = open(os.path.join(dirname, 'index.html'), 'w')
   try:
-    html_header = treecfg.getTemplateFile("dxr-header.html")
-    of.write(html_header.replace('${sidebarActions}', '\n'))
+    html_header = string.Template(treecfg.getTemplateFile("dxr-header.html"))
+    title = os.path.basename(dirname) + "/"
+    if dirname == htmlroot:
+      title = treecfg.tree + "/"
+    of.write(html_header.safe_substitute(sidebarActions = "\n", title = title))
     of.write('''<div id="maincontent" dojoType="dijit.layout.ContentPane"
       region="center"><table id="index-list">
         <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
@@ -386,6 +389,29 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
   opensearch = ''
 
   dxrconfig = dxr.load_config(filename)
+
+  # Copy in the static stuff
+  shutil.rmtree(dxrconfig.wwwdir + "/",  True)
+  shutil.copytree(dxrconfig.dxrroot + "/www/", dxrconfig.wwwdir,  False)
+  
+  # Fill and copy templates that we'll need for search
+  # Note not everything is filled, just properties from dxrconfig
+  # See dxr/__init__.py:DxrConfig.getTemplateFile for details
+  os.mkdir(dxrconfig.wwwdir + "/dxr_server/templates")
+  for tmpl in ("dxr-search-header.html", "dxr-search-footer.html"):
+    with open(dxrconfig.wwwdir + "/dxr_server/templates/" + tmpl, 'w') as f:
+      f.write(dxrconfig.getTemplateFile(tmpl))
+  
+  # Substitute trees directly into the dxr_server sources, so no need for config
+  with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "r") as f:
+    t = string.Template(f.read())
+  with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "w") as f:
+    f.write(t.safe_substitute(trees = repr([tree] if tree else [cfg.tree for cfg in dxrconfig.trees]),
+                              virtroot = dxrconfig.virtroot))
+  
+  # Copy in to www the dxr tokenizer, and cross fingers that this binary
+  # works on the server we deploy to :)
+  shutil.copy(dxrconfig.dxrroot + "/sqlite/libdxr-code-tokenizer.so", dxrconfig.wwwdir + "/dxr_server/")
 
   for treecfg in dxrconfig.trees:
     # if tree is set, only index/build this section if it matches

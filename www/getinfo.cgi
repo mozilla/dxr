@@ -4,10 +4,10 @@ import json
 import cgitb; cgitb.enable()
 import cgi
 import sqlite3
-import ConfigParser
 import os
 import sys
 import re
+import dxr_server
 
 def locUrl(path, line):
   return '%s/%s/%s.html#l%s' % (virtroot, tree, path, line)
@@ -335,20 +335,7 @@ if type is None or tree is None or refid is None:
   printError('Invalid parameters')
   sys.exit(0)
 
-try:
-  config = ConfigParser.ConfigParser()
-  config.read(['/etc/dxr/dxr.config', os.getcwd() + '/dxr.config'])
-  wwwdir = config.get('Web', 'wwwdir')
-  virtroot = config.get('Web', 'virtroot') #Good reason for passing virtroot as querystring?
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  printError('Error loading dxr.config: %s' % msg)
-  sys.exit(0)
-
-dxrdb = os.path.join(wwwdir, tree, '.dxr_xref', tree  + '.sqlite');
-conn = sqlite3.connect(dxrdb)
-conn.execute('PRAGMA temp_store = MEMORY;')
-conn.row_factory = sqlite3.Row
+conn = dxr_server.connect_db(tree)
 
 dispatch = {
     'var': printVariable,

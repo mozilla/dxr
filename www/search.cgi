@@ -8,34 +8,17 @@ import sys
 import os
 import ConfigParser
 import re
+import string
 
-# Get the DXR installation point from dxr.config
-config = ConfigParser.ConfigParser()
-try:
-  config.read(['/etc/dxr/dxr.config', './dxr.config'])
-  sys.path.append(config.get('DXR', 'dxrroot'))
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print 'Content-Type: text/html\n'
-  print '<body><h3>Error: Failed to open either %s/dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
-  sys.exit (0)
-import dxr
-import dxr.stopwatch
-from dxr import queries
+import dxr_server
+from dxr_server.stopwatch import StopWatch
+from dxr_server import queries
 
-try:
-  ctypes_init_tokenizer = ctypes.CDLL(config.get('DXR', 'dxrroot') + "/sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
-  ctypes_init_tokenizer ()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print "Could not load tokenizer: %s" % msg
-  sys.exit (0)
 
-watch = dxr.stopwatch.StopWatch()
+watch = StopWatch()
 
 def redirect_to(str, path, line=None):
-  url = '%s/%s/%s.html' % (dxrconfig.virtroot, tree, path)
+  url = '%s/%s/%s.html' % (dxr_server.virtroot, tree, path)
   url += '?string=' + cgi.escape(str)
 
   if line is not None:
@@ -143,7 +126,7 @@ def processString(string, path=None, ext=None, regexp=None):
   global watch
 
   string = string.strip()
-  vrootfix = dxrconfig.virtroot
+  vrootfix = dxr_server.virtroot
   if vrootfix == '/':
     vrootfix = ''
   if ext is not None and ext[0] == '.':
@@ -403,43 +386,20 @@ form = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
 
 print 'Content-Type: text/html\n'
 
-# Load the configuration files
-try:
-  dxrconfig = dxr.load_config()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print '<body><h3>Error: Failed to parse dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % msg
-  sys.exit (0)
-
 tree = 'undefined'
-for treecfg in dxrconfig.trees:
-  if 'tree' in form and treecfg.tree != form['tree']:
+for treecfg in dxr_server.trees:
+  if 'tree' in form and treecfg != form['tree']:
     continue
-  dxrconfig = treecfg
-  tree = treecfg.tree
+  tree = treecfg
   break
 
 if tree == 'undefined':
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  print dxr_server.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: Specified tree %s is invalid</h3>' % \
     ('tree' in form and cgi.escape(form['tree']) or tree)
   sys.exit (0)
 
-try:
-  # Load the database
-  dbname = tree + '.sqlite'
-  dxrdb = os.path.join(treecfg.dbdir, dbname)
-  conn = sqlite3.connect(dxrdb)
-  conn.text_factory = str
-  conn.create_function ('REGEXP', 2, regexp)
-  conn.execute('PRAGMA temp_store = MEMORY;')
-  conn.execute('SELECT initialize_tokenizer()')
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
-  print '<h3>Error: Failed to open %s</h3><p>%s' % (dbname, msg)
-  sys.exit (0)
+conn = dxr_server.connect_db(tree)
 
 # This makes results a lot more fun!
 def collate_loc(str1, str2):
@@ -477,14 +437,16 @@ watch.start('total')
 for param, dispatch, hasSidebar, titlestr, optargs in searches:
   if param in form:
     titlestr = cgi.escape(titlestr % form[param])
-    print dxrconfig.getTemplateFile("dxr-search-header.html") % titlestr
+    t = string.Template(dxr_server.getTemplateFile("dxr-search-header.html"))
+    t = t.safe_substitute(tree = tree)
+    print t % titlestr
     if not hasSidebar:
       print '<div id="content">'
     kwargs = dict((k,form[k]) for k in optargs if k in form)
     dispatch(form[param], **kwargs)
     break
 else:
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  print dxr_server.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: unknown search parameters</h3>'
 
 watch.stop('total')
@@ -493,4 +455,4 @@ print_timing(watch)
 if 'request_time' in form:
   print_user_timing()
 
-print dxrconfig.getTemplateFile("dxr-search-footer.html")
+print dxr_server.getTemplateFile("dxr-search-footer.html")
