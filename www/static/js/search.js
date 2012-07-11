@@ -15,7 +15,7 @@ function getSearchUrlBase(tree, noredirect) {
 
 function doSearch(id) {
   var f = document.getElementById(id);
-  var args = f.string.value.split(/ +/);
+  var args = f.q.value.split(/ +/);
   var string = "";
 
   var url = getSearchUrlBase (f.tree.value, false);

@@ -113,8 +113,11 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   srcpath = os.path.join(srcpath, genroot)
   of = open(os.path.join(dirname, 'index.html'), 'w')
   try:
-    html_header = treecfg.getTemplateFile("dxr-header.html")
-    of.write(html_header.replace('${sidebarActions}', '\n'))
+    html_header = string.Template(treecfg.getTemplateFile("dxr-header.html"))
+    title = os.path.basename(dirname) + "/"
+    if dirname == htmlroot:
+      title = treecfg.tree + "/"
+    of.write(html_header.safe_substitute(sidebarActions = "\n", title = title))
     of.write('''<div id="maincontent" dojoType="dijit.layout.ContentPane"
       region="center"><table id="index-list">
         <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
@@ -387,10 +390,34 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
 
   dxrconfig = dxr.load_config(filename)
 
-  # Copy in the config file... And all the static stuff
-  shutil.rmtree(dxrconfig.wwwdir, True)
-  shutil.copytree(dxrconfig.dxrroot + "/www", dxrconfig.wwwdir,  False)
-  shutil.copyfile(filename, dxrconfig.wwwdir + "/dxr.config")
+  # Copy in all the static stuff
+  if not os.path.isdir(dxrconfig.wwwdir):
+    os.mkdir(dxrconfig.wwwdir)
+  for dir in ("static", "dxr_server"):
+    shutil.rmtree(dxrconfig.wwwdir + "/" + dir,  True)
+    shutil.copytree(dxrconfig.dxrroot + "/www/" + dir, dxrconfig.wwwdir + "/" + dir,  False)
+  for f in os.listdir(dxrconfig.dxrroot + "/www/"):
+    if os.path.isfile(dxrconfig.dxrroot + "/www/" + f):
+      shutil.copy(dxrconfig.dxrroot + "/www/" + f, dxrconfig.wwwdir)
+  
+  # Fill and copy templates that we'll need for search
+  # Note not everything is filled, just properties from dxrconfig
+  # See dxr/__init__.py:DxrConfig.getTemplateFile for details
+  os.mkdir(dxrconfig.wwwdir + "/dxr_server/templates")
+  for tmpl in ("dxr-search-header.html", "dxr-search-footer.html"):
+    with open(dxrconfig.wwwdir + "/dxr_server/templates/" + tmpl, 'w') as f:
+      f.write(dxrconfig.getTemplateFile(tmpl))
+  
+  # Substitute trees directly into the dxr_server sources, so no need for config
+  with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "r") as f:
+    t = string.Template(f.read())
+  with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "w") as f:
+    f.write(t.safe_substitute(trees = repr([tree] if tree else [cfg.tree for cfg in dxrconfig.trees]),
+                              virtroot = dxrconfig.virtroot))
+  
+  # Copy in to www the dxr tokenizer, and cross fingers that this binary
+  # works on the server we deploy to :)
+  shutil.copy(dxrconfig.dxrroot + "/sqlite-tokenizer/libdxr-code-tokenizer.so", dxrconfig.wwwdir + "/dxr_server/")
 
   for treecfg in dxrconfig.trees:
     # if tree is set, only index/build this section if it matches
@@ -407,14 +434,14 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
 
   # Generate index page with drop-down + opensearch links for all trees
   indexhtml = dxrconfig.getTemplateFile('dxr-index-template.html')
-  indexhtml = string.Template(indexhtml).safe_substitute(**treecfg.__dict__)
-  indexhtml = indexhtml.replace('$BROWSETREE', browsetree)
-  if len(dxrconfig.trees) > 1:
+  if len(dxrconfig.trees) > 1 and not tree:
     options += '</select>'
   else:
-    options = '<input type="hidden" id="tree" value="' + treecfg.tree + '">'
-  indexhtml = indexhtml.replace('$OPTIONS', options)
-  indexhtml = indexhtml.replace('$OPENSEARCH', opensearch)
+    options = '<input type="hidden" name="tree" id="tree" value="' + (tree or treecfg.tree) + '">'
+  indexhtml = string.Template(indexhtml).safe_substitute(tree = treecfg.tree,
+                                                         browsetree = browsetree,
+                                                         options = options,
+                                                         opensearch = opensearch)
   index = open(os.path.join(dxrconfig.wwwdir, 'index.html'), 'w')
   index.write(indexhtml)
   index.close()
@@ -433,7 +460,7 @@ def main(argv):
     else:
       dll_base = os.path.dirname(sys.argv[0])
 
-    dll_path = os.path.join(dll_base, "sqlite", "libdxr-code-tokenizer.so")
+    dll_path = os.path.join(dll_base, "sqlite-tokenizer", "libdxr-code-tokenizer.so")
     ctypes_init_tokenizer = ctypes.CDLL(dll_path).dxr_code_tokenizer_init
     ctypes_init_tokenizer()
   except:

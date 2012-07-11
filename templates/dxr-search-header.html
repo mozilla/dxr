@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
   <link rel="shortcut icon" href="${virtroot}/favicon.png" type="image/png" />
-  <title>DXR Search Results - %s</title>
+  <title>$title - DXR Search</title>
   <link href="${virtroot}/static/dxr-search-styles.css" rel="stylesheet" type="text/css"></link>
   <script type="text/javascript" src="${virtroot}/static/js/searchParser.js"></script>
   <script type="text/javascript" src="${virtroot}/static/js/search.js"></script>
@@ -16,8 +16,9 @@
   <div id="logo"><a href="${virtroot}/"><img src="${virtroot}/static/images/powered-by-mozilla-small.png" border="0"></a></div>
 <div id="search">
   <form id="searchForm" method="get" action="search">
-    <input name="q" type="text" size="31" maxlength="2048" title="Search">
+    <input id="searchbox" name="q" type="text" size="31" value="$query" maxlength="2048" title="Search">
     <input type="submit" value="Search">
+    <input type="button" value="Old Search" onclick="return doSearch('searchForm');">
     <input type="hidden" name="tree" value="${tree}">
   </form>
 </div>

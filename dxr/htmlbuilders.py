@@ -172,10 +172,6 @@ class HtmlBuilder:
     if self.source is None:
       return
 
-    # TODO: Debug hack remove this
-    #if self.filename.endswith("sha1.h"):
-    #  print list(links)
-
     # Blow the contents of the file up into an array; we escape the source and
     # build the line map at the same time.
     line_map = [0]

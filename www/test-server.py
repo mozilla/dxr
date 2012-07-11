@@ -6,13 +6,7 @@ Use apache or something else for deployments, this is NOT designed with security
 NOTE: Support for mod_rewrite or something similar is quite important.
 """
 
-import os, BaseHTTPServer, CGIHTTPServer
-from ConfigParser import ConfigParser
-config = ConfigParser()
-config.read(['/etc/dxr/dxr.config', './dxr.config'])
-virtroot = config.get('Web', 'virtroot')
-if virtroot[-1] == '/':
-  virtroot = virtroot[:-1]
+import os, BaseHTTPServer, CGIHTTPServer, dxr_server
 
 #Extension maps for DXRRequestHandler, sets them depending on context
 #A hack that makes this work nicely.
@@ -21,7 +15,7 @@ everything_is_html = {'': "text/html"}
 class DXRRequestHandler(CGIHTTPServer.CGIHTTPRequestHandler):
   def do_GET(self):
     # Just cut away the virtual root if any
-    self.path = self.path[len(virtroot):]
+    self.path = self.path[len(dxr_server.virtroot):]
     # Handle as default if /search or /static
     # /static urls will be served as static content
     # /search urls will be served as CGI, see is_cgi
@@ -34,14 +28,22 @@ class DXRRequestHandler(CGIHTTPServer.CGIHTTPRequestHandler):
       # for everything that isn't /static or /search
       path = self.translate_path(self.path)
       if not os.path.isdir(path):
-        self.path += ".html"
+        p = self.path.split("?", 1)
+        if len(p) > 1:
+          self.path = p[0] + ".html?" + p[1]
+        else:
+          self.path = p[0] + ".html"
+      print self.path
       CGIHTTPServer.CGIHTTPRequestHandler.do_GET(self)
   
   def is_cgi(self):
     # If startswith search handle as CGI script
     if self.path.startswith('/search'):
       path = self.path.split('?')[0]
-      self.cgi_info = (os.path.dirname(path), os.path.basename(self.path))
+      if self.path.startswith('/search.cgi'):
+        self.cgi_info = (os.path.dirname(path), os.path.basename(self.path))
+      else:
+        self.cgi_info = ("/", "search.py?" + self.path.split('?')[1])
       return True
     return False
 
@@ -49,6 +51,7 @@ def main():
   server_address = ('', 8000)
   server = BaseHTTPServer.HTTPServer(server_address, DXRRequestHandler)
   try:
+    print "Starting test-server!"
     server.serve_forever()
   except KeyboardInterrupt:
     server.socket.close()

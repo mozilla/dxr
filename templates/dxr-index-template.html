@@ -2,8 +2,8 @@
 <html lang="en-US">
 <head>
 <title>Mozilla DXR Source Code Index</title>
-<link rel="shortcut icon" href="$virtroot/favicon.png" type="image/png" />
-$OPENSEARCH
+<link rel="shortcut icon" href="${virtroot}/favicon.png" type="image/png" />
+$opensearch
 <style type="text/css">
 body {
   background-color: white;
@@ -51,8 +51,8 @@ footer {
 }
 </style>
 <script type="application/javascript">
-  var tree = '$tree';
-  var virtroot = '$virtroot';
+  var tree = '${tree}';
+  var virtroot = '${virtroot}';
 </script>
 <script type="application/javascript" src="static/js/search.js"></script>
 </head>
@@ -61,12 +61,13 @@ footer {
 <img src="static/images/powered-by-mozilla.png" alt="">
 
 <form id="searchForm" method="get" action="search"><div>
-  $OPTIONS
+  $options
   <input maxlength=2048 size=55 name="q" value="" title="">&nbsp;
   <input type="submit" value="Search">
+  <input type="button" value="Old Search" onclick="return doSearch('searchForm');">
 </div><div>
 </div><div>
-  $BROWSETREE
+  $browsetree
 </div></form>
 <table>
 <tr>

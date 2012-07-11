@@ -1,41 +1,23 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import cgitb; cgitb.enable()
-import ctypes
 import cgi
 import sqlite3
 import sys
 import os
-import ConfigParser
 import re
+import string
 
-# Get the DXR installation point from dxr.config
-config = ConfigParser.ConfigParser()
-try:
-  config.read(['/etc/dxr/dxr.config', './dxr.config'])
-  sys.path.append(config.get('DXR', 'dxrroot'))
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print 'Content-Type: text/html\n'
-  print '<body><h3>Error: Failed to open either %s/dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % (os.getcwd(), msg)
-  sys.exit (0)
-import dxr
-import dxr.stopwatch
-from dxr import queries
+import dxr_server
+from dxr_server.stopwatch import StopWatch
+from dxr_server import queries
 
-try:
-  ctypes_init_tokenizer = ctypes.CDLL(config.get('DXR', 'dxrroot') + "/sqlite/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
-  ctypes_init_tokenizer ()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print "Could not load tokenizer: %s" % msg
-  sys.exit (0)
+#TODO Remove: config, dxr
 
-watch = dxr.stopwatch.StopWatch()
+watch = StopWatch()
 
 def redirect_to(str, path, line=None):
-  url = '%s/%s/%s.html' % (dxrconfig.virtroot, tree, path)
+  url = '%s/%s/%s' % (dxr_server.virtroot, tree, path)
   url += '?string=' + cgi.escape(str)
 
   if line is not None:
@@ -112,7 +94,7 @@ def GetLine(rowid, line, col):
   fname = row[1]
   text_start = 0
 
-  output = ('<div class="searchfile"><a href="%s/%s.html#l%d">' +
+  output = ('<div class="searchfile"><a href="%s/%s#l%d">' +
             '%s:%d:%d</a></div><ul class="searchresults">\n') % (tree, fname, line, fname, line, col)
 
   # Show [line - 1, line, line + 1] unless we see more
@@ -122,7 +104,7 @@ def GetLine(rowid, line, col):
   for i in xrange (3):
     text_end = text.find ("\n", text_start);
 
-    output += ('<li class="searchresult"><a href="%s/%s.html#l%s">%s:</a>' +
+    output += ('<li class="searchresult"><a href="%s/%s#l%s">%s:</a>' +
                '&nbsp;&nbsp;%s</li>\n') % (tree, fname,
                                            line + i,
                                            line + i,
@@ -132,18 +114,13 @@ def GetLine(rowid, line, col):
   output += '</ul>'
   return output
 
-def regexp(expr, item):
-  reg = re.compile(expr)
-  try:
-    return reg.search(re.escape (item)) is not None
-  except:
-    return False
+
 
 def processString(string, path=None, ext=None, regexp=None):
   global watch
 
   string = string.strip()
-  vrootfix = dxrconfig.virtroot
+  vrootfix = dxr_server.virtroot
   if vrootfix == '/':
     vrootfix = ''
   if ext is not None and ext[0] == '.':
@@ -160,7 +137,7 @@ def processString(string, path=None, ext=None, regexp=None):
       if not outputtedResults:
         outputtedResults = True
         print '<div class="bubble"><span class="title">%s</span><ul>' % name
-      print '<li><a href="%s/%s/%s.html#l%d">%s</a></li>' % \
+      print '<li><a href="%s/%s/%s#l%d">%s</a></li>' % \
         (vrootfix, tree, res[1], res[2], res[0])
     if outputtedResults:
       print '</ul></div>'
@@ -195,7 +172,7 @@ def processString(string, path=None, ext=None, regexp=None):
       print '<div class=bubble><span class="title">Files</span><ul>'
       printHeader = False
     filename = vrootfix + '/' + tree + '/' + row[0]
-    print '<li><a href="%s.html">%s</a></li>' % (filename, row[1])
+    print '<li><a href="%s">%s</a></li>' % (filename, row[1])
 
   if not printHeader:
     print "</ul></div>"
@@ -223,12 +200,12 @@ def processString(string, path=None, ext=None, regexp=None):
     if prevpath is None or prevpath != row[0]:
       if prevpath is not None:
         print '</ul>'
-      print '<div class="searchfile"><a href="%s/%s/%s.html">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
+      print '<div class="searchfile"><a href="%s/%s/%s">%s</a></div><ul class="searchresults">' % (vrootfix, tree, row[0], row[0])
 
     line_str = cgi.escape(row[2])
     line_str = re.sub(r'(?i)(' + re.escape(string) + ')', '<b>\\1</b>', line_str)
 
-    print '<li class="searchresult"><a href="%s/%s/%s.html#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], row[1] + 1, row[1] + 1, line_str)
+    print '<li class="searchresult"><a href="%s/%s/%s#l%s">%s:</a>&nbsp;&nbsp;%s</li>' % (vrootfix, tree, row[0], row[1] + 1, row[1] + 1, line_str)
     prevpath = row[0]
 
   watch.stop('formatting')
@@ -403,43 +380,19 @@ form = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
 
 print 'Content-Type: text/html\n'
 
-# Load the configuration files
-try:
-  dxrconfig = dxr.load_config()
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print '<body><h3>Error: Failed to parse dxr.config ' \
-        'or /etc/dxr/dxr.config</h3><p>%s</body>' % msg
-  sys.exit (0)
-
 tree = 'undefined'
-for treecfg in dxrconfig.trees:
-  if 'tree' in form and treecfg.tree != form['tree']:
+for tree in dxr_server.trees:
+  if 'tree' in form and tree != form['tree']:
     continue
-  dxrconfig = treecfg
-  tree = treecfg.tree
   break
 
 if tree == 'undefined':
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  print dxr_server.getTemplateFile("dxr-search-header.html") % 'Error'
   print '<h3>Error: Specified tree %s is invalid</h3>' % \
     ('tree' in form and cgi.escape(form['tree']) or tree)
   sys.exit (0)
 
-try:
-  # Load the database
-  dbname = tree + '.sqlite'
-  dxrdb = os.path.join(treecfg.dbdir, dbname)
-  conn = sqlite3.connect(dxrdb)
-  conn.text_factory = str
-  conn.create_function ('REGEXP', 2, regexp)
-  conn.execute('PRAGMA temp_store = MEMORY;')
-  conn.execute('SELECT initialize_tokenizer()')
-except:
-  msg = sys.exc_info()[1] # Python 2/3 compatibility
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
-  print '<h3>Error: Failed to open %s</h3><p>%s' % (dbname, msg)
-  sys.exit (0)
+conn = dxr_server.connect_db(tree)
 
 # This makes results a lot more fun!
 def collate_loc(str1, str2):
@@ -476,15 +429,22 @@ watch.start('total')
 
 for param, dispatch, hasSidebar, titlestr, optargs in searches:
   if param in form:
-    titlestr = cgi.escape(titlestr % form[param])
-    print dxrconfig.getTemplateFile("dxr-search-header.html") % titlestr
+    t = string.Template(dxr_server.getTemplateFile("dxr-search-header.html"))
+    t = t.safe_substitute(title = cgi.escape(titlestr % form[param]),
+                        tree = tree,
+                        query = cgi.escape(form[param], True))
+    print t
     if not hasSidebar:
       print '<div id="content">'
     kwargs = dict((k,form[k]) for k in optargs if k in form)
     dispatch(form[param], **kwargs)
     break
 else:
-  print dxrconfig.getTemplateFile("dxr-search-header.html") % 'Error'
+  t = string.Template(dxr_server.getTemplateFile("dxr-search-header.html"))
+  t = t.safe_substitute(title = 'Error',
+                        tree = dxr_server.trees[0],
+                        query = "")
+  print t
   print '<h3>Error: unknown search parameters</h3>'
 
 watch.stop('total')
@@ -493,4 +453,4 @@ print_timing(watch)
 if 'request_time' in form:
   print_user_timing()
 
-print dxrconfig.getTemplateFile("dxr-search-footer.html")
+print dxr_server.getTemplateFile("dxr-search-footer.html")
