@@ -390,30 +390,35 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
 
   dxrconfig = dxr.load_config(filename)
 
-  # Copy in all the static stuff
+  # Create www target if needed
   if not os.path.isdir(dxrconfig.wwwdir):
     os.mkdir(dxrconfig.wwwdir)
-  for dir in ("static", "dxr_server"):
-    shutil.rmtree(dxrconfig.wwwdir + "/" + dir,  True)
-    shutil.copytree(dxrconfig.dxrroot + "/www/" + dir, dxrconfig.wwwdir + "/" + dir,  False)
+
+  # Copy files from dxrroot/www to target www
   for f in os.listdir(dxrconfig.dxrroot + "/www/"):
     if os.path.isfile(dxrconfig.dxrroot + "/www/" + f):
       shutil.copy(dxrconfig.dxrroot + "/www/" + f, dxrconfig.wwwdir)
-  
-  # Fill and copy templates that we'll need for search
-  # Note not everything is filled, just properties from dxrconfig
-  # See dxr/__init__.py:DxrConfig.getTemplateFile for details
-  os.mkdir(dxrconfig.wwwdir + "/dxr_server/templates")
-  for tmpl in ("dxr-search-header.html", "dxr-search-footer.html"):
-    with open(dxrconfig.wwwdir + "/dxr_server/templates/" + tmpl, 'w') as f:
-      f.write(dxrconfig.getTemplateFile(tmpl))
-  
+  # Copy dxr_server folder (deep)
+  shutil.rmtree(dxrconfig.wwwdir + "/dxr_server",  True)
+  shutil.copytree(dxrconfig.dxrroot + "/www/dxr_server", dxrconfig.wwwdir + "/dxr_server",  False)
   # Substitute trees directly into the dxr_server sources, so no need for config
   with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "r") as f:
     t = string.Template(f.read())
   with open(dxrconfig.wwwdir + "/dxr_server/__init__.py", "w") as f:
     f.write(t.safe_substitute(trees = repr([tree] if tree else [cfg.tree for cfg in dxrconfig.trees]),
                               virtroot = dxrconfig.virtroot))
+  
+  # Create folders for templates and cache
+  os.mkdir(dxrconfig.wwwdir + "/dxr_server/jinja_dxr_cache")
+  os.mkdir(dxrconfig.wwwdir + "/dxr_server/templates")
+  # Copy templates to dxr_server/templates
+  for tmpl in os.listdir(dxrconfig.templates):
+    if os.path.isfile(dxrconfig.templates + "/" + tmpl):
+      shutil.copy(dxrconfig.templates + "/" + tmpl, dxrconfig.wwwdir + "/dxr_server/templates/" + tmpl)
+  # Copy static folder (deep)
+  if os.path.isdir(dxrconfig.templates + "/static"):
+    shutil.rmtree(dxrconfig.wwwdir + "/static",  True)
+    shutil.copytree(dxrconfig.templates + "/static", dxrconfig.wwwdir + "/static",  False)
   
   # Copy in to www the dxr tokenizer, and cross fingers that this binary
   # works on the server we deploy to :)

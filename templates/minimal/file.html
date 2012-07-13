@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block title %}{{path}} - DXR{% endblock %}
+
+{% block content %}
+  <h1 class="path">{{path}}</h1>
+  <div class="lines">
+    {% for number, line in lines %}
+    <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"><code>{{"%4i"|format(number)}}</code><code>{{line}}</code></a><br>
+    {% endfor %}
+  </div>
+{% endblock %}

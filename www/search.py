@@ -1,19 +1,12 @@
 #!/usr/bin/env python2
-
 import cgitb; cgitb.enable()
 import cgi
 import sqlite3
-import sys
-import os
-import re, string
-
-import dxr_server.fts
+import sys, os
 
 import dxr_server
-from dxr_server.stopwatch import StopWatch
-from dxr_server import queries
-from dxr_server.queryparser import parse_query 
-import dxr_server.query as query
+import dxr_server.queryparser
+import dxr_server.query
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
@@ -22,69 +15,48 @@ sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
 # Load query parameters
 fieldStorage = cgi.FieldStorage()
-form = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
+querystring = dict((key, fieldStorage.getvalue(key)) for key in fieldStorage.keys())
 
+# Print content-type
 print 'Content-Type: text/html\n'
 
-tree = form['tree']
+# Get and validate tree
+tree = querystring.get('tree')
 if tree not in dxr_server.trees:
-  t = string.Template(dxr_server.getTemplateFile("dxr-search-header.html"))
-  t = t.safe_substitute(title = 'Error',
-                        tree = dxr_server.trees[0],
-                        query = cgi.escape(form["q"], True))
-  print t
-  print '<h3>Error: Specified tree %s is invalid</h3>' % \
-    ('tree' in form and cgi.escape(form['tree']) or tree)
+  print '<h3>Error: Specified tree is invalid</h3>'
   sys.exit (0)
 
+# Parse the search query
+q = dxr_server.queryparser.parse_query(querystring.get("q", ""))
 
+# Connect to database
 conn = dxr_server.connect_db(tree)
 
-# Parse the search query
-q = parse_query(form.get("q", ""))
+# Arguments for the template
+arguments = {
+    # Common Template Variables
+    "wwwroot":    dxr_server.virtroot,
+    "tree":       tree,
+    "trees":      dxr_server.trees,
+    # Search Template Variables
+    "query":      querystring.get("q", ""),
+    "results":    dxr_server.query.fetch_results(
+                      conn, q,
+                      querystring.get("offset", 0),
+                      querystring.get("limit", 100)
+                  ),
+    "offset":     querystring.get("offset", 0),
+    "limit":      querystring.get("limit", 100)
+    # Do NOT add variables without documentating them in templating.mkd
+}
 
-# Check that we got at least
-if len(q["phrases"]) + len(q["keywords"]) + len(q["parameters"]) == 0:
-  t = t.safe_substitute(title = 'Error',
-                        tree = dxr_server.trees[0],
-                        query = cgi.escape(form["q"], True))
-  print t
-  print '<h3>Error: unknown search parameters</h3>'
-else:
-  t = string.Template(dxr_server.getTemplateFile("dxr-search-header.html"))
-  print t.safe_substitute(tree = tree,
-                          query = cgi.escape(form["q"], True),
-                          title = cgi.escape(form["q"], True))
-  # Print sidebar before this
-  # TODO: This should be a template thingy...
-  print '<div id="content">'
-  # Get the first 100 results
-  found_results = False
-  for path, lines in query.fetch_results(conn, q, 100, 0):
-    found_results = True
-    print string.Template("""
-      <div class="searchfile"><a href="$virtroot/$tree/$path">$filename</a></div>
-      <ul class="searchresults">
-    """).safe_substitute(
-              virtroot = dxr_server.virtroot,
-              tree = tree,
-              path = path,
-              filename = os.path.basename(path)
-              )
-    for number, line in lines:
-      cgi.escape(line)
-      print string.Template("""
-        <li class="searchresult"><a
-        href="$virtroot/$tree/$path#l$number">$number:</a>&nbsp;&nbsp;$line</li>
-      """).safe_substitute(
-              virtroot = dxr_server.virtroot,
-              tree = tree,
-              path = path,
-              number = number,
-              line = line
-              )
-    print "</ul>"
-  if not found_results:
-    print "<p>No files matching the query was found.</p>"
+# Load template system
+import jinja2
+env = jinja2.Environment(
+    loader = jinja2.FileSystemLoader("dxr_server/templates"),
+    auto_reload = False,
+    bytecode_cache = jinja2.FileSystemBytecodeCache("dxr_server/jinja_dxr_cache", "%s.cache")
+)
 
-print dxr_server.getTemplateFile("dxr-search-footer.html")
+# Get search template and dump it to stdout
+env.get_template("search.html").stream(**arguments).dump(sys.stdout)

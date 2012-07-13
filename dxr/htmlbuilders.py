@@ -6,241 +6,229 @@ import cgi
 import itertools
 import sys
 import subprocess
-from string import Template
-from ConfigParser import ConfigParser
+import re
 
-class HtmlBuilder:
-  def _zipper(self, func):
-    """ Returns all contents from all plugins. """
-    if func not in self.resmap:
-      return []
-    return itertools.chain(*[f(self.blob.get(name, None), self.filepath, self.tree, self.conn, self.dbpath)
-      for name, f in self.resmap[func]])
+def build_html(treecfg, filepath, dstpath, _zipper):
+  # Make arguments
+  arguments = {}
+  # Set file path
+  arguments["path"]       = filepath.replace(treecfg.sourcedir + '/', '')
+  arguments["revision"]   = get_gevision(treecfg.tree)
+  arguments["lines"]      = build_content(treecfg, filepath, _zipper)
+  arguments["sections"]   = build_sections(treecfg, filepath, _zipper)
+  arguments["generated"]  = False  #TODO: Figure out when/if a file is generated
+  # Build and dump template
+  treecfg.getTemplate("file.html").stream(**arguments).dump(filepath)
 
-  def __init__(self, tree, filepath, dstpath, blob, resmap, conn = None, dbpath=None):
-    # Read and expand all templates
-    self.html_header = tree.getTemplateFile("dxr-header.html")
-    self.html_footer = tree.getTemplateFile("dxr-footer.html")
-    self.html_sidebar_header = tree.getTemplateFile("dxr-sidebar-header.html")
-    self.html_sidebar_footer = tree.getTemplateFile("dxr-sidebar-footer.html")
-    self.html_main_header = tree.getTemplateFile("dxr-main-header.html")
-    self.html_main_footer = tree.getTemplateFile("dxr-main-footer.html")
+_http_pattern = re.compile("^[A-Za-z0-9]+://.*")
+def build_content(tree, filepath, _zipper):
+  # Read source from disk
+  try:
+    with open(filepath) as f:
+      source = f.read()
+  except:
+    print "ERROR, Failed to read source file: %s" % filepath
+    return ""
 
-    self.source = dxr.readFile(filepath)
-    self.virtroot = tree.virtroot
-    self.treename = tree.tree
-    self.filename = os.path.basename(filepath)
-    self.filepath = filepath
-    self.srcroot = tree.sourcedir
-    self.dstpath = os.path.normpath(dstpath)
-    self.srcpath = filepath.replace(self.srcroot + '/', '')
-    self.dbpath = dbpath
+  # Build a line map over the source (without exploding it all over the place!)
+  line_map = [0]
+  offset = source.find("\n", offset) + 1
+  while offset != -1:
+    line_map.append(offset)
+    offset = source.find("\n", offset) + 1
 
-    self.show_sidebar = False
+  # So, we have a minor issue with writing out the main body. Some of our
+  # information is (line, col) information and others is file offset. Also,
+  # we don't necessarily have the information in sorted order.
+  syntax_regions = self._zipper("get_syntax_regions")     # start, end, class
+  link_regions   = self._zipper("get_link_regions")       # start, end, dict (should be set a attribute on the link)
+  line_notes     = self._zipper("get_line_annotations")   # line, dict (should be set as attributes on the line number)
 
-    self.blob = blob
-    self.resmap = resmap
-    self.tree = tree
-    self.conn = conn
+  # Quickly sort the line annotations in reverse order
+  # so we can view it as a stack we just pop annotations off as we generate lines
+  line_notes     = sorted(line_notes, reverse = True)
 
-    if len(self.virtroot) > 0 and not self.virtroot.startswith("/"):
-      print '\033[93mError: %s\033[0m' % "internal error, virtroot must start with / or be empty."
+  # start and end, may be either a number (extent) or a tuple of (line, col)
+  # we shall normalize this, and sort according to extent
+  # This is the fastest way to apply everything, exploding source into an array of chars is a bad way!
+  def normalize(region):
+    start, end, data = region
+    if isinstance(start, tuple):
+      line1, col1 = start
+      line2, col2 = end
+      return (line_map[line1] + col1, line_map[line2] + col2, data)
+    return region
+  # That's it we've normalized this mess (oh, and yes, sorted it on the fly)  
+  region_cmp      = lambda (start, end, data): (-start, end, data)
+  syntax_regions  = sorted((normalize(region) for region in syntax_regions), key = region_cmp)
+  link_regions    = sorted((normalize(region) for region in link_regions),   key = region_cmp)
+  # Notice that we negate start, larges start first and ties resolved with smallest end.
+  # This way be can pop values of the regions in the order they occur...
 
-    # Config info used by dxr.js
-    self.globalScript = ['var virtroot = "%s", tree = "%s";' % (self.virtroot, self.treename)]
+  # Now we create two stacks to keep track of open regions
+  syntax_regions_stack  = []
+  link_regions_stack    = []
 
-  def getSidebarActions(self):
-    html = ''
-    blameLinks = { \
-      'Log': 'http://hg.mozilla.org/mozilla-central/filelog/$rev/$filename', \
-      'Blame': 'http://hg.mozilla.org/mozilla-central/annotate/$rev/$filename', \
-      'Diff': 'http://hg.mozilla.org/mozilla-central/diff/$rev/$filename', \
-      'Raw': 'http://hg.mozilla.org/mozilla-central/raw-file/$rev/$filename' }
-    html+=('<div id="sidebarActions"><b>Actions</b>\n')
-    # Pick up revision command and URLs from config file
-    source_dir = self.srcroot
-    if 'revision' in globals():
-      #TODO: This doesn't work for multiple trees!!!
-      revision = globals()['revision']
-    else:
-      try:
-        revision_command = self.tree.getOption('revision')
-        revision_command = revision_command.replace('$source', source_dir)
-        revision_process = subprocess.Popen ([revision_command], stdout=subprocess.PIPE, shell=True)
-        revision = revision_process.stdout.readline().strip()
-      except:
-        if not 'config-notice' in globals():
-          globals()['config-notice'] = True
-          msg = sys.exc_info()[1] # Python 2/3 compatibility
-          print '\033[93mError: %s\033[0m' % msg
-        revision = ''
-      globals()['revision'] = revision
-    if revision == '':
-      blameLinks = {}
-    for link in blameLinks:
-      try:
-        customLink = self.tree.getOption(link)
-      except:
-        if not 'log-notice' + link in globals():
-          globals()['log-notice' + link] = True
-          print '\033[93mNotice: Missing %s config key\033[0m' % link
-        customLink = blameLinks[link]
-      realLink = customLink \
-        .replace('$rev', revision) \
-        .replace('$filename', self.srcpath)
-      html+=('<a href="%s">%s</a> &nbsp;\n' % (realLink, link))
-    html+=('</div>')
-    return html
+  # Open close link regions, quite simple
+  def open_link_region(region):
+    start, end, data = region
+    # href isn't fully qualified, set it under the tree
+    if "href" in data and not _http_pattern.match(data["href"]):
+      data["href"] = treecfg.virtroot + "/" + treecfg.tree + "/" + data["href"]
+    # If no href make one to a search for the string
+    if "href" not in data:
+      data["href"] = treecfg.virtroot + "/search?q=" + cgi.escape(source[start:end]) + "&tree=" + treecfg.tree
+    # Return an link with attributes a specified in data
+    return "<a %s>" % " ".join(("%s=\"%s\"" % (key, val) for key, val in data.items()))
+  def close_link_region(region):
+    return "</a>"
 
-  def toHTML(self, inhibit_sidebar):
-    out = open(self.dstpath, 'w')
-    sidebarActions = self.getSidebarActions()
+  # Functions for opening the stack of syntax regions
+  # this essential amounts to a span with a set of classes
+  def open_syntax_regions():
+    if len(syntax_regions_stack) > 0:
+      return "<span class=\"%s\">" % " ".join((data for start, end, data in syntax_regions_stack))
+    return ""
+  def close_syntax_regions():
+    if len(syntax_regions_stack) > 0:
+      return "</span>"
+    return ""
+  
+  lines          = []
+  offset         = 0
+  line_number    = 0
+  while offset < len(source):
+    # Start a new line
+    line_number += 1
+    line = ""
+    # Open all tags on the stack
+    for region in link_regions_stack:
+      line += open_link_region(region)
+    # We open syntax regions after tags, because they can be opened and closed
+    # without any effect, ie. inserting <b></b> has no effect...
+    line += open_syntax_regions()
+    
+    # Append to line while we're still one it
+    while offset < line_map[line_number]:
+      # Find next offset as smallest candidate offset
+      # Notice that we never go longer than to end of line
+      next = line_map[line_number]
+      # Next offset can be the next start of something
+      if len(syntax_regions) > 0:
+        next = min(next, syntax_regions[-1][0])
+      if len(link_regions) > 0:
+        next = min(next, link_regions[-1][0])
+      # Next offset can be the end of something we've opened
+      # notice, stack structure and sorting ensure that we only need test top
+      if len(syntax_regions_stack) > 0:
+        next = min(next, syntax_regions_stack[-1][1])
+      if len(link_regions_stack) > 0:
+        next = min(next, link_regions_stack[-1][1])
+      
+      # Output the source text from last offset to next
+      line += cgi.escape(source[offset:next])
+      offset = next
+      
+      # Close syntax regions, modify stack and open them again
+      # this makes sense even if there's not change to the stack
+      # as we can't have span tags crossing link tags
+      line += close_syntax_regions()
+      while len(syntax_regions_stack) > 0 and syntax_regions_stack[-1][1] <= next:
+        syntax_regions_stack.pop()
+      while len(syntax_regions) > 0 and syntax_regions[-1][0] <= next:
+        region = syntax_regions.pop()
+        # Search for the right place in the stack to insert this
+        # The stack is ordered s.t. we have longest end at the bottom (with respect to pop())
+        for i in xrange(0, len(syntax_regions_stack) + 1):
+          if len(syntax_regions_stack) == i or syntax_regions_stack[i][1] < region[1]:
+            break
+        syntax_regions_stack.insert(i, region)
+      # Don't open the tags if at end of line
+      if next < line_map[line_number]:
+        line += open_syntax_regions()
+      
+      # Close and pop links that end here
+      while len(link_regions_stack) > 0 and link_regions_stack[-1][1] <= next:
+        line += close_link_region(link_regions_stack.pop())
+      # Close remaining if at end of line
+      if next < line_map[line_number]:
+        for region in reverse(link_regions_stack):
+          line += close_link_region(region)
+      # Open and pop/push regions that start here
+      while len(link_regions) > 0 and link_regions[-1][0] <= next:
+        region = link_regions.pop()
+        # If the region doesn't end before the top of the stack, we have
+        # overlapping regions, this isn't good, so we discard this region
+        if len(link_region_stack) > 0 and link_region_stack[-1][1] < region[1]:
+          print "Error: Link region: %r in %s overlaps %r" % (region, filepath, link_region_stack[-1])
+          continue  # Okay so skip it
+        # Don't open if at end of line
+        if next < line_map[line_number]:
+          line += open_link_region(region)
+        link_region_stack.append(region)
 
-    if inhibit_sidebar is True:
-      str = 'false'
-    else:
-      str = 'true'
+    # Okay let's pop line annotations of the line_notes stack
+    notes = []
+    while len(line_notes) > 0 and line_notes[-1][0] == line_number:
+      notes.append(line_notes.pop())
 
-    t = Template(self.html_header)
-    self.html_header = t.substitute(sidebarActions = sidebarActions,
-                                    title = self.filename,
-                                    showLeftSidebar = str)
+    lines.append((line_number, line, notes))
+  # Return all lines of the file, as we're done
+  return lines
 
-    out.write(self.html_header + '\n')
-    self.writeSidebar(out)
-    self.writeMainContent(out)
-    self.writeGlobalScript(out)
-    out.write(self.html_footer + '\n')
-    out.close()
 
-  def writeSidebar(self, out):
-    sidebarElements = [x for x in self._zipper("get_sidebar_links")]
-    if len(sidebarElements) == 0: return
+def build_sections(tree, filepath, _zipper):
+  """ Build sections for the sidebar """
+  elements = [x for x in self._zipper("get_sidebar_links")]
+  if len(elements) == 0:
+    return []
+  
+  containers = {}
+  for e in elements:
+    containers.setdefault(len(e) > 4 and e[4] or None, []).append(e)
 
-    out.write(self.html_sidebar_header + '\n')
-    self.writeSidebarBody(out, sidebarElements)
-    out.write(self.html_sidebar_footer + '\n')
+  # Sort the containers by their location
+  # Global scope goes last, and scopes declared outside of this file goes
+  # before everything else
+  clocs = { None: 2 ** 32 }
+  for e in elements:
+    if e[0] in containers:
+      clocs[e[0]] = int(e[1])
+  contKeys = containers.keys()
+  contKeys.sort(lambda x, y: cmp(clocs.get(x, 0), clocs.get(y, 0)))
 
-  def writeSidebarBody(self, out, elements):
-    containers = {}
-    for e in elements:
-      containers.setdefault(len(e) > 4 and e[4] or None, []).append(e)
-
-    # Sort the containers by their location
-    # Global scope goes last, and scopes declared outside of this file goes
-    # before everything else
-    clocs = { None: 2 ** 32 }
-    for e in elements:
-      if e[0] in containers:
-        clocs[e[0]] = int(e[1])
-    contKeys = containers.keys()
-    contKeys.sort(lambda x, y: cmp(clocs.get(x, 0), clocs.get(y, 0)))
-
-    for cont in contKeys:
-      if cont is not None:
-        out.write('<b>%s</b>\n<div>\n' % cgi.escape(str(cont)))
-      #containers[cont].sort(lambda x, y: int(x[1]) - int(y[1]))
-      containers[cont].sort(lambda x, y: cmp(x[0], y[0]))
-      for e in containers[cont]:
-        img = "static/images/icons/" + (len(e) > 3 and e[3] or "page_white_code.png")
-        title = len(e) > 2 and e[2] or e[0]
-        if len(e) > 5 and e[5]:
-          path = "%s/%s/%s" % (self.virtroot, self.treename, e[5])
-        else:
-          path = ''
-        out.write('<img src="%s/%s" class="sidebarimage">' % (self.virtroot, img))
-        out.write('<a class="sidebarlink" title="%s" href="%s#l%d">%s</a><br>\n' %
-          (cgi.escape(title), path, int(e[1]), cgi.escape(e[0])))
-      if cont is not None:
-        out.write('</div><br />\n')
-
-  def writeMainContent(self, out):
-    out.write(self.html_main_header)
-    self.writeMainBody(out)
-    out.write(self.html_main_footer)
-
-  def writeMainBody(self, out):
-    # So, we have a minor issue with writing out the main body. Some of our
-    # information is (line, col) information and others is file offset. Also,
-    # we don't necessarily have the information in sorted order. This means we
-    # have to hope that all ranges are in a strict tree hierarchy, otherwise
-    # things will blow up.
-    syntax_regions = self._zipper("get_syntax_regions")
-    links = self._zipper("get_link_regions")
-    line_notes = self._zipper("get_line_annotations")
-
-    if self.source is None:
-      return
-
-    # Blow the contents of the file up into an array; we escape the source and
-    # build the line map at the same time.
-    line_map = [0]
-    closure = ['', 0]
-    def handle_char(x):
-      if x == '\n':
-        line_map.append(closure[1])
-      elif closure[0] == '\r':
-        line_map.append(closure[1] - 1)
-      closure[0] = x
-      closure[1] += 1
-      return cgi.escape(x)
-    chars = [handle_char(x) for x in self.source]
-    chars.append('')
-
-    def off(val):
-      if isinstance(val, tuple):
-        return line_map[val[0] - 1] + val[1]
-      return val
-    # Produce all of the syntax regions and links. Sincerely hope that the two
-    # do not produce partially-overlapping results.
-    for syn in syntax_regions:
-      if syn[0] is None or syn[1] is None:
-        continue
-      chars[off(syn[0])] = '<span class="%s">%s' % (syn[2], chars[off(syn[0])])
-      chars[off(syn[1]) - 1] += '</span>'
-
-    href_prefix = self.virtroot + "/search?tree=" + self.treename + '&q='
-
-    for link in links:
-      if link[0] is None or link[1] is None:
-        continue
-      item = self.source[off(link[0]):off(link[1])]
-      if 'href' in link[2]:
-        href = link[2]['href']
-        if ':/' not in href:
-          #href is not fully qualified, set it underneath the indexed tree
-          href = "%s/%s/%s" % (self.virtroot, self.treename, href)
-        del link[2]['href']
+  sections = []
+  for cont in contKeys:
+    section = cont or ""
+    items = []
+    containers[cont].sort(lambda x, y: cmp(x[0], y[0]))
+    for e in containers[cont]:
+      img = (len(e) > 3 and e[3] or "page_white_code.png")
+      title = len(e) > 2 and e[2] or e[0]
+      if len(e) > 5 and e[5]:
+        path = e[5]
       else:
-        href = "%s%s" % (href_prefix, item)
+        path = ''
+      items.append((img, cgi.escape(title), path, e[1]))
+    sections.append((section, items))
+  return sections
 
-      if 'rid' in link[2]:
-        link[2]['aria-haspopup'] = 'true'
 
-      chars[off(link[0])] = '<a href="%s" %s>%s' % (
-        href,
-        ' '.join([attr + '="' + str(link[2][attr]) + '"' for attr in link[2]]),
-        chars[off(link[0])])
-      chars[off(link[1]) - 1] += '</a>'
 
-    # Use the line annotations to build a map of the gutter annotations.
-    line_mods = [[num + 1, ''] for num in xrange(len(line_map))]
-    for l in line_notes:
-      line_mods[l[0] - 1][1] += ' ' + ' '.join(
-        [attr + '="' + str(l[1][attr]) + '"' for attr in l[1]])
-    line_divs = ['<div%s id="l%d"><a class="ln" href="#l%d">%d</a></div>' %
-      (mod[1], mod[0], mod[0], mod[0]) for mod in line_mods]
-
-    # Okay, finally, combine everything together into the file.
-    out.write('<div id="linenumbers">%s</div><div id="code">%s</div>' %
-      (''.join(line_divs), ''.join(chars)))
-
-  def writeGlobalScript(self, out):
-    """ Write any extra JS for the page. Lines of script are stored in self.globalScript."""
-    # Add app config info
-    out.write('<script type="text/javascript">')
-    out.write('\n'.join(self.globalScript))
-    out.write('</script>')
+_revision = {}
+def get_revision(treecfg):
+  """ Get the revision for this tree """
+  global _revision
+  if _revision.get(treecfg.tree, None) is None:
+    try:
+      revision_command = treecfg.getOption('revision')
+      revision_command = revision_command.replace('$source', source_dir)
+      revision_process = subprocess.Popen([revision_command], stdout=subprocess.PIPE, shell=True)
+      _revision[treecfg.tree] = revision_process.stdout.readline().strip()
+    except:
+      print '\033[93mError: %s\033[0m' % sys.exc_info()[1]
+      _revision[treecfg.tree] = ""
+  return _revision[treecfg.tree]
 
 
 # HTML-ifier map
@@ -308,5 +296,12 @@ def make_html(srcpath, dstfile, treecfg, blob, conn = None, dbpath=None):
   if dbpath is None:
     dbpath = srcpath
 
-  builder = HtmlBuilder(treecfg, srcpath, dstfile, blob, result_map, conn, dbpath)
-  builder.toHTML(inhibit)
+  def _zipper(func):
+    """ Returns all contents from all plugins. """
+    if func not in result_map:
+      return []
+    return itertools.chain(*[
+                             f(blob.get(name, None), srcpath, treecfg, conn, dbpath)
+                             for name, f in self.result_map[func]]
+    )
+  build_html(tree, srcpath, dstfile, _zipper)

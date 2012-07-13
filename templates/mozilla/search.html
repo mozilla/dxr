@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <link rel="shortcut icon" href="{{wwwroot}}/favicon.png" type="image/png" />
+  <title>{{query}} - DXR Search</title>
+  <link href="{{wwwroot}}/static/dxr-search-styles.css" rel="stylesheet" type="text/css"></link>
+  <script type="text/javascript" src="{{wwwroot}}/static/js/timing.js"></script>
+  <script type="text/javascript">
+    var virtroot = '{{wwwroot}}';
+  </script>
+</head>
+<body onload="parseQS('search-box');">
+  <div id="logo"><a href="{{wwwroot}}/"><img src="{{wwwroot}}/static/images/powered-by-mozilla-small.png" border="0"></a></div>
+<div id="search">
+  <form id="searchForm" method="get" action="search">
+    <input id="searchbox" name="q" type="text" size="31" value="{{query}}" maxlength="2048" title="Search">
+    <input type="submit" value="Search">
+    <input type="hidden" name="tree" value="{{tree}}">
+  </form>
+</div>
+<div id="results">
+  {% for path, lines in results %}
+    <div class="searchfile"><a href="{{wwwroot}}/{{path}}">{{path}}</a></div>
+    <ul class="searchresults">
+        {% for number, line in lines %}
+        <li class="searchresult"><a href="{{wwwroot}}/{{path}}#l{{number}}">{{number}}:</a>&nbsp;&nbsp;{{line}}</li>
+        {% endfor %}
+    </ul>
+  {% else %}
+    <p>No search results found!</p>
+  {% endfor %}
+</div>
+</body>
+</html>

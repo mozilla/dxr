@@ -1,10 +1,5 @@
 import sqlite3, sys, ctypes
 
-# Read template files neatly
-def getTemplateFile(file):
-  with open("dxr_server/templates/" + file, "r") as f:
-    return f.read()
-
 # Load DXR tokenizer for sqlite
 _tokenizer_loaded = False
 def load_tokenizer():
@@ -15,10 +10,9 @@ def load_tokenizer():
     ctypes_init_tokenizer = ctypes.CDLL("dxr_server/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
     ctypes_init_tokenizer ()
     _tokenizer_loaded = True
+    return True
   except:
-    msg = sys.exc_info()[1] # Python 2/3 compatibility
-    print "Could not load tokenizer: %s" % msg
-    sys.exit (0)
+    return False
 
 # Regular expression for the sqlite
 def _regexp(expr, item):
@@ -52,10 +46,8 @@ def connect_db(tree):
     conn.row_factory = sqlite3.Row
     return conn
   except:
-    msg = sys.exc_info()[1] # Python 2/3 compatibility
-    print getTemplateFile("dxr-search-header.html") % 'Error'
-    print '<h3>Error: Failed to open %s</h3><p>%s' % (dbname, msg)
-    sys.exit (0)
+    return None
 
+# Log message
 def log(msg):
   print >> sys.stderr, "Log: %s" % msg

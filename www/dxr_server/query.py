@@ -1,4 +1,4 @@
-import utils
+import utils, cgi
 
 # Register filters by adding them to this list.
 # A filter takes a query and yield triples of
@@ -34,7 +34,7 @@ extents_builders = []
 # Fetch results using a query,
 # See: queryparser.py for details in query specification
 def fetch_results(conn, query,
-                  limit = 100, offset = 0,
+                  offset = 0, limit = 100,
                   markup = "<b>", markdown = "</b>"):
   sql = "SELECT DISTINCT files.path, result.content, files.ID FROM %s WHERE %s LIMIT ? OFFSET ?"
   tables = ["fts AS result", "files"]
@@ -89,6 +89,7 @@ def fetch_results(conn, query,
       while content.count("\n", last_pos, offset) == 0:
         mstart = offset - start + fill
         mend   = mstart + size
+        #TODO: We need some cgi.escape here!!!!
         line = line[:mstart] + markup + line[mstart:mend] + markdown + line[mend:]
         fill += len(markup) + len(markdown)
         i += 1
@@ -100,54 +101,6 @@ def fetch_results(conn, query,
       lines.append((line_number, line))
     # Return result
     yield path, lines
-
-"""
-  for path, content, offsets in conn.execute(sql, arguments):
-    # Split offsets at spaces and find the lines for each of them
-    offsets = offsets.split()
-    offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]
-
-    lines = []
-    line_number = 1
-    last_pos = 0
-
-    for i in xrange(0, len(offsets)):
-      col, term, offset, size = offsets[i]
-      offset = int(offset)
-      size = int(size)
-
-      # Skip if we didn't get a new line
-      line_diff = content.count("\n", last_pos, offset)
-      if line_diff == 0 and last_pos > 0:
-        continue 
-      line_number += line_diff
-      last_pos = offset
-
-      # Find newline before and after offset
-      end   = content.find ("\n", offset)
-      start = max(content.rfind("\n", 0, end), 0)
-      line  = content[start:end]
-
-      # Add some markup to highlight hits
-      fill = 0
-      while content.count("\n", last_pos, offset) == 0:
-        mstart = offset - start + fill
-        mend   = mstart + size
-        line = line[:mstart] + markup + line[mstart:mend] + markdown + line[mend:]
-        fill += len(markup) + len(markdown)
-        i += 1
-        if i >= len(offsets):
-          break
-        col, term, offset, size = offsets[i]
-        offset = int(offset)
-        size = int(size)
-
-      lines.append((line_number, line))
-    # Return result
-    yield path, lines
-"""
-
-
 
 
 def like_escape(val):

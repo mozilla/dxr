@@ -1,0 +1,23 @@
+DXR Application Architecture
+============================
+
+Directory Structure
+-------------------
+
+www/
+  Non-template parts of DXR, ie. the cgi scripts and open search xml
+  These are called *.in, typically *.py.in and are processed during
+  build where we replace variables $trees, $virtroot and $dot, in
+  filenames as well as contents.
+  ($dot is just a dummy variable not having hidden files in www/ folder).
+
+templates/
+  Files that are templates, static files are located in the static/ subfolder.
+  (This folder contains the default templates, feel free to provide another).
+
+xref-tools/
+  Contains plugins for doing cross referencing
+
+docs/
+  Documentation documents for keeping track of interface between various
+  parts of DXR.

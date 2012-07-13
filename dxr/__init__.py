@@ -5,6 +5,7 @@ import dxr.languages
 import imp
 import os, sys
 import string
+import jinja2
 
 ###################
 # Plugin handling #
@@ -89,11 +90,19 @@ def load_big_blob(tree, tmproot):
   finally:
     f.close()
 
+_template_env = None
 class DxrConfig(object):
   def __init__(self, config, tree=None):
     self._tree = tree
     self._loadOptions(config, 'DXR')
     self.templates = os.path.abspath(config.get('DXR', 'templates'))
+    global _template_env
+    if not _template_env:
+      _template_env = jinja2.Environment(
+        loader = jinja2.FileSystemLoader(self.templates),
+        auto_reload = False,
+        bytecode_cache = jinja2.FileSystemBytecodeCache("/tmp/dxr-template-cache", "%s.cache")
+      )
     if config.has_option('DXR', 'dxrroot'):
       self.dxrroot = os.path.abspath(config.get('DXR', 'dxrroot'))
     else:
@@ -136,6 +145,10 @@ class DxrConfig(object):
     tmpl = readFile(os.path.join(self.templates, name))
     tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
     return tmpl
+
+  def getTemplate(self, name):
+    global _template_emv
+    return _template_emv.get_template(name)
 
   def getFileList(self):
     """ Returns an iterator of (relative, absolute) paths for the tree. """
