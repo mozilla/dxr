@@ -48,7 +48,7 @@
   <div>
     {% for icon, title, path, line in items %}
       <img src="{{wwwroot}}/static/images/icons/{{icon}}.png" class="sidebarimage">
-      <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}" title="{{title}}">{{title}}</a>
+      <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}" title="{{title}}">{{title}}</a><br>
     {% endfor %}
   </div><br>
 {% endfor %}
@@ -58,12 +58,8 @@
 <div id="maincontent" dojoType="dijit.layout.ContentPane" region="center">
 <div id="signature">nsContentUtils::IsPunctuationMark(PRUint32 aChar)</div>
 <pre>
- 
-    {% for number, line, annotations in lines %}
-    <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"><code>{{"%4i"|format(number)}}</code><code>{{line}}</code></a><br>
-    {% endfor %}
-
-
+{% for number, line, annotations in lines %}<a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"><code>{{"%4i"|format(number)}} </code></a><code>{{line}}</code>
+{% endfor %}
 </pre></div>
 
 </div>

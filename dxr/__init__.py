@@ -101,7 +101,8 @@ class DxrConfig(object):
       _template_env = jinja2.Environment(
         loader = jinja2.FileSystemLoader(self.templates),
         auto_reload = False,
-        bytecode_cache = jinja2.FileSystemBytecodeCache("/tmp/dxr-template-cache", "%s.cache")
+        # Defaults to somewhere in /tmp
+        bytecode_cache = jinja2.FileSystemBytecodeCache()
       )
     if config.has_option('DXR', 'dxrroot'):
       self.dxrroot = os.path.abspath(config.get('DXR', 'dxrroot'))
@@ -124,7 +125,7 @@ class DxrConfig(object):
         if section == 'DXR' or section == 'Web':
           continue
         self.trees.append(DxrConfig(config, section))
-    else:
+    if tree != None:
       self.tree = self._tree
       self._loadOptions(config, tree)
       if not 'dbdir' in self.__dict__:
@@ -141,14 +142,9 @@ class DxrConfig(object):
   def getOption(self, key):
     return self.__dict__[key]
 
-  def getTemplateFile(self, name):
-    tmpl = readFile(os.path.join(self.templates, name))
-    tmpl = string.Template(tmpl).safe_substitute(**self.__dict__)
-    return tmpl
-
   def getTemplate(self, name):
-    global _template_emv
-    return _template_emv.get_template(name)
+    global _template_env
+    return _template_env.get_template(name)
 
   def getFileList(self):
     """ Returns an iterator of (relative, absolute) paths for the tree. """

@@ -3,7 +3,9 @@
 <head>
 <title>Mozilla DXR Source Code Index</title>
 <link rel="shortcut icon" href="{{wwwroot}}/favicon.png" type="image/png" />
-$opensearch
+{% for tree in trees %}
+<link rel="search" href="static/opensearch-{{tree}}.xml" type="application/opensearchdescription+xml" title="{{tree}}"/>
+{% endfor %}
 <style type="text/css">
 body {
   background-color: white;

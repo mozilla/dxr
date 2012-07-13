@@ -563,9 +563,9 @@ class CxxHtmlifier:
   def collectSidebar(self):
     def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
       if decl:
-        img = 'page_white_code.png'
+        img = 'page_white_code'
       else:
-        img = 'page_white_wrench.png'
+        img = 'page_white_wrench'
 
       try:
         sname = df['sname']

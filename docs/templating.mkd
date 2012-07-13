@@ -43,15 +43,18 @@ passed to the template engine, to use or ignore as it sees fit.
 
 DXR Template Files
 ------------------
-DXR uses 3 different template files, `index.html`, `search.html` and `file.html`
-for the index page, search result pages and file pages, respectively.
+DXR uses 4 different template files, `index.html`, `search.html`, `file.html`
+and `folder.html` for the index page, search result pages, file pages and
+folder listing, respectively.
 Using Jinja2 template inheritance these templates may reuse the same layout,
-however, this is not required. And DXR only requires these three files.
+however, this is not required. And DXR only requires these four files.
 
 If the template folder contains an additional folder called `static/` this
 folder will be copied into the www-folder when building the DXR html files.
 You can use this folder to hold style sheets and images, however, note that
 these files will not be processed by the template engine.
+(Notice that OpenSearch XML files will be generated for each tree and placed in
+ the static folder at build time).
 
 In the following sections you can read about which variables are available in
 different template files.
@@ -115,9 +118,18 @@ focuses, highlights and/or scrolls to line number `line_number`.
                     `section` is a section headline and `items` is a list
                     of items as tuples of `(icon, title, path, line)` where
                     `icon` is unspecified, `title` is a link title, `path`
-                    and `line` a place of interest.                    
+                    and `line` a place of interest.
                     (Icons are provided by plugins, it is the templates
                      responsibility to defined these icons, the mozilla builtin
                      template defines these, so just copy this)
 
+Folder Template Variables
+-------------------------
+Notice that a folder file will have the location similar to it's path, so using
+name as relative link will work perfectly fine.
+Also note instances of this template are rendered statically, at indexing time.
+
+  `name`            Name of current folder as string.
+  `folders`         List of folders as tuples of `(icon, name, modified)`
+  `files`           List of files as tuples of `(icon, name, modified, size)`
 

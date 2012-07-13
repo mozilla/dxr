@@ -21,10 +21,10 @@
 </div>
 <div id="results">
   {% for path, lines in results %}
-    <div class="searchfile"><a href="{{wwwroot}}/{{path}}">{{path}}</a></div>
+    <div class="searchfile"><a href="{{wwwroot}}/{{tree}}/{{path}}">{{path}}</a></div>
     <ul class="searchresults">
         {% for number, line in lines %}
-        <li class="searchresult"><a href="{{wwwroot}}/{{path}}#l{{number}}">{{number}}:</a>&nbsp;&nbsp;{{line}}</li>
+        <li class="searchresult"><i href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">{{number}}:</a>&nbsp;&nbsp;{{line}}</li>
         {% endfor %}
     </ul>
   {% else %}

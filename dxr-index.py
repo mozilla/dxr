@@ -14,7 +14,7 @@ import sqlite3
 import string
 import subprocess
 import sys
-import time
+import time, datetime
 import ctypes
 import tempfile
 
@@ -56,12 +56,12 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
     return None
 
-def async_toHTML(treeconfig, srcpath, dstfile, dbdir):
+def async_toHTML(dxrconfig, treeconfig, srcpath, dstfile, dbdir):
   conn = getdbconn(treeconfig, dbdir)
 
   """Wrapper function to allow doing this async without an instance method."""
   try:
-    dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob, conn)
+    dxr.htmlbuilders.make_html(dxrconfig, srcpath, dstfile, treeconfig, big_blob, conn)
   except Exception, e:
     print 'Error on file %s:' % srcpath
     import traceback
@@ -102,7 +102,7 @@ def make_index(file_list, dbdir, treecfg):
   conn.close()
 
 
-def make_index_html(treecfg, dirname, fnames, htmlroot):
+def make_index_html(dxrconfig, treecfg, dirname, fnames, htmlroot):
   genroot = os.path.relpath(dirname, htmlroot)
   if genroot.startswith('./'): genroot = genroot[2:]
   if genroot.startswith('--GENERATED--'):
@@ -111,46 +111,26 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
   else:
     srcpath = treecfg.sourcedir
   srcpath = os.path.join(srcpath, genroot)
-  of = open(os.path.join(dirname, 'index.html'), 'w')
   try:
-    html_header = string.Template(treecfg.getTemplateFile("dxr-header.html"))
-    title = os.path.basename(dirname) + "/"
-    if dirname == htmlroot:
-      title = treecfg.tree + "/"
-    of.write(html_header.safe_substitute(sidebarActions = "\n", title = title))
-    of.write('''<div id="maincontent" dojoType="dijit.layout.ContentPane"
-      region="center"><table id="index-list">
-        <tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>
-      ''')
-    of.write('<tr><td><img src="%s/static/images/icons/folder.png"></td>' %
-      treecfg.virtroot)
-    of.write('<td><a href="..">Parent directory</a></td>')
-    of.write('<td></td><td>-</td></tr>')
-    torm = []
     fnames.sort()
-    dirs, files = [], []
+    folders = []
+    files = []
+    name = os.path.basename(dirname)
+    if name == os.path.basename(htmlroot):
+      name = treecfg.tree
     for fname in fnames:
-      # Ignore hidden files
-      if fname[0] == '.':
-        torm.append(fname)
+      if fname.startswith("."):
+        fnames.remove(fname)
         continue
-      fullname = os.path.join(dirname, fname)
-
-      # Directory ?
-      if os.path.isdir(fullname):
-        img = 'folder.png'
-        link = fname
-        display = fname + '/'
+      path = os.path.join(dirname, fname)
+      if os.path.isdir(path):
         if fname == '--GENERATED--':
           stat = os.stat(treecfg.objdir) # Meh, good enough
         else:
           stat = os.stat(os.path.join(srcpath, fname))
-        size = '-'
-        add = dirs
+        folders.append(("folder", fname, datetime.datetime.fromtimestamp(stat.st_mtime)))
       else:
-        img = 'page_white.png'
-        link = fname[:-5]
-        display = fname[:-5] # Remove .html
+        display = fname[:-5] #remove .html
         stat = os.stat(os.path.join(srcpath, display))
         size = stat.st_size
         if size > 2 ** 30:
@@ -161,24 +141,21 @@ def make_index_html(treecfg, dirname, fnames, htmlroot):
           size = str(size / 2 ** 10) + 'K'
         else:
           size = str(size)
-        add = files
-      add.append('<tr><td><img src="%s/static/images/icons/%s"></td>' %
-        (treecfg.virtroot, img))
-      add.append('<td><a href="%s">%s</a></td>' % (link, display))
-      add.append('<td>%s</td><td>%s</td>' % (
-        time.strftime('%Y-%b-%d %H:%m', time.gmtime(stat.st_mtime)), size))
-      add.append('</tr>')
-    of.write(''.join(dirs))
-    of.write(''.join(files))
-    of.flush()
-    of.write(treecfg.getTemplateFile("dxr-footer.html"))
-
-    for f in torm:
-      fnames.remove(f)
+        files.append(("page_white", display,
+          datetime.datetime.fromtimestamp(stat.st_mtime), size))
+    arguments = {
+        # Common template variables
+        "wwwroot":    treecfg.virtroot,
+        "tree":       treecfg.tree,
+        "trees":      [tcfg.tree for tcfg in dxrconfig.trees],
+        # Folder template variables
+        "name":       name,
+        "folders":    folders,
+        "files":      files
+    }
+    dxrconfig.getTemplate("folder.html").stream(**arguments).dump(dirname + "/index.html")
   except:
     sys.excepthook(*sys.exc_info())
-  finally:
-    of.close()
 
 def getdbconn(treecfg, dbdir):
   dbname = treecfg.tree + '.sqlite'
@@ -252,7 +229,7 @@ def builddb(treecfg, dbdir, tmproot):
   conn.commit()
   conn.close()
 
-def indextree(treecfg, doxref, dohtml, debugfile):
+def indextree(dxrconfig, treecfg, doxref, dohtml, debugfile):
   global big_blob
 
   # dxr xref files (index + sqlitedb) go in wwwdir/treename-current/.dxr_xref
@@ -342,9 +319,9 @@ def indextree(treecfg, doxref, dohtml, debugfile):
         return False
       if not is_text(srcpath):
         continue
-#      p.apply_async(async_toHTML, [treecfg, srcpath, cpypath + ".html", dbdir])
+#      p.apply_async(async_toHTML, [dxrconfig, treecfg, srcpath, cpypath + ".html", dbdir])
       try:
-        dxr.htmlbuilders.make_html(srcpath, cpypath + ".html", treecfg, big_blob, conn, dbpath)
+        dxr.htmlbuilders.make_html(dxrconfig, srcpath, cpypath + ".html", treecfg, big_blob, conn, dbpath)
       except Exception, e:
         print 'Error on file %s:' % srcpath
         import traceback
@@ -364,7 +341,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     # XXX: This wants to be parallelized. However, I seem to run into problems
     # if it isn't.
     def genhtml(treecfg, dirname, fnames):
-      make_index_html(treecfg, dirname, fnames, tmproot)
+      make_index_html(dxrconfig, treecfg, dirname, fnames, tmproot)
     os.path.walk(tmproot, genhtml, treecfg)
 
   if os.path.exists(oldroot):
@@ -428,28 +405,18 @@ def parseconfig(filename, doxref, dohtml, tree, debugfile):
     # if tree is set, only index/build this section if it matches
     if tree and treecfg.tree != tree:
         continue
-    
     treecfg.virtroot = dxrconfig.virtroot
-    browsetree += '<a href="%s">Browse <b>%s</b> source</a> ' % (treecfg.tree, treecfg.tree)
-    options += '<option value="' + treecfg.tree + '">' + treecfg.tree + '</option>'
-    opensearch += '<link rel="search" href="static/opensearch-' + treecfg.tree + '.xml" type="application/opensearchdescription+xml" '
-    opensearch += 'title="' + treecfg.tree + '" />\n'
     WriteOpenSearch(treecfg.tree, treecfg.hosturl, treecfg.virtroot, treecfg.wwwdir)
-    indextree(treecfg, doxref, dohtml, debugfile)
+    indextree(dxrconfig, treecfg, doxref, dohtml, debugfile)
 
-  # Generate index page with drop-down + opensearch links for all trees
-  indexhtml = dxrconfig.getTemplateFile('dxr-index-template.html')
-  if len(dxrconfig.trees) > 1 and not tree:
-    options += '</select>'
-  else:
-    options = '<input type="hidden" name="tree" id="tree" value="' + (tree or treecfg.tree) + '">'
-  indexhtml = string.Template(indexhtml).safe_substitute(tree = treecfg.tree,
-                                                         browsetree = browsetree,
-                                                         options = options,
-                                                         opensearch = opensearch)
-  index = open(os.path.join(dxrconfig.wwwdir, 'index.html'), 'w')
-  index.write(indexhtml)
-  index.close()
+  # Generate index page
+  arguments = {
+      # Common template variables
+      "tree":     tree or dxrconfig.trees[0],
+      "trees":    ([tree] if tree else [tcfg.tree for tcfg in dxrconfig.trees]),
+      "wwwroot":  dxrconfig.virtroot
+  }
+  dxrconfig.getTemplate("index.html").stream(**arguments).dump(dxrconfig.wwwdir + '/index.html')
 
 
 def main(argv):
