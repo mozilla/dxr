@@ -257,8 +257,6 @@ def indextree(treecfg, doxref, dohtml, debugfile):
 
   # dxr xref files (index + sqlitedb) go in wwwdir/treename-current/.dxr_xref
   # and we'll symlink it to wwwdir/treename later
-  htmlroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-current')
-  oldroot = os.path.join(treecfg.wwwdir, treecfg.tree + '-old')
   tmproot = tempfile.mkdtemp(prefix = (os.path.join(treecfg.wwwdir, '.' + treecfg.tree + '.')))
   linkroot = os.path.join(treecfg.wwwdir, treecfg.tree)
 
@@ -366,19 +364,11 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     def genhtml(treecfg, dirname, fnames):
       make_index_html(treecfg, dirname, fnames, tmproot)
     os.path.walk(tmproot, genhtml, treecfg)
-
-  if os.path.exists(oldroot):
-    shutil.rmtree(oldroot)
-
-  if os.path.exists(htmlroot):
-    shutil.move(htmlroot, oldroot)
-
+  
   os.chmod(tmproot, 0755)
-  shutil.move(tmproot, htmlroot)
+  shutil.move(tmproot, linkroot)
 
-  if os.path.exists(linkroot):
-    os.unlink(linkroot)
-  os.symlink(htmlroot, linkroot)
+  
 
 def parseconfig(filename, doxref, dohtml, tree, debugfile):
   # Build the contents of an html <select> and open search links
