@@ -20,6 +20,7 @@ _parameters += ["-%s" % param for param in _parameters]
 
 #TODO Support negation of phrases, support phrases as args to params, ie. path:"my path", or warning:"..."
 
+
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
 _pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(?P<keyword>[^ \"]?[^ \"-]+)"
 _pat = re.compile(_pat % "|".join(_parameters))
@@ -46,7 +47,7 @@ class Query:
           self.keywords.append(token["keyword"])
 
 
-
+#TODO Use named place holders in filters, this would make the filters easier to write
 
 # Fetch results using a query,
 # See: queryparser.py for details in query specification
@@ -80,6 +81,7 @@ def fetch_results(conn, query,
     return decoder(string, errors="replace")[0]
 
   for path, content, fileid in conn.execute(sql, arguments):
+    utils.log("Result: " + path)
     elist = []
     for f in filters:
       for e in f.extents(conn, query, fileid):
@@ -596,15 +598,116 @@ filters.append(ExistsLikeFilter(
                           AND warnings.file_id = files.ID """,
     filter_id_sql = None,
     ext_sql       = None, #TODO Add extent_start, end to warnings table
-    ext_id_sql    = None,
+    ext_id_sql    = None
 ))
 
 
-#TODO bases filter
+# bases filter
+filters.append(ExistsLikeFilter(
+    param         = "bases",
+    filter_sql    = """SELECT 1 FROM types as base, impl, types
+                        WHERE types.tname LIKE ? ESCAPE "\\"
+                          AND impl.tbase = base.tid
+                          AND impl.tderived = types.tid
+                          AND base.file_id = files.ID""",
+    filter_id_sql = """SELECT 1 FROM types as base, impl
+                        WHERE impl.tbase = base.tid
+                          AND impl.tderived = ?
+                          AND base.file_id = files.ID""",
+    ext_sql       = """SELECT base.extent_start, base.extent_end
+                        FROM types as base
+                       WHERE base.file_id = ?
+                         AND EXISTS (SELECT 1 FROM impl, types
+                                     WHERE impl.tbase = base.tid
+                                       AND impl.tderived = types.tid
+                                       AND types.tname LIKE ? ESCAPE "\\"
+                                    )
+                    """,
+    ext_id_sql    = """SELECT base.extent_start, base.extent_end
+                        FROM types as base
+                       WHERE base.file_id = ?
+                         AND EXISTS (SELECT 1 FROM impl
+                                     WHERE impl.tbase = base.tid
+                                       AND impl.tderived = ?
+                                    )
+                    """
+))
 
 
+# derived filter
+filters.append(ExistsLikeFilter(
+    param         = "derived",
+    filter_sql    = """SELECT 1 FROM types as sub, impl, types
+                        WHERE types.tname LIKE ? ESCAPE "\\"
+                          AND impl.tbase = types.tid
+                          AND impl.tderived = sub.tid
+                          AND sub.file_id = files.ID""",
+    filter_id_sql = """SELECT 1 FROM types as sub, impl
+                        WHERE impl.tbase = ?
+                          AND impl.tderived = sub.tid
+                          AND sub.file_id = files.ID""",
+    ext_sql       = """SELECT sub.extent_start, sub.extent_end
+                        FROM types as sub
+                       WHERE sub.file_id = ?
+                         AND EXISTS (SELECT 1 FROM impl, types
+                                     WHERE impl.tbase = types.tid
+                                       AND impl.tderived = sub.tid
+                                       AND types.tname LIKE ? ESCAPE "\\"
+                                    )
+                    """,
+    ext_id_sql    = """SELECT sub.extent_start, sub.extent_end
+                        FROM types as sub
+                       WHERE sub.file_id = ?
+                         AND EXISTS (SELECT 1 FROM impl
+                                     WHERE impl.tbase = ?
+                                       AND impl.tderived = sub.tid
+                                    )
+                    """
+))
 
-#TODO derived filter
-#TODO member filter
+
+# member filter
+filters.append(ExistsLikeFilter(
+    param         = "member",
+    filter_sql    = """SELECT 1 FROM types as type, (
+                             SELECT scopeid, file_id FROM types
+                       UNION SELECT scopeid, file_id FROM functions
+                       UNION SELECT scopeid, file_id FROM variables
+                       ) as mem
+                        WHERE type.tname LIKE ? ESCAPE "\\"
+                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                    """,
+    filter_id_sql = """SELECT 1 FROM types as type,
+                                     types as mtype,
+                                     functions as mfunc,
+                                     variables as mvar
+                        WHERE types.tid = ?
+                          AND (
+                                 (mtype.scopeid = type.tid AND mtype.file_id = files.ID)
+                              OR (mfunc.scopeid = type.tid AND mfunc.file_id = files.ID)
+                              OR (mvar.scopeid  = type.tid AND mvar.file_id  = files.ID)
+                              )
+                    """,
+    ext_sql       = """ SELECT extent_start, extent_end
+                          FROM (
+                             SELECT extent_start, extent_end, scopeid, file_id FROM types
+                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM functions
+                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM variables
+                       ) as mem WHERE mem.file_id = ?
+                                  AND EXISTS ( SELECT 1 FROM types
+                                                WHERE types.tname LIKE ? ESCAPE "\\"
+                                                  AND types.tid = mem.scopeid)
+                       ORDER BY mem.extent_start
+                    """,
+    ext_id_sql    = """ SELECT extent_start, extent_end
+                          FROM (
+                             SELECT extent_start, extent_end, scopeid, file_id FROM types
+                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM functions
+                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM variables
+                       ) as mem WHERE mem.file_id = ?
+                                  AND mem.scopeid = ?
+                       ORDER BY mem.extent_start
+                    """
+))
 
 
