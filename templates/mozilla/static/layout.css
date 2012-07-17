@@ -1,0 +1,136 @@
+
+body{
+  padding-top:      50px;
+}
+
+#search-box{
+  font-family:      sans serif;
+  position:         fixed;
+  top:              0px;
+  left:             0px;
+  right:            0px;
+  height:           50px;
+  z-index:          15;
+  border-bottom:    1px solid #000;
+  background-color: #fff;
+}
+
+#search-box span{
+  display: block;
+  overflow: hidden;
+  padding-right:     10px;
+  padding-left:      5px;
+}
+
+#search-box input[type=text]{
+  width:            100%;
+}
+
+#panel{
+  background-color: #eee;
+  font-size:        0.8em;
+  position:         absolute;
+  top:              50px;
+  right:            0px;
+  z-index:          10;
+  padding:          1ex;
+  font-family:      sans serif;
+}
+
+#panel-toggle{
+  font-size:        2em;
+  padding-left:     30px;
+  padding-right:    30px;
+  cursor:           pointer;
+}
+
+#content{
+  position:         relative;
+  background-color: #ffffff;
+  z-index:          5;
+}
+
+.section h1{
+  font-size:        1em;
+}
+
+#panel a {
+  text-decoration:    none;
+  color:              #000;
+  background-position:2px 2px;
+  background-repeat:  no-repeat;
+  padding-left:       24px;
+  padding-top:        2px;
+  padding-bottom:     2px;
+  display:            block;
+}
+
+#panel a:hover {
+  background-color:   #ccc;
+  text-decoration:    underline;
+}
+
+
+pre { margin: 0px; }
+
+.ln {
+  display:          block;
+  width:            4ex;
+  text-align:       right;
+  color:            #888;
+  -moz-user-select: none;
+  user-select:      none;
+}
+
+.ln, .result a{
+  text-decoration: none;
+}
+.ln:hover, .result a:hover{
+  text-decoration: underline;
+}
+
+a.snippet{
+  color: #000;
+  display: block;
+}
+
+a.snippet:hover{
+  text-decoration: none;
+  background-color: #eee;
+}
+
+.highlight{
+  background-color: #ccc;
+}
+
+.ln:hover > pre {background-color: #eee;}
+
+.line-numbers{
+  width:            4ex;
+  border-right:     1px dotted #ccc;
+  float:            left;
+}
+.file-lines{
+  margin-left:      5ex;
+}
+
+.annotation{
+  display:    inline-block;
+  float:      right;
+}
+
+.result a.path{
+  font-family:      monospace;
+}
+
+.folder-content a{
+  background-position:2px 2px;
+  background-repeat:  no-repeat;
+  padding-left:       24px;
+  padding-top:        2px;
+  padding-bottom:     2px;
+}
+
+.folder-content td{
+  padding-right:      2ex;
+}

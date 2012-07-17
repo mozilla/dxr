@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link href="{{wwwroot}}/static/layout.css" rel="stylesheet" type="text/css">
+    <link href="{{wwwroot}}/static/code-style.css" rel="stylesheet" type="text/css">
+    <script src="{{wwwroot}}/static/dxr.js"></script>
+    <title>{% block title %}DXR Code Index{% endblock %}</title>
+  </head>
+  <body onload="init();">
+    <div id="search-box">
+      <b>Enter your search query:</b>
+      <form method="get" action="{{wwwroot}}/search">
+        <input type="hidden" name="tree" value="{{tree}}">
+        <span>
+          <input type="text"   name="q"    value="{{query}}" maxlength="2048" title="Search">
+        </span>
+      </form>
+    </div>
+    <div id="panel">
+      <a onclick="toggle_panel();" id="panel-toggle">Hide Navigation</a>
+      {% block panel %}
+      {% endblock %}
+    </div>
+    <div id="content">
+      {% block content %}
+      {% endblock %}
+    </div>
+  </body>
+</html>

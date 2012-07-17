@@ -108,6 +108,7 @@ be parsed from querystring using Javascript.
 Templates implementing this should also ensure that the anchor `#l{{line_number}}`
 focuses, highlights and/or scrolls to line number `line_number`.
 
+  `name`            Name of file being displayed
   `path`            Path of file being displayed
   `lines`           List of lines as tuple of `(line_number, line, annotations)`
                     where `annotations` is a dictionary of keys defined by templates.

@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <link rel="shortcut icon" href="{{wwwroot}}/static/images/favicon.png" type="image/png" />
+  <link href="{{wwwroot}}/static/dxr-styles.css" rel="stylesheet" type="text/css"></link>
+  <style type="text/css">@import "http://ajax.googleapis.com/ajax/libs/dojo/1.5/dijit/themes/tundra/tundra.css";</style>
+  <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojo/dojo.xd.js" type="text/javascript"
+          djConfig="parseOnLoad:true, isDebug:false">
+  </script>
+  <script>
+    dojo.require("dijit.layout.ContentPane");
+    dojo.require("dijit.layout.BorderContainer");
+  </script>
+  <script type="text/javascript" src="{{wwwroot}}/static/js/dxr.js"></script>
+  <title>{{name}}</title>
+</head>
+<body class="tundra" style="overflow: hidden;" onload="checkShowHintBox('searchForm', 'hintBox', 'hintLink'); initLeftPane('toggleLeftSidebarImg', 'sidebar', true);">
+<div id="hintBox" onclick="hideHintBox('hintBox')">
+  A direct result has been selected. Do you mean to search on '<a id='hintLink'></a>' instead?
+</div>
+<div id="bc" dojoType="dijit.layout.BorderContainer" design="headline" gutters="false" style="width: 100%; height: 100%">
+  <div id="header" dojoType="dijit.layout.ContentPane" region="top">
+    <div id="logo"><a href="{{wwwroot}}/"><img src="{{wwwroot}}/static/images/powered-by-mozilla-small.png" border="0"></a></div>
+    <div id="search">
+      <form method="get" id="searchForm" action="{{wwwroot}}/search">
+        <input name="q" type="text" size="31" maxlength="2048" title="Search">
+        <input type="submit" value="Search">
+        <input type="hidden" name="tree" value="{{tree}}">
+      </form>
+    </div>
+    <div id="sidebarActions">
+      {% if not generated %}
+        <a href="http://hg.mozilla.org/mozilla-central/filelog/{{revision}}/{{path}}">Log</a> &nbsp;
+        <a href="http://hg.mozilla.org/mozilla-central/annotate/{{revision}}/{{path}}">Blame</a> &nbsp;
+        <a href="http://hg.mozilla.org/mozilla-central/diff/{{revision}}/{{path}}">Diff</a> &nbsp;
+        <a href="http://hg.mozilla.org/mozilla-central/raw-file/{{revision}}/{{path}}">Raw</a> &nbsp;
+      {% endif %}
+    </div>
+    <div id="toggleLeftSidebar">
+      <img id="toggleLeftSidebarImg" src="{{wwwroot}}/static/images/icons/bullet_toggle_minus.png" onclick="toggleLeftPaneVisibility()" />
+    </div>
+  </div>
+<div id="sidebar" dojoType="dijit.layout.ContentPane" region="left" splitter="true">
+<div class="padding">
+{% for section, items in sections %}
+  <b>{{section}}</b>
+  <div>
+    {% for icon, title, path, line in items %}
+      <img src="{{wwwroot}}/static/images/icons/{{icon}}.png" class="sidebarimage">
+      <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}" title="{{title}}">{{title}}</a><br>
+    {% endfor %}
+  </div><br>
+{% endfor %}
+</div>
+</div>
+
+<div id="maincontent" dojoType="dijit.layout.ContentPane" region="center">
+<div id="signature">nsContentUtils::IsPunctuationMark(PRUint32 aChar)</div>
+<pre>
+{% for number, line, annotations in lines %}<a
+href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}" name="l{{number}}"><code>{{"%4i"|format(number)}} </code></a><code>{{line}}</code>
+{% endfor %}
+</pre></div>
+
+</div>
+</body>
+</html>
+
+
+

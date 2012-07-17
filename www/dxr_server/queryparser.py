@@ -5,46 +5,29 @@
 
 import re
 
-pat = re.compile("([\\\"\\' ]+)")
+# List of parameters to isolate in the search query, ie. path:mypath
+_parameters = ("path", "ext", "type", "type-ref", "function", "function-ref",
+"var", "var-ref", "macro", "macro-ref", "calls", "called-by", "warning",
+"bases", "derived", "member")
 
-def parse_query(query):
-  fts_query = ""
-  keywords = []
-  phrases = []
-  params = {}
-  phrase = None
-  isword = True
-  for word in pat.split(query):
-    if isword:
-      if len(word) == 0:
-        pass
-      elif phrase:
-        fts_query += " " + word + " "
-        phrase.append(word)
-      elif ":" in word:
-        key, val = word.split(":", 1)
-        params.setdefault(key, []).append(val)
-      else:
-        fts_query += " " + word + " "
-        keywords.append(word)
-    else:
-      # Yes, if you use " inside ' or V.V. it won't work as expected, sorry
-      # don't do that...
-      # Okay for future reference clean up this parsing. And support more
-      # features, take a look at the enhanced FTS query syntax for sqlite
-      # thought this might require that we compile sqlite ourselves.
-      # At least it not mainstream anywhere now.
-      if "'" in word or '"' in word:
-        fts_query += " ' "
-        if phrase:
-          phrases.append(phrase)
-          phrase = None
-        else:
-          phrase = []
-    isword = not isword
-  if phrase:
-    phrases.append(phrase)
-  return {"keywords":   keywords,
-          "phrases":    phrases,
-          "parameters": params,
-          "fts_query":  fts_query.replace("'", "\"")}
+# Pattern recognizing a parameter and a argument, a phrase or a keyword
+_pat = r"((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(?P<keyword>[^\"]+)" % "|".join(_parameters)
+_pat = re.compile(_pat)
+
+class Query:
+  """ Query object, constructor will parse any search query """
+  def __init__(self, querystr):
+    self.params = {}
+    for param in _parameters:
+      self.params[param] = []
+    self.keywords = []
+    self.phrases = []
+    # We basically iterate over the set of matches left to right
+    for token in (match.groupdict() for match in _pat.finditer(querystr)):
+      if token["param"] and token["arg"]:
+        self.params[token["param"]].append(token["arg"])
+      if token["phrase"]:
+        self.phrases.append(token["phrase"])
+      if token["keyword"]:
+        self.keywords.append(token["keyword"])
+

@@ -18,14 +18,13 @@ def build_html(dxrconfig, treecfg, filepath, dstpath, _zipper):
   arguments["trees"]      = [treecfg.tree for tcfg in dxrconfig.trees]
   # Set file template variables
   arguments["path"]       = filepath.replace(treecfg.sourcedir + '/', '')
+  arguments["name"]       = os.path.basename(arguments["path"])
   arguments["revision"]   = get_revision(treecfg)
   arguments["lines"]      = build_content(treecfg, filepath, _zipper)
   arguments["sections"]   = build_sections(treecfg, filepath, _zipper)
   arguments["generated"]  = False  #TODO: Figure out when/if a file is generated
-  #for nb, line, notes in build_content(treecfg, filepath, _zipper):
-  #  print >> sys.stderr, "%3i: %r" % (nb, line)
   # Build and dump template
-  treecfg.getTemplate("file.html").stream(**arguments).dump(dstpath, encoding = "utf-8")
+  treecfg.getTemplate("file.html").stream(**arguments).dump(dstpath, encoding = "utf-8", errors = "replace")
 
 _http_pattern = re.compile("^[A-Za-z0-9]+://.*")
 def build_content(treecfg, filepath, _zipper):
@@ -48,7 +47,7 @@ def build_content(treecfg, filepath, _zipper):
   def src(start, end = None):
     if isinstance(start, tuple):
       start, end = start[:2]
-    return decoder(source[start:end], errors="strict")[0]  #TODO After testing make it replace!
+    return decoder(source[start:end], errors="replace")[0]
   # We shall decode on-the-fly because we need ascii offsets to do the rendering
   # of regions correctly. But before we stuff anything into the template engine
   # we must ensure that it's correct utf-8 encoded string
@@ -82,6 +81,12 @@ def build_content(treecfg, filepath, _zipper):
   # This is the fastest way to apply everything, exploding source into an array of chars is a bad way!
   def normalize(region):
     start, end, data = region
+    if end < start:
+      # Regions like this happens when you implement your own operator, ie. &=
+      # apparently the cxx-lang plugin doesn't provide and end for these
+      # operators. Why don't know, also I don't know if it can supply this...
+      # It's a ref regions...
+      return (start, start + 1, data)
     if isinstance(start, tuple):
       line1, col1 = start
       line2, col2 = end
@@ -93,7 +98,7 @@ def build_content(treecfg, filepath, _zipper):
   syntax_regions  = (normalize(region) for region in syntax_regions if sane_region(region))
   link_regions    = (normalize(region) for region in link_regions if sane_region(region))
   # That's it we've normalized this mess, so let's just sort it too
-  cmp_region      = lambda (start, end, data): (-start, end, data)
+  cmp_region      = lambda (start, end, data): (- start, end, data)
   syntax_regions  = sorted(syntax_regions, key = cmp_region)
   link_regions    = sorted(link_regions, key = cmp_region)
   # Notice that we negate start, larges start first and ties resolved with smallest end.
@@ -158,7 +163,11 @@ def build_content(treecfg, filepath, _zipper):
         next = min(next, syntax_regions_stack[-1][1])
       if len(link_regions_stack) > 0:
         next = min(next, link_regions_stack[-1][1])
-      
+     
+      if filepath.endswith("BitField.h") and 1 < line_number and offset == 0:
+        print "BF: %i - %i LINE: %i" % (offset, next, line_number)
+        
+
       # Output the source text from last offset to next
       if next < line_map[line_number]:
         line += cgi.escape(src(offset,next))
@@ -212,7 +221,7 @@ def build_content(treecfg, filepath, _zipper):
     # Okay let's pop line annotations of the line_notes stack
     notes = []
     while len(line_notes) > 0 and line_notes[-1][0] == line_number:
-      notes.append(line_notes.pop())
+      notes.append(line_notes.pop()[1])
 
     lines.append((line_number, line, notes))
   # Return all lines of the file, as we're done

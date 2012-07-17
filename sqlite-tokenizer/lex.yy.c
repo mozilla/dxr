@@ -357,8 +357,8 @@ static void yy_fatal_error (yyconst char msg[] ,yyscan_t yyscanner );
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
 
-#define YY_NUM_RULES 17
-#define YY_END_OF_BUFFER 18
+#define YY_NUM_RULES 18
+#define YY_END_OF_BUFFER 19
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -368,10 +368,10 @@ struct yy_trans_info
 	};
 static yyconst flex_int16_t yy_accept[41] =
     {   0,
-        0,    0,   18,   15,   16,   11,    2,   13,   11,   12,
-       12,   10,    9,    9,   14,    9,    6,    9,    3,    7,
-       11,    7,    1,   12,   12,   13,    7,    6,    8,    5,
-       14,    3,    3,    7,    7,    1,    1,    4,    3,    0
+        0,    0,   19,   16,   17,   12,    3,   14,   12,   13,
+       13,   11,   10,   10,   15,    1,    7,   10,    4,    8,
+       12,    8,    2,   13,   13,   14,    8,    7,    9,    6,
+       15,    4,    4,    8,    8,    2,    2,    5,    4,    0
     } ;
 
 static yyconst flex_int32_t yy_ec[256] =
@@ -825,17 +825,17 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 51 "dxr-tokenizer.yy"
-UPDATE_LOCATION; return ActionIdentifier;
+UPDATE_LOCATION; /* discard - is a search query modifier */
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
 #line 52 "dxr-tokenizer.yy"
-UPDATE_LOCATION; return ActionQuote;
+UPDATE_LOCATION; return ActionIdentifier;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
 #line 53 "dxr-tokenizer.yy"
-UPDATE_LOCATION; return ActionOther;
+UPDATE_LOCATION; return ActionQuote;
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
@@ -875,12 +875,12 @@ UPDATE_LOCATION; return ActionOther;
 case 11:
 YY_RULE_SETUP
 #line 61 "dxr-tokenizer.yy"
-UPDATE_LOCATION; return ActionOther; 
+UPDATE_LOCATION; return ActionOther;
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 62 "dxr-tokenizer.yy"
-UPDATE_LOCATION; return ActionOther;
+UPDATE_LOCATION; return ActionOther; 
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
@@ -895,20 +895,25 @@ UPDATE_LOCATION; return ActionOther;
 case 15:
 YY_RULE_SETUP
 #line 65 "dxr-tokenizer.yy"
-UPDATE_LOCATION; /* discard */
+UPDATE_LOCATION; return ActionOther;
 	YY_BREAK
 case 16:
-/* rule 16 can match eol */
 YY_RULE_SETUP
 #line 66 "dxr-tokenizer.yy"
 UPDATE_LOCATION; /* discard */
 	YY_BREAK
 case 17:
+/* rule 17 can match eol */
 YY_RULE_SETUP
 #line 67 "dxr-tokenizer.yy"
+UPDATE_LOCATION; /* discard */
+	YY_BREAK
+case 18:
+YY_RULE_SETUP
+#line 68 "dxr-tokenizer.yy"
 ECHO;
 	YY_BREAK
-#line 912 "lex.yy.c"
+#line 917 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2025,7 +2030,7 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 67 "dxr-tokenizer.yy"
+#line 68 "dxr-tokenizer.yy"
 
 
 

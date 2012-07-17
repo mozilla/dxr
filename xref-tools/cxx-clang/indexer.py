@@ -588,12 +588,12 @@ class CxxHtmlifier:
     for row in self.conn.execute("SELECT tqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
       yield make_tuple(row, "tqualname", "file_line", "scopeid")
-    for row in self.conn.execute("SELECT fqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
+    for row in self.conn.execute("SELECT fname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
                                  "(SELECT path from files where id=f1.file_id) AS path FROM functions f1 WHERE funcid IN " +
                                  "(SELECT coalesce((SELECT defid FROM decldef dd WHERE dd.file_id = f2.file_id AND dd.file_line = f2.file_line " +
                                  " AND dd.file_col = f2.file_col), f2.funcid) FROM functions f2 " +
                                  "WHERE f2.file_id = (SELECT id FROM files WHERE path = ?))", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "fqualname", "file_line", "scopeid", False, self.srcpath)
+      yield make_tuple(row, "fname", "file_line", "scopeid", False, self.srcpath)
 
     for row in self.conn.execute("SELECT vname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = variables.scopeid) AS sname " +
                                  "FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) AND " +

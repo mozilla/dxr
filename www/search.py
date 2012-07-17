@@ -5,7 +5,6 @@ import sqlite3
 import sys, os
 
 import dxr_server
-import dxr_server.queryparser
 import dxr_server.query
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
@@ -27,7 +26,7 @@ if tree not in dxr_server.trees:
   sys.exit (0)
 
 # Parse the search query
-q = dxr_server.queryparser.parse_query(querystring.get("q", ""))
+q = dxr_server.query.Query(querystring.get("q", ""))
 
 # Connect to database
 conn = dxr_server.connect_db(tree)
@@ -39,7 +38,7 @@ arguments = {
     "tree":       tree,
     "trees":      dxr_server.trees,
     # Search Template Variables
-    "query":      querystring.get("q", ""),
+    "query":      cgi.escape(querystring.get("q", ""), True),
     "results":    dxr_server.query.fetch_results(
                       conn, q,
                       querystring.get("offset", 0),
@@ -59,4 +58,4 @@ env = jinja2.Environment(
 )
 
 # Get search template and dump it to stdout
-env.get_template("search.html").stream(**arguments).dump(sys.stdout)
+env.get_template("search.html").stream(**arguments).dump(sys.stdout, encoding = "utf-8")
