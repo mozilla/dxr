@@ -8,9 +8,10 @@
     <title>{% block title %}DXR Code Index{% endblock %}</title>
   </head>
   <body onload="init();">
+    {% block body %}
     <div id="search-box">
       <a href="{{wwwroot}}/">
-        <img id="dxr" src="{{wwwroot}}/static/dxr.png">
+        <img id="dxr" src="{{wwwroot}}/static/magmoz.png">
       </a>
       <div id="tip">Enter search query here</div>
       <div id="tree">You're browsing <b>{{tree}}</b></div>
@@ -23,7 +24,11 @@
     </div>
     {% if panel %}
     <div id="panel">
-      <a onclick="toggle_panel();" id="panel-toggle">Hide Navigation</a>
+      <a onclick="toggle_panel();" id="panel-toggle">
+        {%- block panel_title -%}
+        Navigation
+        {%- endblock -%}
+      </a>
       {% block panel %}
       {% endblock %}
     </div>
@@ -33,5 +38,6 @@
       {% endblock %}
     </div>
     <div id="inline-menu"></div>
+    {% endblock %}
   </body>
 </html>

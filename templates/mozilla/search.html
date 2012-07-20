@@ -2,6 +2,10 @@
 
 {% block title %}{{query}} - DXR Search{% endblock %}
 
+{% set panel = True %}
+
+{% block panel_title %}Advanced{% endblock %}
+
 {% block content %}
   {% for path, lines in results %}
     <div class="result">

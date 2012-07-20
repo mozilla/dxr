@@ -15,9 +15,7 @@ body{
 }
 
 #dxr{
-    padding-left:   5px;
     float:          left;
-    padding-top:    11px;
 }
 
 #tip, #tree{
@@ -27,7 +25,7 @@ body{
 
 #tip{
     float: left;
-    margin-left: 10px;
+    margin-left: 2px;
 }
 
 #tree{
@@ -36,7 +34,7 @@ body{
 }
 
 #textwrap{
-    margin-left:    75px;
+    margin-left:    53px;
     margin-right:   30px;
 }
 
@@ -45,7 +43,7 @@ body{
   border:               1px solid #888;
   font-family:          monospace;
   padding-left:         20px;
-  background-image:     url(tango-search.png);
+  background-image:     url(icons/page_white_find.png);
   background-position:  2px 2px;
   background-repeat:    no-repeat;
 }
@@ -113,6 +111,10 @@ pre { margin: 0px; }
   text-decoration: underline;
 }
 
+.highlight .ln{
+  color: #fff;
+}
+
 a.snippet{
   color: #000;
   display: block;
@@ -149,6 +151,11 @@ a.snippet:hover{
   font-family:      monospace;
 }
 
+table.folder-content{
+  font-family:        monospace;
+  width:              100%;
+}
+
 .folder-content a{
   background-position:2px 2px;
   background-repeat:  no-repeat;
@@ -157,8 +164,8 @@ a.snippet:hover{
   padding-bottom:     2px;
 }
 
-.folder-content td{
-  padding-right:      2ex;
+.folder-content th{
+  text-align:         left;
 }
 
 #inline-menu{

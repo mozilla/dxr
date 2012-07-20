@@ -23,8 +23,14 @@ _parameters += ["-" + param for param in _parameters] + ["+" + param for param
 
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
-_pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(?P<keyword>[^ \"]?[^ \"-]+)"
+_pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(-\"(?P<notphrase>[^\"]+)\")|(?P<keyword>[^ \"]?[^ \"-]+)"
 _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
+
+# Pattern for recognizing if a word will be tokenized as a single term.
+# Ideally we should reuse our custom sqlite tokenizer, but that'll just
+# complicated things, anyways, if it's not a identifier, it must be a single
+# token, in which we'll wrap it anyway :) 
+_single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query:
   """ Query object, constructor will parse any search query """
@@ -35,6 +41,7 @@ class Query:
     self.notwords = []
     self.keywords = []
     self.phrases = []
+    self.notphrases = []
     # We basically iterate over the set of matches left to right
     for token in (match.groupdict() for match in _pat.finditer(querystr)):
       if token["param"] and token["arg"]:
@@ -43,10 +50,19 @@ class Query:
         self.phrases.append(token["phrase"])
       if token["keyword"]:
         if token["keyword"].startswith("-"):
-          self.notwords.append(token["keyword"][1:])
+          # If it's not a single term by the tokenizer
+          # we must wrap it as a phrase
+          if _single_term.match(token["keyword"][1:]):
+            self.notwords.append(token["keyword"][1:])
+          else:
+            self.notphrase.append(token["keyword"][1:])
         else:
-          self.keywords.append(token["keyword"])
-
+          if _single_term.match(token["keyword"]):
+            self.keywords.append(token["keyword"])
+          else:
+            self.notphrase.append(token["keyword"])
+      if token["notphrase"]:
+        self.notphrase.append(token["notphrase"])
 
 #TODO Use named place holders in filters, this would make the filters easier to write
 
@@ -208,11 +224,14 @@ class FTSSearchFilter(SearchFilter):
     elif len(query.notwords):
       q = " ".join(query.notwords)
       yield "files.ID NOT IN (SELECT n.rowid FROM fts as n WHERE n.content MATCH ?)", [q], False
+    if len(query.notphrases):
+      q = " ".join(['"%s"' % phrase for phrase in query.notphrases])
+      yield "files.ID NOT IN (SELECT n.rowid FROM fts as n WHERE n.content MATCH ?)", [q], False
   def extents(self, conn, query, fileid):
     if len(query.keywords) or len(query.phrases):
       def builder():
         sql = "SELECT offsets(fts) FROM fts WHERE fts.content MATCH ? AND fts.rowid = ?"
-        q = " ".join(query.keywords + ["-%s" % w for w in query.notwords] + ['"%s"' % phrase for phrase in query.phrases])
+        q = " ".join(query.keywords + ['"%s"' % phrase for phrase in query.phrases])
         offsets = conn.execute(sql, [q, fileid]).fetchone()
         offsets = offsets[0].split()
         offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]

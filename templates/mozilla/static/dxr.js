@@ -1,18 +1,19 @@
 
+var panel_visible = true;
+//TODO Load/save this to cookie, and differentiate between search panel and browser panel!
+//     Use panel-toggle innerHTML to decide what type of panel is currently displayed
 function toggle_panel(){
-  var panel_toggle = document.getElementById("panel-toggle");
   var sections = document.querySelectorAll(".section");
-  if(panel_toggle.innerHTML == "Hide Navigation"){
-    panel_toggle.innerHTML = "Show Navigation";
+  if(panel_visible){
     for(var i = 0; i < sections.length; i++){
       sections[i].style.display = "none";
     }
   }else{
-    panel_toggle.innerHTML = "Hide Navigation";
     for(var i = 0; i < sections.length; i++){
       sections[i].style.display = "block";
     }
   }
+  panel_visible = !panel_visible;
 }
 
 function init(){

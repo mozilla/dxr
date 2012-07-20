@@ -1,6 +1,18 @@
 {% extends "layout.html" %}
 
-{% block content %}
-  <p>Welcome to DXR, now search!</p>
+{% block body %}
+<div style="text-align: center;">
+  <img src="{{wwwroot}}/static/magmoz.svg" style="width: 50%">
+  <div style="width: 100%; background-color: #eee; padding: 2ex 0px 2ex 0px">
+    <div style="width: 50%; margin: auto; text-align: left; font-family: sans-serif;">
+      You can search <b>{{tree}}</b> here
+      <form method="get" action="{{wwwroot}}/search">
+        <input type="text" name="q" value="{{query}}" maxlength="2048"
+        title="Search" style="width: 100%;font-family: monospace;">
+        <input type="hidden" name="tree" value="{{tree}}">
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
