@@ -9,22 +9,29 @@
   </head>
   <body onload="init();">
     <div id="search-box">
-      <b>Enter your search query:</b>
-      <form method="get" action="{{wwwroot}}/search">
-        <input type="hidden" name="tree" value="{{tree}}">
-        <span>
-          <input type="text"   name="q"    value="{{query}}" maxlength="2048" title="Search">
-        </span>
-      </form>
+      <a href="{{wwwroot}}/">
+        <img id="dxr" src="{{wwwroot}}/static/dxr.png">
+      </a>
+      <div id="tip">Enter search query here</div>
+      <div id="tree">You're browsing <b>{{tree}}</b></div>
+      <div id="textwrap">
+        <form method="get" action="{{wwwroot}}/search">
+          <input type="text" name="q" value="{{query}}" maxlength="2048" title="Search">
+          <input type="hidden" name="tree" value="{{tree}}">
+        </form>
+      </div>
     </div>
+    {% if panel %}
     <div id="panel">
       <a onclick="toggle_panel();" id="panel-toggle">Hide Navigation</a>
       {% block panel %}
       {% endblock %}
     </div>
+    {% endif %}
     <div id="content">
       {% block content %}
       {% endblock %}
     </div>
+    <div id="inline-menu"></div>
   </body>
 </html>

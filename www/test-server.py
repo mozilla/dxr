@@ -6,7 +6,11 @@ Use apache or something else for deployments, this is NOT designed with security
 NOTE: Support for mod_rewrite or something similar is quite important.
 """
 
-import os, BaseHTTPServer, CGIHTTPServer, dxr_server
+import os, sys, BaseHTTPServer, CGIHTTPServer, dxr_server
+
+port = 8000
+if len(sys.argv) > 2 and sys.argv[1] == "--port":
+  port = int(sys.argv[2])
 
 #Extension maps for DXRRequestHandler, sets them depending on context
 #A hack that makes this work nicely.
@@ -48,7 +52,7 @@ class DXRRequestHandler(CGIHTTPServer.CGIHTTPRequestHandler):
     return False
 
 def main():
-  server_address = ('', 8000)
+  server_address = ('', port)
   server = BaseHTTPServer.HTTPServer(server_address, DXRRequestHandler)
   try:
     print "Starting test-server!"

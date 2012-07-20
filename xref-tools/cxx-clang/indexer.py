@@ -4,7 +4,7 @@ from dxr.languages import language_schema
 import dxr.plugins
 import os
 import mmap
-import re
+import re, urllib
 
 file_cache = {}
 decl_master = {}
@@ -559,6 +559,7 @@ class CxxHtmlifier:
     self.srcpath = srcpath.replace(treecfg.sourcedir + '/', '')
     self.blob_file = None #blob["byfile"].get(self.srcpath, None)
     self.conn = conn
+    self.treecfg = treecfg
 
   def collectSidebar(self):
     def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
@@ -623,13 +624,73 @@ class CxxHtmlifier:
         yield (token.start, token.end, 'p')
 
   def getLinkRegions(self):
-    def make_link(obj, clazz, rid):
+    # I'm sorry that I'm hacking this even worse, but this is already a mess
+    # refs should be split into multiple tabels, function-refs, variable-refs
+    # and type-refs, these should be part of DXR, and references listed there
+    # shouldn't have to be generated as link regions by cxx-clang.
+    # link regions by cxx-clang should be merged with other link regions and
+    # link regions should be menu regions, not links. because links aren't good
+    # enougth...
+    # YES, this is a ugly as it get's, but the plugin architecture needs a
+    # lot of refactoring anyway...
+    def make_link(obj, kind, rid):
       start = obj['extent_start']
       end = obj['extent_end']
-      kwargs = {}
-      kwargs['rid'] = rid
-      kwargs['class'] = clazz
-      return (start, end, kwargs)
+      search = self.treecfg.virtroot + "/search?tree=" + self.treecfg.tree + "&q="
+      menu = {}
+      if kind == "ref":
+        cur = self.conn.execute("""
+                 SELECT "function-ref", functions.file_line, functions.fqualname,
+                        (SELECT files.path FROM files WHERE files.ID = functions.file_id)
+                        FROM functions WHERE functions.funcid = ?
+          UNION  SELECT "var-ref", variables.file_line, variables.vname,
+                        (SELECT files.path FROM files WHERE files.ID = variables.file_id)
+                        FROM variables WHERE variables.varid = ?
+          UNION  SELECT "type-ref", types.file_line, types.tqualname,
+                        (SELECT files.path FROM files WHERE files.ID = types.file_id)
+                        FROM types WHERE types.tid = ?
+          UNION  SELECT "macro-ref", macros.file_line, macros.macroname,
+                        (SELECT files.path FROM files WHERE files.ID = macros.file_id)
+                        FROM macros WHERE macros.macroid = ?
+        """, [rid] * 4)
+        row = cur.fetchone()
+        if row:
+          menu["Find references"]  = search + urllib.quote("+" + row[0] + ":%s" % row[2])
+          url = self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[3] + "#l%s" % row[1]
+          menu["Jump to definition"]  = url
+        if row[0] == "function-ref":
+          menu["Find callers"]        = search + urllib.quote("+callers:%s" % row[2])
+          menu["Find callees"]        = search + urllib.quote("+called-by:%s" % row[2])
+        if row[0] == "type-ref":
+          menu["Find base classes"]   = search + urllib.quote("+bases:%s" % row[2])
+          menu["Find sub classes"]    = search + urllib.quote("+derived:%s" % row[2])
+          menu["Find members"]        = search + urllib.quote("+member:%s" % row[2])
+      if kind == "var":
+        menu["Find-references"]     = search + urllib.quote("+var-ref:%s" % rid)
+      if kind == "func":
+        menu["Find callers"]        = search + urllib.quote("+callers:%s" % rid)
+        menu["Find callees"]        = search + urllib.quote("+called-by:%s" % rid)
+        menu["Find references"]     = search + urllib.quote("+function-ref:%s" % rid)
+      if kind == "type":
+        menu["Find base classes"]   = search + urllib.quote("+bases:%s" % rid)
+        menu["Find sub classes"]    = search + urllib.quote("+derived:%s" % rid)
+        menu["Find members"]        = search + urllib.quote("+member:%s" % rid)
+        menu["Find references"]     = search + urllib.quote("+type-ref:%s" % rid)
+      if kind == "typedef":
+        pass  #TODO Figure out what we do with these
+        # Maybe support it when a refactor of this mess is done...
+      cur = self.conn.execute("""
+          SELECT decldef.file_line, (SELECT path FROM
+          files WHERE files.ID = decldef.file_id) FROM decldef
+          WHERE decldef.defid = ?
+      """, [rid])
+      row = cur.fetchone()
+      if row:
+        url = self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[1] + "#l%s" % row[0]
+        menu["Jump to declaration"] = url
+      # Well, at least it can't possibly get any worse :)
+      menustring = "!".join(["%s|%s" % (key, val) for key, val in menu.items()])
+      return (start, end, {"data-menu": menustring})
 
     pattern = re.compile('\#[\s]*include[\s]*[<"](\S+)[">]')
 
@@ -650,21 +711,21 @@ class CxxHtmlifier:
         continue
     
     for row in self.conn.execute("""SELECT refid, extent_start, extent_end FROM refs WHERE refid IS NOT NULL
-                                    AND file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start""",
-                                 (self.srcpath,)).fetchall():
+                                    AND file_id = (SELECT id FROM files WHERE path = ?)""",
+                                 (self.srcpath,)):
       yield make_link(row, "ref", row['refid'])
       
-    for row in self.conn.execute("SELECT varid, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
-      yield make_link(row, "var", row['varid'])
+    for row in self.conn.execute("SELECT vname, extent_start, extent_end FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)):
+      yield make_link(row, "var", row['vname'])
 
-    for row in self.conn.execute("SELECT funcid, extent_start, extent_end FROM functions WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
-      yield make_link(row, "func", row['funcid'])
+    for row in self.conn.execute("SELECT fqualname, extent_start, extent_end FROM functions WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)):
+      yield make_link(row, "func", row['fqualname'])
 
-    for row in self.conn.execute("SELECT tid, extent_start, extent_end FROM types WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
-      yield make_link(row, "t", row['tid'])
+    for row in self.conn.execute("SELECT tqualname, extent_start, extent_end FROM types WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)):
+      yield make_link(row, "type", row['tqualname'])
 
-    for row in self.conn.execute("SELECT tid, extent_start, extent_end FROM typedefs WHERE file_id = (SELECT id FROM files WHERE path = ?) ORDER BY extent_start", (self.srcpath,)).fetchall():
-      yield make_link(row, "t", row['tid'])
+    for row in self.conn.execute("SELECT tid, extent_start, extent_end FROM typedefs WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)):
+      yield make_link(row, "typedef", row['tid'])
 
     for row in self.conn.execute("SELECT macroid, macroname, file_line, file_col FROM macros WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
       line = row['file_line']

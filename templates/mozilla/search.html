@@ -8,16 +8,19 @@
       <a class="path" href="{{wwwroot}}/{{tree}}/{{path}}">{{path}}</a><br>
       {% if lines|length > 0 %}
       {% for number, line in lines %}
-        <a class="snippet" href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">
+      <a class="snippet" href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">
         <div class="line-numbers">
         <pre><span class="ln">{{number}}</span></pre>
         </div>
         <div class="file-lines"><pre><code>{{line}}</code></pre></div>
-        </a>
-        {%- endfor %}
+      </a>
+      {%- endfor %}
       {% endif %}
     </div>
   {% else %}
-    <p>No search results found!</p>
+  <div style="width: 100%; text-align: center;">
+    <img src="{{wwwroot}}/static/garbage.svg" style="margin: auto; width: 50%;">
+    <div style="font-family: sans-serif; font-size: 4em;">Sorry, no results!</div>
+  </div>
   {% endfor %}
 {% endblock %}

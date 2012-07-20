@@ -24,11 +24,12 @@ function init(){
         if(highligted)
           highligted.classList.remove("highlight");
         elems[0].parentNode.classList.add("highlight");
-        window.scroll(0, findPos(elems[0]) - window.innerHeight / 4.0);
+        window.scroll(0, findPosTop(elems[0]) - window.innerHeight / 4.0);
       }
     } 
   }
   window.onhashchange();
+  init_menu();
 }
 
 //TODO use findLine to update log, blame, diff, raw links...
@@ -42,7 +43,7 @@ function findLine(){
   return -1;
 }
 
-function findPos(obj) {
+function findPosTop(obj) {
   var top = 0;
   do{
     top += obj.offsetTop;
@@ -50,4 +51,40 @@ function findPos(obj) {
   return top;
 }
 
+function findPosLeft(obj) {
+  var left = 0;
+  do{
+    left += obj.offsetLeft;
+  }while(obj = obj.offsetParent);
+  return left;
+}
 
+function init_menu(){
+  //TODO Cleanup this, use add eventlistener, and clean popup on mouseup on window
+  var m = document.getElementById("inline-menu");
+  var as = document.querySelectorAll(".file-lines a");
+  for(var i = 0; i < as.length; i++){
+    var a = as[i];
+    var menu = a.dataset["menu"];
+    if(menu){
+      a.onclick = function(e){
+        var rows = e.target.dataset.menu.split("!");
+        var links = "";
+        for(var j = 0; j < rows.length; j++){
+          var row = rows[j];
+          var args = row.split("|")
+          links += "<a href='" + args[1] + "'>" + args[0] + "</a>";
+        }
+        m.innerHTML = links;
+        m.style.display = "block";
+        m.style.top = findPosTop(e.target) + "px";
+        m.style.left = findPosLeft(e.target) + "px";
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  }
+  document.body.onmouseup = function(){
+    m.style.display = "none";
+  }
+}

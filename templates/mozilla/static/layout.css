@@ -1,6 +1,6 @@
 
 body{
-  padding-top:      50px;
+  margin:           50px 0px 5px 0px;
 }
 
 #search-box{
@@ -11,19 +11,43 @@ body{
   right:            0px;
   height:           50px;
   z-index:          15;
-  border-bottom:    1px solid #000;
-  background-color: #fff;
+  background-color: #eee;
 }
 
-#search-box span{
-  display: block;
-  overflow: hidden;
-  padding-right:     10px;
-  padding-left:      5px;
+#dxr{
+    padding-left:   5px;
+    float:          left;
+    padding-top:    11px;
+}
+
+#tip, #tree{
+    padding-top: 5px;
+    font-size: 0.8em;
+}
+
+#tip{
+    float: left;
+    margin-left: 10px;
+}
+
+#tree{
+    margin-right: 10px;
+    float: right;
+}
+
+#textwrap{
+    margin-left:    75px;
+    margin-right:   30px;
 }
 
 #search-box input[type=text]{
-  width:            100%;
+  width:                100%;
+  border:               1px solid #888;
+  font-family:          monospace;
+  padding-left:         20px;
+  background-image:     url(tango-search.png);
+  background-position:  2px 2px;
+  background-repeat:    no-repeat;
 }
 
 #panel{
@@ -75,7 +99,7 @@ pre { margin: 0px; }
 
 .ln {
   display:          block;
-  width:            4ex;
+  width:            5ex;
   text-align:       right;
   color:            #888;
   -moz-user-select: none;
@@ -106,12 +130,13 @@ a.snippet:hover{
 .ln:hover > pre {background-color: #eee;}
 
 .line-numbers{
-  width:            4ex;
+  width:            5ex;
   border-right:     1px dotted #ccc;
   float:            left;
 }
+
 .file-lines{
-  margin-left:      5ex;
+  margin-left:      6ex;
 }
 
 .annotation{
@@ -120,6 +145,7 @@ a.snippet:hover{
 }
 
 .result a.path{
+  padding-left:     1ex;
   font-family:      monospace;
 }
 
@@ -134,3 +160,22 @@ a.snippet:hover{
 .folder-content td{
   padding-right:      2ex;
 }
+
+#inline-menu{
+  margin-top:       12px;
+  background-color: #eee;
+  display:          none;
+  position:         absolute;
+  z-index:          10;
+}
+
+#inline-menu a{
+  padding:          0px 2px 0px 2px;
+  text-decoration:  none;
+  display:          block;
+  color:            #000;
+}
+#inline-menu a:hover{
+  background-color: #ccc;
+}
+

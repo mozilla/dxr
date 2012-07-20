@@ -1,0 +1,15 @@
+[DXR]
+templates=PWD/../../templates/mozilla
+dxrroot=PWD/../..
+
+[Web]
+wwwdir=PWD/www
+virtroot=/
+hosturl=http://0.0.0.0:3571
+
+[HelloWorld]
+sourcedir=PWD/HelloWorld
+objdir=PWD/HelloWorld-obj
+revision=echo "TheRevision"
+pullcommand=make clean
+buildcommand=mkdir ../HelloWorld-obj/; make
