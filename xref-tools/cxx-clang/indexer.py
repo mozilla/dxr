@@ -586,9 +586,9 @@ class CxxHtmlifier:
         sname = None
 
       return (df[name], df[loc], df[name], img, sname, path)
-    for row in self.conn.execute("SELECT tqualname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
+    for row in self.conn.execute("SELECT tname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "tqualname", "file_line", "scopeid")
+      yield make_tuple(row, "tname", "file_line", "scopeid")
     for row in self.conn.execute("SELECT fname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
                                  "(SELECT path from files where id=f1.file_id) AS path FROM functions f1 WHERE funcid IN " +
                                  "(SELECT coalesce((SELECT defid FROM decldef dd WHERE dd.file_id = f2.file_id AND dd.file_line = f2.file_line " +
@@ -633,9 +633,7 @@ class CxxHtmlifier:
     # enougth...
     # YES, this is a ugly as it get's, but the plugin architecture needs a
     # lot of refactoring anyway...
-    def make_link(obj, kind, rid):
-      start = obj['extent_start']
-      end = obj['extent_end']
+    def make_menu(kind, rid):
       search = self.treecfg.virtroot + "/search?tree=" + self.treecfg.tree + "&q="
       menu = {}
       if kind == "ref":
@@ -689,8 +687,15 @@ class CxxHtmlifier:
         url = self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[1] + "#l%s" % row[0]
         menu["Jump to declaration"] = url
       # Well, at least it can't possibly get any worse :)
-      menustring = "!".join(["%s|%s" % (key, val) for key, val in menu.items()])
-      return (start, end, {"data-menu": menustring})
+      return "!".join(["%s|%s" % (key, val) for key, val in menu.items()])
+
+    # Let's cache the menustrings locally, for this file, it might help a little
+    # for large files, and we have many of those
+    menues = {}
+    def make_link(obj, kind, rid):
+      start = obj['extent_start']
+      end = obj['extent_end']
+      return (start, end, {"data-menu": menues.setdefault(rid, make_menu(kind, rid))})
 
     pattern = re.compile('\#[\s]*include[\s]*[<"](\S+)[">]')
 

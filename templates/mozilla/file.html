@@ -15,11 +15,18 @@
   {% for section, items in sections %}
   <div class="section">
     <h1>{{section}}</h1>
-    {% for icon, title, path, line in items %}
-    <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}"
-       title="{{title}}"
-       style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
-       >{{title}}</a>
+    {% for icon, title, link_path, line in items %}
+      {% if link_path == path %}
+        <a href="#l{{line}}"
+        title="{{title}}"
+        style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
+        >{{title}}</a>
+      {% else %}
+        <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}"
+        title="{{title}}"
+        style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
+        >{{title}}</a>
+      {% endif %}
     {%- endfor %}
     </div>
   {% endfor %}
