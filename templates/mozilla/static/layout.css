@@ -1,6 +1,6 @@
 
 body{
-  margin:           50px 0px 5px 0px;
+  margin:           50px 0px 0px 0px;
 }
 
 #search-box{
@@ -14,38 +14,57 @@ body{
   background-color: #eee;
 }
 
+
 #dxr{
-    float:          left;
+  user-select:          none;
+  -moz-user-select:     none;
+  -webkit-user-select:  none;
+  float:                left;
+  display:              block;
 }
 
 #tip, #tree{
-    padding-top: 5px;
+    padding-top: 3px;
     font-size: 0.8em;
 }
 
 #tip{
     float: left;
-    margin-left: 2px;
 }
 
 #tree{
-    margin-right: 10px;
     float: right;
 }
 
-#textwrap{
+#search-box-content{
     margin-left:    53px;
-    margin-right:   30px;
+    margin-right:   5px;
 }
 
-#search-box input[type=text]{
-  width:                100%;
-  border:               1px solid #888;
-  font-family:          monospace;
-  padding-left:         20px;
-  background-image:     url(icons/page_white_find.png);
+#formwrap{
+  float: right;
+  width: 100%;
+}
+
+#inputwrap{
+  background-image:     url(http://localhost:8000/static/icons/page_white_find.png);
   background-position:  2px 2px;
   background-repeat:    no-repeat;
+  border:               1px solid #888;
+  padding-left:         20px;
+  background-color:     #fff;
+  margin-top:           3px;
+}
+
+#query{
+  width:                100%;
+  border:               none;
+  font-family:          monospace;
+  padding:              0px;
+  outline:              none;
+  height:               20px;
+  vertical-align:       middle;
+  font-size:            14px;
 }
 
 #panel{
@@ -186,3 +205,15 @@ table.folder-content{
   background-color: #ccc;
 }
 
+#fetch-results{
+  display:              none;
+  background-color:     #eee;
+  padding:              5px;
+  font-family:          sans-serif;
+  font-size:            2em;
+  text-align:           center;
+  user-select:          none;
+  -moz-user-select:     none;
+  -webkit-user-select:  none;
+  cursor:               default;
+}

@@ -55,14 +55,31 @@ class Query:
           if _single_term.match(token["keyword"][1:]):
             self.notwords.append(token["keyword"][1:])
           else:
-            self.notphrase.append(token["keyword"][1:])
+            self.phrases.append(token["keyword"][1:])
         else:
           if _single_term.match(token["keyword"]):
             self.keywords.append(token["keyword"])
           else:
-            self.notphrase.append(token["keyword"])
+            self.phrases.append(token["keyword"])
       if token["notphrase"]:
         self.notphrase.append(token["notphrase"])
+  def single_term(self):
+    """ Returns the single term making up the query, None for complex queries """
+    count = 0
+    term = None
+    for param in _parameters:
+      count += len(self.params[param])
+    count += len(self.notwords)
+    count += len(self.keywords)
+    if len(self.keywords):
+      term = self.keywords[0]
+    count += len(self.phrases)
+    if len(self.phrases):
+      term = self.phrases[0]
+    count += len(self.notphrases)
+    if count > 1:
+      return None
+    return term
 
 #TODO Use named place holders in filters, this would make the filters easier to write
 
@@ -148,6 +165,81 @@ def fetch_results(conn, query,
       lines.append((line_number, out_line))
     # Return result
     yield path, lines
+
+
+def direct_result(conn, query):
+  """ Get a direct result as tuple of (path, line) or None if not direct result
+      for query, ie. complex query
+  """
+  term = query.single_term()
+  if not term:
+    return None
+  cur = conn.cursor()
+  
+  # See if we can find only one file match
+  cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
+  rows = cur.fetchall()
+  if rows and len(rows) == 1:
+    return (rows[0]['path'], 1)
+
+  # Case sensitive type matching
+  cur.execute("""SELECT
+                    (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+                    types.file_line
+                 FROM types WHERE types.tname = ? LIMIT 2""", (term,))
+  rows = cur.fetchall()
+  if rows and len(rows) == 1:
+    return (rows[0]['path'], rows[0]['file_line'])
+
+  # Case sensitive function names
+  cur.execute("""SELECT
+                    (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+                    functions.file_line
+                 FROM functions WHERE functions.fname = ? LIMIT 2""", (term,))
+  rows = cur.fetchall()
+  if rows and len(rows) == 1:
+    return (rows[0]['path'], rows[0]['file_line'])
+
+  # Try fully qualified names
+  if "::" in term:
+    # Case insensitive type matching
+    cur.execute("""SELECT
+                      (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+                      types.file_line
+                   FROM types WHERE types.tqualname LIKE ? LIMIT 2""", ("%" + term,))
+    rows = cur.fetchall()
+    if rows and len(rows) == 1:
+      return (rows[0]['path'], rows[0]['file_line'])
+
+    # Case insensitive function names
+    cur.execute("""SELECT
+                      (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+                      functions.file_line
+                   FROM functions WHERE functions.fqualname LIKE ? LIMIT 2""", ("%" + term,))
+    rows = cur.fetchall()
+    if rows and len(rows) == 1:
+      return (rows[0]['path'], rows[0]['file_line'])
+
+  # Case insensitive type matching
+  cur.execute("""SELECT
+                    (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+                    types.file_line
+                 FROM types WHERE types.tname LIKE ? LIMIT 2""", (term,))
+  rows = cur.fetchall()
+  if rows and len(rows) == 1:
+    return (rows[0]['path'], rows[0]['file_line'])
+
+  # Case insensitive function names
+  cur.execute("""SELECT
+                    (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+                    functions.file_line
+                 FROM functions WHERE functions.fname LIKE ? LIMIT 2""", (term,))
+  rows = cur.fetchall()
+  if rows and len(rows) == 1:
+    return (rows[0]['path'], rows[0]['file_line'])
+
+  # Okay we've got nothing
+  return None
 
 
 def like_escape(val):

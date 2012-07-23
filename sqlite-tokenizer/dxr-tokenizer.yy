@@ -364,6 +364,7 @@ DXRCodeTokenizerNext(sqlite3_tokenizer_cursor*  pCursor,      /* Cursor */
   // Free dynamic token allocation (if any)
   if(pDXRCursor->dynamicToken)
     sqlite3_free(pDXRCursor->dynamicToken);
+  pDXRCursor->dynamicToken = NULL;
 
   // Read next token, this gives us token action
   // and sets pDXRCursor->location

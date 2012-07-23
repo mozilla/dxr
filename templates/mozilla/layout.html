@@ -4,27 +4,37 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <link href="{{wwwroot}}/static/layout.css" rel="stylesheet" type="text/css">
     <link href="{{wwwroot}}/static/code-style.css" rel="stylesheet" type="text/css">
+    <script>
+      var wwwroot = "{{wwwroot}}";
+      var tree    = "{{tree}}";
+    </script>
     <script src="{{wwwroot}}/static/dxr.js"></script>
+    {% block head %}
+    {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
   </head>
-  <body onload="init();">
+  <body>
     {% block body %}
     <div id="search-box">
-      <a href="{{wwwroot}}/">
-        <img id="dxr" src="{{wwwroot}}/static/magmoz.png">
+      <a id="dxr" href="{{wwwroot}}/">
+        <img src="{{wwwroot}}/static/magmoz.png">
       </a>
-      <div id="tip">Enter search query here</div>
-      <div id="tree">You're browsing <b>{{tree}}</b></div>
-      <div id="textwrap">
-        <form method="get" action="{{wwwroot}}/search">
-          <input type="text" name="q" value="{{query}}" maxlength="2048" title="Search">
-          <input type="hidden" name="tree" value="{{tree}}">
-        </form>
+      <div id="search-box-content">
+        <div id="tip">Enter search query here</div>
+        <div id="tree">You're browsing <b>{{tree}}</b></div>
+        <div id="formwrap">
+          <form method="get" action="{{wwwroot}}/search">
+            <div id="inputwrap">
+              <input type="text" id="query" name="q" value="{{query}}" maxlength="2048" title="Search">
+            </div>
+            <input type="hidden" name="tree" value="{{tree}}">
+          </form>
+        </div>
       </div>
     </div>
     {% if panel %}
     <div id="panel">
-      <a onclick="toggle_panel();" id="panel-toggle">
+      <a id="panel-toggle">
         {%- block panel_title -%}
         Navigation
         {%- endblock -%}

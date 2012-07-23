@@ -2,11 +2,18 @@
 
 {% block title %}{{query}} - DXR Search{% endblock %}
 
-{% set panel = True %}
+{% block head %}<script src="{{wwwroot}}/static/search.js"></script>{% endblock %}
 
+{# Enable panel #}
+{% set panel = True %}
 {% block panel_title %}Advanced{% endblock %}
 
+{% block panel %}
+
+{% endblock %}
+
 {% block content %}
+  <div id="results">
   {% for path, lines in results %}
     <div class="result">
       <a class="path" href="{{wwwroot}}/{{tree}}/{{path}}">{{path}}</a><br>
@@ -23,8 +30,12 @@
     </div>
   {% else %}
   <div style="width: 100%; text-align: center;">
-    <img src="{{wwwroot}}/static/garbage.svg" style="margin: auto; width: 50%;">
+    <img src="{{wwwroot}}/static/garbage.svg" style="padding-top: 50px; width: 400px;">
     <div style="font-family: sans-serif; font-size: 4em;">Sorry, no results!</div>
   </div>
   {% endfor %}
+  </div>
+  <div id="fetch-results">
+    <img src="{{wwwroot}}/static/view-refresh.svg" style="vertical-align: middle;"> Fetching results
+  </div>
 {% endblock %}

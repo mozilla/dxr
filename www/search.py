@@ -21,6 +21,9 @@ output_format = querystring.get("format", "html")
 if output_format not in ("html", "json"):
   output_format = "html"
 
+# Decide if we can redirect
+can_redirect = querystring.get("redirect", "true") == "true"
+
 # Get and validate tree
 tree = querystring.get('tree')
 if tree not in dxr_server.trees:
@@ -47,6 +50,15 @@ else:
     "trees":      dxr_server.trees
   }
   if conn:
+    result = None
+    if can_redirect:
+      result = dxr_server.query.direct_result(conn, q)
+    if result:
+      path, line = result
+      print 'Content-Type: text/html\n'
+      redirect = "<html><head><meta http-equiv='REFRESH' content='0;url=%s/%s/%s?from=%s#l%i'></head></html>"
+      print redirect % (dxr_server.virtroot, tree, path, cgi.escape(querystring.get("q", ""), True), line)
+      sys.exit(0)
     # Search Template Variables
     arguments["query"]    = cgi.escape(querystring.get("q", ""), True)
     arguments["results"]  = dxr_server.query.fetch_results(conn, q,
