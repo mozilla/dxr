@@ -740,7 +740,7 @@ class CxxHtmlifier:
 
   def getLineAnnotations(self):
     for row in self.conn.execute("SELECT wmsg, file_line FROM warnings WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
-      yield (row[1], {"class": "lnw", "title": row[0]})
+      yield (row[1], {"class": "lnw", "title": row[0]}, "warning")
 
 htmlifier_current = None
 htmlifier_current_path = None

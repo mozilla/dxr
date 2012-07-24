@@ -7,10 +7,14 @@
 {% block panel %}
   <div class="section">
     <h1>hg.mozilla.org</h1>
-    <a href="http://hg.mozilla.org/{{tree}}/filelog/{{revision}}/{{path}}">Log</a>
-    <a href="http://hg.mozilla.org/{{tree}}/annotate/{{revision}}/{{path}}">Blame</a>
-    <a href="http://hg.mozilla.org/{{tree}}/diff/{{revision}}/{{path}}">Diff</a>
-    <a href="http://hg.mozilla.org/{{tree}}/raw-file/{{revision}}/{{path}}">Raw</a>
+    <a href="http://hg.mozilla.org/{{tree}}/filelog/{{revision}}/{{path}}"
+       style="background-image: url('{{wwwroot}}/static/icons/log.png');">Log</a>
+     <a href="http://hg.mozilla.org/{{tree}}/annotate/{{revision}}/{{path}}"
+       style="background-image: url('{{wwwroot}}/static/icons/blame.png');">Blame</a>
+     <a href="http://hg.mozilla.org/{{tree}}/diff/{{revision}}/{{path}}"
+       style="background-image: url('{{wwwroot}}/static/icons/diff.png');">Diff</a>
+     <a href="http://hg.mozilla.org/{{tree}}/raw-file/{{revision}}/{{path}}"
+       style="background-image: url('{{wwwroot}}/static/icons/raw.png');">Raw</a>
   </div>
   {% for section, items in sections %}
   <div class="section">
@@ -44,8 +48,9 @@
 <pre>
 {%- for number, line, annotations in lines %}
 <code>{{line}}</code>
-{%- for annotation in annotations -%}
-<div class="annotation" {% for key, value in annotation.items() %} {{key}}="{{value}}" {% endfor %}>Warning</div>
+{%- for annotation, icon in annotations -%}
+<div class="annotation" {% for key, value in annotation.items() %} {{key}}="{{value}}" {% endfor %}
+     style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"></div>
 {%- endfor -%}
 {%- endfor -%}
 </pre>

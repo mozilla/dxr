@@ -141,8 +141,7 @@ def make_index_html(dxrconfig, treecfg, dirname, fnames, htmlroot):
           size = str(size / 2 ** 10) + 'K'
         else:
           size = str(size)
-        files.append(("page_white", display,
-          datetime.datetime.fromtimestamp(stat.st_mtime), size))
+        files.append(("page_white", display, datetime.datetime.fromtimestamp(stat.st_mtime), size))
     arguments = {
         # Common template variables
         "wwwroot":    treecfg.virtroot,

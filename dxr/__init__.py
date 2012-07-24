@@ -90,15 +90,14 @@ def load_big_blob(tree, tmproot):
   finally:
     f.close()
 
-_template_env = None
 class DxrConfig(object):
-  def __init__(self, config, tree=None):
+  def __init__(self, config, tree=None, template_env = None):
     self._tree = tree
     self._loadOptions(config, 'DXR')
     self.templates = os.path.abspath(config.get('DXR', 'templates'))
-    global _template_env
-    if not _template_env:
-      _template_env = jinja2.Environment(
+    self.template_env = template_env
+    if not self.template_env:
+      self.template_env = jinja2.Environment(
         loader = jinja2.FileSystemLoader(self.templates),
         auto_reload = False,
         # Defaults to somewhere in /tmp
@@ -124,7 +123,7 @@ class DxrConfig(object):
       for section in config.sections():
         if section == 'DXR' or section == 'Web':
           continue
-        self.trees.append(DxrConfig(config, section))
+        self.trees.append(DxrConfig(config, section, self.template_env))
     if tree != None:
       self.tree = self._tree
       self._loadOptions(config, tree)
@@ -143,8 +142,7 @@ class DxrConfig(object):
     return self.__dict__[key]
 
   def getTemplate(self, name):
-    global _template_env
-    return _template_env.get_template(name)
+    return self.template_env.get_template(name)
 
   def getFileList(self):
     """ Returns an iterator of (relative, absolute) paths for the tree. """

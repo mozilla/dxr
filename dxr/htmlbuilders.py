@@ -221,7 +221,7 @@ def build_content(treecfg, filepath, _zipper):
     # Okay let's pop line annotations of the line_notes stack
     notes = []
     while len(line_notes) > 0 and line_notes[-1][0] == line_number:
-      notes.append(line_notes.pop()[1])
+      notes.append(line_notes.pop()[1:3])
 
     lines.append((line_number, line, notes))
   # Return all lines of the file, as we're done

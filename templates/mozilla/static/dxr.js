@@ -4,15 +4,11 @@ var panel_visible = true;
 var panel_title = "";
 /** Toggle the panel visiblity (save state to cookie) */
 function toggle_panel(){
-  var sections = document.querySelectorAll(".section");
+  var content = document.getElementById("panel-content");
   if(panel_visible){
-    for(var i = 0; i < sections.length; i++){
-      sections[i].style.display = "none";
-    }
+    content.style.display = "none";
   }else{
-    for(var i = 0; i < sections.length; i++){
-      sections[i].style.display = "block";
-    }
+    content.style.display = "block";
   }
   panel_visible = !panel_visible;
   createCookie("panel-state" + panel_title, (panel_visible ? "true" : "false"), 42);

@@ -6,10 +6,62 @@
 
 {# Enable panel #}
 {% set panel = True %}
-{% block panel_title %}Advanced{% endblock %}
+{% block panel_title %}Advanced Search{% endblock %}
 
 {% block panel %}
-
+<form id="advanced-search">
+<div class="section">
+   <label for="full-text-search">text search</label>
+  <input type="text" name="full-text-search"
+  placeholder='Tokens or "phrases"'
+  style="background-image: url({{wwwroot}}/static/icons/search.png);">
+  <br>
+</div>
+<div class="section">
+  <h1>Case Insensitive Substring Matching</h1>
+  <label for="path">path:</label>
+  <input type="text" name="path"
+  data-param="path" placeholder="Path substring"
+  style="background-image: url({{wwwroot}}/static/icons/path-search.png);">
+  <br>
+  <label for="type">type:</label>
+  <input type="text" name="type"
+  data-param="type" placeholder="Type name"
+  style="background-image: url({{wwwroot}}/static/icons/type.png);">
+  <br>
+  <label for="type-ref">type-ref:</label>
+  <input type="text" name="type-ref"
+  data-param="type-ref" placeholder="Type name"
+  style="background-image: url({{wwwroot}}/static/icons/reference.png);">
+  <br>
+  <label for="function">function:</label>
+  <input type="text" name="function"
+  data-param="function" placeholder="Function name"
+  style="background-image: url({{wwwroot}}/static/icons/method.png);">
+  <br>
+  <label for="function-ref">function-ref:</label>
+  <input type="text" name="function-ref"
+  data-param="function-ref" placeholder="Function reference"
+  style="background-image: url({{wwwroot}}/static/icons/reference.png);">
+  <br>
+  <label for="macro">macro:</label>
+  <input type="text" name="macro"
+  data-param="macro" placeholder="Macro name"
+  style="background-image: url({{wwwroot}}/static/icons/macro.png);">
+  <br>
+  <label for="warning">warning:</label>
+  <input type="text" name="warning"
+  data-param="warning" placeholder="Warning substring"
+  style="background-image: url({{wwwroot}}/static/icons/search-warning.png);">
+</div>
+<div class="section">
+  <h1>Case Insensitive Suffix Matching</h1>
+  <label for="ext">ext:</label>
+  <input type="text" name="ext" data-param="ext" placeholder="File extension"
+  style="background-image: url({{wwwroot}}/static/icons/path-search.png);">
+</div>
+<input type="submit" value="Search">
+</form>
 {% endblock %}
 
 {% block content %}

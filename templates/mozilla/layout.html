@@ -39,8 +39,10 @@
         Navigation
         {%- endblock -%}
       </a>
-      {% block panel %}
-      {% endblock %}
+      <div id="panel-content">
+        {% block panel %}
+        {% endblock %}
+      </div>
     </div>
     {% endif %}
     <div id="content">

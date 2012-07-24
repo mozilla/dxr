@@ -163,6 +163,8 @@ a.snippet:hover{
 .annotation{
   display:    inline-block;
   float:      right;
+  height:     16px;
+  width:      16px;
 }
 
 .result a.path{
@@ -217,3 +219,23 @@ table.folder-content{
   -webkit-user-select:  none;
   cursor:               default;
 }
+
+#advanced-search div.section input{
+  background-position:  2px 2px;
+  background-repeat:    no-repeat;
+  padding-left:         20px;
+  height:               20px;
+  background-color:     #fff;
+  border:               1px solid #888;
+  font-family:          monospace;
+  margin:               2px;
+  width:                30ex;
+}
+#advanced-search div.section label{
+  font-family:          monospace;
+  font-size:            12px;
+  width:                15ex;
+  display:              inline-block;
+  text-align:           right;
+}
+

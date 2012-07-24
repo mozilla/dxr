@@ -1,0 +1,62 @@
+DXR Icon Library
+================
+_The DXR icon library is a mix of icons from different authors and credit is distributed here._
+
+
+Template Designers
+------------------
+When creating a template for DXR you should include the icons/ folder from the default template.
+You can replace icons as you see fit, but icons mentioned in this document may be referenced
+from {{wwwroot}}/static/icons/, so make sure the icon filenames are preserved.
+
+
+DXR/Plugin Developers
+---------------------
+If your plugin needs an icon that is not present in the icons/ folder,
+please add it and document it's origin in this document.
+Feel free to use icons already existing, but keep in mind that icons have semantic naming.
+So don't use the `search` icon for zoom, because a template designer may choose to change
+the search icon from a magnifying glass to binoculars.
+
+
+Credits and Licensing Information
+---------------------------------
+_Icons from following authors are used here._
+
+[Silk](http://www.famfamfam.com/lab/icons/silk/) icon by Mark James,
+licensed under Creative Commons Attribution 2.5 License.
+
+[FatCow](http://www.fatcow.com/free-icons) icons by FatCow hosting,
+licensed under Creative Commons Attribution 3.0 License.
+
+[Fugue](http://p.yusukekamiyamane.com/) by Yusuke Kamiyamane,
+licensed under Creative Commons Attribution 3.0 License.
+
+[SharpDevelop](http://www.icsharpcode.net/OpenSource/SD/) a mix of (partially)
+derivative works of Yusuke Kamiyamane, modified by the SharpDevelop team and
+independent works by the SharpDevelop team all licensed under GNU LGPL.
+
+[Tango](http://tango.freedesktop.org/) by the Tango desktop project,
+released into public domain.
+
+Icon Listing
+------------
+_List of all icons and their origin._
+
+folder                    **Silk**
+page_white_find           **Silk** 
+page_white_code           **Silk**
+page_white                **Silk**
+page_white_wrench         **Silk**
+raw                       **Fugue**
+warning                   **Fugue**
+path-search               **Fugue**
+log                       **Fugue**
+blame                     **Fugue**
+diff                      **Fugue**
+search-warning            **Fugue**
+method                    **SharpDevelop**
+reference                 **SharpDevelop**
+type                      **SharpDevelop**
+macro                     **SharpDevelop**
+search                    **Tango**

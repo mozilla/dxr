@@ -103,6 +103,23 @@ window.addEventListener('load', function(){
   // Fetch results if there's no scrollbar initially
   if(document.documentElement.clientHeight == document.documentElement.scrollHeight)
     fetch_results();
+  // Subscribe to advanced-search submit
+  document.getElementById("advanced-search").addEventListener('submit', function(e){
+    // Build the query
+    var query = "";
+    var fields = document.querySelectorAll("#advanced-search input[type=text]");
+    for(var i = 0; i < fields.length; i++){
+      var field = fields[i];
+      if(field.dataset.param && field.value != "")
+        query += field.dataset.param + ":";
+      if(field.value != "")
+        query += field.value + " ";
+    }
+    // Change document location
+    document.location = wwwroot + "/search?q=" + escape(query) + "&tree=" + tree;
+    e.preventDefault();
+    return false;
+  }, true);
 }, false);
 
 }());
