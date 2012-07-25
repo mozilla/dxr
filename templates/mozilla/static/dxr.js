@@ -83,14 +83,16 @@ function init_menu(){
   var as = document.querySelectorAll(".file-lines a");
   // Show menu when link is clicked
   function showMenu(e){
-    var rows = e.target.dataset.menu.split("!");
-    var links = "";
-    for(var j = 0; j < rows.length; j++){
-      var row = rows[j];
-      var args = row.split("|")
-      links += "<a href='" + args[1] + "'>" + args[0] + "</a>";
+    var menu = "";
+    var links = JSON.parse(e.target.dataset.menu);
+    for(var i = 0; i < links.length; i++){
+      var link = links[i];
+      menu += "<a href='" + link.href + "'";
+      menu += " title='" + link.title + "'";
+      menu += " style=\"background-image: url('" + wwwroot + "/static/icons/" + link.icon + ".png')\">";
+      menu += link.text + "</a>";
     }
-    m.innerHTML = links;
+    m.innerHTML = menu;
     m.style.display = "block";
     m.style.top = findPosTop(e.target) + "px";
     m.style.left = findPosLeft(e.target) + "px";

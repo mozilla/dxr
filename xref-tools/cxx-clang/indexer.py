@@ -1,4 +1,5 @@
-import csv
+import csv, cgi
+import json
 from dxr.languages import register_language_table
 from dxr.languages import language_schema
 import dxr.plugins
@@ -562,12 +563,7 @@ class CxxHtmlifier:
     self.treecfg = treecfg
 
   def collectSidebar(self):
-    def make_tuple(df, name, loc, scope="scopeid", decl=False, srcpath=None):
-      if decl:
-        img = 'page_white_code'
-      else:
-        img = 'page_white_wrench'
-
+    def make_tuple(df, name, loc, scope, img, srcpath=None):
       try:
         sname = df['sname']
       except:
@@ -588,20 +584,20 @@ class CxxHtmlifier:
       return (df[name], df[loc], df[name], img, sname, path)
     for row in self.conn.execute("SELECT tname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = types.scopeid) AS sname " +
                                  "FROM types WHERE file_id = (SELECT id FROM files where path = ?)", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "tname", "file_line", "scopeid")
+      yield make_tuple(row, "tname", "file_line", "scopeid", "type")
     for row in self.conn.execute("SELECT fname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = f1.scopeid) AS sname, " +
                                  "(SELECT path from files where id=f1.file_id) AS path FROM functions f1 WHERE funcid IN " +
                                  "(SELECT coalesce((SELECT defid FROM decldef dd WHERE dd.file_id = f2.file_id AND dd.file_line = f2.file_line " +
                                  " AND dd.file_col = f2.file_col), f2.funcid) FROM functions f2 " +
                                  "WHERE f2.file_id = (SELECT id FROM files WHERE path = ?))", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "fname", "file_line", "scopeid", False, self.srcpath)
+      yield make_tuple(row, "fname", "file_line", "scopeid", "method", self.srcpath)
 
     for row in self.conn.execute("SELECT vname, file_line, scopeid, (SELECT sname from scopes where scopes.scopeid = variables.scopeid) AS sname " +
                                  "FROM variables WHERE file_id = (SELECT id FROM files WHERE path = ?) AND " +
                                  "scopeid NOT IN (SELECT funcid FROM functions WHERE functions.file_id = variables.file_id UNION " +
                                  "  SELECT defid FROM decldef WHERE decldef.file_id = variables.file_id)",
                                  (self.srcpath,)).fetchall():
-      yield make_tuple(row, "vname", "file_line", "scopeid")
+      yield make_tuple(row, "vname", "file_line", "scopeid", "field")
 
     tblmap = { "functions": "fqualname", "types": "tqualname" }
 #    for df in self.blob_file["decldef"]:
@@ -610,7 +606,7 @@ class CxxHtmlifier:
 #        yield make_tuple(dxr.languages.get_row_for_id(table, df["defid"]), tblmap[table],
 #          df["declloc"], "scopeid", True)
     for row in self.conn.execute("SELECT macroname, file_line FROM macros WHERE file_id = (SELECT id FROM files WHERE path = ?)", (self.srcpath,)).fetchall():
-      yield make_tuple(row, "macroname", "file_line")
+      yield make_tuple(row, "macroname", "file_line", "scopeid", "macro")
 
   def getSyntaxRegions(self):
     for token in self.tokenizer.getTokens():
@@ -631,11 +627,9 @@ class CxxHtmlifier:
     # link regions by cxx-clang should be merged with other link regions and
     # link regions should be menu regions, not links. because links aren't good
     # enougth...
-    # YES, this is a ugly as it get's, but the plugin architecture needs a
-    # lot of refactoring anyway...
     def make_menu(kind, rid):
       search = self.treecfg.virtroot + "/search?tree=" + self.treecfg.tree + "&q="
-      menu = {}
+      menu = []
       if kind == "ref":
         cur = self.conn.execute("""
                  SELECT "function-ref", functions.file_line, functions.fqualname,
@@ -653,27 +647,101 @@ class CxxHtmlifier:
         """, [rid] * 4)
         row = cur.fetchone()
         if row:
-          menu["Find references"]  = search + urllib.quote("+" + row[0] + ":%s" % row[2])
-          url = self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[3] + "#l%s" % row[1]
-          menu["Jump to definition"]  = url
+          menu.append({
+            "text":   "Find references",
+            "title":  "Find other references to the same item",
+            "href":   search + urllib.quote("+" + row[0] + ":%s" % row[2]),
+            "icon":   "reference"
+          })
+          menu.append({
+            "text":   "Jump to definition",
+            "title":  "Jump to file/line where referenced item was declared",
+            "href":   self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[3] + "#l%s" % row[1],
+            "icon":   "jump",
+          })
         if row[0] == "function-ref":
-          menu["Find callers"]        = search + urllib.quote("+callers:%s" % row[2])
-          menu["Find callees"]        = search + urllib.quote("+called-by:%s" % row[2])
+          menu.append({
+            "text":   "Find callers",
+            "title":  "Find functions that calls this function",
+            "href":   search + urllib.quote("+callers:%s" % row[2]),
+            "icon":   "method"
+          })
+          menu.append({
+            "text":   "Find callees",
+            "title":  "Find functions that are called by this function",
+            "href":   search + urllib.quote("+called-by:%s" % row[2]),
+            "icon":   "method"
+          })
         if row[0] == "type-ref":
-          menu["Find base classes"]   = search + urllib.quote("+bases:%s" % row[2])
-          menu["Find sub classes"]    = search + urllib.quote("+derived:%s" % row[2])
-          menu["Find members"]        = search + urllib.quote("+member:%s" % row[2])
+          menu.append({
+            "text":   "Find sub classes",
+            "title":  "Find sub classes of this class",
+            "href":   search + urllib.quote("+derived:%s" % row[2]),
+            "icon":   "type"
+          })
+          menu.append({
+            "text":   "Find base classes",
+            "title":  "Find base classes of this class",
+            "href":   search + urllib.quote("+bases:%s" % row[2]),
+            "icon":   "type"
+          })
+          menu.append({
+            "text":   "Find members",
+            "title":  "Find members of this class",
+            "href":   search + urllib.quote("+member:%s" % row[2]),
+            "icon":   "members"
+          })
       if kind == "var":
-        menu["Find-references"]     = search + urllib.quote("+var-ref:%s" % rid)
+        menu.append({
+          "text":   "Find references",
+          "title":  "Find reference to this variable",
+          "href":   search + urllib.quote("+var-ref:%s" % rid),
+          "icon":   "field"
+        })
       if kind == "func":
-        menu["Find callers"]        = search + urllib.quote("+callers:%s" % rid)
-        menu["Find callees"]        = search + urllib.quote("+called-by:%s" % rid)
-        menu["Find references"]     = search + urllib.quote("+function-ref:%s" % rid)
+        menu.append({
+          "text":   "Find callers",
+          "title":  "Find functions that calls this function",
+          "href":   search + urllib.quote("+callers:%s" % rid),
+          "icon":   "method"
+        })
+        menu.append({
+          "text":   "Find callees",
+          "title":  "Find functions that are called by this function",
+          "href":   search + urllib.quote("+called-by:%s" % rid),
+          "icon":   "method"
+        })
+        menu.append({
+          "text":   "Find references",
+          "title":  "Find references of this function",
+          "href":   search + urllib.quote("+function-ref:%s" % rid),
+          "icon":   "reference"
+        })
       if kind == "type":
-        menu["Find base classes"]   = search + urllib.quote("+bases:%s" % rid)
-        menu["Find sub classes"]    = search + urllib.quote("+derived:%s" % rid)
-        menu["Find members"]        = search + urllib.quote("+member:%s" % rid)
-        menu["Find references"]     = search + urllib.quote("+type-ref:%s" % rid)
+        menu.append({
+          "text":   "Find sub classes",
+          "title":  "Find sub classes of this class",
+          "href":   search + urllib.quote("+derived:%s" % rid),
+          "icon":   "type"
+        })
+        menu.append({
+          "text":   "Find base classes",
+          "title":  "Find base classes of this class",
+          "href":   search + urllib.quote("+bases:%s" % rid),
+          "icon":   "type"
+        })
+        menu.append({
+          "text":   "Find members",
+          "title":  "Find members of this class",
+          "href":   search + urllib.quote("+member:%s" % rid),
+          "icon":   "members"
+        })
+        menu.append({
+          "text":   "Find references",
+          "title":  "Find references to this class",
+          "href":   search + urllib.quote("+type-ref:%s" % rid),
+          "icon":   "reference"
+        })
       if kind == "typedef":
         pass  #TODO Figure out what we do with these
         # Maybe support it when a refactor of this mess is done...
@@ -685,9 +753,13 @@ class CxxHtmlifier:
       row = cur.fetchone()
       if row:
         url = self.treecfg.virtroot + "/" + self.treecfg.tree + "/" + row[1] + "#l%s" % row[0]
-        menu["Jump to declaration"] = url
-      # Well, at least it can't possibly get any worse :)
-      return "!".join(["%s|%s" % (key, val) for key, val in menu.items()])
+        menu.append({
+          "text":   "Jump to declaration",
+          "title":  "Jump to declaration of this item",
+          "href":   url,
+          "icon":   "jump"
+        })
+      return cgi.escape(json.dumps(menu), True)
 
     # Let's cache the menustrings locally, for this file, it might help a little
     # for large files, and we have many of those

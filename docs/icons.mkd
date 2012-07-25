@@ -55,8 +55,11 @@ log                       **Fugue**
 blame                     **Fugue**
 diff                      **Fugue**
 search-warning            **Fugue**
+jump                      **SharpDevelop**
 method                    **SharpDevelop**
 reference                 **SharpDevelop**
 type                      **SharpDevelop**
+field                     **SharpDevelop**
 macro                     **SharpDevelop**
+members                   **SharpDevelop**
 search                    **Tango**

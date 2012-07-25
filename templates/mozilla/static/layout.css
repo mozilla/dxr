@@ -198,10 +198,13 @@ table.folder-content{
 }
 
 #inline-menu a{
-  padding:          0px 2px 0px 2px;
-  text-decoration:  none;
-  display:          block;
-  color:            #000;
+  background-position:  2px 2px;
+  background-repeat:    no-repeat;
+  height:               20px;
+  padding:              0px 2px 0px 20px;
+  text-decoration:      none;
+  display:              block;
+  color:                #000;
 }
 #inline-menu a:hover{
   background-color: #ccc;
@@ -238,4 +241,5 @@ table.folder-content{
   display:              inline-block;
   text-align:           right;
 }
+
 

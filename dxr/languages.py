@@ -27,7 +27,7 @@ language_schema = dxr.plugins.Schema({
     ("scopeid", "INTEGER", True),        # Scope this type is defined in
     ("tname", "VARCHAR(256)", False),     # Simple name of the type
     ("tqualname", "VARCHAR(256)", False), # Fully-qualified name of the type
-    ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union)
+    ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union, struct, enum)
     ("language", "_language", True),     # Language of the type
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
