@@ -1,0 +1,91 @@
+DXR Plugin Architecture
+=======================
+_This document describes how to write plugins for DXR._
+
+Design Philosophy
+-----------------
+DXR is designed to run as cron job producing builds on-the-fly without manual
+supervision. For this reason we consider any minor failure fatal.
+Otherwise we would risk that DXR silently produces and pushes garbage builds to
+production servers. For example we could ignore a missing file in a plugin, or
+ignore a single plugin should it fail to build, but for simplicity we choose to
+crash instead. Please keep principle in mind when designing plugins and honor
+design principle by crashing on failure.
+
+
+Required Plugin Files
+---------------------
+_List of files that must be defined by a plugin._
+
+A plugin is a folder located in the `plugin/` folder, a plugin folder **must**
+contain these 3 files.
+
+ - `makefile`              Make dependencies for this plugin
+ - `indexer.py`            Build database
+ - `htmlifier.py`          Generate metadata for HTML building
+
+
+Plugin Makefile
+---------------
+_File for building anything the plugin wants done before indexing._
+
+This **must** be a GNU Make file with targets `build` and `clean` for building
+dependencies and cleaning up after build, respectively. Operations of this make
+should as far as possible remain with the plugin subdirectory.
+
+The `make build` target **will** be invoked once before any pre-,
+post-processing or htmlification takes place. Please note that htmlification
+is parallized, so `make build` **must** not rebuild the target if it already
+exists! We could have chosen to work around this in the backend, but the
+current design would make it very easy to distribute htmlification to multiple
+computers.
+
+The `make clean` target **may** be called after a build, but may not be invoked
+before the next pre-, post-processing and htmlification process takes place.
+Both targets will be invoked with the plugin folder as current working directory.
+
+
+Plugin Indexer
+--------------
+_Python plugin for pre- and post processing builds, ie. build the database._
+
+This must be a python module with two functions `pre_process(tree, environ)`
+and `post_process(tree, conn)` where parameters `tree` and `conn` is a config
+for the tree and database connection, respectively.
+The `environ` parameter is a dictionary of environment variables, and may be
+modified prior to build using by the `pre_process` function.
+
+Both function will only be called once per tree and are allowed to use a
+number of subprocess as specified by `tree.config.nb_jobs`.
+If a plugin desires to store information from pre- or post processing, it can
+do so in its own temporary directory, each plugin is allowed to use the
+temporary folder `<tree.temp_folder>/plugins/<plugin-name>`.
+(The temporary folder will remain untill htmlification is done).
+
+
+Plugin Htmlifier
+----------------
+_Python plugin for htmlification of source files._
+
+This must be a python module with one function `htmlify(tree, conn, path, text)`,
+where `tree` and `conn` are tree config and connection, respectively.
+The `path` parameter is the path of the file in the tree, the `text` parameter
+is the file contents as string.
+
+The `htmlify` function return either `None` or an object with methods `refs()`,
+`regions()`, `annotations()` and `links()`, which yields as defined below.
+
+ - `refs()`            Yeilds tuples of `(start, end, menu)`
+ - `regions()`         Yields tuples of `(start, end, class)`
+ - `annotations()`     Yields tuples of `(line, icon, title, text)`
+ - `links()`           Yeilds tuples of `(importance, section, items)`, where
+                       items is a generator of tuples of `(title, img, path, line)`.
+                       `importance` is an integer used to sort sidebar sections.
+
+Note that the htmlifier module may not write to the database, it also strongly
+recommended that the htmlifier module doesn't write to the plugins temporary
+folder. It's a **strict requirement** that the htmlifier module maybe loaded
+and used by multiple processes at the same time. For this reason the htmlifier
+is not allowed to have subprocesses either.
+
+

@@ -19,47 +19,57 @@ So don't use the `search` icon for zoom, because a template designer may choose 
 the search icon from a magnifying glass to binoculars.
 
 
-Credits and Licensing Information
+Icons From Silk
 ---------------------------------
-_Icons from following authors are used here._
+Following icons originates from [Silk](http://www.famfamfam.com/lab/icons/silk/) 
+by Mark James, licensed under Creative Commons Attribution 2.5 License.
 
-[Silk](http://www.famfamfam.com/lab/icons/silk/) icon by Mark James,
-licensed under Creative Commons Attribution 2.5 License.
+ - `folder`
+ - `page_white_find`
+ - `page_white_code`
+ - `page_white`
+ - `page_white_wrench`
 
-[FatCow](http://www.fatcow.com/free-icons) icons by FatCow hosting,
-licensed under Creative Commons Attribution 3.0 License.
+Icons From FatCow Hosting
+-------------------------
+Following icons originates from [FatCow](http://www.fatcow.com/free-icons)
+by FatCow hosting, licensed under Creative Commons Attribution 3.0 License.
 
-[Fugue](http://p.yusukekamiyamane.com/) by Yusuke Kamiyamane,
-licensed under Creative Commons Attribution 3.0 License.
 
-[SharpDevelop](http://www.icsharpcode.net/OpenSource/SD/) a mix of (partially)
-derivative works of Yusuke Kamiyamane, modified by the SharpDevelop team and
-independent works by the SharpDevelop team all licensed under GNU LGPL.
+Icons From Fugue
+----------------
+Following icons originates from [Fugue](http://p.yusukekamiyamane.com/)
+by Yusuke Kamiyamane, licensed under Creative Commons Attribution 3.0 License.
 
-[Tango](http://tango.freedesktop.org/) by the Tango desktop project,
-released into public domain.
+ - `raw`
+ - `warning`
+ - `path-search`
+ - `log`
+ - `blame`
+ - `diff`
+ - `search-warning`
 
-Icon Listing
-------------
-_List of all icons and their origin._
 
-folder                    **Silk**
-page_white_find           **Silk** 
-page_white_code           **Silk**
-page_white                **Silk**
-page_white_wrench         **Silk**
-raw                       **Fugue**
-warning                   **Fugue**
-path-search               **Fugue**
-log                       **Fugue**
-blame                     **Fugue**
-diff                      **Fugue**
-search-warning            **Fugue**
-jump                      **SharpDevelop**
-method                    **SharpDevelop**
-reference                 **SharpDevelop**
-type                      **SharpDevelop**
-field                     **SharpDevelop**
-macro                     **SharpDevelop**
-members                   **SharpDevelop**
-search                    **Tango**
+Icons From SharpDevelop
+-----------------------
+Following icons originates from [SharpDevelop](http://www.icsharpcode.net/OpenSource/SD/)
+a mix of (partially) derivative works of Yusuke Kamiyamane, modified by the
+SharpDevelop team and independent works by the SharpDevelop team all licensed
+under GNU LGPL.
+
+ - `jump`
+ - `method`
+ - `reference`
+ - `type`
+ - `field`
+ - `macro`
+ - `members`
+
+
+Icons From Tango Project
+------------------------
+Following icons originates from [Tango](http://tango.freedesktop.org/) by the
+Tango desktop project, released into public domain.
+
+ - `search`
+

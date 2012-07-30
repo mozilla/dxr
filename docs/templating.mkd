@@ -44,11 +44,11 @@ passed to the template engine, to use or ignore as it sees fit.
 DXR Template Files
 ------------------
 DXR uses the following template files:
-  `index.html`        Index page
-  `search.html`       Search result page
-  `file.html`         File content page
-  `folder.html`       Folder listing page
-  `error.html`        Error message
+ - `index.html`        Index page
+ - `search.html`       Search result page
+ - `file.html`         File content page
+ - `folder.html`       Folder listing page
+ - `error.html`        Error message
 Using Jinja2 template inheritance these templates may reuse the same layout,
 however, this is not required. And DXR only requires these files.
 
@@ -67,13 +67,16 @@ Common Template Variables
 -------------------------
 _These variables are available in templates_
 
-  `wwwroot`         Root of the DXR www folder, ie. `{{wwwroot}}/static/...`
-                    can be used to refer to the `static/` folder.
-                    (This is useful as DXR may serve your templates from any URL)
-  `tree`            Currently browsed or searched tree, or arbitrary tree.
-                    (Notice that the value is **always** a **valid tree**)
-  `trees`           List of trees indexed by the DXR server.
-
+ - `wwwroot`         Root of the DXR www folder, ie. `{{wwwroot}}/static/...`
+                     can be used to refer to the `static/` folder.
+                     (This is useful as DXR may serve your templates from any URL)
+ - `tree`            Currently browsed or searched tree, or arbitrary tree.
+                     (Notice that the value is **always** a **valid tree**)
+ - `trees`           List of trees indexed by the DXR server.
+ - `config`          Dictionary containing keys defined in the `Template`
+                     section of the configuration file. Templates should
+                     document configuration keys they require in their own
+                     template documentation.
 
 Index Template Variables
 ------------------------
@@ -88,15 +91,15 @@ TODO: Add automatically generated variables for displaying search suggestions th
 Search Template Variables
 -------------------------
 _Variables specific to the search template._
-  `query`           Last search query or empty string if none.
-  `results`         List of results as tuples of `(path, lines)`, where `lines`
-                    is a list of lines as tuples of `(line_number, line)`.
-                    NOTE: results is a **generator** you can only iterate over
-                    it once, but you can iterate over lines multiple times.
-                    (If querystring `offset` and `limit` were given these are
+ - `query`           Last search query or empty string if none.
+ - `results`         List of results as tuples of `(path, lines)`, where `lines`
+                     is a list of lines as tuples of `(line_number, line)`.
+                     NOTE: results is a **generator** you can only iterate over
+                     it once, but you can iterate over lines multiple times.
+                     (If querystring `offset` and `limit` were given these are
                      respected, otherwise 0 and 100 is assumed, respectively)
-  `offset`          Querystring parameter `offset` as int, or 0.
-  `limit`           Querystring parameter `limit` as int, or 100.
+ - `offset`          Querystring parameter `offset` as int, or 0.
+ - `limit`           Querystring parameter `limit` as int, or 100.
 
 
 File Template Variables
@@ -111,21 +114,20 @@ be parsed from querystring using Javascript.
 Templates implementing this should also ensure that the anchor `#l{{line_number}}`
 focuses, highlights and/or scrolls to line number `line_number`.
 
-  `name`            Name of file being displayed
-  `path`            Path of file being displayed
-  `lines`           List of lines as tuple of `(line_number, line, annotations)`
-                    where `annotations` is list of tuples `(attr, icon)` where
-                    `attr` is HTML element attributes and `icon` is the name of
-                    an icon.
-  `revision`        Revision, as returned by revision command in config file.
-                    (Revision is assumed to be the same for the whole tree).
-  `generated`       True, if the file is generated as part of the build process.
-  `sections`        List of sections as tuples of `(section, items)`, where
-                    `section` is a section headline and `items` is a list
-                    of items as tuples of `(icon, title, path, line)` where
-                    `icon` is unspecified, `title` is a link title, `path`
-                    and `line` a place of interest.
-                    (Icons are provided by plugins, it is the templates
+ - `name`            Name of file being displayed
+ - `path`            Path of file being displayed
+ - `lines`           List of lines as tuple of `(line_number, line, annotations)`
+                     where `annotations` is list of tuples `(attr, icon)` where
+                     `attr` is HTML element attributes and `icon` is the name of
+                     an icon.
+ - `revision`        Revision, as returned by revision command in config file.
+                     (Revision is assumed to be the same for the whole tree).
+ - `sections`        List of sections as tuples of `(section, items)`, where
+                     `section` is a section headline and `items` is a list
+                     of items as tuples of `(icon, title, path, line)` where
+                     `icon` is unspecified, `title` is a link title, `path`
+                     and `line` a place of interest.
+                     (Icons are provided by plugins, it is the templates
                      responsibility to defined these icons, the mozilla builtin
                      template defines these, so just copy this)
 
@@ -136,12 +138,12 @@ Notice that a folder file will have the location similar to it's path, so using
 name as relative link will work perfectly fine.
 Also note instances of this template are rendered statically, at indexing time.
 
-  `name`            Name of current folder as string.
-  `folders`         List of folders as tuples of `(icon, name, modified)`
-  `files`           List of files as tuples of `(icon, name, modified, size)`
+ - `name`            Name of current folder as string.
+ - `folders`         List of folders as tuples of `(icon, name, modified)`
+ - `files`           List of files as tuples of `(icon, name, modified, size)`
 
 
 Error Template Variables
 ------------------------
 
-  `error`           Some sort of error message, preferably not human readable.
+ - `error`           Some sort of error message, preferably not human readable.

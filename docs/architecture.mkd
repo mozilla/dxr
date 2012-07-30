@@ -1,5 +1,7 @@
 DXR Application Architecture
 ============================
+_This documents the architecture of DXR._
+
 
 Directory Structure
 -------------------

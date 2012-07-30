@@ -1,0 +1,76 @@
+DXR Configuration
+=================
+_This document describes how to configure you DXR builds, as well as fully
+documenting all configuration settings._
+
+Configuration File Format
+-------------------------
+The configuration file is split into different sections, sections `DXR` and
+`Template` are special, all other sections describes a tree for indexing.
+Keys that must and can be specified for different sections are listed in
+relevant section below.
+
+The config file must be written in a format compatible with pythins builtin
+[ConfigParser](http://docs.python.org/library/configparser.html), see python
+documentation for details.
+
+
+DXR Configuration
+-----------------
+_Configuration keys for the `DXR` section of the configuration file._
+
+ - `target_folder`      Output directory (**required**)
+ - `dxrroot`            Location of you DXR install (defaults to directory executable)
+ - `plugin_folder`      Plugin folder (default `<dxrroot>/plugins`)
+ - `nb_jobs`            Number of jobs allowed (default `1`), note that this value
+                        can be overwritten by the `-j` argument when running `dxr-build.py`
+ - `temp_folder`        Temporary folder (default `/tmp`, not recommended!)
+ - `template`           Template folder (default `<dxrroot>/templates/minimalistic`)
+ - `wwwroot`            Virtual root on deployment server (default `/`)
+ - `enabled_plugins`    Enabled plugins (default `*`)
+ - `disabled_plugins`   Disabled plugins (default ` `)
+
+Notice, it's strongly recommended that you provide a sane **temporary folder**,
+using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`
+is better, but preferable you'd want something on the same file system as the
+`target_folder`.
+
+
+Tree Configuration
+------------------
+_Configuration keys for tree sections of the configuration file._
+
+Any section that is not named `DXR` or `Template` specifies a tree using the
+keys listed below.
+
+ - `source_folder`      Source folder (**required**)
+ - `build_command`      Command for building sources (defaults to `make -j $jobs`)
+                        Notice that `$jobs` will be replaced with `nb_jobs` as
+                        provided in the config file or defined at runtime using
+                        the `-j` argument.
+ - `object_folder`      Folder where object files will be stored (**required**)
+ - `temp_folder`        Tempoary folder for this tree (defaults `<temp_folder>/<tree>`)
+                        It's **not** recommend that this attribute is defined!
+ - `enabled_plugins`    Plugins enabled in this tree (defaults `*`)
+ - `disabled_plugins`   Plugins disabled in this tree (default `*`), note that
+                        plugins disabled in the `DXR` section is also disabled.
+ - `ignore_patterns`    Space separated list of Unix shell-style file patterns
+                        to ignore, for information on the pattern style, see
+                        [fnmatch](http://docs.python.org/library/fnmatch.html)
+
+
+Notice that is strongly recommended that you don't defined the `temp_folder`,
+this feature is just here for completeness. If you define a `build_command`
+without using `$jobs` somewhere in the command you will be warned, but build
+will continue.
+
+
+Template Configuration
+----------------------
+Configuration keys in the `Template` section will passed on the to the template
+as properties in the `config` dictionary. Take a look at the documentation for
+you template of choice, to see which keys are relevant here.
+
+Usually this section is used to provide external links to source code
+repositories, or information about which revision of the tree is being indexed.
+

@@ -1,0 +1,53 @@
+Deployment of DXR
+=================
+_This document details how to deploy DXR for a project._
+
+
+A DXR deployment can have multiple trees.
+
+
+You'll need:
+Working DXR install, dependencies
+
+  - sqlite (`>= 3.7.4`)
+  - python (`>= 2.5`)
+  - jinja2 (`>= 2.4`)
+  - pygments (`>= 1.4`)
+
+We strongly recommend that you run latest version of pygments, jinja2 and sqlite.
+
+You'll also need a configuration file, see configuration.mkd for details on this.
+Please not that the configuration file applies to you DXR deployment.
+
+If you have small project with a few trees you can build your entire DXR
+deploymet with:
+
+./dxr-build.py project-config.config
+
+If you have larger project you can build each tree individually.
+First you'll want to build the server software, you can do this with:
+./dxr-build.py project-config.config --server
+
+You can also build trees indenpendent of each other:
+./dxr-build.py project-config.config --tree [tree]
+
+The build output, server or tree will be written to the target-folder as
+configured in your project-config.config file.
+If you build server and trees on different machines you can just merge the
+folders and have working DXR installation.
+
+Please note that things in the target-folder with a name similar to what your
+building will be overwritten when building.
+
+
+When building a tree the tree is written to target-folder/[tree-name].
+When building the server, it is written to target-folder/server.
+If you distribute building to multiple machines and build to target-folders on
+different machines, just merge you folder, ie. copy server and [tree-name] for
+all trees into the www-folder on your webserver and install the .htaccess file
+from server/ in the www-folder.
+
+Also follow server-setup.mkd for details on apache configuration and webserver
+dependencies.
+
+
