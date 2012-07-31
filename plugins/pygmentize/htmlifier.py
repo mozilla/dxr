@@ -31,8 +31,8 @@ def htmlify(tree, conn, path, text):
   options   = {'encoding': 'utf-8'}
   filename  = os.path.basename(path)
   try:
-    lexer = pygments.lexers.get_lexer_by_filename(filename, **options)
-  except pygments.utils.ClassNotFound:
+    lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
+  except pygments.util.ClassNotFound:
     # TODO Note this filename in some auxiliary log-file
     return None
   return Pygmentizer(text, lexer)

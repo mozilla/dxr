@@ -7,13 +7,13 @@
 {% block panel %}
   <div class="section">
     <h1>hg.mozilla.org</h1>
-    <a href="http://hg.mozilla.org/{{tree}}/filelog/{{revision}}/{{path}}"
+    <a href="http://hg.mozilla.org/{{tree}}/filelog/{{config.revision}}/{{path}}"
        style="background-image: url('{{wwwroot}}/static/icons/log.png');">Log</a>
-     <a href="http://hg.mozilla.org/{{tree}}/annotate/{{revision}}/{{path}}"
+     <a href="http://hg.mozilla.org/{{tree}}/annotate/{{config.revision}}/{{path}}"
        style="background-image: url('{{wwwroot}}/static/icons/blame.png');">Blame</a>
-     <a href="http://hg.mozilla.org/{{tree}}/diff/{{revision}}/{{path}}"
+     <a href="http://hg.mozilla.org/{{tree}}/diff/{{config.revision}}/{{path}}"
        style="background-image: url('{{wwwroot}}/static/icons/diff.png');">Diff</a>
-     <a href="http://hg.mozilla.org/{{tree}}/raw-file/{{revision}}/{{path}}"
+     <a href="http://hg.mozilla.org/{{tree}}/raw-file/{{config.revision}}/{{path}}"
        style="background-image: url('{{wwwroot}}/static/icons/raw.png');">Raw</a>
   </div>
   {% for section, items in sections %}

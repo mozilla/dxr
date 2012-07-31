@@ -7,7 +7,8 @@ def load_tokenizer():
   if _tokenizer_loaded:
     return
   try:
-    ctypes_init_tokenizer = ctypes.CDLL("dxr_server/libdxr-code-tokenizer.so").dxr_code_tokenizer_init
+    lib = "sqlite-tokenizer/libdxr-code-tokenizer.so"
+    ctypes_init_tokenizer = ctypes.CDLL(lib).dxr_code_tokenizer_init
     ctypes_init_tokenizer ()
     _tokenizer_loaded = True
     return True
@@ -35,7 +36,7 @@ def _collate_loc(str1, str2):
 # Get database connection for tree
 def connect_db(tree):
   load_tokenizer()
-  dbname = tree + "/.dxr_xref/" + tree + ".sqlite"
+  dbname = "../" + tree + "/xref.sqlite"
   try:
     conn = sqlite3.connect(dbname)
     conn.text_factory = str

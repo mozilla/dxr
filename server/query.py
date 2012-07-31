@@ -590,30 +590,53 @@ filters.append(ExistsLikeFilter(
 ))
 
 
-# callers filter
+# callers filter (direct-calls)
 filters.append(ExistsLikeFilter(
     param         = "callers",
-    filter_sql    = """SELECT 1 FROM functions as caller, functions as target, callers
+    filter_sql    = """SELECT 1
+                        FROM functions as caller, functions as target, callers
                        WHERE %s
-                         AND (  ( callers.targetid = target.funcid)
-                               OR EXISTS ( SELECT 1 FROM targets
-                                           WHERE targets.funcid = target.funcid
-                                             AND targets.targetid = callers.targetid
-                                         )
-                             )
+                         AND callers.targetid = target.funcid
                          AND callers.callerid = caller.funcid
                          AND caller.file_id = files.ID
                     """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end FROM functions
+    ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                        FROM functions
                        WHERE functions.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions as target, callers
                                       WHERE %s
-                                        AND (  ( callers.targetid = target.funcid)
-                                              OR EXISTS ( SELECT 1 FROM targets
-                                                           WHERE targets.funcid = target.funcid
-                                                             AND targets.targetid = callers.targetid
-                                                             AND callers.callerid = target.funcid
-                                              )
+                                        AND callers.targetid = target.funcid
+                                        AND callers.callerid = functions.funcid
+                                    )
+                       ORDER BY functions.extent_start
+                    """,
+    like_name     = "target.fname",
+    qual_name     = "target.fqualname"
+))
+
+# callers filter (indirect-calls
+filters.append(ExistsLikeFilter(
+    param         = "callers",
+    filter_sql    = """SELECT 1
+                        FROM functions as caller, functions as target, callers
+                       WHERE %s
+                         AND  EXISTS ( SELECT 1 FROM targets
+                                        WHERE targets.funcid = target.funcid
+                                          AND targets.targetid = callers.targetid
+                                     )
+                         AND callers.callerid = caller.funcid
+                         AND caller.file_id = files.ID
+                    """,
+    ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                        FROM functions
+                       WHERE functions.file_id = ?
+                         AND EXISTS (SELECT 1 FROM functions as target, callers
+                                      WHERE %s
+                                        AND EXISTS (
+                                   SELECT 1 FROM targets
+                                    WHERE targets.funcid = target.funcid
+                                      AND targets.targetid = callers.targetid
+                                      AND callers.callerid = target.funcid
                                             )
                                         AND callers.callerid = functions.funcid
                                     )
@@ -623,30 +646,54 @@ filters.append(ExistsLikeFilter(
     qual_name     = "target.fqualname"
 ))
 
-# called-by filter
+# called-by filter (direct calls)
 filters.append(ExistsLikeFilter(
     param         = "called-by",
-    filter_sql    = """SELECT 1 FROM functions as target, functions as caller, callers
+    filter_sql    = """SELECT 1
+                         FROM functions as target, functions as caller, callers
                         WHERE %s
                           AND callers.callerid = caller.funcid
-                          AND (  (callers.targetid = target.funcid)
-                                OR EXISTS (SELECT 1 FROM targets
-                                            WHERE targets.funcid = target.funcid
-                                              AND targets.targetid = callers.targetid
-                                          )
-                              )
+                          AND callers.targetid = target.funcid
                           AND target.file_id = files.ID
                     """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end FROM functions
+    ext_sql       = """SELECT functions.extent_start, functions.extent_end 
+                        FROM functions
                        WHERE functions.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions as caller, callers
                                       WHERE %s
                                         AND caller.funcid = callers.callerid
-                                        AND (   (callers.targetid = functions.funcid)
-                                             OR EXISTS (SELECT 1 FROM targets
-                                                         WHERE targets.funcid = functions.funcid
-                                                           AND targets.targetid = callers.targetid
-                                                       )
+                                        AND callers.targetid = functions.funcid
+                                    )
+                       ORDER BY functions.extent_start
+                    """,
+    like_name     = "caller.fname",
+    qual_name     = "caller.fqualname"
+))
+
+# called-by filter (indirect calls)
+filters.append(ExistsLikeFilter(
+    param         = "called-by",
+    filter_sql    = """SELECT 1
+                         FROM functions as target, functions as caller, callers
+                        WHERE %s
+                          AND callers.callerid = caller.funcid
+                          AND ( EXISTS (SELECT 1 FROM targets
+                                         WHERE targets.funcid = target.funcid
+                                           AND targets.targetid = callers.targetid
+                                       )
+                              )
+                          AND target.file_id = files.ID
+                    """,
+    ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                        FROM functions
+                       WHERE functions.file_id = ?
+                         AND EXISTS (SELECT 1 FROM functions as caller, callers
+                                      WHERE %s
+                                        AND caller.funcid = callers.callerid
+                                        AND EXISTS (
+                                    SELECT 1 FROM targets
+                                     WHERE targets.funcid = functions.funcid
+                                       AND targets.targetid = callers.targetid
                                             )
                                     )
                        ORDER BY functions.extent_start
@@ -711,23 +758,51 @@ filters.append(ExistsLikeFilter(
 ))
 
 
-# member filter
+# member filter for functions
 filters.append(ExistsLikeFilter(
     param         = "member",
-    filter_sql    = """SELECT 1 FROM types as type, (
-                             SELECT scopeid, file_id FROM types
-                       UNION SELECT scopeid, file_id FROM functions
-                       UNION SELECT scopeid, file_id FROM variables
-                       ) as mem
+    filter_sql    = """SELECT 1 FROM types as type, functions as mem
                         WHERE %s
                           AND mem.scopeid = type.tid AND mem.file_id = files.ID
                     """,
     ext_sql       = """ SELECT extent_start, extent_end
-                          FROM (
-                             SELECT extent_start, extent_end, scopeid, file_id FROM types
-                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM functions
-                       UNION SELECT extent_start, extent_end, scopeid, file_id FROM variables
-                       ) as mem WHERE mem.file_id = ?
+                          FROM functions as mem WHERE mem.file_id = ?
+                                  AND EXISTS ( SELECT 1 FROM types as type
+                                                WHERE %s
+                                                  AND type.tid = mem.scopeid)
+                       ORDER BY mem.extent_start
+                    """,
+    like_name     = "type.tname",
+    qual_name     = "type.tqualname"
+))
+
+# member filter for types
+filters.append(ExistsLikeFilter(
+    param         = "member",
+    filter_sql    = """SELECT 1 FROM types as type, types as mem
+                        WHERE %s
+                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                    """,
+    ext_sql       = """ SELECT extent_start, extent_end
+                          FROM types as mem WHERE mem.file_id = ?
+                                  AND EXISTS ( SELECT 1 FROM types as type
+                                                WHERE %s
+                                                  AND type.tid = mem.scopeid)
+                       ORDER BY mem.extent_start
+                    """,
+    like_name     = "type.tname",
+    qual_name     = "type.tqualname"
+))
+
+# member filter for variables
+filters.append(ExistsLikeFilter(
+    param         = "member",
+    filter_sql    = """SELECT 1 FROM types as type, variables as mem
+                        WHERE %s
+                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                    """,
+    ext_sql       = """ SELECT extent_start, extent_end
+                          FROM variables as mem WHERE mem.file_id = ?
                                   AND EXISTS ( SELECT 1 FROM types as type
                                                 WHERE %s
                                                   AND type.tid = mem.scopeid)

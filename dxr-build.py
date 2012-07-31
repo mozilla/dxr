@@ -1,13 +1,14 @@
 #!/usr/bin/env python2
 
 import dxr
-import dxr.htmlbuilders
+import dxr.utils
+import dxr.plugins
 import dxr.languages
 import os, sys
 import shutil
 import sqlite3
 import string
-import subprocess
+import subprocess, select
 import time, datetime
 import fnmatch
 import getopt
@@ -63,11 +64,14 @@ def main(argv):
 
   # Load configuration file
   # (this will abort on inconsistencies)
-  config = dxr.utils.Config(configfile, nb_jobs = str(nb_jobs))
+  overrides = {}
+  if nb_jobs:
+    overrides['nb_jobs'] = nb_jobs
+  config = dxr.utils.Config(configfile, **overrides)
 
   # Find trees to make, fail if requested tree isn't available
-  if tree
-    trees = [t for t in config.trees if t.name = tree]
+  if tree:
+    trees = [t for t in config.trees if t.name == tree]
     if len(trees) == 0:
       print >> sys.stderr, "Tree '%s' is not defined in config file!" % tree
       sys.exit(1)
@@ -78,12 +82,13 @@ def main(argv):
 
   # Create config.target_folder (if not exists)
   ensure_folder(config.target_folder, False)
+  ensure_folder(config.temp_folder,	  True)
 
   #TODO Start time to save time for each step for summary!
 
   # Make server if requested
   if make_server:
-    create_server()
+    create_server(config)
 
   # Build trees requested
   for tree in trees:
@@ -95,16 +100,17 @@ def main(argv):
     files_folder    = os.path.join(tree.target_folder, 'files')
     folders_folder  = os.path.join(tree.target_folder, 'folders')
     raw_folder      = os.path.join(tree.target_folder, 'raw')
-    ensure_folder(files_folder,     True)   # file listings
-    ensure_folder(folders_folder,   True)   # folder listings
-    ensure_folder(raw_folder,       True)   # Raw content, ie. images etc.
+    #ensure_folder(files_folder,     True)   # file listings
+    #ensure_folder(folders_folder,   True)   # folder listings
+    #ensure_folder(raw_folder,       True)   # Raw content, ie. images etc.
 
     # Temporary folders for plugins
+    ensure_folder(os.path.join(tree.temp_folder, 'plugins'), True)
     for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
       ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), True)
 
     # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
-    dxr.utils.connect_database(tree)
+    conn = dxr.utils.connect_database(tree)
 
     # Create database tables
     create_tables(tree, conn)
@@ -118,7 +124,7 @@ def main(argv):
 
     # Optimize, analyze and check database integrity
     conn.execute("INSERT INTO fts(fts) VALUES('optimize')")
-    conn.execute("ANALYSE");
+    conn.execute("ANALYZE");
 
     isOkay = None
     for row in conn.execute("PRAGMA integrity_check"):
@@ -132,7 +138,7 @@ def main(argv):
       sys.exit(1)
 
     # Check integrity of fts table, should throw exception on failure
-    conn.execute("INSERT INTO fts(fts) VALUES('integrity-check')")
+    #conn.execute("INSERT INTO fts(fts) VALUES('integrity-check')")
 
     # Commit database
     conn.commit()
@@ -169,11 +175,12 @@ def ensure_folder(folder, clean = False):
 
 def create_tables(tree, conn):
   conn.execute("CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)")
-  conn.execute(dxr.languages.language_schema.get_create_sql())
+  conn.executescript(dxr.languages.language_schema.get_create_sql())
 
 
 def index_files(tree, conn):
   """ Index all files from the source directory """
+  print "Indexing files from the '%s' tree" % tree.name
   cur = conn.cursor()
   # Walk the directory tree top-down, this allows us to modify folders to
   # exclude folders matching an ignore_pattern
@@ -302,7 +309,7 @@ def create_server(config):
 
   # Delete and copy in the server folder as is
   if os.path.isdir(server_folder):
-    os.rmtree(server_folder, False)
+    shutil.rmtree(server_folder, False)
   shutil.copytree(os.path.join(config.dxrroot, 'server'), server_folder, False)
 
   # We don't want to load config file on the server, so we just write all the
@@ -311,7 +318,7 @@ def create_server(config):
   with open(config_file, 'r') as f:
     data = f.read()
   data = string.Template(data).safe_substitute(
-    trees               = repr([t.name for t in config.tree]),
+    trees               = repr([t.name for t in config.trees]),
     wwwroot             = repr(config.wwwroot),
     template_parameters = repr(config.template_parameters)
   )
@@ -367,15 +374,16 @@ def build_tree(tree, conn):
   # Let plugins preprocess
   # modify environ, change makefile, hack things whatever!
   for indexer in indexers:
-    indexer.pre_process(tree, conn, environ)
+    indexer.pre_process(tree, environ)
 
   # Open log files
   msglog = open(os.path.join(tree.temp_folder, "build-messages.log"), 'w')
   errlog = open(os.path.join(tree.temp_folder, "build-errors.log"), 'w')
 
   # Call the make command
+  print "Building the '%s' tree" % tree.name
   r = subprocess.call(
-    tree.build_command.replace("$jobs", config.nb_jobs),
+    tree.build_command.replace("$jobs", tree.config.nb_jobs),
     shell   = True,
     stdout  = msglog,
     stderr  = errlog,
@@ -396,9 +404,11 @@ def build_tree(tree, conn):
   for indexer in indexers:
     indexer.post_process(tree, conn)
 
-
+import time
 def run_html_workers(tree, conn):
   """ Build HTML for a tree """
+  print "Building HTML for the '%s' tree" % tree.name
+
   # Let's find the number of rows, this is the maximum rowid, assume we didn't
   # delete files, this assumption should hold, but even if we delete files, it's
   # fairly like that this partition the work reasonably evenly.
@@ -409,44 +419,21 @@ def run_html_workers(tree, conn):
   # Make some slices
   slices = []
   # Don't make slices bigger than 500
-  step = min(500, file_count)
+  step = min(500, int(file_count) / int(tree.config.nb_jobs))
   start = None    # None, is not --start argument
   for end in xrange(step, file_count, step):
     slices.append((start, end))
     start = end + 1
   slices.append((start, None))  # None, means omit --end argument
 
-  # Okay, let's make a list of workers
-  workers = []
-  next_id = 0   # unique ids for workers, to associate log files
+  # Map from pid to workers
+  workers = {}
+  next_id = 1   # unique ids for workers, to associate log files
   # While there's slices and workers, we can manage them
   while len(slices) > 0 or len(workers) > 0:
-    # Handle errors for workers that are done
-    for worker, msgs, errs in workers:
-      if worker.poll() is None:
-        continue
-      # Close log files
-      msgs.close()
-      errs.close()
-      # Crash and error if we have problems
-      if worker.returncode != 0:
-        print >> sys.stderr, "dxr-htmlbuilder.py subprocess failed!"
-        print >> sys.stderr, "    | See %s for messages" % msgs.name
-        print >> sys.stderr, "    | See %s for errors" % errs.name
-        # Kill co-workers
-        for worker, msgs, errs in workers:
-          if worker[0].pull() is None:
-            worker[0].kill()
-            msgs.close()
-            errs.close()
-        # Exit, we're done here
-        sys.exit(1)
-    
-    # Remove workers that are complete
-    workers = [w for w in workers if w[0].poll() is not None]
 
     # Create workers while we have slots available
-    while len(workers) < tree.config.nb_jobs and len(slices) > 0:
+    while len(workers) < int(tree.config.nb_jobs) and len(slices) > 0:
       # Get slice of work
       start, end = slices.pop()
       # Setup arguments
@@ -456,21 +443,43 @@ def run_html_workers(tree, conn):
       if end is not None:
         args += ['--end', str(end)]
       # Open log files
-      msgs_filename = "html-worker-%s-messages.log" % next_id
-      errs_filename = "html-worker-%s-errors.log" % next_id
+      msgs_filename = "dxr-worker-%s-messages.log" % next_id
+      errs_filename = "dxr-worker-%s-errors.log" % next_id
       msgs = open(os.path.join(tree.temp_folder, msgs_filename), 'w')
       errs = open(os.path.join(tree.temp_folder, errs_filename), 'w')
       # Create a worker
+      print " - Starting worker %i" % next_id
       worker = subprocess.Popen(
-        [os.path.join(tree.config.dxrroot, "dxr-htmlbuilder.py")] + args,
+        [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args,
         stdout = msgs,
         stderr = errs
       )
-      # Add workers to list of workers
-      workers.append((worker, msgs, errs))
+      # Add worker
+      workers[worker.pid] = (worker, msgs, errs, next_id)
+      next_id += 1
 
-    # Wait for a subprocess to terminate (any subprocess is fine!)
-    os.wait()
+    # Wait for a subprocess to terminate
+    pid, exit = os.waitpid(0, 0)
+    # Find worker that terminated
+    worker, msgs, errs, wid = workers[pid]
+    print " - Worker %i finished" % wid
+    # Remove from workers
+    del workers[pid]
+    # Close log files
+    msgs.close()
+    errs.close()
+    # Crash and error if we have problems
+    if exit != 0:
+      print >> sys.stderr, "dxr-worker.py subprocess failed!"
+      print >> sys.stderr, "    | See %s for messages" % msgs.name
+      print >> sys.stderr, "    | See %s for errors" % errs.name
+      # Kill co-workers
+      for worker, msgs, errs, wid in workers.values():
+        worker.kill()
+        msgs.close()
+        errs.close()
+      # Exit, we're done here
+      sys.exit(1)
 
 if __name__ == '__main__':
   main(sys.argv[1:])

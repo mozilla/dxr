@@ -4,8 +4,9 @@ import cgi
 import sqlite3
 import sys, os
 
-import dxr_server
-import dxr_server.query
+import config
+import utils
+import query
 
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
@@ -26,44 +27,51 @@ can_redirect = querystring.get("redirect", "true") == "true"
 
 # Get and validate tree
 tree = querystring.get('tree')
-if tree not in dxr_server.trees:
+if tree not in config.trees:
   # Arguments for the template
   arguments = {
     # Common Template Variables
-    "wwwroot":    dxr_server.virtroot,
-    "tree":       dxr_server.trees[0],
-    "trees":      dxr_server.trees,
+    "wwwroot":    config.wwwroot,
+    "tree":       config.trees[0],
+    "trees":      config.trees,
     # Error template Variables
     "error":      "Tree '%s' is not a valid tree." % tree
   }
   template = "error.html"
 else:
   # Parse the search query
-  q = dxr_server.query.Query(querystring.get("q", ""))
+  q = query.Query(querystring.get("q", ""))
   # Connect to database
-  conn = dxr_server.connect_db(tree)
+  conn = utils.connect_db(tree)
   # Arguments for the template
   arguments = {
     # Common Template Variables
-    "wwwroot":    dxr_server.virtroot,
+    "wwwroot":    config.wwwroot,
     "tree":       tree,
-    "trees":      dxr_server.trees
+    "trees":      config.trees
   }
   if conn:
     result = None
     if can_redirect:
-      result = dxr_server.query.direct_result(conn, q)
+      result = query.direct_result(conn, q)
     if result:
       path, line = result
       print 'Content-Type: text/html\n'
-      redirect = "<html><head><meta http-equiv='REFRESH' content='0;url=%s/%s/%s?from=%s#l%i'></head></html>"
-      print redirect % (dxr_server.virtroot, tree, path, cgi.escape(querystring.get("q", ""), True), line)
+      redirect = """
+        <html>
+          <head>
+            <meta http-equiv='REFRESH' content='0;url=%s/%s/%s?from=%s#l%i'>
+          </head>
+        </html>
+      """
+      q_escape = cgi.escape(querystring.get("q", ""), True)
+      print redirect % (config.wwwroot, tree, path, q_escape, line)
       sys.exit(0)
     # Search Template Variables
     arguments["query"]    = cgi.escape(querystring.get("q", ""), True)
-    arguments["results"]  = dxr_server.query.fetch_results(conn, q,
-                                                           querystring.get("offset", 0),
-                                                           querystring.get("limit", 100))
+    arguments["results"]  = query.fetch_results(conn, q,
+                                                querystring.get("offset", 0),
+                                                querystring.get("limit", 100))
     arguments["offset"]   = querystring.get("offset", 0)
     arguments["limit"]    = querystring.get("limit", 100)
     template = "search.html"
@@ -92,9 +100,9 @@ print 'Content-Type: text/html\n'
 # Load template system
 import jinja2
 env = jinja2.Environment(
-    loader = jinja2.FileSystemLoader("dxr_server/templates"),
+    loader = jinja2.FileSystemLoader("template"),
     auto_reload = False,
-    bytecode_cache = jinja2.FileSystemBytecodeCache("dxr_server/jinja_dxr_cache", "%s.cache")
+    bytecode_cache = jinja2.FileSystemBytecodeCache("jinja_dxr_cache", "%s.cache")
 )
 
 # Get search template and dump it to stdout

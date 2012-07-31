@@ -79,7 +79,7 @@ The `htmlify` function return either `None` or an object with methods `refs()`,
  - `regions()`         Yields tuples of `(start, end, class)`
  - `annotations()`     Yields tuples of `(line, icon, title, text)`
  - `links()`           Yeilds tuples of `(importance, section, items)`, where
-                       items is a generator of tuples of `(title, img, path, line)`.
+                       items is a generator of tuples of `(icon, title, path, line)`.
                        `importance` is an integer used to sort sidebar sections.
 
 Note that the htmlifier module may not write to the database, it also strongly

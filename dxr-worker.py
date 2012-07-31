@@ -1,11 +1,13 @@
 #!/usr/bin/env python2
 
 import dxr
+import dxr.utils
 import dxr.plugins
 import os, sys
 import getopt
 import jinja2
 import json
+import codecs
 import cgi
 from itertools import chain
 
@@ -51,7 +53,7 @@ def main(argv):
   config = dxr.utils.Config(configfile)
 
   # Find the tree
-  for t in config.trees
+  for t in config.trees:
     if t.name == tree:
       tree = t
       break
@@ -71,7 +73,7 @@ def main(argv):
 
 
 def print_usage():
-  print "Usage: dxr-htmlbuilder.py -f FILE -t TREE -s START -e END"
+  print "Usage: dxr-worker.py -f FILE -t TREE -s START -e END"
 
 
 def print_help():
@@ -102,6 +104,8 @@ def build_html(tree, conn, start, end):
   elif end:
     sql += " WHERE fts.rowid <= ? "
     args = [end]
+  else:
+    args = []
   for path, text in conn.execute(sql, args):
     dst_path = os.path.join(tree.target_folder, "files", path)
     # Crash if file exists!
@@ -119,7 +123,7 @@ def htmlify(tree, conn, path, text, dst_path, plugins):
     if htmlifier:
       htmlifiers.append(htmlifier)
   # Load template
-  env = dxr.utils.load_tempate_env(tree.config)
+  env = dxr.utils.load_template_env(tree.config)
   tmpl = env.get_template('file.html')
   arguments = {
     # Set common template variables
@@ -150,7 +154,7 @@ def build_lines(tree, conn, path, text, htmlifiers):
   def src(start, end = None):
     if isinstance(start, tuple):
       start, end = start[:2]
-    return decoder(source[start:end], errors = 'replace')[0]
+    return decoder(text[start:end], errors = 'replace')[0]
   # We shall decode on-the-fly because we need ascii offsets to do the rendering
   # of regions correctly. But before we stuff anything into the template engine
   # we must ensure that it's correct utf-8 encoded string
@@ -160,13 +164,13 @@ def build_lines(tree, conn, path, text, htmlifiers):
 
   # Build a line map over the source (without exploding it all over the place!)
   line_map = [0]
-  offset = source.find("\n", 0) + 1
+  offset = text.find("\n", 0) + 1
   while offset > 0:
     line_map.append(offset)
-    offset = source.find("\n", offset) + 1
+    offset = text.find("\n", offset) + 1
   # If we don't have a line ending at the end improvise one
-  if not source.endswith("\n"):
-    line_map.append(len(source))
+  if not text.endswith("\n"):
+    line_map.append(len(text))
 
   # So, we have a minor issue with writing out the main body. Some of our
   # information is (line, col) information and others is file offset. Also,
@@ -240,7 +244,7 @@ def build_lines(tree, conn, path, text, htmlifiers):
   lines          = []
   offset         = 0
   line_number    = 0
-  while offset < len(source):
+  while offset < len(text):
     # Start a new line
     line_number += 1
     line = ""
@@ -308,9 +312,9 @@ def build_lines(tree, conn, path, text, htmlifiers):
         # If the ref doesn't end before the top of the stack, we have
         # overlapping regions, this isn't good, so we discard this ref
         if len(refs_stack) > 0 and refs_stack[-1][1] < ref[1]:
-          stack_src = source[refs_stack[-1][0]:refs_stack[-1][1]]
+          stack_src = text[refs_stack[-1][0]:refs_stack[-1][1]]
           print >> sys.stderr, "Error: Ref region overlap"
-          print >> sys.stderr, "   > '%s' %r" % (source[ref[0]:ref[1]], ref)
+          print >> sys.stderr, "   > '%s' %r" % (text[ref[0]:ref[1]], ref)
           print >> sys.stderr, "   > '%s' %r" % (stack_src, refs_stack[-1])
           print >> sys.stderr, "   > IN %s" % path
           continue  # Okay so skip it
@@ -334,9 +338,9 @@ def build_sections(tree, conn, path, text, htmlifiers):
   # Chain links from different htmlifiers
   links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
   # Sort by importance
-  links = sorted(links, key = lambda importance, section, items: importance)
+  links = sorted(links, key = lambda section: section[1])
   # Return list of section and items (without importance)
-  return [section, list(items) for importance, section, items in links]
+  return [(section, list(items)) for importance, section, items in links]
 
 
 if __name__ == '__main__':

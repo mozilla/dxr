@@ -1,4 +1,5 @@
-import os, subprocess
+import os, sys, subprocess
+import imp
 
 def indexer_exports():
   """ Indexer files should export these, for use as __all__"""
@@ -37,6 +38,7 @@ def load_indexers(tree):
 
 def load_htmlifiers(tree):
   """ Load htmlifiers for a given tree """
+  sys.path.append(tree.config.plugin_folder)
   plugins = []
   for name in tree.enabled_plugins:
     path = os.path.join(tree.config.plugin_folder, name)
