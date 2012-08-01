@@ -1,25 +1,41 @@
 DXR Application Architecture
 ============================
-_This documents the architecture of DXR._
+_This document gives a brief outline of the architecture for DXR._
 
 
-Directory Structure
--------------------
+The DXR Index Generation Process
+--------------------------------
+DXR is designed to generate a source code index offline, after which the
+generated files can be uploaded to a public webserver. Plugins are allowed to
+modify the build environment and tap into the compiler. Plugins will also be
+asked for syntax regions, line annotations, navigation links and inline menues
+when the HTML is generated.
 
-www/
-  Non-template parts of DXR, ie. the cgi scripts and open search xml
-  These are called *.in, typically *.py.in and are processed during
-  build where we replace variables $trees, $virtroot and $dot, in
-  filenames as well as contents.
-  ($dot is just a dummy variable not having hidden files in www/ folder).
+The build process looks like this.
 
-templates/
-  Files that are templates, static files are located in the static/ subfolder.
-  (This folder contains the default templates, feel free to provide another).
+ 1. Read user supplied configuration file (see configuration.mkd)
+ 2. Copy `server/` and template to `target_folder`
+ 3. Store relevant configuration keys in `server/config.py`
+ 4. Run the `make build` for all plugins
+ 5. For each source tree
+    1. Run `pre_process` from `indexer.py` for all plugins
+    2. Build the tree using `build_command`
+    3. Run `post_process` from `indexer.py` for all plugins
+    4. Launch subprocessees of `dxr-worker.py` to generate HTML
+       (These reads configuration file and uses plugins `htmlifier` module)
+ 6. Verify integrity of the database
 
-xref-tools/
-  Contains plugins for doing cross referencing
 
-docs/
-  Documentation documents for keeping track of interface between various
-  parts of DXR.
+DXR Directory Structure
+-----------------------
+_A brief outline of important directories in the DXR source code._
+
+ - `dxr/`               Various utlities for `dxr-build.py` and `dxr-worker.py`
+ - `tests/`             Automated tests (see tests.mkd for details)
+ - `sqlite-tokenizer/`  Customized tokenizer for sqlite full text search.
+ - `server/`            Server side scripts
+ - `plugins/`           Plugins (see plugins.mkd for details)
+ - `docs/`              Documentation of important interfaces
+ - `templates`          Templates (see templating.mkd for details)
+
+

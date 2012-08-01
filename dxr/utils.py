@@ -47,6 +47,7 @@ class Config:
     self.template_parameters = dict(tmpl_cfg.items('Template'))
 
     # Render all paths absolute
+    self.dxrroot          = os.path.abspath(self.dxrroot)
     self.plugin_folder    = os.path.abspath(self.plugin_folder)
     self.temp_folder      = os.path.abspath(self.temp_folder)
     self.target_folder    = os.path.abspath(self.target_folder)

@@ -20,12 +20,15 @@ DXR Configuration
 _Configuration keys for the `DXR` section of the configuration file._
 
  - `target_folder`      Output directory (**required**)
- - `dxrroot`            Location of you DXR install (defaults to directory executable)
+ - `dxrroot`            Location of you DXR install
+                        (defaults to directory of the executable)
  - `plugin_folder`      Plugin folder (default `<dxrroot>/plugins`)
- - `nb_jobs`            Number of jobs allowed (default `1`), note that this value
-                        can be overwritten by the `-j` argument when running `dxr-build.py`
- - `temp_folder`        Temporary folder (default `/tmp`, not recommended!)
- - `template`           Template folder (default `<dxrroot>/templates/minimalistic`)
+ - `nb_jobs`            Number of jobs allowed (default `1`), note that this
+                        value can be overwritten by the `-j` argument when
+                        running `dxr-build.py`
+ - `temp_folder`        Temporary folder (default `/tmp/dxr-temp`)
+ - `template`           Template folder, see templating.mkd
+                        (default `<dxrroot>/templates/minimalistic`)
  - `wwwroot`            Virtual root on deployment server (default `/`)
  - `enabled_plugins`    Enabled plugins (default `*`)
  - `disabled_plugins`   Disabled plugins (default ` `)
@@ -49,7 +52,8 @@ keys listed below.
                         provided in the config file or defined at runtime using
                         the `-j` argument.
  - `object_folder`      Folder where object files will be stored (**required**)
- - `temp_folder`        Tempoary folder for this tree (defaults `<temp_folder>/<tree>`)
+ - `temp_folder`        Tempoary folder for this tree, 
+                        (defaults `<temp_folder>/<tree>`)
                         It's **not** recommend that this attribute is defined!
  - `enabled_plugins`    Plugins enabled in this tree (defaults `*`)
  - `disabled_plugins`   Plugins disabled in this tree (default `*`), note that

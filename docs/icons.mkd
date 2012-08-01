@@ -5,18 +5,20 @@ _The DXR icon library is a mix of icons from different authors and credit is dis
 
 Template Designers
 ------------------
-When creating a template for DXR you should include the icons/ folder from the default template.
-You can replace icons as you see fit, but icons mentioned in this document may be referenced
-from {{wwwroot}}/static/icons/, so make sure the icon filenames are preserved.
+When creating a template for DXR you should include the icons/ folder from the
+default template. You can replace icons as you see fit, but icons mentioned in
+this document may be referenced from {{wwwroot}}/static/icons/, so make sure
+the icon filenames are preserved.
 
 
 DXR/Plugin Developers
 ---------------------
 If your plugin needs an icon that is not present in the icons/ folder,
 please add it and document it's origin in this document.
-Feel free to use icons already existing, but keep in mind that icons have semantic naming.
-So don't use the `search` icon for zoom, because a template designer may choose to change
-the search icon from a magnifying glass to binoculars.
+Feel free to use icons already existing, but keep in mind that icons have
+semantic naming. So don't use the `search` icon for zoom, because a template
+designer may choose to change the search icon from a magnifying glass to
+binoculars.
 
 
 Icons From Silk
@@ -29,6 +31,7 @@ by Mark James, licensed under Creative Commons Attribution 2.5 License.
  - `page_white_code`
  - `page_white`
  - `page_white_wrench`
+
 
 Icons From FatCow Hosting
 -------------------------
@@ -52,10 +55,10 @@ by Yusuke Kamiyamane, licensed under Creative Commons Attribution 3.0 License.
 
 Icons From SharpDevelop
 -----------------------
-Following icons originates from [SharpDevelop](http://www.icsharpcode.net/OpenSource/SD/)
-a mix of (partially) derivative works of Yusuke Kamiyamane, modified by the
-SharpDevelop team and independent works by the SharpDevelop team all licensed
-under GNU LGPL.
+Following icons originates from 
+[SharpDevelop](http://www.icsharpcode.net/OpenSource/SD/) a mix of (partially)
+derivative works of Yusuke Kamiyamane, modified by the SharpDevelop team and
+independent works by the SharpDevelop team all licensed under GNU LGPL.
 
  - `jump`
  - `method`

@@ -9,6 +9,7 @@ import jinja2
 import json
 import codecs
 import cgi
+import datetime
 from itertools import chain
 
 def main(argv):
@@ -90,7 +91,7 @@ def build_html(tree, conn, start, end):
   """ Build HTML for file ids from start to end """
   # Load htmlifier plugins
   plugins = dxr.plugins.load_htmlifiers(tree)
-  # Fetch each document one by one
+  # Build sql statement and arguments
   sql = """SELECT
              (SELECT path FROM files WHERE files.ID = fts.rowid) as path,
              fts.content as content
@@ -106,13 +107,23 @@ def build_html(tree, conn, start, end):
     args = [end]
   else:
     args = []
+  # Log a little information, at almost no overhead
+  count = 0
+  started = datetime.datetime.now()
+  # Fetch each document one by one 
   for path, text in conn.execute(sql, args):
     dst_path = os.path.join(tree.target_folder, "files", path)
     # Crash if file exists!
     if os.path.exists(dst_path):
-      print >> sys.stderr, "File '%s' already exists at htmlification!"
+      print >> sys.stderr, "File '%s' already exists at htmlification!" % path
       sys.exit(1)
+    print "Building: %s" % path
     htmlify(tree, conn, path, text, dst_path, plugins)
+    count += 1
+  # Write time information
+  time = datetime.datetime.now() - started
+  print "Finished %s files in %s" % (count, time)
+  
 
 def htmlify(tree, conn, path, text, dst_path, plugins):
   """ Build HTML for path, text save it to dst_path """

@@ -14,10 +14,11 @@ class ClangHtmlifier:
     self.file_id = file_id
 
   def regions(self):
-    # Let's not do any syntax stuff here, it doesn't really make any sense
-    # when syntax is already done in pygmentize
-    # I suppose this is only useful if we want to highlight something special,
-    # like warnings, or code coverage, or who knows...
+    # TODO Don't do syntax highlighting here, we have pygments for this
+    # but for the moment being pygments is disabled for cpp files as it
+    # has an infinite loop, as reported here:
+    # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
+    
     return []
 
 
@@ -28,59 +29,98 @@ class ClangHtmlifier:
 
     # Extents for functions defined here
     sql = """
-      SELECT extent_start, extent_end, funcid, fqualname
+      SELECT extent_start, extent_end, fqualname
         FROM functions
        WHERE file_id = ?
     """
-    for start, end, funcid, fqualname in self.conn.execute(sql, args):
-      yield start, end, self.function_menu(funcid, fqualname)
+    for start, end, fqualname in self.conn.execute(sql, args):
+      yield start, end, self.function_menu(fqualname)
 
     # Extents for variables defined here
     sql = """
-      SELECT extent_start, extent_end, varid, vname
+      SELECT extent_start, extent_end, vname
         FROM variables
        WHERE file_id = ?
     """
-    for start, end, varid, vname in self.conn.execute(sql, args):
-      yield start, end, self.variable_menu(varid, vname)
+    for start, end, vname in self.conn.execute(sql, args):
+      yield start, end, self.variable_menu(vname)
 
     # Extents for types defined here
     sql = """
-      SELECT extent_start, extent_end, tid, tqualname
+      SELECT extent_start, extent_end, tqualname
         FROM types
        WHERE file_id = ?
     """
-    for start, end, tid, tqualname in self.conn.execute(sql, args):
-      yield start, end, self.type_menu(tid, tqualname)
+    for start, end, tqualname in self.conn.execute(sql, args):
+      yield start, end, self.type_menu(tqualname)
 
     # Extents for macros defined here
     sql = """
-      SELECT file_line, file_col, macroid, macroname
+      SELECT file_line, file_col, macroname
         FROM macros
        WHERE file_id = ?
     """
-    for line, col, macroid, macroname in self.conn.execute(sql, args):
+    for line, col, macroname in self.conn.execute(sql, args):
       # TODO Refactor macro table and remove the (line, col) scheme!
       start = (line, col)
       end   = (line, col + len(macroname))
-      yield start, end, self.macro_menu(macroid, macroname)
+      yield start, end, self.macro_menu(macroname)
 
-    # Extents for references in this file
+    # Add references to types
     sql = """
-      SELECT extent_start, extent_end, refid
-        FROM refs
-       WHERE refid IS NOT NULL AND file_id = ?
-    """ #TODO Refactor references table, refid IS NOT NULL shouldn't be needed!
-    cache = {}
-    for start, end, refid in self.conn.execute(sql, args):
-      # Try to fetch from cache
-      menu = cache.get(int(refid), False)
-      if menu is False:
-        menu = self.ref_menu(refid)
-        # Store to cache, also stores None if no menu
-        cache[int(refid)] = menu
-      if menu:
-        yield start, end, menu
+      SELECT refs.extent_start, refs.extent_end,
+             types.tqualname,
+             (SELECT path FROM files WHERE files.ID = types.file_id),
+             types.file_line
+        FROM types, refs
+       WHERE types.tid = refs.refid AND refs.file_id = ?
+    """
+    for start, end, tqualname, path, line in self.conn.execute(sql, args):
+      menu = self.type_menu(tqualname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
+
+    # Add references to functions
+    sql = """
+      SELECT refs.extent_start, refs.extent_end,
+             functions.fqualname,
+             (SELECT path FROM files WHERE files.ID = functions.file_id),
+             functions.file_line
+        FROM functions, refs
+       WHERE functions.funcid = refs.refid AND refs.file_id = ?
+    """
+    for start, end, fqualname, path, line in self.conn.execute(sql, args):
+      menu = self.function_menu(fqualname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
+
+    # Add references to functions
+    sql = """
+      SELECT refs.extent_start, refs.extent_end,
+             variables.vname,
+             (SELECT path FROM files WHERE files.ID = variables.file_id),
+             variables.file_line
+        FROM variables, refs
+       WHERE variables.varid = refs.refid AND refs.file_id = ?
+    """
+    for start, end, vname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(vname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
+
+    # Add references to functions
+    sql = """
+      SELECT refs.extent_start, refs.extent_end,
+             macros.macroname,
+             (SELECT path FROM files WHERE files.ID = macros.file_id),
+             macros.file_line
+        FROM macros, refs
+       WHERE macros.macroid = refs.refid AND refs.file_id = ?
+    """
+    for start, end, macroname, path, line in self.conn.execute(sql, args):
+      menu = self.macro_menu(macroname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
 
     # Hack to add links for #includes
     # TODO This should be handled in the clang extension we don't know the
@@ -130,85 +170,19 @@ class ClangHtmlifier:
     return url
 
 
-  def ref_menu(self, rid):
-    """ Generate a menu for a reference """
-    # Since reference ids are ids of either type, variable, function or macro
-    # We just try them all, one by one, order by what we consider most likely
-    menu = None
+  def add_jump_definition(self, menu, path, line):
+    """ Add a jump to definition to the menu """
+    # Definition url
+    url = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
+    url += "#l%s" % line
+    menu.insert(0, { 
+      'text':   "Jump to definition",
+      'title':  "Jump to the definition in '%s'" % os.path.basename(path),
+      'href':   url,
+      'icon':   'jump'
+    })
 
-    # Check if it's a variable
-    if not menu:
-      sql = """
-        SELECT vname, file_id, file_line
-          FROM variables
-         WHERE varid = ? LIMIT 1
-      """
-      row = self.conn.execute(sql, (rid,)).fetchone()
-      if row:
-        vname, file_id, line = row
-        menu = self.variable_menu(rid, vname)
-
-    # Check if it's a function
-    if not menu:
-      sql = """
-        SELECT fqualname, file_id, file_line
-          FROM functions
-         WHERE funcid = ? LIMIT 1
-      """
-      row = self.conn.execute(sql, (rid,)).fetchone()
-      if row:
-        fqualname, file_id, line = row
-        menu = self.function_menu(rid, fqualname)
-
-    # Check if it's a macro
-    if not menu:
-      sql = """
-        SELECT macroname, file_id, file_line
-          FROM macros
-         WHERE macroid = ? LIMIT 1
-      """
-      row = self.conn.execute(sql, (rid,)).fetchone()
-      if row:
-        macroname, file_id, line = row
-        menu = self.macro_menu(rid, macroname)
-
-    # Check if it's a type
-    if not menu:
-      sql = """
-        SELECT tqualname, file_id, file_line
-          FROM types
-         WHERE tid = ? LIMIT 1
-      """
-      row = self.conn.execute(sql, (rid,)).fetchone()
-      if row:
-        tqualname, file_id, line = row
-        menu = self.type_menu(rid, tqualname)
-
-    # Add jump to definition
-    if menu:
-      # Okay, lookup path of definition
-      sql = "SELECT path FROM files WHERE files.ID = ? LIMIT 1"
-      (path,) = self.conn.execute(sql, (file_id,)).fetchone()
-      # Definition url
-      url = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
-      url += "#l%s" % line
-      menu.insert(0, { 
-        'text':   "Jump to definition",
-        'title':  "Jump to the definition of this reference",
-        'href':   url,
-        'icon':   'jump'
-      })
-
-    # Okay we don't know what it is
-    sql = "SELECT extent_start, extent_end FROM refs WHERE refid = ?"
-    start, end = self.conn.execute(sql, (rid,)).fetchone()
-    src = self.text[start:end]
-    # TODO Refactor refs, such that we don't have things that doesn't resolve!
-    print >> sys.stderr, "Failed to resolve refid '%s' for '%s'" % (rid, src)
-    return None
-
-
-  def type_menu(self, tid, tqualname):
+  def type_menu(self, tqualname):
     """ Build menu for type """
     menu = []
     # Things we can do with tqualname
@@ -239,7 +213,7 @@ class ClangHtmlifier:
     return menu
 
 
-  def variable_menu(self, varid, vname):
+  def variable_menu(self, vname):
     """ Build menu for a variable """
     menu = []
     # Well, what more than references can we do?
@@ -253,7 +227,7 @@ class ClangHtmlifier:
     return menu
 
 
-  def macro_menu(self, macroid, macroname):
+  def macro_menu(self, macroname):
     menu = []
     # Things we can do with macros
     self.tree.config.wwwroot
@@ -266,7 +240,7 @@ class ClangHtmlifier:
     return menu
 
 
-  def function_menu(self, funcid, fqualname):
+  def function_menu(self, fqualname):
     """ Build menu for a function """
     menu = []
     # Things we can do with qualified name

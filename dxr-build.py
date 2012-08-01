@@ -442,42 +442,45 @@ def run_html_workers(tree, conn):
         args += ['--start', str(start)]
       if end is not None:
         args += ['--end', str(end)]
-      # Open log files
-      msgs_filename = "dxr-worker-%s-messages.log" % next_id
-      errs_filename = "dxr-worker-%s-errors.log" % next_id
-      msgs = open(os.path.join(tree.temp_folder, msgs_filename), 'w')
-      errs = open(os.path.join(tree.temp_folder, errs_filename), 'w')
+      # Open log file
+      log_filename = "dxr-worker-%s.log" % next_id
+      log = open(os.path.join(tree.temp_folder, log_filename), 'w')
       # Create a worker
       print " - Starting worker %i" % next_id
+      cmd = [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args
+      # Write command to log
+      log.write(" ".join(cmd) + "\n")
+      log.flush()
       worker = subprocess.Popen(
-        [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args,
-        stdout = msgs,
-        stderr = errs
+        cmd,
+        stdout = log,
+        stderr = log
       )
       # Add worker
-      workers[worker.pid] = (worker, msgs, errs, next_id)
+      workers[worker.pid] = (worker, log, next_id)
       next_id += 1
 
     # Wait for a subprocess to terminate
     pid, exit = os.waitpid(0, 0)
     # Find worker that terminated
-    worker, msgs, errs, wid = workers[pid]
+    worker, log, wid = workers[pid]
     print " - Worker %i finished" % wid
     # Remove from workers
     del workers[pid]
-    # Close log files
-    msgs.close()
-    errs.close()
+    # Close log file
+    log.close()
     # Crash and error if we have problems
     if exit != 0:
       print >> sys.stderr, "dxr-worker.py subprocess failed!"
-      print >> sys.stderr, "    | See %s for messages" % msgs.name
-      print >> sys.stderr, "    | See %s for errors" % errs.name
+      print >> sys.stderr, "    | Log from %s:" % log.name
+      # Print log for easy debugging
+      with open(log.name, 'r') as log:
+        for line in log:
+          print >> sys.stderr, "    | " + line.strip('\n')
       # Kill co-workers
-      for worker, msgs, errs, wid in workers.values():
+      for worker, log, wid in workers.values():
         worker.kill()
-        msgs.close()
-        errs.close()
+        log.close()
       # Exit, we're done here
       sys.exit(1)
 
