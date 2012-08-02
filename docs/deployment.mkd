@@ -5,6 +5,12 @@ _This document details how to deploy DXR for a project._
 DXR is designed to generated a source code index for one more trees offline, preferably on a dedicated build server, the generated index is then uploaded
 to a webserver for hosting.
 
+Build DXR and Associated Plugins
+--------------------------------
+Before you can start generating source code indexes with DXR, you must build
+DXR. This is done using the top-level makefile, simply type `make build` and you
+should be good to go. Notice that this make file also has a `make check` target.
+
 
 Generating a Source Code Index
 ------------------------------

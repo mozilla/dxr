@@ -29,20 +29,13 @@ Plugin Makefile
 ---------------
 _File for building anything the plugin wants done before indexing._
 
-This **must** be a GNU Make file with targets `build` and `clean` for building
-dependencies and cleaning up after build, respectively. Operations of this make
-should as far as possible remain with the plugin subdirectory.
+This **must** be a GNU Make file with targets `build`, `check` and `clean`
+for building dependencies, verifying build and cleaning up after build,
+respectively. Operations of this make should as far as possible remain within
+the plugin subdirectory.
 
-The `make build` target **will** be invoked once before any pre-,
-post-processing or htmlification takes place. Please note that htmlification
-is parallized, so `make build` **must** not rebuild the target if it already
-exists! We could have chosen to work around this in the backend, but the
-current design would make it very easy to distribute htmlification to multiple
-computers.
-
-The `make clean` target **may** be called after a build, but may not be invoked
-before the next pre-, post-processing and htmlification process takes place.
-Both targets will be invoked with the plugin folder as current working directory.
+The targets will be invoked by the top-level makefile, for this purpose your
+plugin **must** be listed here.
 
 
 Plugin Indexer

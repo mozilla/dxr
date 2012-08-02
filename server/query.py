@@ -88,7 +88,11 @@ class Query:
 def fetch_results(conn, query,
                   offset = 0, limit = 100,
                   markup = "<b>", markdown = "</b>"):
-  sql = "SELECT files.path, fts.content, files.ID FROM fts, files WHERE %s LIMIT ? OFFSET ?"
+  sql = """
+    SELECT files.path, files.icon, fts.content, files.ID
+      FROM fts, files
+     WHERE %s LIMIT ? OFFSET ?
+  """
   conditions = " files.ID = fts.rowid "
   arguments = []
 
@@ -114,7 +118,7 @@ def fetch_results(conn, query,
   def d(string):
     return decoder(string, errors="replace")[0]
 
-  for path, content, fileid in conn.execute(sql, arguments):
+  for path, icon, content, fileid in conn.execute(sql, arguments):
     elist = []
     for f in filters:
       for e in f.extents(conn, query, fileid):
@@ -164,7 +168,7 @@ def fetch_results(conn, query,
 
       lines.append((line_number, out_line))
     # Return result
-    yield path, lines
+    yield icon, path, lines
 
 
 def direct_result(conn, query):
@@ -183,19 +187,23 @@ def direct_result(conn, query):
     return (rows[0]['path'], 1)
 
   # Case sensitive type matching
-  cur.execute("""SELECT
-                    (SELECT path FROM files WHERE files.ID = types.file_id) as path,
-                    types.file_line
-                 FROM types WHERE types.tname = ? LIMIT 2""", (term,))
+  cur.execute("""
+    SELECT
+      (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+      types.file_line
+     FROM types WHERE types.tname = ? LIMIT 2
+  """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
     return (rows[0]['path'], rows[0]['file_line'])
 
   # Case sensitive function names
-  cur.execute("""SELECT
-                    (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
-                    functions.file_line
-                 FROM functions WHERE functions.fname = ? LIMIT 2""", (term,))
+  cur.execute("""
+    SELECT
+        (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+        functions.file_line
+      FROM functions WHERE functions.fname = ? LIMIT 2
+  """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
     return (rows[0]['path'], rows[0]['file_line'])
@@ -203,37 +211,45 @@ def direct_result(conn, query):
   # Try fully qualified names
   if "::" in term:
     # Case insensitive type matching
-    cur.execute("""SELECT
-                      (SELECT path FROM files WHERE files.ID = types.file_id) as path,
-                      types.file_line
-                   FROM types WHERE types.tqualname LIKE ? LIMIT 2""", ("%" + term,))
+    cur.execute("""
+      SELECT
+         (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+         types.file_line
+        FROM types WHERE types.tqualname LIKE ? LIMIT 2
+    """, ("%" + term,))
     rows = cur.fetchall()
     if rows and len(rows) == 1:
       return (rows[0]['path'], rows[0]['file_line'])
 
     # Case insensitive function names
-    cur.execute("""SELECT
-                      (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
-                      functions.file_line
-                   FROM functions WHERE functions.fqualname LIKE ? LIMIT 2""", ("%" + term,))
+    cur.execute("""
+    SELECT
+       (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+       functions.file_line
+      FROM functions WHERE functions.fqualname LIKE ? LIMIT 2
+    """, ("%" + term,))
     rows = cur.fetchall()
     if rows and len(rows) == 1:
       return (rows[0]['path'], rows[0]['file_line'])
 
   # Case insensitive type matching
-  cur.execute("""SELECT
-                    (SELECT path FROM files WHERE files.ID = types.file_id) as path,
-                    types.file_line
-                 FROM types WHERE types.tname LIKE ? LIMIT 2""", (term,))
+  cur.execute("""
+  SELECT
+     (SELECT path FROM files WHERE files.ID = types.file_id) as path,
+     types.file_line
+    FROM types WHERE types.tname LIKE ? LIMIT 2
+  """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
     return (rows[0]['path'], rows[0]['file_line'])
 
   # Case insensitive function names
-  cur.execute("""SELECT
-                    (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
-                    functions.file_line
-                 FROM functions WHERE functions.fname LIKE ? LIMIT 2""", (term,))
+  cur.execute("""
+  SELECT
+     (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
+     functions.file_line
+    FROM functions WHERE functions.fname LIKE ? LIMIT 2
+  """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
     return (rows[0]['path'], rows[0]['file_line'])

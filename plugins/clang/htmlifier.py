@@ -18,8 +18,16 @@ class ClangHtmlifier:
     # but for the moment being pygments is disabled for cpp files as it
     # has an infinite loop, as reported here:
     # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
-    
-    return []
+    tokenizer = tokenizers.CppTokenizer(self.text)
+    for token in tokenizer.getTokens():
+      if token.token_type == tokenizer.KEYWORD:
+        yield (token.start, token.end, 'k')
+      elif token.token_type == tokenizer.STRING:
+        yield (token.start, token.end, 'str')
+      elif token.token_type == tokenizer.COMMENT:
+        yield (token.start, token.end, 'c')
+      elif token.token_type == tokenizer.PREPROCESSOR:
+        yield (token.start, token.end, 'p')
 
 
   def refs(self):

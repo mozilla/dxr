@@ -31,7 +31,27 @@ by Mark James, licensed under Creative Commons Attribution 2.5 License.
  - `page_white_code`
  - `page_white`
  - `page_white_wrench`
-
+ - `mimetypes/php.png`
+ - `mimetypes/c.png`
+ - `mimetypes/build.png`
+ - `mimetypes/sh.png`
+ - `mimetypes/cs.png`
+ - `mimetypes/h.png`
+ - `mimetypes/css.png`
+ - `mimetypes/js.png`
+ - `mimetypes/rb.png`
+ - `mimetypes/txt.png`
+ - `mimetypes/cpp.png`
+ - `mimetypes/xml.png`
+ - `mimetypes/unknown.png`
+ - `mimetypes/ui.png`
+ - `mimetypes/conf.png`
+ - `mimetypes/java.png`
+ - `mimetypes/svg.png`
+ - `mimetypes/html.png`
+ - `mimetypes/iso.png`
+ - `mimetypes/vs.png`
+ - `mimetypes/py.png` (mixed with official python logo)
 
 Icons From FatCow Hosting
 -------------------------
@@ -51,6 +71,7 @@ by Yusuke Kamiyamane, licensed under Creative Commons Attribution 3.0 License.
  - `blame`
  - `diff`
  - `search-warning`
+ - `mimetypes/diff.png`
 
 
 Icons From SharpDevelop
@@ -75,4 +96,6 @@ Following icons originates from [Tango](http://tango.freedesktop.org/) by the
 Tango desktop project, released into public domain.
 
  - `search`
+
+
 

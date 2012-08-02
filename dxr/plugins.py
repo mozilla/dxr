@@ -1,5 +1,6 @@
 import os, sys, subprocess
 import imp
+import dxr.utils
 
 def indexer_exports():
   """ Indexer files should export these, for use as __all__"""
@@ -8,20 +9,6 @@ def indexer_exports():
 def htmlifier_exports():
   """ Htmlifier files should export these, for use as __all__"""
   return ['htmlify']
-
-
-def build_plugins(config):
-  """ Build plugins, exit on failure """
-  for plugin in config.enabled_plugins:
-    path = os.path.join(config.plugin_folder, name)
-    makefile = os.path.join(path, "makefile")
-    if os.path.isfile(makefile):
-      r = subprocess.call("make -f '%s' -j %i" % (makefile, config.nb_jobs),
-                          cwd   = path,
-                          shell = True)
-      if r != 0:
-        print >> sys.stderr, "Failed to build the '%s' plugin" % plugin
-        sys.exit(1)
 
 
 def load_indexers(tree):

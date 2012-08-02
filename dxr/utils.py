@@ -20,7 +20,8 @@ class Config:
       'dxrroot':          os.path.dirname(__main__.__file__),
       'plugin_folder':    "%(dxrroot)s/plugins",
       'nb_jobs':          "1",
-      'temp_folder':      "/tmp",
+      'temp_folder':      "/tmp/dxr-temp",
+      'log_folder':       "%(temp_folder)s/logs",
       'template':         "%(dxrroot)s/templates/minimalistic",
       'wwwroot':          "/",
       'enabled_plugins':  "*",
@@ -34,6 +35,7 @@ class Config:
     self.nb_jobs          = parser.get('DXR', 'nb_jobs',          False, override)
     self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
     self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
+    self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
     self.template         = parser.get('DXR', 'template',         False, override)
     self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
     self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
@@ -50,6 +52,7 @@ class Config:
     self.dxrroot          = os.path.abspath(self.dxrroot)
     self.plugin_folder    = os.path.abspath(self.plugin_folder)
     self.temp_folder      = os.path.abspath(self.temp_folder)
+    self.log_folder       = os.path.abspath(self.log_folder)
     self.target_folder    = os.path.abspath(self.target_folder)
     self.template         = os.path.abspath(self.template)
 
@@ -91,6 +94,7 @@ class TreeConfig:
       'enabled_plugins':  "*",
       'disabled_plugins': "",
       'temp_folder':      os.path.join(config.temp_folder, name),
+      'log_folder':       os.path.join(config.log_folder, name),
       'ignore_patterns':  ".hg .git CVS .svn .bzr .deps .libs",
       'build_command':    "make -j $jobs"
     })
@@ -100,6 +104,7 @@ class TreeConfig:
     self.enabled_plugins  = parser.get(name, 'enabled_plugins',   False)
     self.disabled_plugins = parser.get(name, 'disabled_plugins',  False)
     self.temp_folder      = parser.get(name, 'temp_folder',       False)
+    self.log_folder       = parser.get(name, 'log_folder',         False)
     self.object_folder    = parser.get(name, 'object_folder',     False)
     self.source_folder    = parser.get(name, 'source_folder',     False)
     self.build_command    = parser.get(name, 'build_command',     False)
@@ -119,6 +124,7 @@ class TreeConfig:
 
     # Render all path absolute
     self.temp_folder      = os.path.abspath(self.temp_folder)
+    self.log_folder       = os.path.abspath(self.log_folder)
     self.object_folder    = os.path.abspath(self.object_folder)
     self.source_folder    = os.path.abspath(self.source_folder)
 
@@ -151,33 +157,12 @@ class TreeConfig:
 
 
 
-_tokenizer_built = False
-def build_tokenizer(config):
-  """ Build tokenizer for configuration """
-  global _tokenizer_built
-  if _tokenizer_built:
-    return
-  print "Building sqlite-tokenizer:"
-  r = subprocess.call(
-      "make",
-      stdout  = sys.stdout,
-      stderr  = sys.stderr,  # TODO Pipe this somewhere else!
-      shell   = True,
-      cwd     = os.path.join(config.dxrroot, 'sqlite-tokenizer')
-  )
-  if r != 0:
-    print >> sys.stderr, "Failed to build sqlite-tokenizer!"
-    sys.exit(1)
-  _tokenizer_built = True
-
-
 _tokenizer_loaded = False
 def load_tokenizer(config):
   """ Load tokenizer if not loaded before (built if necessary) """
   global _tokenizer_loaded
   if _tokenizer_loaded:
     return
-  build_tokenizer(config)
   lib = os.path.join(
     config.dxrroot,
     'sqlite-tokenizer',
@@ -220,6 +205,7 @@ def load_template_env(config):
     )
   return _template_env
 
+
 _next_id = 1
 def next_global_id():
   """ Source of unique ids """
@@ -229,4 +215,9 @@ def next_global_id():
   n = _next_id
   _next_id += 1
   return n
+
+
+def open_log(config_or_tree, name):
+  """ Get an open log file given config or tree and name """
+  return open(os.path.join(config_or_tree.log_folder, name), 'w')
 

@@ -27,6 +27,7 @@ _Configuration keys for the `DXR` section of the configuration file._
                         value can be overwritten by the `-j` argument when
                         running `dxr-build.py`
  - `temp_folder`        Temporary folder (default `/tmp/dxr-temp`)
+ - `log_folder`         Log folder (default `<temp_folder>/logs`)
  - `template`           Template folder, see templating.mkd
                         (default `<dxrroot>/templates/minimalistic`)
  - `wwwroot`            Virtual root on deployment server (default `/`)
@@ -37,6 +38,11 @@ Notice, it's strongly recommended that you provide a sane **temporary folder**,
 using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`
 is better, but preferable you'd want something on the same file system as the
 `target_folder`.
+
+Please note that `dxr-build.py` assume the plugins in `plugin_folder` are
+already build and ready for use. If you specify your own plugin folder, the
+top-level makefile will not do this for you. This setting is mainly here for
+completion, it's not recommended for normal operation.
 
 
 Tree Configuration
@@ -52,8 +58,9 @@ keys listed below.
                         provided in the config file or defined at runtime using
                         the `-j` argument.
  - `object_folder`      Folder where object files will be stored (**required**)
+ - `log_folder`         Log folder (defaults `<config_log_folder>/<tree>`)
  - `temp_folder`        Tempoary folder for this tree, 
-                        (defaults `<temp_folder>/<tree>`)
+                        (defaults `<config_temp_folder>/<tree>`)
                         It's **not** recommend that this attribute is defined!
  - `enabled_plugins`    Plugins enabled in this tree (defaults `*`)
  - `disabled_plugins`   Plugins disabled in this tree (default `*`), note that

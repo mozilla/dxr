@@ -11,6 +11,7 @@ language_schema = dxr.schema.Schema({
   "files" : [
       ("ID", "INTEGER", False),
       ("path", "VARCHAR(1024)", True),
+      ("icon", "VARCHAR(64)", True),
       ("_key", "ID"),
       ("_index", "path")
   ],

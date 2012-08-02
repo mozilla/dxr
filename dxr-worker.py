@@ -92,18 +92,20 @@ def build_html(tree, conn, start, end):
   # Load htmlifier plugins
   plugins = dxr.plugins.load_htmlifiers(tree)
   # Build sql statement and arguments
-  sql = """SELECT
-             (SELECT path FROM files WHERE files.ID = fts.rowid) as path,
-             fts.content as content
-          FROM fts"""
+  sql = """
+  SELECT
+    path, icon, fts.content
+    FROM fts, files
+   WHERE fts.rowid = files.id
+  """
   if start and end:
-    sql += " where fts.rowid >= ? AND fts.rowid <= ?"
+    sql += " AND fts.rowid >= ? AND fts.rowid <= ?"
     args = [start, end]
   elif start:
-    sql += " WHERE fts.rowid >= ?"
+    sql += " AND fts.rowid >= ?"
     args = [start]
   elif end:
-    sql += " WHERE fts.rowid <= ? "
+    sql += " AND fts.rowid <= ? "
     args = [end]
   else:
     args = []
@@ -111,21 +113,21 @@ def build_html(tree, conn, start, end):
   count = 0
   started = datetime.datetime.now()
   # Fetch each document one by one 
-  for path, text in conn.execute(sql, args):
+  for path, icon, text in conn.execute(sql, args):
     dst_path = os.path.join(tree.target_folder, "files", path)
     # Crash if file exists!
     if os.path.exists(dst_path):
       print >> sys.stderr, "File '%s' already exists at htmlification!" % path
       sys.exit(1)
     print "Building: %s" % path
-    htmlify(tree, conn, path, text, dst_path, plugins)
+    htmlify(tree, conn, icon, path, text, dst_path, plugins)
     count += 1
   # Write time information
   time = datetime.datetime.now() - started
   print "Finished %s files in %s" % (count, time)
   
 
-def htmlify(tree, conn, path, text, dst_path, plugins):
+def htmlify(tree, conn, icon, path, text, dst_path, plugins):
   """ Build HTML for path, text save it to dst_path """
   # Create htmlifiers for this source
   htmlifiers = []
@@ -143,6 +145,7 @@ def htmlify(tree, conn, path, text, dst_path, plugins):
     'trees':      [t.name for t in tree.config.trees],
     'config':     tree.config.template_parameters,
     # Set file template variables
+    'icon':       icon,
     'path':       path,
     'name':       os.path.basename(path),
     'lines':      build_lines(tree, conn, path, text, htmlifiers),

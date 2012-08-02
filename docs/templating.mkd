@@ -92,8 +92,8 @@ Search Template Variables
 -------------------------
 _Variables specific to the search template._
  - `query`           Last search query or empty string if none.
- - `results`         List of results as tuples of `(path, lines)`, where `lines`
-                     is a list of lines as tuples of `(line_number, line)`.
+ - `results`         List of results as tuples of `(icon, path, lines)`, where
+                     `lines` is a list tuples `(line_number, line)`.
                      NOTE: results is a **generator** you can only iterate over
                      it once, but you can iterate over lines multiple times.
                      (If querystring `offset` and `limit` were given these are
@@ -115,6 +115,7 @@ Templates implementing this should also ensure that the anchor `#l{{line_number}
 focuses, highlights and/or scrolls to line number `line_number`.
 
  - `name`            Name of file being displayed
+ - `icon`            File icon for use as favicon
  - `path`            Path of file being displayed
  - `lines`           List of lines as tuple of `(line_number, line, annotations)`
                      where `annotations` is list of tuples `(attr, icon)` where

@@ -3,6 +3,7 @@ import pygments
 import pygments.lexers
 from pygments.token import Token
 import os, sys
+import fnmatch
 
 class Pygmentizer:
   """ Pygmentizer add syntax regions for file """
@@ -28,13 +29,23 @@ class Pygmentizer:
     return []
 
 def htmlify(tree, conn, path, text):
+  # TODO Enable C++ highlighting using pygments, pending fix for infinite
+  # looping that we don't like, see:
+  # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
+  if any((path.endswith(e) for e in ('.c', '.cc', '.cpp', '.h', '.hpp'))):
+    return None
+  # Options and filename
   options   = {'encoding': 'utf-8'}
   filename  = os.path.basename(path)
   try:
     lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
   except pygments.util.ClassNotFound:
-    # TODO Note this filename in some auxiliary log-file
-    return None
+    # Small hack for js highlighting of jsm files
+    if fnmatch.fnmatchcase(filename, "*.jsm"):
+      lexer = pygments.lexers.JavascriptLexer(**options)
+    else:
+      print >> sys.stderr, "pygments: No lexer for '%s'" % filename
+      return None
   return Pygmentizer(text, lexer)
 
 __all__ = dxr.plugins.htmlifier_exports()

@@ -1,6 +1,10 @@
 {% extends "layout.html" %}
 
-{% block title %}{{path}} - DXR{% endblock %}
+{% block title %}{{name}} - DXR{% endblock %}
+
+{% block head %}
+  <link rel="shortcut icon" href="{{wwwroot}}/static/icons/{{icon}}.png"/>
+{% endblock %}
 
 {% set panel = True %}
 
@@ -49,8 +53,11 @@
 {%- for number, line, annotations in lines %}
 <code>{{line}}</code>
 {%- for annotation, icon in annotations -%}
-<div class="annotation" {% for key, value in annotation.items() %} {{key}}="{{value}}" {% endfor %}
-     style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"></div>
+<div class="annotation"
+  {% for key, value in annotation.items() %}
+    {{key}}="{{value}}"
+  {% endfor %}
+  style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"></div>
 {%- endfor -%}
 {%- endfor -%}
 </pre>

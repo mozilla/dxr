@@ -4,14 +4,16 @@ import dxr
 import dxr.utils
 import dxr.plugins
 import dxr.languages
+import dxr.mime
 import os, sys
 import shutil
 import sqlite3
 import string
 import subprocess, select
-import time, datetime
+import time
 import fnmatch
 import getopt
+from datetime import datetime
 
 def main(argv):
   # Options to read
@@ -83,8 +85,7 @@ def main(argv):
   # Create config.target_folder (if not exists)
   ensure_folder(config.target_folder, False)
   ensure_folder(config.temp_folder,	  True)
-
-  #TODO Start time to save time for each step for summary!
+  ensure_folder(config.log_folder,    True)
 
   # Make server if requested
   if make_server:
@@ -92,18 +93,16 @@ def main(argv):
 
   # Build trees requested
   for tree in trees:
+    # Note starting time
+    started = datetime.now()
+
     # Create folders (delete if exists)
     ensure_folder(tree.target_folder, True) # <config.target_folder>/<tree.name>
     ensure_folder(tree.object_folder, True) # Object folder (user defined!)
     ensure_folder(tree.temp_folder,   True) # <config.temp_folder>/<tree.name>
                                             # (or user defined)
-    files_folder    = os.path.join(tree.target_folder, 'files')
-    folders_folder  = os.path.join(tree.target_folder, 'folders')
-    raw_folder      = os.path.join(tree.target_folder, 'raw')
-    #ensure_folder(files_folder,     True)   # file listings
-    #ensure_folder(folders_folder,   True)   # folder listings
-    #ensure_folder(raw_folder,       True)   # Raw content, ie. images etc.
-
+    ensure_folder(tree.log_folder,    True) # <config.log_folder>/<tree.name>
+                                            # (or user defined)
     # Temporary folders for plugins
     ensure_folder(os.path.join(tree.temp_folder, 'plugins'), True)
     for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
@@ -122,23 +121,8 @@ def main(argv):
     # Build tree
     build_tree(tree, conn)
 
-    # Optimize, analyze and check database integrity
-    conn.execute("INSERT INTO fts(fts) VALUES('optimize')")
-    conn.execute("ANALYZE");
-
-    isOkay = None
-    for row in conn.execute("PRAGMA integrity_check"):
-      if row[0] == "ok" and isOkay is None:
-        isOkay = True
-      else:
-        isOkay = False
-        print >> sys.stderr, "Database, integerity-check: %s" % row[0]
-    if not isOkay:
-      print >> sys.stderr, "Database integrity-check failed!"
-      sys.exit(1)
-
-    # Check integrity of fts table, should throw exception on failure
-    #conn.execute("INSERT INTO fts(fts) VALUES('integrity-check')")
+    # Optimize and run integrity check on database
+    finalize_database(conn)
 
     # Commit database
     conn.commit()
@@ -150,6 +134,11 @@ def main(argv):
     conn.commit()
     conn.close()
 
+    # Save the tree finish time
+    delta = datetime.now() - started
+    print "(finished building '%s' in %s)" % (tree.name, delta)
+
+  # Print a neat summary
 
 def print_help():
   print_usage()
@@ -174,6 +163,7 @@ def ensure_folder(folder, clean = False):
 
 
 def create_tables(tree, conn):
+  print "Creating tables"
   conn.execute("CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)")
   conn.executescript(dxr.languages.language_schema.get_create_sql())
 
@@ -181,6 +171,7 @@ def create_tables(tree, conn):
 def index_files(tree, conn):
   """ Index all files from the source directory """
   print "Indexing files from the '%s' tree" % tree.name
+  started = datetime.now()
   cur = conn.cursor()
   # Walk the directory tree top-down, this allows us to modify folders to
   # exclude folders matching an ignore_pattern
@@ -201,23 +192,20 @@ def index_files(tree, conn):
       file_path = os.path.join(root, f)
       path = os.path.join(rel_path, f)
 
-      # Try to decode the file as text
-      try:
-        with open(file_path, "r") as source_file:
-          data = source_file.read()
-        data.decode('utf-8')
-      except UnicodeDecodeError:
-        # TODO Check if it's a jpg, gif, png, ico or other web supported format
-        # (ONLY web supported format, we don't bother with conversion)
-        # generate web page for it, and copy it into the raw folder...
+      # the file
+      with open(file_path, "r") as source_file:
+        data = source_file.read()
+
+      # Discard non-text files
+      if not dxr.mime.is_text(file_path, data):
         continue
-      except:
-        traceback.print_exc()
-        print >> sys.stderr, "Failed to open %s" % file_path
-        sys.exit(1)
+
+      # Find an icon (ideally dxr.mime should use magic numbers, etc.)
+      # that's why it makes sense to save this result in the database
+      icon = dxr.mime.icon(path)
 
       # Insert this file
-      cur.execute("INSERT INTO files (path) VALUES (?)", (path,))
+      cur.execute("INSERT INTO files (path, icon) VALUES (?, ?)", (path, icon))
       # Index this file
       sql = "INSERT INTO fts (rowid, content) VALUES (?, ?)"
       cur.execute(sql, (cur.lastrowid, data))
@@ -236,6 +224,9 @@ def index_files(tree, conn):
 
   # Okay, let's commit everything
   conn.commit()
+
+  # Print time
+  print "(finished in %s)" % (datetime.now() - started)
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
@@ -256,7 +247,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     path = os.path.join(tree.source_folder, folder, f)
     # stat the folder
     stat = os.stat(path)
-    modified = datetime.datetime.fromtimestamp(stat.st_mtime)
+    modified = datetime.fromtimestamp(stat.st_mtime)
     # Okay, this is what we give the template:
     folders.append(('folder', f, modified))
 
@@ -267,7 +258,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     path = os.path.join(tree.source_folder, folder, f)
     # stat the file
     stat = os.stat(path)
-    modified = datetime.datetime.fromtimestamp(stat.st_mtime)
+    modified = datetime.fromtimestamp(stat.st_mtime)
     # Format the size
     size = stat.st_size # TODO Make this a bit prettier, ie. 4 decimals
     if size > 2 ** 30:
@@ -279,8 +270,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     else:
       size = str(size)
     # Now give this stuff to list template
-    # TODO Customize icon base on file type or extension
-    files.append(('page_white', f, modified, size))
+    files.append((dxr.mime.icon(path), f, modified, size))
 
   # Destination file path
   dst_path = os.path.join(tree.target_folder, 'folders', folder, 'index.html')
@@ -304,6 +294,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
 def create_server(config):
   """ Create server scripts for hosting the DXR indexes """
+  print "Generating server scripts"
   # Server folder (located in the target_folder)
   server_folder = os.path.join(config.target_folder, 'server')
 
@@ -376,33 +367,61 @@ def build_tree(tree, conn):
   for indexer in indexers:
     indexer.pre_process(tree, environ)
 
-  # Open log files
-  msglog = open(os.path.join(tree.temp_folder, "build-messages.log"), 'w')
-  errlog = open(os.path.join(tree.temp_folder, "build-errors.log"), 'w')
+  # Open log file
+  log = dxr.utils.open_log(tree, "build.log")
 
   # Call the make command
   print "Building the '%s' tree" % tree.name
   r = subprocess.call(
     tree.build_command.replace("$jobs", tree.config.nb_jobs),
     shell   = True,
-    stdout  = msglog,
-    stderr  = errlog,
+    stdout  = log,
+    stderr  = log,
     env     = environ,
     cwd     = tree.source_folder
   )
 
-  # Close log files
-  msglog.close()
-  errlog.close()
+  # Close log file
+  log.close()
 
   # Abort if build failed!
   if r != 0:
-    print >> sys.stderr, "Build command for '%s' failed, exited non-zero!" % tree.name
+    msg = "Build command for '%s' failed, exited non-zero!"
+    print >> sys.stderr, msg % tree.name
+    print >> sys.stderr, "    | See log: %s " % log.name
     sys.exit(1)
 
   # Let plugins post process
   for indexer in indexers:
     indexer.post_process(tree, conn)
+
+
+def finalize_database(conn):
+  """ Finalize the database """
+  print "Finalize database:"
+
+  print " - Merging B-tree nodes in full text index"
+  conn.execute("INSERT INTO fts(fts) VALUES('optimize')")
+
+  print " - Build database statistics for query optimization"
+  conn.execute("ANALYZE");
+
+  print " - Running integrity check"
+  isOkay = None
+  for row in conn.execute("PRAGMA integrity_check"):
+    if row[0] == "ok" and isOkay is None:
+      isOkay = True
+    else:
+      if isOkay is not False:
+        print >> sys.stderr, "Database, integerity-check failed"
+      isOkay = False
+      print >> sys.stderr, "  | %s" % row[0]
+  if not isOkay:
+    sys.exit(1)
+
+  # Check integrity of fts table, should throw exception on failure
+  #conn.execute("INSERT INTO fts(fts) VALUES('integrity-check')")
+
 
 import time
 def run_html_workers(tree, conn):
@@ -443,8 +462,7 @@ def run_html_workers(tree, conn):
       if end is not None:
         args += ['--end', str(end)]
       # Open log file
-      log_filename = "dxr-worker-%s.log" % next_id
-      log = open(os.path.join(tree.temp_folder, log_filename), 'w')
+      log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
       # Create a worker
       print " - Starting worker %i" % next_id
       cmd = [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args
@@ -457,14 +475,14 @@ def run_html_workers(tree, conn):
         stderr = log
       )
       # Add worker
-      workers[worker.pid] = (worker, log, next_id)
+      workers[worker.pid] = (worker, log, datetime.now(), next_id)
       next_id += 1
 
     # Wait for a subprocess to terminate
     pid, exit = os.waitpid(0, 0)
     # Find worker that terminated
-    worker, log, wid = workers[pid]
-    print " - Worker %i finished" % wid
+    worker, log, started, wid = workers[pid]
+    print " - Worker %i finished in %s" % (wid, datetime.now() - started)
     # Remove from workers
     del workers[pid]
     # Close log file
@@ -478,7 +496,7 @@ def run_html_workers(tree, conn):
         for line in log:
           print >> sys.stderr, "    | " + line.strip('\n')
       # Kill co-workers
-      for worker, log, wid in workers.values():
+      for worker, log, started, wid in workers.values():
         worker.kill()
         log.close()
       # Exit, we're done here

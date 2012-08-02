@@ -2,7 +2,8 @@ LEX		?= flex
 CC		?= gcc
 CFLAGS	:= $(shell pkg-config --cflags sqlite3) -DSQLITE_ENABLE_FTS3 -Wall -DNDEBUG
 LDFLAGS := $(shell pkg-config --libs sqlite3)
-all: libdxr-code-tokenizer.so
+all: build
+build: libdxr-code-tokenizer.so
 lex.yy.c: dxr-tokenizer.yy
 	$(LEX) $<
 libdxr-code-tokenizer.so: lex.yy.c

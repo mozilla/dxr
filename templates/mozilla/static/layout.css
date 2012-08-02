@@ -160,6 +160,10 @@ a.snippet:hover{
   margin-left:      6ex;
 }
 
+.file-lines a{
+  cursor:           pointer;
+}
+
 .annotation{
   display:    inline-block;
   float:      right;
@@ -170,6 +174,13 @@ a.snippet:hover{
 .result a.path{
   padding-left:     1ex;
   font-family:      monospace;
+  background-position:2px 2px;
+  background-repeat:  no-repeat;
+  padding-left:       24px;
+  padding-top:        2px;
+  padding-bottom:     2px;
+  height:             20px;
+  display:            block;
 }
 
 table.folder-content{
@@ -206,6 +217,7 @@ table.folder-content{
   display:              block;
   color:                #000;
 }
+
 #inline-menu a:hover{
   background-color: #ccc;
 }
@@ -234,6 +246,7 @@ table.folder-content{
   margin:               2px;
   width:                30ex;
 }
+
 #advanced-search div.section label{
   font-family:          monospace;
   font-size:            12px;

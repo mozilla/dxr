@@ -66,9 +66,12 @@
 
 {% block content %}
   <div id="results">
-  {% for path, lines in results %}
+  {% for icon, path, lines in results %}
     <div class="result">
-      <a class="path" href="{{wwwroot}}/{{tree}}/{{path}}">{{path}}</a><br>
+      <a class="path"
+         href="{{wwwroot}}/{{tree}}/{{path}}"
+         style="background-image: url({{wwwroot}}/static/icons/{{icon}}.png);"
+         >{{path}}</a>
       {% if lines|length > 0 %}
       {% for number, line in lines %}
       <a class="snippet" href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">
@@ -82,12 +85,15 @@
     </div>
   {% else %}
   <div style="width: 100%; text-align: center;">
-    <img src="{{wwwroot}}/static/garbage.svg" style="padding-top: 50px; width: 400px;">
+    <img src="{{wwwroot}}/static/garbage.svg"
+         style="padding-top: 50px; width: 400px;">
     <div style="font-family: sans-serif; font-size: 4em;">Sorry, no results!</div>
   </div>
   {% endfor %}
   </div>
   <div id="fetch-results">
-    <img src="{{wwwroot}}/static/view-refresh.svg" style="vertical-align: middle;"> Fetching results
+    <img src="{{wwwroot}}/static/view-refresh.svg"
+         style="vertical-align: middle;">
+    Fetching results
   </div>
 {% endblock %}
