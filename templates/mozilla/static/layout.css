@@ -171,16 +171,12 @@ a.snippet:hover{
   width:      16px;
 }
 
-.result a.path{
-  padding-left:     1ex;
-  font-family:      monospace;
-  background-position:2px 2px;
+.result div.path{
+  font-family:        monospace;
   background-repeat:  no-repeat;
-  padding-left:       24px;
-  padding-top:        2px;
-  padding-bottom:     2px;
-  height:             20px;
-  display:            block;
+  padding-left:       17px;
+  padding-top:        1px;
+  height:             16px;
 }
 
 table.folder-content{
@@ -201,7 +197,6 @@ table.folder-content{
 }
 
 #inline-menu{
-  margin-top:       12px;
   background-color: #eee;
   display:          none;
   position:         absolute;
@@ -212,27 +207,33 @@ table.folder-content{
   background-position:  2px 2px;
   background-repeat:    no-repeat;
   height:               20px;
-  padding:              0px 2px 0px 20px;
+  padding:              0px 20px 0px 20px;
   text-decoration:      none;
   display:              block;
   color:                #000;
 }
 
 #inline-menu a:hover{
-  background-color: #ccc;
+  background-color:     #ccc;
 }
 
 #fetch-results{
-  display:              none;
   background-color:     #eee;
-  padding:              5px;
-  font-family:          sans-serif;
-  font-size:            2em;
-  text-align:           center;
+  visibility:           hidden;
   user-select:          none;
   -moz-user-select:     none;
   -webkit-user-select:  none;
   cursor:               default;
+  text-align:           center;
+  font-size:            2em;
+}
+
+#foot{
+  clear:                both;
+  padding:              5px;
+  font-family:          sans-serif;
+  font-size:            0.8em;
+  height:               48px;
 }
 
 #advanced-search div.section input{

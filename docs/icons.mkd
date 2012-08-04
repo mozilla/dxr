@@ -27,6 +27,9 @@ Following icons originates from [Silk](http://www.famfamfam.com/lab/icons/silk/)
 by Mark James, licensed under Creative Commons Attribution 2.5 License.
 
  - `folder`
+ - `path_search`
+ - `exclude_path`
+ - `goto_folder`
  - `page_white_find`
  - `page_white_code`
  - `page_white`
@@ -66,11 +69,10 @@ by Yusuke Kamiyamane, licensed under Creative Commons Attribution 3.0 License.
 
  - `raw`
  - `warning`
- - `path-search`
  - `log`
  - `blame`
  - `diff`
- - `search-warning`
+ - `search_warning`
  - `mimetypes/diff.png`
 
 

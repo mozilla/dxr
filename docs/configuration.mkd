@@ -33,6 +33,8 @@ _Configuration keys for the `DXR` section of the configuration file._
  - `wwwroot`            Virtual root on deployment server (default `/`)
  - `enabled_plugins`    Enabled plugins (default `*`)
  - `disabled_plugins`   Disabled plugins (default ` `)
+ - `directory_index`    Filename for directory index files
+                        (default `.dxr-directory-index.html`)
 
 Notice, it's strongly recommended that you provide a sane **temporary folder**,
 using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`
@@ -43,6 +45,11 @@ Please note that `dxr-build.py` assume the plugins in `plugin_folder` are
 already build and ready for use. If you specify your own plugin folder, the
 top-level makefile will not do this for you. This setting is mainly here for
 completion, it's not recommended for normal operation.
+
+You might be tempted use `index.html` for `directory_index`, however, this is
+**not** recommened as any indexed files with that name would hide the directory
+index, which must be rather confusing to the users.
+(Notice, this value will also be used in the generated `.htaccess` file).
 
 
 Tree Configuration

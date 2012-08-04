@@ -4,6 +4,7 @@ import ConfigParser
 import __main__
 import os, sys, subprocess
 import jinja2
+import string
 
 
 # Please keep these config objects as simple as possible, and in sync with
@@ -25,7 +26,8 @@ class Config:
       'template':         "%(dxrroot)s/templates/minimalistic",
       'wwwroot':          "/",
       'enabled_plugins':  "*",
-      'disabled_plugins': " "
+      'disabled_plugins': " ",
+      'directory_index':  ".dxr-directory-index.html"
     })
     parser.read(configfile)
 
@@ -40,6 +42,7 @@ class Config:
     self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
     self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
     self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
+    self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
     # Set configfile
     self.configfile       = configfile
     self.trees            = []
@@ -112,8 +115,6 @@ class TreeConfig:
 
     # You cannot redefine the target folder!
     self.target_folder    = os.path.join(config.target_folder, name)
-    # You cannot redefine the database_file!
-    self.database_file    = os.path.join(self.target_folder, "xref.sqlite")
     # Set config file and DXR config object reference
     self.configfile       = configfile
     self.config           = config
@@ -177,7 +178,7 @@ def connect_database(tree):
   # Build and load tokenizer if needed
   load_tokenizer(tree.config)
   # Create connection
-  conn = sqlite3.connect(tree.database_file)
+  conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
   # Configure connection
   conn.execute("PRAGMA synchronous=off")  # TODO Test performance without this
   conn.execute("PRAGMA page_size=65535")  # TODO Test performance without this
@@ -216,6 +217,18 @@ def next_global_id():
   _next_id += 1
   return n
 
+
+def substitute_in_file(path, **variables):
+  """ Do a simple python string.Template substitution on a file
+      This function is mainly used for code generation, please make sure that
+      input files for this file have comments telling the reader where to look
+      to see declared variables.
+  """
+  with open(path, 'r') as f:
+    data = f.read()
+  data = string.Template(data).safe_substitute(variables)
+  with open(path, 'w') as f:
+    f.write(data)
 
 def open_log(config_or_tree, name):
   """ Get an open log file given config or tree and name """

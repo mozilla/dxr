@@ -49,6 +49,11 @@
       {% block content %}
       {% endblock %}
     </div>
+    <div id="foot">
+      {% block foot %}
+        {{config.foot_text}}
+      {% endblock %}
+    </div>
     <div id="inline-menu"></div>
     {% endblock %}
   </body>

@@ -1,12 +1,20 @@
 {% extends "layout.html" %}
 
+
 {% block title %}{{query}} - DXR Search{% endblock %}
 
-{% block head %}<script src="{{wwwroot}}/static/search.js"></script>{% endblock %}
+
+{% block head %}
+  <script src="{{wwwroot}}/static/menu.js"></script>
+  <script src="{{wwwroot}}/static/search.js"></script>
+  <script src="{{wwwroot}}/static/panel.js"></script>
+{% endblock %}
+
 
 {# Enable panel #}
 {% set panel = True %}
 {% block panel_title %}Advanced Search{% endblock %}
+
 
 {% block panel %}
 <form id="advanced-search">
@@ -22,7 +30,7 @@
   <label for="path">path:</label>
   <input type="text" name="path"
   data-param="path" placeholder="Path substring"
-  style="background-image: url({{wwwroot}}/static/icons/path-search.png);">
+  style="background-image: url({{wwwroot}}/static/icons/path_search.png);">
   <br>
   <label for="type">type:</label>
   <input type="text" name="type"
@@ -52,26 +60,38 @@
   <label for="warning">warning:</label>
   <input type="text" name="warning"
   data-param="warning" placeholder="Warning substring"
-  style="background-image: url({{wwwroot}}/static/icons/search-warning.png);">
+  style="background-image: url({{wwwroot}}/static/icons/search_warning.png);">
 </div>
 <div class="section">
   <h1>Case Insensitive Suffix Matching</h1>
   <label for="ext">ext:</label>
   <input type="text" name="ext" data-param="ext" placeholder="File extension"
-  style="background-image: url({{wwwroot}}/static/icons/path-search.png);">
+  style="background-image: url({{wwwroot}}/static/icons/path_search.png);">
 </div>
 <input type="submit" value="Search">
 </form>
 {% endblock %}
 
+
+{# When updating results remember to update it in search.js too! #}
 {% block content %}
   <div id="results">
   {% for icon, path, lines in results %}
     <div class="result">
-      <a class="path"
-         href="{{wwwroot}}/{{tree}}/{{path}}"
+      <div class="path"
          style="background-image: url({{wwwroot}}/static/icons/{{icon}}.png);"
-         >{{path}}</a>
+         >
+         {%- set folders = path.split('/') -%}
+         {%- for folder in folders -%}
+         <a href="{{wwwroot}}/{{tree}}/{{"/".join(folders[0:loop.index])}}"
+            {% if not loop.last %}
+            data-path="{{"/".join(folders[0:loop.index])}}/"
+            {% endif %}
+            >{{folder}}
+           {%- if not loop.last -%} / {%- endif -%}
+          </a>
+         {%- endfor -%}
+      </div>
       {% if lines|length > 0 %}
       {% for number, line in lines %}
       <a class="snippet" href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">
@@ -91,6 +111,10 @@
   </div>
   {% endfor %}
   </div>
+{% endblock %}
+
+
+{% block foot %}
   <div id="fetch-results">
     <img src="{{wwwroot}}/static/view-refresh.svg"
          style="vertical-align: middle;">

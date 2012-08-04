@@ -24,8 +24,8 @@ def main(argv):
 
   # Parse arguments
   try:
-    params = ["help", "file=", "tree=", "jobs="]
-    options, args = getopt.getopt(argv, "hf:t:j:", params)
+    params = ["help", "file=", "tree=", "jobs=", "server"]
+    options, args = getopt.getopt(argv, "hf:t:j:s", params)
   except getopt.GetoptError:
     print >> sys.stderr, "Failed to parse options"
     print_usage()
@@ -81,6 +81,8 @@ def main(argv):
     # Build everything if no tree or action is provided
     trees = config.trees
     make_server = True
+  else:
+    trees = []
 
   # Create config.target_folder (if not exists)
   ensure_folder(config.target_folder, False)
@@ -231,10 +233,10 @@ def index_files(tree, conn):
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
   """ Build folders and folder listing """
-  # Create the sub folder in each of the 3 locations required
-  os.mkdir(os.path.join(tree.target_folder, 'files',    folder))
-  os.mkdir(os.path.join(tree.target_folder, 'folders',  folder))
-  os.mkdir(os.path.join(tree.target_folder, 'raw',      folder))
+  # Create the sub folder, if it doesn't exist
+  path = os.path.join(tree.target_folder, folder)
+  if not os.path.isdir(path):
+    os.mkdir(path)
 
   # Okay, now we build folder listing
   # Name is either basename (or if that is "" name of tree)
@@ -273,7 +275,9 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     files.append((dxr.mime.icon(path), f, modified, size))
 
   # Destination file path
-  dst_path = os.path.join(tree.target_folder, 'folders', folder, 'index.html')
+  dst_path = os.path.join(tree.target_folder,
+                          folder,
+                          tree.config.directory_index)
   # Fetch template from environment
   env = dxr.utils.load_template_env(tree.config)  # don't worry it caches the env
   tmpl = env.get_template('folder.html')
@@ -306,15 +310,26 @@ def create_server(config):
   # We don't want to load config file on the server, so we just write all the
   # setting into the config.py script, simple as that.
   config_file = os.path.join(server_folder, 'config.py')
-  with open(config_file, 'r') as f:
-    data = f.read()
-  data = string.Template(data).safe_substitute(
+  dxr.utils.substitute_in_file(config_file, 
     trees               = repr([t.name for t in config.trees]),
     wwwroot             = repr(config.wwwroot),
     template_parameters = repr(config.template_parameters)
   )
-  with open(config_file, 'w') as f:
-    f.write(data)
+
+  # Substitution for test-server.py
+  test_server = os.path.join(server_folder, 'test-server.py')
+  dxr.utils.substitute_in_file(test_server, 
+    trees               = repr([t.name for t in config.trees]),
+    wwwroot             = repr(config.wwwroot),
+    template_parameters = repr(config.template_parameters),
+    directory_index     = repr(config.directory_index)
+  )
+
+  # Substitution for dot-htaccess
+  test_server = os.path.join(server_folder, 'test-server.py')
+  dxr.utils.substitute_in_file(test_server, 
+    directory_index     = repr(config.directory_index)
+  )
 
   # Create jinja cache folder in server folder
   os.mkdir(os.path.join(server_folder, 'jinja_dxr_cache'))

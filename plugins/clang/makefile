@@ -15,7 +15,6 @@ libclang-index-plugin.so: dxr-index.o sha1.o
 check: build
 	which clang
 	which clang++
-	#TODO try to load the plugin with clang binary to see if it works
 
 clean:
 	rm -rf *.o libclang-index-plugin.so

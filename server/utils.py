@@ -36,7 +36,7 @@ def _collate_loc(str1, str2):
 # Get database connection for tree
 def connect_db(tree):
   load_tokenizer()
-  dbname = "../" + tree + "/xref.sqlite"
+  dbname = "../" + tree + "/.dxr-xref.sqlite"
   try:
     conn = sqlite3.connect(dbname)
     conn.text_factory = str

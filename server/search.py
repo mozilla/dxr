@@ -88,9 +88,10 @@ if output_format == "json":
   # so let's format it as objects instead of tuples
   arguments["results"] = [
       {
+        "icon":   icon,
         "path":   path,
         "lines":  [{"line_number": line_nb, "line": line} for line_nb, line in lines]
-      } for path, lines in arguments["results"]]
+      } for icon, path, lines in arguments["results"]]
   json.dump(arguments, sys.stdout, indent = 2)
   sys.exit(0)
 

@@ -114,11 +114,11 @@ def build_html(tree, conn, start, end):
   started = datetime.datetime.now()
   # Fetch each document one by one 
   for path, icon, text in conn.execute(sql, args):
-    dst_path = os.path.join(tree.target_folder, "files", path)
-    # Crash if file exists!
+    dst_path = os.path.join(tree.target_folder, path + ".html")
+    # Give warning before overwriting the file
     if os.path.exists(dst_path):
-      print >> sys.stderr, "File '%s' already exists at htmlification!" % path
-      sys.exit(1)
+      msg = "File '%s' already exists and will be overwritten!"
+      print >> sys.stderr, msg % path
     print "Building: %s" % path
     htmlify(tree, conn, icon, path, text, dst_path, plugins)
     count += 1
@@ -351,8 +351,8 @@ def build_sections(tree, conn, path, text, htmlifiers):
   """ Build navigation sections for template """
   # Chain links from different htmlifiers
   links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
-  # Sort by importance
-  links = sorted(links, key = lambda section: section[1])
+  # Sort by importance (resolve tries by section name)
+  links = sorted(links, key = lambda section: (section[0], section[1]))
   # Return list of section and items (without importance)
   return [(section, list(items)) for importance, section, items in links]
 

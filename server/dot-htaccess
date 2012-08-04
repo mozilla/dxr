@@ -1,0 +1,29 @@
+RewriteEngine On
+
+# Notice that this file is a python string.Template, so two dollar chars is
+# substituted for a single dollar sign.
+# Available variables are declared in dxr-build.py
+
+# Python scripts are cgi scripts
+AddHandler cgi-script .py
+
+# search/ as server/search.py (cgi script)
+RewriteRule ^search$$ server/search.py [L]
+
+# static/ maps to server/template/static/
+RewriteRule ^static/(.*)$$ server/template/static/$$1 [L]
+
+# Index is in server/index.html
+RewriteRule ^$$ server/index.html [L]
+
+# Directory indexes as expected
+DirectoryIndex ${directory_index}
+
+# If not index.html, search.py or somewhere in static/ forbid access to server/
+RewriteCond %{REQUEST_URI} !^/server/index.html$$
+RewriteCond %{REQUEST_URI} !^/server/search.py$$
+RewriteCond %{REQUEST_URI} !^/server/template/static/(.*)$$
+RewriteRule ^server/(.*)$$ - [L,F]
+
+# Forbid access to the sqlite database (people shouldn't download these)
+RewriteRule ^[^/]+/\.dxr-xref.sqlite$$ - [L,F]
