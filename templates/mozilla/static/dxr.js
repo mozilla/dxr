@@ -1,33 +1,52 @@
-(function (){
-
-
-/** Initialize everything */
-window.addEventListener('load', function (){
-  init_tip();
-}, false);
+var dxr = (function (){
+var dxr = {};
 
 //TODO use findLine to update log, blame, diff, raw links...
 
-
-/** Initialize search tips */
-function init_tip(){
+/** Set search tip provided to user */
+dxr.setTip = function(text){
   var tip = document.getElementById("tip");
-  // Parse querystring for from=
-  var query = null
-  var items = window.location.search.substr(1).split("&");
-  for(var i = 0; i < items.length; i++){
-    var keyvalue = items[i].split("=");
-    if(keyvalue[0] == "from")
-      query = keyvalue[1];
-  }
-  if(query){
-    var url = wwwroot + "/search?tree=" + tree + "&q=" + query + "&redirect=false";
-    tip.innerHTML = ("You've been taken to a direct result " +
-                     "<a href='{{url}}'>click here</a>" + 
-                     " to see all search results").replace("{{url}}", url);
-    var q = document.getElementById("query");
-    q.value = query;
+  tip.innerHTML = text;
+}
+
+
+/** Prettify Date an 822 date */
+function prettyDate(datetime){
+  var d  = new Date(Date.parse(datetime));
+  var ds = ((new Date()).getTime() - d.getTime()) / 1000;
+  var dd = ds / (60 * 60 * 24);
+  // If something is wrong return unformatted stirng
+  if(isNaN(dd))
+    return datetime;
+  if(ds < 0)    return "at " + d.toLocaleDateString();
+  if(ds < 60)   return "just now";
+  if(ds < 120)  return "1 minute ago";
+  if(ds < 3600) return Math.floor(ds / 60) + " minutes ago";
+  if(ds < 7200) return "1 hour ago";
+  if(dd < 1)    return Math.floor(ds / 3600) + " hours ago";
+  if(dd < 2)    return "Yesterday";
+  if(dd < 7)    return dd + " days ago";
+  if(dd < 31)   return Math.ceil(dd / 7) + " weeks ago";
+  return d.toLocaleDateString();
+}
+
+/** Write a pretty form of created date */
+function prettifyDates(){
+  // Prettify all dates as I desire
+  // - If only one could this IRL :)
+  var dates = document.querySelectorAll(".pretty-date");
+  for(var i = 0; i < dates.length; i++){
+    var date = dates[i];
+    if(date.dataset["datetime"])
+      date.innerHTML = prettyDate(date.dataset["datetime"]);
   }
 }
 
+/** Initialize everything */
+window.addEventListener('load', function (){
+  prettifyDates();
+}, false);
+
+/** Export dxr as defined here */
+return dxr;
 }());

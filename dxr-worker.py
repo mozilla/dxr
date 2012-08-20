@@ -94,18 +94,18 @@ def build_html(tree, conn, start, end):
   # Build sql statement and arguments
   sql = """
   SELECT
-    path, icon, fts.content
-    FROM fts, files
-   WHERE fts.rowid = files.id
+    path, icon, trg_index.text
+    FROM trg_index, files
+   WHERE trg_index.id = files.id
   """
   if start and end:
-    sql += " AND fts.rowid >= ? AND fts.rowid <= ?"
+    sql += " AND trg_index.id >= ? AND trg_index.id <= ?"
     args = [start, end]
   elif start:
-    sql += " AND fts.rowid >= ?"
+    sql += " AND trg_index.id >= ?"
     args = [start]
   elif end:
-    sql += " AND fts.rowid <= ? "
+    sql += " AND trg_index.id <= ? "
     args = [end]
   else:
     args = []
@@ -140,16 +140,17 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
   tmpl = env.get_template('file.html')
   arguments = {
     # Set common template variables
-    'wwwroot':    tree.config.wwwroot,
-    'tree':       tree.name,
-    'trees':      [t.name for t in tree.config.trees],
-    'config':     tree.config.template_parameters,
+    'wwwroot':        tree.config.wwwroot,
+    'tree':           tree.name,
+    'trees':          [t.name for t in tree.config.trees],
+    'config':         tree.config.template_parameters,
+    'generated_date': tree.config.generated_date,
     # Set file template variables
-    'icon':       icon,
-    'path':       path,
-    'name':       os.path.basename(path),
-    'lines':      build_lines(tree, conn, path, text, htmlifiers),
-    'sections':   build_sections(tree, conn, path, text, htmlifiers)
+    'icon':           icon,
+    'path':           path,
+    'name':           os.path.basename(path),
+    'lines':          build_lines(tree, conn, path, text, htmlifiers),
+    'sections':       build_sections(tree, conn, path, text, htmlifiers)
   }
   # Fill-in variables and dump to file with utf-8 encoding
   tmpl.stream(**arguments).dump(dst_path, encoding = 'utf-8')

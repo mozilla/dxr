@@ -4,6 +4,7 @@
 trees                 = ${trees}
 wwwroot               = ${wwwroot}
 template_parameters   = ${template_parameters}
+generated_date        = ${generated_date}
 
 # The right hand side of assignments above will be filled using the string.Template
 # function builtin to python. Using repr, we save simple variables this way for

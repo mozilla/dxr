@@ -166,7 +166,7 @@ def ensure_folder(folder, clean = False):
 
 def create_tables(tree, conn):
   print "Creating tables"
-  conn.execute("CREATE VIRTUAL TABLE fts USING fts4 (basename, content, tokenize=dxrCodeTokenizer)")
+  conn.execute("CREATE VIRTUAL TABLE trg_index USING trilite")
   conn.executescript(dxr.languages.language_schema.get_create_sql())
 
 
@@ -209,7 +209,7 @@ def index_files(tree, conn):
       # Insert this file
       cur.execute("INSERT INTO files (path, icon) VALUES (?, ?)", (path, icon))
       # Index this file
-      sql = "INSERT INTO fts (rowid, content) VALUES (?, ?)"
+      sql = "INSERT INTO trg_index (id, text) VALUES (?, ?)"
       cur.execute(sql, (cur.lastrowid, data))
 
       # Okay to this file was indexed
@@ -283,14 +283,16 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
   tmpl = env.get_template('folder.html')
   arguments = {
     # Set common template variables
-    'wwwroot':    tree.config.wwwroot,
-    'tree':       tree.name,
-    'trees':      [t.name for t in tree.config.trees],
-    'config':     tree.config.template_parameters,
+    'wwwroot':        tree.config.wwwroot,
+    'tree':           tree.name,
+    'trees':          [t.name for t in tree.config.trees],
+    'config':         tree.config.template_parameters,
+    'generated_date': tree.config.generated_date,
     # Set folder template variables
-    'name':       name,
-    'folders':    folders,
-    'files':      files
+    'name':           name,
+    'path':           folder,
+    'folders':        folders,
+    'files':          files
   }
   # Fill-in variables and dump to file with utf-8 encoding
   tmpl.stream(**arguments).dump(dst_path, encoding = 'utf-8')
@@ -313,7 +315,8 @@ def create_server(config):
   dxr.utils.substitute_in_file(config_file, 
     trees               = repr([t.name for t in config.trees]),
     wwwroot             = repr(config.wwwroot),
-    template_parameters = repr(config.template_parameters)
+    template_parameters = repr(config.template_parameters),
+    generated_date      = repr(config.generated_date)
   )
 
   # Substitution for test-server.py
@@ -326,8 +329,8 @@ def create_server(config):
   )
 
   # Substitution for dot-htaccess
-  test_server = os.path.join(server_folder, 'test-server.py')
-  dxr.utils.substitute_in_file(test_server, 
+  htaccess = os.path.join(server_folder, 'dot-htaccess')
+  dxr.utils.substitute_in_file(htaccess, 
     directory_index     = repr(config.directory_index)
   )
 
@@ -338,16 +341,9 @@ def create_server(config):
   # We'll use mod_rewrite to map static/ one level up
   shutil.copytree(config.template, os.path.join(server_folder, 'template'))
 
-  # Copy the dxr tokenizer to server_folder
-  shutil.copytree(
-    os.path.join(config.dxrroot, 'sqlite-tokenizer'),
-    os.path.join(server_folder, 'sqlite-tokenizer')
-  )
-
   # Build index file
   build_index(config)
   # TODO Make open-search.xml things (or make the server so it can do them!)
-  # TODO Make .htaccess, s.t. this will actually work
 
 def build_index(config):
   """ Build index.html for the server """
@@ -358,10 +354,11 @@ def build_index(config):
   tmpl  = env.get_template('index.html')
   arguments = {
     # Set common template arguments
-    'wwwroot':    config.wwwroot,
-    'tree':       config.trees[0].name,
-    'trees':      [t.name for t in config.trees],
-    'config':     config.template_parameters
+    'wwwroot':        config.wwwroot,
+    'tree':           config.trees[0].name,
+    'trees':          [t.name for t in config.trees],
+    'config':         config.template_parameters,
+    'generated_date': config.generated_date
   }
   # Fill-in variables and dump to file
   tmpl.stream(**arguments).dump(dst_path, encoding = 'utf-8')
@@ -415,9 +412,6 @@ def finalize_database(conn):
   """ Finalize the database """
   print "Finalize database:"
 
-  print " - Merging B-tree nodes in full text index"
-  conn.execute("INSERT INTO fts(fts) VALUES('optimize')")
-
   print " - Build database statistics for query optimization"
   conn.execute("ANALYZE");
 
@@ -434,8 +428,7 @@ def finalize_database(conn):
   if not isOkay:
     sys.exit(1)
 
-  # Check integrity of fts table, should throw exception on failure
-  #conn.execute("INSERT INTO fts(fts) VALUES('integrity-check')")
+  conn.commit()
 
 
 import time

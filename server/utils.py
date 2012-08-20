@@ -1,25 +1,15 @@
 import sqlite3, sys, ctypes
 
-# Load DXR tokenizer for sqlite
-_tokenizer_loaded = False
+# Load trilite
+_trilite_loaded = False
 def load_tokenizer():
-  global _tokenizer_loaded
-  if _tokenizer_loaded:
+  global _trilite_loaded
+  if _trilite_loaded:
     return
   try:
-    lib = "sqlite-tokenizer/libdxr-code-tokenizer.so"
-    ctypes_init_tokenizer = ctypes.CDLL(lib).dxr_code_tokenizer_init
-    ctypes_init_tokenizer ()
-    _tokenizer_loaded = True
+    ctypes.CDLL("libtrilite.so").load_trilite_extension()
+    _trilite_loaded = True
     return True
-  except:
-    return False
-
-# Regular expression for the sqlite
-def _regexp(expr, item):
-  reg = re.compile(expr)
-  try:
-    return reg.search(re.escape (item)) is not None
   except:
     return False
 
@@ -40,9 +30,7 @@ def connect_db(tree):
   try:
     conn = sqlite3.connect(dbname)
     conn.text_factory = str
-    conn.create_function("REGEXP", 2, _regexp)
     conn.execute("PRAGMA temp_store = MEMORY;")
-    conn.execute("SELECT initialize_tokenizer()")
     conn.create_collation("loc", _collate_loc)
     conn.row_factory = sqlite3.Row
     return conn

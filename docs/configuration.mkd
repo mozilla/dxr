@@ -35,6 +35,9 @@ _Configuration keys for the `DXR` section of the configuration file._
  - `disabled_plugins`   Disabled plugins (default ` `)
  - `directory_index`    Filename for directory index files
                         (default `.dxr-directory-index.html`)
+ - `generated_date`     In RFC-822 format, also know as (RFC 2822),
+                        You might want to overwrite this to get the same date
+                        on all files! (defaults to time of execution)
 
 Notice, it's strongly recommended that you provide a sane **temporary folder**,
 using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`

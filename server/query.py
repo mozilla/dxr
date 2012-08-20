@@ -1,4 +1,4 @@
-import utils, cgi, codecs
+import utils, cgi, codecs, struct
 
 # Register filters by adding them to this list.
 filters = []
@@ -19,11 +19,13 @@ _parameters = ["path", "ext", "type", "type-ref", "function", "function-ref",
 _parameters += ["-" + param for param in _parameters] + ["+" + param for param
     in _parameters] + ["-+" + param for param in _parameters] + ["+-" + param for param in _parameters]
 
+_parameters += ['regexp', '-regexp']
+
 #TODO Support negation of phrases, support phrases as args to params, ie. path:"my path", or warning:"..."
 
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
-_pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(-\"(?P<notphrase>[^\"]+)\")|(?P<keyword>[^ \"]?[^ \"-]+)"
+_pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(-\"(?P<notphrase>[^\"]+)\")|(?P<keyword>[^ \"]+)"
 _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 
 # Pattern for recognizing if a word will be tokenized as a single term.
@@ -89,11 +91,12 @@ def fetch_results(conn, query,
                   offset = 0, limit = 100,
                   markup = "<b>", markdown = "</b>"):
   sql = """
-    SELECT files.path, files.icon, fts.content, files.ID
-      FROM fts, files
+    SELECT files.path, files.icon, trg_index.text, files.ID,
+    extents(trg_index.contents)
+      FROM trg_index, files
      WHERE %s LIMIT ? OFFSET ?
   """
-  conditions = " files.ID = fts.rowid "
+  conditions = " files.ID = trg_index.id "
   arguments = []
 
   has_extents = False
@@ -102,9 +105,9 @@ def fetch_results(conn, query,
       has_extents = exts or has_extents
       conditions += " AND " + conds
       arguments += args
+
   sql %= conditions
   arguments += [limit, offset]
-
 
   #TODO Actually do something with the has_extents, ie. don't fetch contents
 
@@ -118,8 +121,19 @@ def fetch_results(conn, query,
   def d(string):
     return decoder(string, errors="replace")[0]
 
-  for path, icon, content, fileid in conn.execute(sql, arguments):
+  cursor = conn.execute(sql, arguments)
+
+  for path, icon, content, fileid, extents in cursor:
     elist = []
+
+    # Special hack for TriLite extents
+    if extents:
+      matchExtents = []
+      for i in xrange(0, len(extents), 8):
+        s, e = struct.unpack("II", extents[i:i+8])
+        matchExtents.append((s, e, []))
+      elist.append(fix_extents_overlap(sorted(matchExtents)))
+
     for f in filters:
       for e in f.extents(conn, query, fileid):
         elist.append(e)
@@ -148,19 +162,23 @@ def fetch_results(conn, query,
       start     = max(content.rfind("\n", 0, end), 0)
       src_line  = content[start:end]
 
-      # Part from line break to start is escape and outputted
-      out_line = cgi.escape(d(src_line[1:estart - start]))
+      # Build line, start from mend = 1 just past the \n
+      out_line = ""
+      mend = 1      # Invariant: Offset where last write ended
 
       # Add some markup to highlight hits
       while content.count("\n", last_pos, estart) == 0:
+        last_end = mend
         mstart = estart - start
         mend   = eend - start
+        # Output line segment from last_end to markup start
+        out_line += cgi.escape(d(src_line[last_end:mstart]))
         # Output markup and line segment
         out_line += markup + cgi.escape(d(src_line[mstart:mend])) + markdown
         i += 1
         if i >= len(offsets):
           break
-        estart, end, keylist = offsets[i]
+        estart, eend, keylist = offsets[i]
 
       # Output the rest of the line when theres no more offsets
       # Notice that the while loop always goes atleast once
@@ -301,6 +319,30 @@ def merge_extents(*elist):
     yield start, end, keylist
     elist = [e for e in elist if e.value[0] < e.value[1] or e.next()]
 
+def fix_extents_overlap(extents):
+  """
+    Take a sorted list of extents and yield the extents without overlapings.
+    Assumes extents are of similar format as in merge_extents
+  """
+  # There must be two extents for there to be an overlap
+  while len(extents) >= 2:
+    # Take the two next extents
+    start1, end1, keys1 = extents[0]
+    start2, end2, keys2 = extents[1]
+    # Check for overlap
+    if end1 <= start2:
+      # If no overlap, yield first extent
+      yield start1, end1, keys1
+      extents = extents[1:]
+      continue
+    # If overlap, yield extent from start1 to start2
+    if start1 != start2:
+      yield start1, start2, keys1
+    extents[0] = (start2, end1, keys1 + keys2)
+    extents[1] = (end1, end2, keys2)
+  if len(extents) > 0:
+    yield extents[0]
+
 
 class SearchFilter:
   """ Base class for all search filters, plugins subclasses this class and
@@ -316,36 +358,39 @@ class SearchFilter:
         boolean True if this filter offer extents for results,
         Note the sql conditions must be string and condition on files.ID
     """
-    pass
+    return []
   def extents(self, conn, query, fileid):
     """ Given a connection, query and a file id yield a ordered lists of extents to highlight """
-    pass
+    return []
 
-class FTSSearchFilter(SearchFilter):
-  """ Full Text Search filter """
+class TriLiteSearchFilter(SearchFilter):
+  """ TriLite Search filter """
   def __init__(self):
     SearchFilter.__init__(self)
   def filter(self, query):
-    if len(query.keywords) or len(query.phrases):
-      q = " ".join(query.keywords + ["-%s" % w for w in query.notwords] + ['"%s"' % phrase for phrase in query.phrases])
-      yield "fts.content MATCH ?", [q], True
-    elif len(query.notwords):
-      q = " ".join(query.notwords)
-      yield "files.ID NOT IN (SELECT n.rowid FROM fts as n WHERE n.content MATCH ?)", [q], False
-    if len(query.notphrases):
-      q = " ".join(['"%s"' % phrase for phrase in query.notphrases])
-      yield "files.ID NOT IN (SELECT n.rowid FROM fts as n WHERE n.content MATCH ?)", [q], False
-  def extents(self, conn, query, fileid):
-    if len(query.keywords) or len(query.phrases):
-      def builder():
-        sql = "SELECT offsets(fts) FROM fts WHERE fts.content MATCH ? AND fts.rowid = ?"
-        q = " ".join(query.keywords + ['"%s"' % phrase for phrase in query.phrases])
-        offsets = conn.execute(sql, [q, fileid]).fetchone()
-        offsets = offsets[0].split()
-        offsets = [offsets[i:i+4] for i in xrange(0, len(offsets), 4)]
-        for col, term, start, size in offsets:
-          yield (int(start), int(start) + int(size), [])
-      yield builder()
+    for term in query.keywords + query.phrases:
+      yield "trg_index.contents MATCH ?", ["substr-extents:" + term], True
+    for expr in query.params['regexp']:
+      yield "trg_index.contents MATCH ?", ["regexp-extents:" + expr], True
+    if (  len(query.notwords)
+        + len(query.notphrases)
+        + len(query.params['-regexp'])) > 0:
+      conds = []
+      args  = []
+      for term in query.notwords + query.notphrases:
+        conds.append("trg_index.contents MATCH ?")
+        args.append("substr:" + term)
+      for expr in query.params['-regexp']:
+        conds.append("trg_index.contents MATCH ?")
+        args.append("regexp:" + expr)
+      yield (
+        """ files.ID NOT IN
+              (SELECT id FROM trg_index WHERE %s)
+        """ % conds.join(" AND "),
+        args, False)
+  # Notice that extents is more efficiently handled in the search query
+  # Sorry to break the pattern, but it's sagnificantly faster.
+
 
 class SimpleFilter(SearchFilter):
   """ Search filter for limited results.
@@ -445,8 +490,8 @@ class ExistsLikeFilter(SearchFilter):
               yield (start, end,[])
         yield builder()
 
-# Full Text Search filter
-filters.append(FTSSearchFilter())
+# TriLite Search filter
+filters.append(TriLiteSearchFilter())
 
 # path filter
 filters.append(SimpleFilter(

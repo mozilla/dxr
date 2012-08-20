@@ -47,7 +47,7 @@ body{
 }
 
 #inputwrap{
-  background-image:     url(http://localhost:8000/static/icons/page_white_find.png);
+  background-image:     url(icons/page_white_find.png);
   background-position:  2px 2px;
   background-repeat:    no-repeat;
   border:               1px solid #888;
@@ -172,11 +172,12 @@ a.snippet:hover{
 }
 
 .result div.path{
-  font-family:        monospace;
-  background-repeat:  no-repeat;
-  padding-left:       17px;
-  padding-top:        1px;
-  height:             16px;
+  font-family:          monospace;
+  background-repeat:    no-repeat;
+  padding-left:         20px;
+  background-position:  2px 2px;
+  padding-top:          2.5px;
+  height:               17.5px;
 }
 
 table.folder-content{
@@ -219,7 +220,7 @@ table.folder-content{
 
 #fetch-results{
   background-color:     #eee;
-  visibility:           hidden;
+  display:              none;
   user-select:          none;
   -moz-user-select:     none;
   -webkit-user-select:  none;
@@ -256,4 +257,9 @@ table.folder-content{
   text-align:           right;
 }
 
+#no-results, #expr-error{
+  display:              none;
+  width:                100%;
+  text-align:           center;
+}
 

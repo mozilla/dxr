@@ -47,14 +47,14 @@
 <div class="line-numbers">
   {% for number, line, annotations in lines %}
   <pre><a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"
-          class="ln"
+          class="ln" id="line-{{number}}"
           name="l{{number}}">{{number}}</a></pre>
   {%- endfor %}
 </div>
 <div class="file-lines">
 <pre>
 {%- for number, line, annotations in lines %}
-<code>{{line}}</code>
+<code aria-labelledby="line-{{number}}">{{line}}</code>
 {%- for annotation, icon in annotations -%}
 <div class="annotation"
   {% for key, value in annotation.items() %}

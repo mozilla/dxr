@@ -11,11 +11,8 @@ def icon(path):
   return "mimetypes/" + ext_map.get(ext, "unknown")
 
 def is_text(path, data):
-  try:
-    data.decode('utf-8')
-  except UnicodeDecodeError:
-    return False
-  return True
+  # Simple stupid test that apparently works rather well :)
+  return '\0' not in data
 
 # File extension known as this point
 ext_map = {
@@ -58,7 +55,10 @@ ext_map = {
   "iso":        'iso',
   "php":        'php',
   "rb":         'rb',
-  "ipdl":       'conf'
+  "ipdl":       'conf',
+  "mm":         'mm',
+  "tex":        'tex',
+  "vsprops":    'vs'
 }
 
 

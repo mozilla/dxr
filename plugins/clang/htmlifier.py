@@ -282,8 +282,9 @@ class ClangHtmlifier:
 
   def links(self):
     # For each type add a section with members
-    sql = "SELECT tname, tid, file_line FROM types WHERE file_id = ?"
-    for tname, tid, tline in self.conn.execute(sql, (self.file_id,)):
+    sql = "SELECT tname, tid, file_line, tkind FROM types WHERE file_id = ?"
+    for tname, tid, tline, tkind in self.conn.execute(sql, (self.file_id,)):
+      if len(tname) == 0: continue
       links = []
       links += list(self.member_functions(tid))
       links += list(self.member_variables(tid))
@@ -291,8 +292,13 @@ class ClangHtmlifier:
       # Sort them by line
       links = sorted(links, key = lambda link: link[3])
 
+      # Make sure we have a sane limitation of tkind
+      if tkind not in ('class', 'struct', 'enum', 'union'):
+        print >> sys.stderr, "tkind '%s' was replaced for 'type'!" % tkind
+        tkind = 'type'
+
       # Add the outer type as the first link
-      links.insert(0, ('type', tname, self.path, tline))
+      links.insert(0, (tkind, tname, self.path, tline))
 
       # Now return the type
       yield (30, tname, links)
@@ -314,6 +320,8 @@ class ClangHtmlifier:
       WHERE file_id = ? AND scopeid = ?
     """
     for fname, line in self.conn.execute(sql, (self.file_id, tid)):
+      # Skip nameless things
+      if len(fname) == 0: continue
       yield 'method', fname, self.path, line
 
 
@@ -325,6 +333,8 @@ class ClangHtmlifier:
       WHERE file_id = ? AND scopeid = ?
     """
     for vname, line in self.conn.execute(sql, (self.file_id, tid)):
+      # Skip nameless things
+      if len(vname) == 0: continue
       yield 'field', vname, self.path, line
 
 

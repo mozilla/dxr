@@ -5,6 +5,7 @@ import __main__
 import os, sys, subprocess
 import jinja2
 import string
+from datetime import datetime
 
 
 # Please keep these config objects as simple as possible, and in sync with
@@ -17,6 +18,7 @@ class Config:
   """ Configuration for DXR """
   def __init__(self, configfile, **override):
     # Create parser with sane defaults
+    generated_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     parser = ConfigParser.ConfigParser({
       'dxrroot':          os.path.dirname(__main__.__file__),
       'plugin_folder':    "%(dxrroot)s/plugins",
@@ -27,7 +29,8 @@ class Config:
       'wwwroot':          "/",
       'enabled_plugins':  "*",
       'disabled_plugins': " ",
-      'directory_index':  ".dxr-directory-index.html"
+      'directory_index':  ".dxr-directory-index.html",
+      'generated_date':   generated_date
     })
     parser.read(configfile)
 
@@ -43,6 +46,7 @@ class Config:
     self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
     self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
     self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
+    self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
     # Set configfile
     self.configfile       = configfile
     self.trees            = []
@@ -158,34 +162,29 @@ class TreeConfig:
 
 
 
-_tokenizer_loaded = False
-def load_tokenizer(config):
-  """ Load tokenizer if not loaded before (built if necessary) """
-  global _tokenizer_loaded
-  if _tokenizer_loaded:
+_trilite_loaded = False
+def load_trilite(config):
+  """ Load trilite if not loaded before"""
+  global _trilite_loaded
+  if _trilite_loaded:
     return
-  lib = os.path.join(
-    config.dxrroot,
-    'sqlite-tokenizer',
-    'libdxr-code-tokenizer.so'
-  )
-  ctypes.CDLL(lib).dxr_code_tokenizer_init()
-  _tokenizer_loaded = True
+  ctypes.CDLL("libtrilite.so").load_trilite_extension()
+  _trilite_loaded = True
 
 
 def connect_database(tree):
   """ Connect to database ensuring that dependencies are built first """
   # Build and load tokenizer if needed
-  load_tokenizer(tree.config)
+  load_trilite(tree.config)
   # Create connection
   conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
   # Configure connection
   conn.execute("PRAGMA synchronous=off")  # TODO Test performance without this
-  conn.execute("PRAGMA page_size=65535")  # TODO Test performance without this
+  conn.execute("PRAGMA page_size=32768")
+  # Optimal page should probably be tested, we get a hint from:
+  # http://www.sqlite.org/intern-v-extern-blob.html
   conn.text_factory = str
   conn.row_factory  = sqlite3.Row
-  # Initialize tokenizer
-  conn.execute("SELECT initialize_tokenizer()")
   return conn
 
 

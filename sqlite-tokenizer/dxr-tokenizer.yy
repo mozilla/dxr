@@ -49,21 +49,21 @@ typedef enum DXRTokenAction{
 
 %%
 "-"                                 UPDATE_LOCATION; /* discard - is a search query modifier */
-[a-zA-Z_]+[a-zA-Z_0-9]*							UPDATE_LOCATION; return ActionIdentifier;
-"\""												        UPDATE_LOCATION; return ActionQuote;
-[0-9]+("."[0-9]*)?									UPDATE_LOCATION; return ActionOther;
-"==="|"!=="											    UPDATE_LOCATION; return ActionOther;
-"//"|"/*"|"*/" 										  UPDATE_LOCATION; return ActionOther;
-"&&"|"||"|"."|"->"|"=>"							UPDATE_LOCATION; return ActionOther;
-"=="|"!="|"<="|">="|"<"|">"					UPDATE_LOCATION; return ActionOther;
-"+="|"-="|"*="|"&="|"^="|"~="				UPDATE_LOCATION; return ActionOther;
-"+"|"/"|"*"									  	    UPDATE_LOCATION; return ActionOther;
-"("|")"|"["|"]"|"{"|"}" 						UPDATE_LOCATION; return ActionOther;
-"="|":"|";"|"."|"!"|\\|"$"|"@"			UPDATE_LOCATION; return ActionOther; 
-"&"|"|"|"^"|"%" 									  UPDATE_LOCATION; return ActionOther;
-"~"|"#"|"?" 										    UPDATE_LOCATION; return ActionOther;
-".."|"--"|"<>"|"><"|","							UPDATE_LOCATION; return ActionOther;
-.													          UPDATE_LOCATION; /* discard */
+[a-zA-Z_]+[a-zA-Z_0-9]*             UPDATE_LOCATION; return ActionIdentifier;
+"\""                                UPDATE_LOCATION; return ActionQuote;
+[0-9]+("."[0-9]*)?                  UPDATE_LOCATION; return ActionOther;
+"==="|"!=="                         UPDATE_LOCATION; return ActionOther;
+"//"|"/*"|"*/"                      UPDATE_LOCATION; return ActionOther;
+"&&"|"||"|"."|"->"|"=>"             UPDATE_LOCATION; return ActionOther;
+"=="|"!="|"<="|">="|"<"|">"         UPDATE_LOCATION; return ActionOther;
+"+="|"-="|"*="|"&="|"^="|"~="       UPDATE_LOCATION; return ActionOther;
+"+"|"/"|"*"                         UPDATE_LOCATION; return ActionOther;
+"("|")"|"["|"]"|"{"|"}"             UPDATE_LOCATION; return ActionOther;
+"="|":"|";"|"."|"!"|\\|"$"|"@"      UPDATE_LOCATION; return ActionOther; 
+"&"|"|"|"^"|"%"                     UPDATE_LOCATION; return ActionOther;
+"~"|"#"|"?"                         UPDATE_LOCATION; return ActionOther;
+".."|"--"|"<>"|"><"|","             UPDATE_LOCATION; return ActionOther;
+.                                   UPDATE_LOCATION; /* discard */
 "\n"                                UPDATE_LOCATION; /* discard */
 %%
 
@@ -110,6 +110,7 @@ int main(int argc, char* argv[]){
     {"sda\"sdfdsf",                              3,    3,   ActionQuote     },
     {"33 identifier34c ?? -- ==",                5,    7,   ActionIdentifier},
     {"See how7his work",                         3,    3,   ActionEnd       },
+    {"permissions.js",                           2,    3,   ActionEnd       },
     {NULL, 0, 0}
   };
 
@@ -205,6 +206,13 @@ int main(int argc, char* argv[]){
   TEST_SQL("Insert into fts table",
            "INSERT INTO fts (rowid, content) "
            "VALUES (1, \"hello 'world' ju+st [testing].\")");
+
+  TEST_SQL("Insert into fts table",
+           "INSERT INTO fts (rowid, content) "
+           "VALUES (2, \"permissions.js\")");
+
+  TEST_SQL("Match in fts table",
+           "SELECT rowid FROM fts WHERE content MATCH \"'permissions.js'\"");
 
   // Close the connection
   if(verbose)
