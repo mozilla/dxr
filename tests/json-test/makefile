@@ -1,8 +1,9 @@
 all:
 	cat test.config.in | sed -e 's?PWD?'`pwd`'?g' > test.config
-	cd ../../; ./update.sh tests/json-test/test.config HelloWorld; cd -
+	cd ../../; ./dxr-build.py --file tests/json-test/test.config; cd -
 clean:
 	rm -rf test.config
-	rm -rf HelloWorld-obj
-	rm -rf www
+	rm -rf HelloWorld-objects
+	rm -rf temp
+	rm -rf target
 	cd HelloWorld; make clean; cd -

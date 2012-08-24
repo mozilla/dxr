@@ -368,13 +368,11 @@ function fetch_results(display_fetcher){
       }
       var results = document.getElementById("results");
       // Clear results if necessary
-      if(clear_on_set) results.innerHTML = "";
+      if(clear_on_set && !data["error"])
+        results.innerHTML = "";
       results.innerHTML += format_results(data);
-      if(!data["error"] && results.innerHTML == ""){
-        //noresults.style.display = "block";
-      }
-      if(data["error"] && results.innerHTML == ""){
-        //error.style.display = "block";
+      // Set error as tip
+      if(data["error"]){
         dxr.setTip("<b>" + data["error"] + "</b>");
       }
       request = null;

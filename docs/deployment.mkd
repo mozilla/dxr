@@ -35,11 +35,18 @@ the generated source code index.
 DXR have the following dependencies on the build servers
 
  - sqlite (`>= 3.7.4`)
+ - trilite (latest git revision)
  - python (`>= 2.5`)
  - jinja2 (`>= 2.4`)
  - pygments (`>= 1.4`)
- - flex (`>= 2.5`)
  - clang (`>= 3.0`)
+ - python-hglib (`>= 0.2`)
+
+DXR relies on TriLite for string matching. TriLite is an Sqlite extension for
+accelerated substring and regular expression matching. You can fetch latest
+revision from [github](https://github.com/jonasfj/trilite).
+Notice, that TriLite is under active development, and far from stable, so if
+you have problems with it, try another revision and file a bug.
 
 
 The Generated Source Code Index
@@ -73,6 +80,5 @@ DXR have the following dependencies on the webserver
  - sqlite (`>= 3.7.4`)
  - python (`>= 2.5`)
  - jinja2 (`>= 2.4`)
+ - trilite (latest git revision)
  - apache with `mod_rewrite`
-
-

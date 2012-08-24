@@ -1,17 +1,36 @@
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <link href="{{wwwroot}}/static/style.css" rel="stylesheet" type="text/css">
+    <link href="{{wwwroot}}/static/code-style.css" rel="stylesheet" type="text/css">
     <title>{% block title %}DXR Code Index{% endblock %}</title>
+    {% block head %}
+    {% endblock %}
   </head>
   <body>
     <div id="search-box">
       <form method="get" action="{{wwwroot}}/search">
-        <input type="hidden" name="tree" value="{{tree}}">
+        <b>Search:</b> 
         <input type="text"   name="q"    value="{{query}}" maxlength="2048" title="Search">
+        <input type="hidden" name="tree" value="{{tree}}">
+        <input type="hidden" name="redirect" value="true" id="redirect">
         <input type="submit" value="Search">
       </form>
     </div>
+    {% if panel %}
+    <div id="panel">
+      <a id="panel-toggle">
+        {%- block panel_title -%}
+        Navigation
+        {%- endblock -%}
+      </a>
+      <div id="panel-content">
+        {% block panel %}
+        {% endblock %}
+      </div>
+    </div>
+    {% endif %}
     <div id="content">
       {% block content %}
       {% endblock %}

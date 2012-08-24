@@ -25,7 +25,7 @@ class Config:
       'nb_jobs':          "1",
       'temp_folder':      "/tmp/dxr-temp",
       'log_folder':       "%(temp_folder)s/logs",
-      'template':         "%(dxrroot)s/templates/minimalistic",
+      'template':         "%(dxrroot)s/templates/mozilla",
       'wwwroot':          "/",
       'enabled_plugins':  "*",
       'disabled_plugins': " ",

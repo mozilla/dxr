@@ -29,7 +29,7 @@ _Configuration keys for the `DXR` section of the configuration file._
  - `temp_folder`        Temporary folder (default `/tmp/dxr-temp`)
  - `log_folder`         Log folder (default `<temp_folder>/logs`)
  - `template`           Template folder, see templating.mkd
-                        (default `<dxrroot>/templates/minimalistic`)
+                        (default `<dxrroot>/templates/mozilla`)
  - `wwwroot`            Virtual root on deployment server (default `/`)
  - `enabled_plugins`    Enabled plugins (default `*`)
  - `disabled_plugins`   Disabled plugins (default ` `)
@@ -114,6 +114,5 @@ configuration file.
  - `plugin_hg_hgweb`    Location of hg-web installation for this tree.
                         (Assumed to have default url layout)
  - `plugin_hg_section`  Section text (defaults to `Mercurial`)
- - `plugin_hq_bugzilla` URL of Bugzilla installation.
 
 

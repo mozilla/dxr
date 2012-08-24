@@ -67,13 +67,13 @@ class HgHtmlifier:
       icon  = gravatar_url + "&s=16"
       img   = gravatar_url + "&s=80"
       self.cache[rev] = {
-        'class':      "node note-blame",
-        'title':      cgi.escape(info.desc, True),
-        'style':      "background-image: url('%s');" % icon,
-        'changeset':  cgi.escape(info.node, True),
-        'user':       cgi.escape(info.author, True),
-        'date':       cgi.escape(date, True),
-        'img':        cgi.escape(img, True)
+        'class':              "note note-blame",
+        'title':              cgi.escape(info.desc.decode('utf-8', errors='ignore'), True),
+        'style':              "background-image: url('%s');" % icon,
+        'data-hg-changeset':  cgi.escape(info.node.decode('utf-8', errors='ignore'), True),
+        'data-hg-user':       cgi.escape(info.author.decode('utf-8', errors='ignore'), True),
+        'data-hg-date':       cgi.escape(date.decode('utf-8', errors='ignore'), True),
+        'data-hg-img':        cgi.escape(img, True)
       }
     return self.cache[rev]
 
@@ -81,6 +81,8 @@ class HgHtmlifier:
     nb = 0
     for info, line in self.blame:
       nb += 1
+      info = info.decode('utf-8', errors='ignore')
+      info = info.strip()
       rev, date = info.split(" ", 1)
       yield nb, self.hgLog(rev, date)
 

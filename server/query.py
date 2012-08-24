@@ -118,8 +118,8 @@ def fetch_results(conn, query,
 
   #TODO Actually do something with the has_extents, ie. don't fetch contents
 
-  utils.log(sql)
-  utils.log(arguments)
+  #utils.log(sql)
+  #utils.log(arguments)
 
   # Make a simple decoder for decoding unicode
   # Note that we need to operate in ascii inorder to handle
@@ -393,7 +393,7 @@ class TriLiteSearchFilter(SearchFilter):
       yield (
         """ files.ID NOT IN
               (SELECT id FROM trg_index WHERE %s)
-        """ % conds.join(" AND "),
+        """ % " AND ".join(conds),
         args, False)
   # Notice that extents is more efficiently handled in the search query
   # Sorry to break the pattern, but it's sagnificantly faster.

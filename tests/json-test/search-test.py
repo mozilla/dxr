@@ -3,7 +3,7 @@
 import sys, urllib2, json, traceback
 
 def search(query):
-  url = "http://localhost:3571/search.py?format=json&tree=HelloWorld&q=%s&redirect=false" % query
+  url = "http://localhost:3571/search?format=json&tree=HelloWorld&q=%s&redirect=false" % query
   data = urllib2.urlopen(url).read()
   return json.loads(data)
 

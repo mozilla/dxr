@@ -6,7 +6,7 @@ make
 echo "Ready to test"
 
 # Launch test server in background
-pushd www
+pushd target/server
 ./test-server.py --port 3571 2>/dev/null &
 popd
 

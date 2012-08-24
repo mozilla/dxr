@@ -3,6 +3,9 @@
 {% block title %}{{query}} - DXR Search{% endblock %}
 
 {% block content %}
+  {% if error %}
+    <b>{{error}}</b>
+  {% endif %}
   {% for path, lines in results %}
     <div class="result">
       <a class="path">{{path}}</a><br>
