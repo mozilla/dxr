@@ -39,6 +39,8 @@ _Configuration keys for the `DXR` section of the configuration file._
                         You might want to overwrite this to get the same date
                         on all files! (defaults to time of execution)
 
+(Refer to the Plugin Configuration section for plugin keys available here).
+
 Notice, it's strongly recommended that you provide a sane **temporary folder**,
 using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`
 is better, but preferable you'd want something on the same file system as the
@@ -79,6 +81,7 @@ keys listed below.
                         to ignore, for information on the pattern style, see
                         [fnmatch](http://docs.python.org/library/fnmatch.html)
 
+(Refer to the Plugin Configuration section for plugin keys available here).
 
 Notice that is strongly recommended that you don't defined the `temp_folder`,
 this feature is just here for completeness. If you define a `build_command`
@@ -94,4 +97,23 @@ you template of choice, to see which keys are relevant here.
 
 Usually this section is used to provide external links to source code
 repositories, or information about which revision of the tree is being indexed.
+
+
+Plugin Configuration
+--------------------
+Keys prefixed with `plugin_` in either a tree section or the DXR section will
+read and stored on the `config` and `tree` objects, available to plugins.
+These keys can be used to configure plugins, and some plugins might require
+these in order to work. Plugin developers are advised to name their
+configuration keys as `plugin_<plugin-name>_<key>`, refer to Plugins.mkd for
+more details on plugin development.
+
+Plugin keys listed below can be defined in the tree sections of the
+configuration file.
+
+ - `plugin_hg_hgweb`    Location of hg-web installation for this tree.
+                        (Assumed to have default url layout)
+ - `plugin_hg_section`  Section text (defaults to `Mercurial`)
+ - `plugin_hq_bugzilla` URL of Bugzilla installation.
+
 

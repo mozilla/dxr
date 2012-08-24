@@ -107,20 +107,12 @@ function initSearch(){
 
   // Fetch results, if any, on scroll to bottom of page
   window.addEventListener('scroll', function(e){
-    if(atPageBottom() && !state.eof) fetch_results();
+    if(atPageBottom() && !state.eof) fetch_results(true);
   }, false); 
-  
-  // Fields, and list of params used in advanced search
-  var fields = document.querySelectorAll("#advanced-search input[type=text]");
-  var params = [];
-  for(var i = 0; i < fields.length; i++){
-    if(fields[i].dataset.param)
-      params.push(fields[i].dataset.param);
-  }
 
   // Timer for when to fetch results during live-search
   var timer   = null;
-  var timeout = 300;  // use 300 ms
+  var timeout = 500;  // use 500 ms
 
   // Update advanced search fields on change in q
   q.addEventListener('keyup', function(e){
@@ -132,21 +124,17 @@ function initSearch(){
     state.eof     = false;
     state.changed = true;
     // Update advanced fields
-    var query = parseQuery(q.value, params);
-    // For each field, set it to the params
-    for(var i = 0; i < fields.length; i++){
-      // If it doesn't have a param, it's the terms
-      if(fields[i].dataset.param)
-        fields[i].value = query.args[fields[i].dataset.param].join(" ");
-      else
-        fields[i].value = query.terms.join(" ");
-    }
+    updateAdvancedFields();
     // Reset the timer
     if(timer) clearTimeout(timer);
     setTimeout(fetch_results, timeout);
   }, false);
 
+  // Update advanced fields imidiately
+  updateAdvancedFields();
+
   // Update query on change in any advanced search field
+  var fields = document.querySelectorAll("#advanced-search input[type=text]");
   for(var i = 0; i < fields.length; i++){
     fields[i].addEventListener('keyup', function(e){
       // Don't do anything if query didn't change
@@ -166,8 +154,30 @@ function initSearch(){
 
   // Fetch results if a bottom of page initially
   // this is necessary, otherwise one can't scroll
-  if(atPageBottom() && !state.eof) fetch_results();
+  if(atPageBottom() && !state.eof) fetch_results(true);
 }
+
+/** Update advanced fields to match content of q */
+function updateAdvancedFields(){
+  var q = document.getElementById("query");
+  var fields = document.querySelectorAll("#advanced-search input[type=text]");
+  var params = [];
+  for(var i = 0; i < fields.length; i++){
+    if(fields[i].dataset.param)
+      params.push(fields[i].dataset.param);
+  }
+  var query = parseQuery(q.value, params);
+  // For each field, set it to the params
+  for(var i = 0; i < fields.length; i++){
+    // If it doesn't have a param, it's the terms
+    if(fields[i].dataset.param)
+      fields[i].value = query.args[fields[i].dataset.param].join(" ");
+    else
+      fields[i].value = query.terms.join(" ");
+  }
+}
+
+var regexpParser = /^regexp:(.)(?:(?!\1).)+\1/;
 
 /** Parse query to dictionary with params
  * parameter arguments not in params will be considered terms
@@ -179,8 +189,20 @@ function parseQuery(q, params){
   var terms = [];
   var args = {};
 
+  // Remove regexp if there it needs special care
+  var idx = params.indexOf("regexp");
+  var hasRegExp = false;
+  if(idx != -1){
+    // Clone
+    params = params.slice();
+    // Remove regexp
+    params.splice(hasRegExp, 1);
+    hasRegExp = true;
+    args.regexp = [];
+  }
+
   // Build regular expression
-  var regexp = "";
+  var regexp = "^";
   for(var i = 0; i < params.length; i++){
     var param = params[i];
     regexp += "(" + param + ":[^ ]+)|";
@@ -188,7 +210,6 @@ function parseQuery(q, params){
     args[param] = [];
   }
   regexp += "(\"[^\"]+\")|([^ ]+)|([ ]+)";
-  var r = regexp;
   regexp = new RegExp(regexp);
 
   // While there's text to parse, get the next match
@@ -196,7 +217,19 @@ function parseQuery(q, params){
   while(m = regexp.exec(q)){
     // Length of token read, -1 for unknown
     var len = -1;
+    // Attempt to read a regular expression
+    var r = regexpParser.exec(q);
+    if(hasRegExp && r){
+      // Check for a match
+      if(r[0]){
+        args.regexp.push(r[0].substr(7));
+        len = r[0].length;
+      }
+    }
+
+    // Attempt to read one of the params
     for(var i = 0; i < params.length; i++){
+      if(len != -1) break;
       var param = params[i];
       var arg   = m[i + 1];
       // Arg is in fact defined we got it
@@ -208,26 +241,28 @@ function parseQuery(q, params){
       }
     }
     // If we didn't get an argument, it might be a phrase
-    if(len < 0 && m[params.length + 1]){
+    var arg = m[params.length + 1]
+    if(len < 0 && arg){
       // Leave the quotes on, and consider it a term
-      terms.push(m[params.length + 1]);
-      len = m[params.length + 1].length;
+      terms.push(arg);
+      len = arg.length;
     }
     // It can also be a term
-    if(len < 0 && m[params.length + 2]){
-      terms.push(m[params.length + 2]);
-      len = m[params.length + 2].length;
+    arg = m[params.length + 2]
+    if(len < 0 && arg){
+      terms.push(arg);
+      len = arg.length;
     }
     // It can also be whitespace
-    if(len < 0 && m[params.length + 3])
-      len = m[params.length + 3].length;
+    arg = m[params.length + 3]
+    if(len < 0 && arg)
+      len = arg.length;
     // Worst case we didn't get it right
     if(len < 0){
       len = 1;
       // Log and error for debuggin
       if(console && console.log)
         console.log("Failed to parse query '" + q + "'");
-      return {};
     }
     // Update q before we repeat
     q = q.substr(len);
@@ -239,18 +274,51 @@ function parseQuery(q, params){
   };
 }
 
+/** Used to parse advanced search query */
+var regexpFieldParser = /^((.)(?:(?!\2).)+\2)|^(\s+)/;
+
 /** Build a query from advanced search */
 function buildQueryFromAdvanced(){
-  var query = "";
+  var query = [];
   var fields = document.querySelectorAll("#advanced-search input[type=text]");
   for(var i = 0; i < fields.length; i++){
     var field = fields[i];
-    if(field.dataset.param && field.value != "")
-      query += field.dataset.param + ":";
-    if(field.value != "")
-      query += field.value + " ";
+    // Just add terms flat
+    if(!field.dataset.param){
+      // Notice how we normalize whitespace
+      query = [].concat(query, field.value.split("\\s+"));
+      continue;
+    }
+    // Magic to handle regular expressions
+    if(field.dataset.param == "regexp"){
+      var v = field.value;
+      var r;
+      while(r = regexpFieldParser.exec(v)){
+        var len = -1;
+        if(r[1]){
+          query.push("regexp:" + r[1]);
+          len = r[1].length;
+        }else if(r[3])
+          len = r[3].length;
+        // Continue with the rest of the string
+        v = v.substr(len);
+      }
+      // Regular expressions should be wrapped with same start and end letter
+      // which, we don't case just the same, we use # if non is specified.
+      if(v != "")
+        query.push("regexp:#" + v + "#");
+      continue;
+    }
+    // Split at every whitespace
+    var args = field.value.split("\\s+");
+    for(var j = 0; j < args.length; j++){
+      var arg = args[j];
+      if(arg == "") continue;
+      query.push(field.dataset.param + ":" + arg);
+    }
   }
-  return query;
+  // Notice whitespace normalization 
+  return query.join(" ");
 }
 
 // Current request
@@ -259,7 +327,8 @@ var request = null;
 var clear_on_set = false;
 
 /** Fetch results, using current state */
-function fetch_results(){
+function fetch_results(display_fetcher){
+
   // Stop if we're at end, nothing more to do
   if(state.eof && !state.changed) return;
   
@@ -275,7 +344,8 @@ function fetch_results(){
 
   // Show the fetcher line at the bottom
   var fetcher = document.getElementById("fetch-results");
-  fetcher.style.visibility = "visible";
+  if(display_fetcher)
+    fetcher.style.visibility = "visible";
 
   // Create request
   request = new XMLHttpRequest();
@@ -300,11 +370,12 @@ function fetch_results(){
       // Clear results if necessary
       if(clear_on_set) results.innerHTML = "";
       results.innerHTML += format_results(data);
-      if(!data["error"] && results.innerHTML == "")
-        noresults.style.display = "block";
+      if(!data["error"] && results.innerHTML == ""){
+        //noresults.style.display = "block";
+      }
       if(data["error"] && results.innerHTML == ""){
-        error.style.display = "block";
-        dxr.setTip(data["error"]);
+        //error.style.display = "block";
+        dxr.setTip("<b>" + data["error"] + "</b>");
       }
       request = null;
     }else if(request.readyState == 4){
@@ -377,15 +448,18 @@ function initMenu(){
     if(!path) return;
 
     // Parse querystring so we can make some urls
-    var params = parseQuerystring();
-    var query = params.q;
+    var params = {
+      tree:           tree,
+      limit:          state.limit,
+      redirect:       'false'
+    };
 
     // Create url to limit search
-    params.q = query + " path:" + path;
+    params.q = state.query + " path:" + path;
     var limit_url = createSearchUrl(params);
 
     // Create url to exclude path from search
-    params.q = query + " -path:" + path;
+    params.q = state.query + " -path:" + path;
     var exclude_url = createSearchUrl(params);
 
     // Populate menu with links

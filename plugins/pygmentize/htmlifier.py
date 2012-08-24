@@ -28,7 +28,11 @@ class Pygmentizer:
   def links(self):
     return []
 
-def htmlify(tree, conn, path, text):
+
+def load(tree, conn):
+  pass
+
+def htmlify(path, text):
   # TODO Enable C++ highlighting using pygments, pending fix for infinite
   # looping that we don't like, see:
   # https://bitbucket.org/birkenfeld/pygments-main/issue/795/

@@ -359,7 +359,7 @@ public:
     if (!interestingLocation(d->getLocation()))
       return;
     beginRecord("variable", d->getLocation());
-    recordValue("vname", d->getQualifiedNameAsString());
+    recordValue("vname", d->getNameAsString());
     recordValue("vloc", locationToString(d->getLocation()));
     recordValue("vtype", d->getType().getAsString(), true);
     printScope(d);

@@ -51,9 +51,14 @@ class Config:
     self.configfile       = configfile
     self.trees            = []
     # Set template paramters (using new parser to avoid defaults)
-    tmpl_cfg = ConfigParser.ConfigParser()
-    tmpl_cfg.read(configfile)
-    self.template_parameters = dict(tmpl_cfg.items('Template'))
+    tmp_cfg = ConfigParser.ConfigParser()
+    tmp_cfg.read(configfile)
+    self.template_parameters = dict(tmp_cfg.items('Template'))
+
+    # Read all plugin_ keys
+    for key, value in tmp_cfg.items('DXR'):
+      if key.startswith('plugin_'):
+        setattr(self, key, value)
 
     # Render all paths absolute
     self.dxrroot          = os.path.abspath(self.dxrroot)
@@ -123,6 +128,11 @@ class TreeConfig:
     self.configfile       = configfile
     self.config           = config
     self.name             = name
+
+    # Read all plugin_ keys
+    for key, value in parser.items(name):
+      if key.startswith('plugin_'):
+        setattr(self, key, value)
 
     # Convert ignore patterns to list
     self.ignore_patterns  = self.ignore_patterns.split()

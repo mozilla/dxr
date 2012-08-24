@@ -121,9 +121,9 @@ focuses, highlights and/or scrolls to line number `line_number`.
  - `icon`             File icon for use as favicon
  - `path`             Path of file being displayed
  - `lines`            List of lines as tuple of `(line_number, line, annotations)`
-                      where `annotations` is list of tuples `(attr, icon)` where
-                      `attr` is HTML element attributes and `icon` is the name of
-                      an icon.
+                      where `annotations` is list of dictionaries `attr` where
+                      keys can be `div` element attributes. See Plugins.mkd for
+                      more information.
  - `revision`         Revision, as returned by revision command in config file.
                       (Revision is assumed to be the same for the whole tree).
  - `sections`         List of sections as tuples of `(section, items)`, where

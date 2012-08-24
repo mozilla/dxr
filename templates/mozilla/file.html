@@ -12,38 +12,31 @@
 {% set panel = True %}
 
 {% block panel %}
-  <div class="section">
-    <h1>hg.mozilla.org</h1>
-    <a href="http://hg.mozilla.org/{{tree}}/filelog/{{config.revision}}/{{path}}"
-       style="background-image: url('{{wwwroot}}/static/icons/log.png');">Log</a>
-     <a href="http://hg.mozilla.org/{{tree}}/annotate/{{config.revision}}/{{path}}"
-       style="background-image: url('{{wwwroot}}/static/icons/blame.png');">Blame</a>
-     <a href="http://hg.mozilla.org/{{tree}}/diff/{{config.revision}}/{{path}}"
-       style="background-image: url('{{wwwroot}}/static/icons/diff.png');">Diff</a>
-     <a href="http://hg.mozilla.org/{{tree}}/raw-file/{{config.revision}}/{{path}}"
-       style="background-image: url('{{wwwroot}}/static/icons/raw.png');">Raw</a>
-  </div>
   {% for section, items in sections %}
   <div class="section">
     <h1>{{section}}</h1>
-    {% for icon, title, link_path, line in items %}
-      {% if link_path == path %}
-        <a href="#l{{line}}"
+    {% for icon, title, href in items %}
+      <a href="{{href}}"
         title="{{title}}"
         style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
         >{{title}}</a>
-      {% else %}
-        <a href="{{wwwroot}}/{{tree}}/{{path}}#l{{line}}"
-        title="{{title}}"
-        style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
-        >{{title}}</a>
-      {% endif %}
     {%- endfor %}
     </div>
   {% endfor %}
 {% endblock %}
 
 {% block content %}
+<div id="annotations">
+  {% for number, line, annotations in lines %}
+  <div class="annotation-set" id="aset-{{number}}">
+  {%- for annotation in annotations -%}
+  <div {% for key, value in annotation.items() %}
+        {{key}}="{{value}}"
+     {% endfor %} ></div>
+   {%- endfor -%}
+  </div>
+  {%- endfor -%}
+</div>
 <div class="line-numbers">
   {% for number, line, annotations in lines %}
   <pre><a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"
@@ -55,13 +48,6 @@
 <pre>
 {%- for number, line, annotations in lines %}
 <code aria-labelledby="line-{{number}}">{{line}}</code>
-{%- for annotation, icon in annotations -%}
-<div class="annotation"
-  {% for key, value in annotation.items() %}
-    {{key}}="{{value}}"
-  {% endfor %}
-  style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"></div>
-{%- endfor -%}
 {%- endfor -%}
 </pre>
 </div>

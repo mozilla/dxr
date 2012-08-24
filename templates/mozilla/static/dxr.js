@@ -11,7 +11,7 @@ dxr.setTip = function(text){
 
 
 /** Prettify Date an 822 date */
-function prettyDate(datetime){
+dxr.prettyDate = function(datetime){
   var d  = new Date(Date.parse(datetime));
   var ds = ((new Date()).getTime() - d.getTime()) / 1000;
   var dd = ds / (60 * 60 * 24);
@@ -38,7 +38,7 @@ function prettifyDates(){
   for(var i = 0; i < dates.length; i++){
     var date = dates[i];
     if(date.dataset["datetime"])
-      date.innerHTML = prettyDate(date.dataset["datetime"]);
+      date.innerHTML = dxr.prettyDate(date.dataset["datetime"]);
   }
 }
 

@@ -19,13 +19,16 @@ _parameters = ["path", "ext", "type", "type-ref", "function", "function-ref",
 _parameters += ["-" + param for param in _parameters] + ["+" + param for param
     in _parameters] + ["-+" + param for param in _parameters] + ["+-" + param for param in _parameters]
 
-_parameters += ['regexp', '-regexp']
-
 #TODO Support negation of phrases, support phrases as args to params, ie. path:"my path", or warning:"..."
 
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
-_pat = "((?P<param>%s):(?P<arg>[^ ]+))|(\"(?P<phrase>[^\"]+)\")|(-\"(?P<notphrase>[^\"]+)\")|(?P<keyword>[^ \"]+)"
+_pat = "(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
+_pat += "(?:(?P<param>%s):(?P<arg>[^ ]+))|"
+_pat += "(?:\"(?P<phrase>[^\"]+)\")|"
+_pat += "(?:-\"(?P<notphrase>[^\"]+)\")|"
+_pat += "(?P<keyword>[^ \"]+)"
+# Regexp for parsing regular expression
 _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 
 # Pattern for recognizing if a word will be tokenized as a single term.
@@ -40,6 +43,8 @@ class Query:
     self.params = {}
     for param in _parameters:
       self.params[param] = []
+    self.params["regexp"] = []
+    self.params["-regexp"] = []
     self.notwords = []
     self.keywords = []
     self.phrases = []
@@ -48,6 +53,8 @@ class Query:
     for token in (match.groupdict() for match in _pat.finditer(querystr)):
       if token["param"] and token["arg"]:
         self.params[token["param"]].append(token["arg"])
+      if token["regpar"] and token["regarg"]:
+        self.params[token["regpar"]].append(token["regarg"])
       if token["phrase"]:
         self.phrases.append(token["phrase"])
       if token["keyword"]:

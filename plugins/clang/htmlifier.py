@@ -275,10 +275,14 @@ class ClangHtmlifier:
 
 
   def annotations(self):
+    icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
     sql = "SELECT wmsg, file_line FROM warnings WHERE file_id = ?"
     for msg, line in self.conn.execute(sql, (self.file_id,)):
-      yield line, {'title': msg}, 'warning'
-
+      yield line, {
+        'title': msg,
+        'class': "note note-warning",
+        'style': icon
+      }
 
   def links(self):
     # For each type add a section with members
@@ -290,7 +294,7 @@ class ClangHtmlifier:
       links += list(self.member_variables(tid))
 
       # Sort them by line
-      links = sorted(links, key = lambda link: link[3])
+      links = sorted(links, key = lambda link: link[1])
 
       # Make sure we have a sane limitation of tkind
       if tkind not in ('class', 'struct', 'enum', 'union'):
@@ -298,7 +302,7 @@ class ClangHtmlifier:
         tkind = 'type'
 
       # Add the outer type as the first link
-      links.insert(0, (tkind, tname, self.path, tline))
+      links.insert(0, (tkind, tname, "#l%s" % tline))
 
       # Now return the type
       yield (30, tname, links)
@@ -307,7 +311,7 @@ class ClangHtmlifier:
     links = []
     sql = "SELECT macroname, file_line FROM macros WHERE file_id = ?"
     for macro, line in self.conn.execute(sql, (self.file_id,)):
-      links.append(('macro', macro, self.path, line))
+      links.append(('macro', macro, "#l%s" % line))
     if links:
       yield (100, "Macros", links)
 
@@ -322,7 +326,7 @@ class ClangHtmlifier:
     for fname, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
       if len(fname) == 0: continue
-      yield 'method', fname, self.path, line
+      yield 'method', fname, "#l%s" % line
 
 
   def member_variables(self, tid):
@@ -335,12 +339,18 @@ class ClangHtmlifier:
     for vname, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
       if len(vname) == 0: continue
-      yield 'field', vname, self.path, line
+      yield 'field', vname, "#l%s" % line
 
+_tree = None
+_conn = None
+def load(tree, conn):
+  global _tree, _conn
+  _tree = tree
+  _conn = conn
 
 #tokenizers = None
 _patterns = ('*.c', '*.cc', '*.cpp', '*.h', '*.hpp')
-def htmlify(tree, conn, path, text):
+def htmlify(path, text):
   #if not tokenizers:
   #  # HACK around the fact that we can't load modules from plugin folders
   #  # we'll probably need to fix this later,
@@ -351,9 +361,9 @@ def htmlify(tree, conn, path, text):
   if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
     # Get file_id, skip if not in database
     sql = "SELECT files.ID FROM files WHERE path = ? LIMIT 1"
-    row = conn.execute(sql, (path,)).fetchone()
+    row = _conn.execute(sql, (path,)).fetchone()
     if row:
-      return ClangHtmlifier(tree, conn, path, text, row[0])
+      return ClangHtmlifier(_tree, _conn, path, text, row[0])
   return None
 
 

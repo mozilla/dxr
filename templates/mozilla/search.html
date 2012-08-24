@@ -51,12 +51,12 @@
 <div class="section">
   <label for="substring-search">Text search</label>
   <input type="text" name="substring-search"
-  placeholder='Substring or "phrases"'
+  placeholder='Substring, "phrases"'
   style="background-image: url('{{wwwroot}}/static/icons/search.png');">
   <br>
   <label for="regexp-search">regexp:</label>
   <input type="text" name="regexp-search"
-  data-param="regexp" placeholder='Regular expressions'
+  data-param="regexp" placeholder='/(f|s)?prinf/'
   style="background-image: url('{{wwwroot}}/static/icons/regexp-search.png');">
   <br>
 </div>
@@ -94,13 +94,13 @@
   <br>
   <label for="warning">warning:</label>
   <input type="text" name="warning"
-  data-param="warning" placeholder="Warning substring"
+  data-param="warning" placeholder="unused variable"
   style="background-image: url('{{wwwroot}}/static/icons/search_warning.png');">
 </div>
 <div class="section">
   <h1>Case Insensitive Suffix Matching</h1>
   <label for="ext">ext:</label>
-  <input type="text" name="ext" data-param="ext" placeholder="File extension"
+  <input type="text" name="ext" data-param="ext" placeholder=".cpp"
   style="background-image: url('{{wwwroot}}/static/icons/path_search.png');">
 </div>
 <input type="submit" value="Search">

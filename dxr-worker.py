@@ -91,6 +91,8 @@ def build_html(tree, conn, start, end):
   """ Build HTML for file ids from start to end """
   # Load htmlifier plugins
   plugins = dxr.plugins.load_htmlifiers(tree)
+  for plugin in plugins:
+    plugin.load(tree, conn)
   # Build sql statement and arguments
   sql = """
   SELECT
@@ -132,7 +134,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
   # Create htmlifiers for this source
   htmlifiers = []
   for plugin in plugins:
-    htmlifier = plugin.htmlify(tree, conn, path, text)
+    htmlifier = plugin.htmlify(path, text)
     if htmlifier:
       htmlifiers.append(htmlifier)
   # Load template
@@ -341,7 +343,7 @@ def build_lines(tree, conn, path, text, htmlifiers):
     # Okay let's pop line annotations of the notes stack
     current_notes = []
     while len(notes) > 0 and notes[-1][0] == line_number:
-      current_notes.append(notes.pop()[1:3])
+      current_notes.append(notes.pop()[1])
 
     lines.append((line_number, line, current_notes))
   # Return all lines of the file, as we're done

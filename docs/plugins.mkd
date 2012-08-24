@@ -53,32 +53,55 @@ number of subprocess as specified by `tree.config.nb_jobs`.
 If a plugin desires to store information from pre- or post processing, it can
 do so in its own temporary directory, each plugin is allowed to use the
 temporary folder `<tree.temp_folder>/plugins/<plugin-name>`.
-(The temporary folder will remain untill htmlification is done).
+(The temporary folder will remain until htmlification is done).
 
 
 Plugin Htmlifier
 ----------------
 _Python plugin for htmlification of source files._
 
-This must be a python module with one function `htmlify(tree, conn, path, text)`,
-where `tree` and `conn` are tree config and connection, respectively.
-The `path` parameter is the path of the file in the tree, the `text` parameter
-is the file contents as string.
+This must be a python module with two functions `load(tree, conn)` and
+`htmlify(path, text)`. This module will be used by multiple processes
+concurrently, but in any given instance `load` will only be invoked once,
+to allow the module to load resources into global scope for simplicity and
+to facilitate caching.
+
+Once `load(tree, conn)` have been invoked with the tree config object
+and database connnection. The `htmlify(conn, path, text)` function may be
+invoked multiple times. The `path` parameter is the path of the file in the
+tree, the `text` parameter is the file contents as string.
 
 The `htmlify` function return either `None` or an object with methods `refs()`,
 `regions()`, `annotations()` and `links()`, which yields as defined below.
 
  - `refs()`            Yeilds tuples of `(start, end, menu)`
  - `regions()`         Yields tuples of `(start, end, class)`
- - `annotations()`     Yields tuples of `(line, icon, title, text)`
+ - `annotations()`     Yields tuples of `(line, attributes)` where `attributes`
+                       is a dictionary defined by plugins. It must be sensible
+                       to assign the key-value pairs as HTML attributes on a
+                       `div` tag, and `class` must contains `note note-<type>`
+                       where `type` can be used templates to differentiate
+                       annotations.
  - `links()`           Yeilds tuples of `(importance, section, items)`, where
-                       items is a generator of tuples of `(icon, title, path, line)`.
+                       items is a generator of tuples of `(icon, title, href)`.
                        `importance` is an integer used to sort sidebar sections.
 
 Note that the htmlifier module may not write to the database, it also strongly
 recommended that the htmlifier module doesn't write to the plugins temporary
-folder. It's a **strict requirement** that the htmlifier module maybe loaded
+folder. It is a **strict requirement** that the htmlifier module maybe loaded
 and used by multiple processes at the same time. For this reason the htmlifier
-is not allowed to have subprocesses either.
+is not allowed to have worker processes of their own.
+
+
+Plugin Configration
+-------------------
+Configuration keys prefixed with `plugin_` in the either a tree section or the
+DXR section of the configuration will be read and stored on the `tree` and
+`config` objects, respectively. Please note that these values will not have any
+default values, nor will they be present unless defined in the config file.
+
+It's the plugins responsibility to validate these values. Plugins are advised to
+prefix all config keys as `plugin_<plugin-name>_<key>`. It's also recommended
+that plugins document their keys in the plugin section of Configuration.mkd.relatively sane
 
 

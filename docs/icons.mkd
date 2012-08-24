@@ -62,6 +62,8 @@ Icons From FatCow Hosting
 Following icons originates from [FatCow](http://www.fatcow.com/free-icons)
 by FatCow hosting, licensed under Creative Commons Attribution 3.0 License.
 
+ - `user`
+
 
 Icons From Fugue
 ----------------

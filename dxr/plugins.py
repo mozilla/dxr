@@ -8,7 +8,7 @@ def indexer_exports():
 
 def htmlifier_exports():
   """ Htmlifier files should export these, for use as __all__"""
-  return ['htmlify']
+  return ['htmlify', 'load']
 
 
 def load_indexers(tree):

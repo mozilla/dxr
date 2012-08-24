@@ -116,11 +116,12 @@ pre { margin: 0px; }
 
 .ln {
   display:          block;
-  width:            5ex;
   text-align:       right;
   color:            #888;
   -moz-user-select: none;
   user-select:      none;
+  padding-left:     2ex;
+  padding-right:    4px;
 }
 
 .ln, .result a{
@@ -148,34 +149,55 @@ a.snippet:hover{
   background-color: #ccc;
 }
 
-.ln:hover > pre {background-color: #eee;}
+.ln:hover > pre {
+  background-color: #eee;
+}
 
-.line-numbers{
-  width:            5ex;
-  border-right:     1px dotted #ccc;
+div .line-numbers{
+  margin-right:     4px;
+  border-right:     1px solid #ccc;
   float:            left;
 }
 
-.file-lines{
-  margin-left:      6ex;
+#results .line-numbers{
+  width:    8ex;
 }
 
 .file-lines a{
   cursor:           pointer;
 }
 
-.annotation{
-  display:    inline-block;
-  float:      right;
-  height:     16px;
-  width:      16px;
+.note{
+  float:            left;
+  height:           16px;
+  width:            16px;
+  margin-bottom:    -1px;
+}
+
+#annotations .note-blame{
+  display:          none;
+  cursor:           pointer;
+}
+#annotations.blame .note{
+  display:          none;
+}
+#annotations.blame .note-blame{
+  display:          block;
+}
+
+#annotations{
+  float: left;
+}
+
+.annotation-set{
+  height: 15px;
 }
 
 .result div.path{
   font-family:          monospace;
   background-repeat:    no-repeat;
-  padding-left:         20px;
-  background-position:  2px 2px;
+  padding-left:         52px;
+  background-position:  32px 2px;
   padding-top:          2.5px;
   height:               17.5px;
 }
@@ -217,6 +239,16 @@ table.folder-content{
 #inline-menu a:hover{
   background-color:     #ccc;
 }
+
+#info-box{
+  background-color:     #eee;
+  display:              none;
+  position:             absolute;
+  padding:              5px;
+  z-index:              8;
+}
+
+#info-box img{ float: left; padding-right: 5px;}
 
 #fetch-results{
   background-color:     #eee;
