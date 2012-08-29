@@ -112,7 +112,7 @@ function initSearch(){
 
   // Timer for when to fetch results during live-search
   var timer   = null;
-  var timeout = 500;  // use 500 ms
+  var timeout = 300;  // use 300 ms
 
   // Update advanced search fields on change in q
   q.addEventListener('keyup', function(e){
@@ -353,12 +353,8 @@ function fetch_results(display_fetcher){
     if(request.readyState == 4 && request.status == 200){
       // Get error and no result pages
       var noresults = document.getElementById("no-results");
-      var error     = document.getElementById("expr-error");
       // Hide these pages
       noresults.style.display = 'none';
-      error.style.display     = 'none';
-      // Display a nice tip, in case there was an error
-      dxr.setTip("Displaying live search results as you type:");
       // Get data
       var data = JSON.parse(request.responseText);
       // Update state, if it wasn't changed
@@ -366,15 +362,16 @@ function fetch_results(display_fetcher){
         state.eof     = data["results"].length == 0;
         state.offset += data["results"].length;
       }
+      // Display a nice tip
+      dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
       var results = document.getElementById("results");
       // Clear results if necessary
       if(clear_on_set && !data["error"])
         results.innerHTML = "";
       results.innerHTML += format_results(data);
       // Set error as tip
-      if(data["error"]){
-        dxr.setTip("<b>" + data["error"] + "</b>");
-      }
+      if(data["error"])
+        dxr.setErrorTip(data["error"]);
       request = null;
     }else if(request.readyState == 4){
       // Something failed, who cares try again :)

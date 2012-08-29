@@ -24,6 +24,12 @@ contain these 3 files.
  - `indexer.py`            Build database
  - `htmlifier.py`          Generate metadata for HTML building
 
+Plugins should have a name without dash and other special characters not
+allowed in Python module names. Notice that the plugin folder will be added to
+the search path for modules, so plugin names shouldn't conflict with other
+modules, and plugins are able to import submodules from within their own plugin
+folder if it contains an `__init__.py` file.
+
 
 Plugin Makefile
 ---------------

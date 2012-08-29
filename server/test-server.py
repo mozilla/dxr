@@ -43,7 +43,7 @@ class DXRRequestHandler(CGIHTTPServer.CGIHTTPRequestHandler):
       # Let's try to find the tree
       tree = None
       for t in $trees:
-        if path.startswith(t):
+        if path.startswith(t + "/") or path == t:
           tree = t
           break
       if not tree:

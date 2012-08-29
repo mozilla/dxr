@@ -111,8 +111,10 @@ more details on plugin development.
 Plugin keys listed below can be defined in the tree sections of the
 configuration file.
 
- - `plugin_hg_hgweb`    Location of hg-web installation for this tree.
-                        (Assumed to have default url layout)
- - `plugin_hg_section`  Section text (defaults to `Mercurial`)
-
-
+ - `plugin_hg_hgweb`          Location of hg-web installation for this tree.
+                              (Assumed to have default url layout)
+ - `plugin_hg_section`        Section text (defaults to `Mercurial`)
+ - `plugin_buglink_name`      Name of the projects bug tracker installation.
+                              (eg. `bugzilla.mozilla.org`)
+ - `plugin_buglink_bugzilla`  URL pattern for buglinks, %s will be replaced with
+                              the bug number, this key must include `http://`

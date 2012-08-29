@@ -34,6 +34,7 @@ by Mark James, licensed under Creative Commons Attribution 2.5 License.
  - `page_white_code`
  - `page_white`
  - `page_white_wrench`
+ - `buglink`
  - `mimetypes/php`
  - `mimetypes/c`
  - `mimetypes/build`
@@ -61,8 +62,6 @@ Icons From FatCow Hosting
 -------------------------
 Following icons originates from [FatCow](http://www.fatcow.com/free-icons)
 by FatCow hosting, licensed under Creative Commons Attribution 3.0 License.
-
- - `user`
 
 
 Icons From Fugue

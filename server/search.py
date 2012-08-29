@@ -8,6 +8,8 @@ import config
 import utils
 import query
 
+import time
+
 # XXX: enable auto-flush on write - http://mail.python.org/pipermail/python-list/2008-June/668523.html
 # reopen stdout file descriptor with write mode
 # and 0 as the buffer size (unbuffered)
@@ -48,7 +50,8 @@ if tree not in config.trees:
   template = "error.html"
 else:
   # Parse the search query
-  q = query.Query(querystring.get("q", ""))
+  qtext = querystring.get("q", "").decode('utf-8')
+  q = query.Query(qtext)
   # Connect to database
   conn = utils.connect_db(tree)
   # Arguments for the template
@@ -74,13 +77,14 @@ else:
           </head>
         </html>
       """
-      q_escape = cgi.escape(querystring.get("q", ""), True)
+      q_escape = cgi.escape(qtext, True)
       print redirect % (config.wwwroot, tree, path, q_escape, line)
       sys.exit(0)
     # Okay let's try to make search results
     template = "search.html"
     # Catching any errors from sqlite, typically, regexp errors
     error = None
+    start = time.time()
     try:
       results = list(query.fetch_results(
         conn, q,
@@ -98,10 +102,11 @@ else:
         template = "error.html"
     if template == "search.html":
       # Search Template Variables
-      arguments["query"]            = cgi.escape(querystring.get("q", ""), True)
+      arguments["query"]            = cgi.escape(qtext, True)
       arguments["results"]          = results
       arguments["offset"]           = offset
       arguments["limit"]            = limit
+      arguments["time"]             = time.time() - start
   else:
     arguments["error"] = "Failed to establish database connection."
     template = "error.html"
@@ -113,13 +118,15 @@ if output_format == "json":
   import json
   # Tuples are encoded as lists in JSON, and these are not real
   # easy to unpack or read in Javascript. So for ease of use, we
-  # convert to dicitionaries before returning the json results.
+  # convert to dictionaries before returning the json results.
+  # If further discrepancies are introduced please document them in templating.mkd
   arguments["results"] = [
-      {
-        "icon":   icon,
-        "path":   path,
-        "lines":  [{"line_number": nb, "line": l} for nb, l in lines]
-      } for icon, path, lines in arguments["results"]]
+    {
+      "icon":   icon,
+      "path":   path,
+      "lines":  [{"line_number": nb, "line": l} for nb, l in lines]
+    } for icon, path, lines in arguments["results"]
+  ]
   json.dump(arguments, sys.stdout, indent = 2)
   sys.exit(0)
 
@@ -129,9 +136,9 @@ print 'Content-Type: text/html\n'
 # Load template system
 import jinja2
 env = jinja2.Environment(
-    loader          = jinja2.FileSystemLoader("template"),
-    auto_reload     = False,
-    bytecode_cache  = jinja2.FileSystemBytecodeCache("jinja_dxr_cache", "%s.cache")
+  loader          = jinja2.FileSystemLoader("template"),
+  auto_reload     = False,
+  bytecode_cache  = jinja2.FileSystemBytecodeCache("jinja_dxr_cache", "%s.cache")
 )
 
 # Get search template and dump it to stdout

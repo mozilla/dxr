@@ -20,7 +20,11 @@
         <img src="{{wwwroot}}/static/magmoz.png">
       </a>
       <div id="search-box-content">
-        <div id="tip">Enter search query here</div>
+        <div id="tip">
+          {%- block tip -%}
+            Enter search query here
+          {%- endblock -%}
+        </div>
         <div id="tree">You're browsing <b>{{tree}}</b></div>
         <div id="formwrap">
           <form method="get" action="{{wwwroot}}/search">

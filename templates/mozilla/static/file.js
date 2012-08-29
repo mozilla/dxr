@@ -19,24 +19,89 @@ function hashchanged(){
   } 
 }
 
+/** Add auxiliary string method for indexOf using regexp
+ * Credits to: http://stackoverflow.com/a/274094
+ */
+String.prototype.regexIndexOf = function(regex, startpos){
+  var indexOf = this.substring(startpos || 0).search(regex);
+  return (indexOf >= 0) ? (indexOf + (startpos || 0)) : indexOf;
+}
+
+/** Add auxiliary string method for LastIndexOf using regexp
+ * Credits to: http://stackoverflow.com/a/274094
+ */
+String.prototype.regexLastIndexOf = function(regex, startpos){
+  if(!regex.global){
+    var flags = "g" + (regex.ignoreCase ? "i" : "") + (regex.multiLine ? "m" : "");
+    regex = new RegExp(regex.source, flags);
+  }
+  if(typeof (startpos) == "undefined") {
+      startpos = this.length;
+  } else if(startpos < 0) {
+      startpos = 0;
+  }
+  var stringToWorkWith = this.substring(0, startpos + 1);
+  var lastIndexOf = -1;
+  var nextStop = 0;
+  while((result = regex.exec(stringToWorkWith)) != null) {
+      lastIndexOf = result.index;
+      regex.lastIndex = ++nextStop;
+  }
+  return lastIndexOf;
+}
+
 /** Initialize the context menu */
 function init_menu(){
-  var as = document.querySelectorAll(".file-lines a");
-  // Show menu when link is clicked
-  function showMenu(e){
-    var links = JSON.parse(e.target.dataset.menu);
+  var pre = document.querySelector(".file-lines pre");
+  // Show menu when text is clicked
+  pre.addEventListener('click', function(e){
+    // Abort if the target isn't a code node underneath
+    if(e.target == pre) return;
+    var links = []
+    // Find the word clicked
+    var s = window.getSelection();
+    // If there's a selection, we don't show menu, so users can copy/paste things
+    if(!s.isCollapsed) return;
+    var offset = s.focusOffset;
+    var text  = s.anchorNode.nodeValue;
+    var start = text.regexLastIndexOf(/\s/, offset) + 1;
+    var end   = text.regexIndexOf(/\s/, offset);
+    if(start == -1) start = 0;
+    if(end   == -1) end   = text.length;
+    var word = text.substr(start, end - start);
+    // Make work link
+    if(word.length > 0){
+      links.push({
+        icon:   'search', 
+        text:   "Search for \"" + htmlEntities(word) + "\"",
+        title:  "Search for documents with the substring \"" + htmlEntities(word) + "\"", 
+        href:   wwwroot + "/search?tree=" + encodeURIComponent(tree) + "&q=" + encodeURIComponent(word)
+      });
+    }
+    // Append menu from target, if any
+    if(e.target.dataset.menu){
+      links = [].concat(links, JSON.parse(e.target.dataset.menu));
+    }
+    if(links.length == 0) return;
     // Populate and launch menu
     menu.populate(links);
-    menu.launch(e.target);
+    if(e.target.dataset.menu){
+      menu.launch(e.target);
+    }else{
+      // Create a text range, and use it to get a bounding box
+      // Our range will never cross elements, because we create it from
+      // carat position, and when there's an actual non-empty selection
+      // well, we can't really get the position of the click as text offset.
+      var range = document.createRange();
+      range.setStart(s.anchorNode, start);
+      range.setEnd(s.anchorNode, end);
+      var left = range.getBoundingClientRect().left;
+      menu.launchAt(left, menu.posTop(e.target) + e.target.offsetHeight);
+    }
     // Stop event propagation
     e.preventDefault();
     e.stopPropagation();
-  }
-  // Add event listener to all relevant links
-  for(var i = 0; i < as.length; i++){
-    if(as[i].dataset["menu"])
-      as[i].addEventListener('click', showMenu, false);
-  }
+  }, false);
 }
 
 var pattern = /^#l[0-9]+$/;

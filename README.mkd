@@ -25,4 +25,4 @@ _This is a short list of major things that could be done to improve DXR._
   * Break `server/query.py` into multiple files and distribute them to relevant
     plugins, if they are plugin specific (depending on database schema design)
   * Use TriLite to accelerate substring matching for semantic searches.
-
+  * Migrate `server/search.py` from CGI to WSGI for better performance.

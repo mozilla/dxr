@@ -7,8 +7,16 @@ var dxr = {};
 dxr.setTip = function(text){
   var tip = document.getElementById("tip");
   tip.innerHTML = text;
+  var inputwrap = document.getElementById("inputwrap");
+  inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/page_white_find.png)";
 }
 
+/** Set search tip as error message */
+dxr.setErrorTip = function(text){
+  dxr.setTip("<b>" + text + "</b>");
+  var inputwrap = document.getElementById("inputwrap");
+  inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/warning.png)";
+}
 
 /** Prettify Date an 822 date */
 dxr.prettyDate = function(datetime){
@@ -25,7 +33,7 @@ dxr.prettyDate = function(datetime){
   if(ds < 7200) return "1 hour ago";
   if(dd < 1)    return Math.floor(ds / 3600) + " hours ago";
   if(dd < 2)    return "Yesterday";
-  if(dd < 7)    return dd + " days ago";
+  if(dd < 7)    return Math.floor(dd) + " days ago";
   if(dd < 31)   return Math.ceil(dd / 7) + " weeks ago";
   return d.toLocaleDateString();
 }

@@ -13,6 +13,8 @@ def htmlifier_exports():
 
 def load_indexers(tree):
   """ Load indexers for a given tree """
+  # Allow plugins to load from the plugin folder
+  sys.path.append(tree.config.plugin_folder)
   plugins = []
   for name in tree.enabled_plugins:
     path = os.path.join(tree.config.plugin_folder, name)
@@ -25,6 +27,7 @@ def load_indexers(tree):
 
 def load_htmlifiers(tree):
   """ Load htmlifiers for a given tree """
+  # Allow plugins to load from the plugin folder
   sys.path.append(tree.config.plugin_folder)
   plugins = []
   for name in tree.enabled_plugins:

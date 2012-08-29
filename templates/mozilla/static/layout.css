@@ -289,7 +289,7 @@ table.folder-content{
   text-align:           right;
 }
 
-#no-results, #expr-error{
+#no-results{
   display:              none;
   width:                100%;
   text-align:           center;

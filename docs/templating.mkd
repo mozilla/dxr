@@ -11,6 +11,7 @@ To learn about Jinja2 read the [template designers documentation](jinja.pocoo.or
 This document will assume you are familiar with Jinja2 and in particular the 
 template inheritance feature from Jinja2.
 
+
 DXR URL Layout
 --------------
 DXR assumes a simple URL layout, it is necessary to understand this for the
@@ -34,9 +35,9 @@ The search script is located in the www-folder, so `http://.../search` will get
 you the search page. Specifically `{{wwwroot}}/search`, `{{wwwroot}}` will be
 introduced later. The search page takes the querystring `q` as query and `tree`
 as tree. If `&format=json` is appended to the querystring, the search page will
-return results in JSON format. If `&force` is appended to the querystring the
-search page will **not** redirect to direct results, this is useful if users
-wants to return from a direct result.
+return results in JSON format. If `&redirect=false` is appended to the
+querystring the search page will **not** redirect to direct results, this is
+useful if users wants to return from a direct result.
 Querystring parameters `limit` and `offset` will be parsed as integers and
 passed to the template engine, to use or ignore as it sees fit.
 
@@ -100,6 +101,7 @@ _Variables specific to the search template._
  - `error`            Query error, usually from invalid regular expression.
  - `offset`           Querystring parameter `offset` as int, or 0.
  - `limit`            Querystring parameter `limit` as int, or 100.
+ - `time`             Query execution time in seconds (float)
 
 Notice that if there's less results than limit, there can be no more results for
 the given query. However, the opposite implication doesn't not always hold.
@@ -152,3 +154,12 @@ Error Template Variables
 ------------------------
 
  - `error`           Some sort of error message, preferably not human readable.
+
+
+Notes on JSON Interface
+-----------------------
+If `&format=json` is appended to the querystring for a search query, the results
+will be returned in JSON format. This option is only available for the search
+page. The JSON interface essentially outputs the template variables as documented
+in the "Search Template Variables" section. The only exception to this rule is
+that tuples are converted to dictionaries, as these are more natural in JSON.
