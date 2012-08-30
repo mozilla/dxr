@@ -5,9 +5,32 @@
 {% block head %}
 <script>
 window.addEventListener('load', function(){
-  window.addEventListener('dxr-state-changed', function(e){
-    var magmoz = document.getElementById('magmoz');
-    magmoz.style.display = 'none';
+  var qbox = document.getElementById('qbox');
+  // Hide box in center and display results
+  qbox.addEventListener('keyup', function(e){
+    var content = document.getElementById("content");
+    var querybox = document.getElementById("query");
+    var searchbox = document.getElementById("search-box");
+    searchbox.style.display = 'block';
+    query.value = qbox.value;
+    query.focus();
+    // Update state
+    state.query   = qbox.value;
+    state.offset  = 0;
+    state.eof     = false;
+    state.changed = true;
+    // Set tree correctly
+    var tree = document.getElementById("tree");
+    var qtree = document.getElementById("qtree");
+    tree.value = qtree.value;
+    // Clear content
+    content.innerHTML = "";
+    // Dispatch dxr-state-changed
+    window.dispatchEvent(
+      new CustomEvent( 'dxr-state-changed', {
+        detail: {}
+      })
+    );
   }, false);
 }, false);
 </script>
@@ -17,10 +40,22 @@ window.addEventListener('load', function(){
   max-height: 35%;
   width:      400px;
 }
+#search-box{
+  display:    none;
+}
+#qtree{
+  height:     18px;
+  margin:     0px;
+  padding:    0px;
+  border:     1px solid black;
+  outline:    none;
+  font-size:  0.8em;
+  font-weight: bold;
+}
 </style>
 {% endblock %}
 
-{% block body %}
+{% block content %}
 <div style="text-align: center;">
   <img src="{{wwwroot}}/static/magmoz.svg" id="magmoz">
   <div style="width: 100%; background-color: #eee; padding: 2ex 0px 2ex 0px">
@@ -28,15 +63,15 @@ window.addEventListener('load', function(){
       <form method="get" action="{{wwwroot}}/search">
         You can search
         {% if trees|length > 1%}
-          <select name="tree" id="tree">
+          <select name="tree" id="qtree">
             {% for tree in trees %}
               <option {% if loop.first -%}selected="selected"{%-endif-%}>{{tree}}</option>
             {% endfor %}
           </select>
         {% else %}
-          <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
+          <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="qtree">
         {% endif %} here
-        <input type="text" name="q" value="{{query}}" maxlength="2048" id="query"
+        <input type="text" name="q" value="{{query}}" maxlength="2048" id="qbox" accesskey="s"
         title="Search" style="width: 100%;font-family: monospace; border: 1px solid black; outline: none;">
       </form>
       or browse 
@@ -49,13 +84,11 @@ window.addEventListener('load', function(){
         <a href="{{tree}}/">{{tree}}</a>
       {%- endfor -%}
       .
-      <div id="tip"></div>
     </div>
-  </div>
-  <div id="content" style="text-align: left;">
-  </div>
-  <div id="foot">
   </div>
 </div>
 {% endblock %}
 
+{# We want an empty footer #}
+{% block foot %}
+{% endblock %}

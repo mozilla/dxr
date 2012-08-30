@@ -14,6 +14,13 @@ body{
   background-color: #eee;
 }
 
+#tree{
+  margin:               0px;
+  outline:              none;
+  font-size:            1em;
+  border:               1px solid black;
+  font-weight: bold;
+}
 
 #dxr{
   user-select:          none;
@@ -23,9 +30,14 @@ body{
   display:              block;
 }
 
-#treetip, #search-box-content #tip{
-    padding-top: 3px;
-    font-size: 0.8em;
+#search-box-content #tip{
+  padding-top: 3px;
+  font-size: 0.8em;
+}
+
+#treetip{
+  font-size: 0.8em;
+  padding-top: 1px;
 }
 
 #search-box-content #tip{

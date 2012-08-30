@@ -122,6 +122,20 @@ function initIncrementalSearch(){
   // Set fetch results time when state is changed
   window.addEventListener('dxr-state-changed', setFetchResultsTimer);
 
+  document.getElementById("tree").addEventListener('change', function(){
+    state.query   = q.value;
+    state.offset  = 0;
+    state.eof     = false;
+    state.changed = true;
+    state.changed = true;
+    // Dispatch dxr-state-changed
+    window.dispatchEvent(
+      new CustomEvent( 'dxr-state-changed', {
+        detail: {}
+      })
+    );
+  }, false);
+
   // Fetch results if a bottom of page initially
   // this is necessary, otherwise one can't scroll
   if(atPageBottom() && !state.eof) fetch_results(true);

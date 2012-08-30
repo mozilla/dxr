@@ -41,22 +41,31 @@
         <img src="{{wwwroot}}/static/magmoz.png">
       </a>
       <div id="search-box-content">
+        <form method="get" action="{{wwwroot}}/search">
         <div id="tip">
           {%- block tip -%}
             Enter search query here
           {%- endblock -%}
         </div>
-        <div id="treetip">You're browsing <b>{{tree}}</b></div>
+        <div id="treetip">You're browsing
+          {% if trees|length > 1%}
+          <select name="tree" id="tree">
+            {% for t in trees %}
+              <option {% if t == tree -%}selected="selected"{%-endif-%}>{{t}}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+            <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
+          {% endif %}
+        </div>
         <div id="formwrap">
-          <form method="get" action="{{wwwroot}}/search">
             <div id="inputwrap">
               <input type="text" id="query" name="q" value="{{query}}"
               maxlength="2048" title="Search" accesskey="s">
             </div>
-            <input type="hidden" name="tree" value="{{tree}}" id="tree">
             <input type="hidden" name="redirect" value="true" id="redirect">
-          </form>
         </div>
+        </form>
       </div>
     </div>
     {% if panel %}
