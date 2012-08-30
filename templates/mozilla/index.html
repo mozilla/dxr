@@ -2,9 +2,27 @@
 
 {% set state_eof = True %}
 
+{% block head %}
+<script>
+window.addEventListener('load', function(){
+  window.addEventListener('dxr-state-changed', function(e){
+    var magmoz = document.getElementById('magmoz');
+    magmoz.style.display = 'none';
+  }, false);
+}, false);
+</script>
+<style type="text/css">
+#magmoz{
+  max-width:  40%;
+  max-height: 35%;
+  width:      400px;
+}
+</style>
+{% endblock %}
+
 {% block body %}
 <div style="text-align: center;">
-  <img src="{{wwwroot}}/static/magmoz.svg" style="max-width: 40%; max-height: 35%; width: 400px;">
+  <img src="{{wwwroot}}/static/magmoz.svg" id="magmoz">
   <div style="width: 100%; background-color: #eee; padding: 2ex 0px 2ex 0px">
     <div style="width: 50%; margin: auto; text-align: left; font-family: sans-serif;">
       <form method="get" action="{{wwwroot}}/search">
