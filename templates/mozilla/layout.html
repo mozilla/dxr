@@ -6,9 +6,30 @@
     <link href="{{wwwroot}}/static/code-style.css" rel="stylesheet" type="text/css">
     <script>
       var wwwroot = "{{wwwroot}}";
-      var tree    = "{{tree}}";
     </script>
     <script src="{{wwwroot}}/static/dxr.js"></script>
+    <script src="{{wwwroot}}/static/menu.js"></script>
+    <script src="{{wwwroot}}/static/search.js"></script>
+    <script>
+    // State used for fetching results
+    var state = {
+      // Current query (loaded from q in initIncrementalSearch)
+      // This, avoid ugly decoding, otherwise needed
+      query:        null,
+      // Offset for next request
+      offset:       {{state_offset or 0}},
+      // Number of results when paging
+      limit:        {{state_limit or 100}},
+      // True, if there's no more result
+      eof:          {% if state_eof -%}
+                      true
+                    {%-else-%}
+                      false
+                    {%-endif %},
+      // True, when this state is modified by user through search box
+      changed:      false
+    };
+  </script>
     {% block head %}
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
@@ -25,14 +46,14 @@
             Enter search query here
           {%- endblock -%}
         </div>
-        <div id="tree">You're browsing <b>{{tree}}</b></div>
+        <div id="treetip">You're browsing <b>{{tree}}</b></div>
         <div id="formwrap">
           <form method="get" action="{{wwwroot}}/search">
             <div id="inputwrap">
               <input type="text" id="query" name="q" value="{{query}}"
               maxlength="2048" title="Search" accesskey="s">
             </div>
-            <input type="hidden" name="tree" value="{{tree}}">
+            <input type="hidden" name="tree" value="{{tree}}" id="tree">
             <input type="hidden" name="redirect" value="true" id="redirect">
           </form>
         </div>
@@ -65,6 +86,11 @@
       {% endblock %}
     </div>
     {% endblock %}
+    <div id="fetch-results">
+      <img src="{{wwwroot}}/static/view-refresh.svg"
+           style="vertical-align: middle;">
+      Fetching results
+    </div>
     <div id="inline-menu"></div>
     <div id="info-box"></div>
   </body>

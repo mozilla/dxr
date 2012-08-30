@@ -2,8 +2,10 @@ Deployment of DXR
 =================
 _This document details how to deploy DXR for a project._
 
-DXR is designed to generated a source code index for one more trees offline, preferably on a dedicated build server, the generated index is then uploaded
+DXR is designed to generated a source code index for one more trees offline,
+preferably on a dedicated build server, the generated index is then uploaded
 to a webserver for hosting.
+
 
 Build DXR and Associated Plugins
 --------------------------------

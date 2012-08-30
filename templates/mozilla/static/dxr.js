@@ -8,14 +8,16 @@ dxr.setTip = function(text){
   var tip = document.getElementById("tip");
   tip.innerHTML = text;
   var inputwrap = document.getElementById("inputwrap");
-  inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/page_white_find.png)";
+  if(inputwrap)
+    inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/page_white_find.png)";
 }
 
 /** Set search tip as error message */
 dxr.setErrorTip = function(text){
   dxr.setTip("<b>" + text + "</b>");
   var inputwrap = document.getElementById("inputwrap");
-  inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/warning.png)";
+  if(inputwrap)
+    inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/warning.png)";
 }
 
 /** Prettify Date an 822 date */
@@ -48,6 +50,11 @@ function prettifyDates(){
     if(date.dataset["datetime"])
       date.innerHTML = dxr.prettyDate(date.dataset["datetime"]);
   }
+}
+
+/** Get current tree */
+dxr.tree = function(){
+  return document.getElementById("tree").value;
 }
 
 /** Initialize everything */

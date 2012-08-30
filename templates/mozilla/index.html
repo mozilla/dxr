@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% set state_eof = True %}
+
 {% block body %}
 <div style="text-align: center;">
   <img src="{{wwwroot}}/static/magmoz.svg" style="max-width: 40%; max-height: 35%; width: 400px;">
@@ -8,15 +10,15 @@
       <form method="get" action="{{wwwroot}}/search">
         You can search
         {% if trees|length > 1%}
-          <select name="tree">
+          <select name="tree" id="tree">
             {% for tree in trees %}
               <option {% if loop.first -%}selected="selected"{%-endif-%}>{{tree}}</option>
             {% endfor %}
           </select>
         {% else %}
-          <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}">
+          <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
         {% endif %} here
-        <input type="text" name="q" value="{{query}}" maxlength="2048"
+        <input type="text" name="q" value="{{query}}" maxlength="2048" id="query"
         title="Search" style="width: 100%;font-family: monospace; border: 1px solid black; outline: none;">
       </form>
       or browse 
@@ -29,7 +31,12 @@
         <a href="{{tree}}/">{{tree}}</a>
       {%- endfor -%}
       .
+      <div id="tip"></div>
     </div>
+  </div>
+  <div id="content" style="text-align: left;">
+  </div>
+  <div id="foot">
   </div>
 </div>
 {% endblock %}

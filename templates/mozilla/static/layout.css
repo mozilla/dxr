@@ -23,16 +23,16 @@ body{
   display:              block;
 }
 
-#tip, #tree{
+#treetip, #search-box-content #tip{
     padding-top: 3px;
     font-size: 0.8em;
 }
 
-#tip{
+#search-box-content #tip{
     float: left;
 }
 
-#tree{
+#treetip{
     float: right;
 }
 
@@ -159,7 +159,7 @@ div .line-numbers{
   float:            left;
 }
 
-#results .line-numbers{
+.result .line-numbers{
   width:    8ex;
 }
 
@@ -290,7 +290,6 @@ table.folder-content{
 }
 
 #no-results{
-  display:              none;
   width:                100%;
   text-align:           center;
 }

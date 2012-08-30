@@ -75,7 +75,7 @@ function init_menu(){
         icon:   'search', 
         text:   "Search for \"" + htmlEntities(word) + "\"",
         title:  "Search for documents with the substring \"" + htmlEntities(word) + "\"", 
-        href:   wwwroot + "/search?tree=" + encodeURIComponent(tree) + "&q=" + encodeURIComponent(word)
+        href:   wwwroot + "/search?tree=" + encodeURIComponent(dxr.tree()) + "&q=" + encodeURIComponent(word)
       });
     }
     // Append menu from target, if any
@@ -144,20 +144,21 @@ function init_tip(){
   }
   if(query){
     // Set a nice search tip, so people can go the results
-    var url = wwwroot + "/search?tree=" + tree + "&q=" + query + "&redirect=false";
+    var url = wwwroot + "/search?tree=" + dxr.tree() + "&q=" + query + "&redirect=false";
     text = ("You've been taken to a direct result " +
                      "<a href='{{url}}'>click here</a>" + 
                      " to see all search results").replace("{{url}}", url);
     dxr.setTip(text);
     // Insert the query into the search field
     var q = document.getElementById("query");
-    q.value = query;
+    q.value     = query;
+    state.query = query;
     // Make search field redirect = false, untill user types a different query
     var redirect = document.getElementById("redirect");
     redirect.value = "false";
     q.focus();
-    q.addEventListener('keyup', function(){
-      if(q.value != query)
+    window.addEventListener('dxr-state-changed', function(){
+      if(state.query != query)
         redirect.value = "true";
       else
         redirect.value = "false";

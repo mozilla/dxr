@@ -1,6 +1,5 @@
 {% extends "layout.html" %}
 
-
 {% block title %}{{query}} - DXR Search{% endblock %}
 
 {% block tip -%}
@@ -11,30 +10,13 @@
   {%- endif -%}
 {%- endblock %}
 
+{% set state_offset = offset + results|length %}
+{% set state_limit  = limit %}
+{% set state_eof    = results|length < limit %}
+
 {% block head %}
-  <script src="{{wwwroot}}/static/menu.js"></script>
   <script src="{{wwwroot}}/static/panel.js"></script>
-  <script>
-    // State used for fetching results
-    var state = {
-      // Current query (loaded from q in initSearch)
-      // This, avoid ugly decoding, otherwise needed
-      query:        null,
-      // Offset for next request
-      offset:       {{offset + results|length}},
-      // Number of results when paging
-      limit:        {{limit}},
-      // True, if there's no more result
-      eof:          {% if results|length < limit -%}
-                      true
-                    {%-else-%}
-                      false
-                    {%-endif %},
-      // True, when this state is modified by user through search box
-      changed:      false
-    };
-  </script>
-  <script src="{{wwwroot}}/static/search.js"></script>
+  <script src="{{wwwroot}}/static/advanced-search.js"></script>
   {% if error %}
   <script>
     window.addEventListener('load', function(){
@@ -42,8 +24,6 @@
       dxr.setErrorTip("{{error}}");
     });
   </script>
-  {% elif results|length == 0 %}
-  <style> #no-results {display: block;} </style>
   {% endif %}
 {% endblock %}
 
@@ -116,7 +96,6 @@
 
 {# When updating results remember to update it in search.js too! #}
 {% block content %}
-  <div id="results">
   {% for icon, path, lines in results %}
     <div class="result">
       <div class="path"
@@ -144,8 +123,7 @@
       {%- endfor %}
       {% endif %}
     </div>
-  {% endfor %}
-  </div>
+  {% else %}
   <div id="no-results">
     <img src="{{wwwroot}}/static/garbage.svg"
          style="padding-top: 50px; width: 400px;">
@@ -153,6 +131,7 @@
       Sorry, no results!
     </div>
   </div>
+  {% endfor %}
 {% endblock %}
 
 {% block foot %}
@@ -173,10 +152,5 @@
     <a style="float: right;"
        href="{{search_url}}&offset={{next}}&limit={{limit}}">Next page</a>
   {% endif %}
-</div>
-  <div id="fetch-results">
-    <img src="{{wwwroot}}/static/view-refresh.svg"
-         style="vertical-align: middle;">
-    Fetching results
   </div>
 {% endblock %}
