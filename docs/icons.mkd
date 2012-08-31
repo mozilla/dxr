@@ -35,6 +35,7 @@ by Mark James, licensed under Creative Commons Attribution 2.5 License.
  - `page_white`
  - `page_white_wrench`
  - `buglink`
+ - `external_link`
  - `mimetypes/php`
  - `mimetypes/c`
  - `mimetypes/build`
