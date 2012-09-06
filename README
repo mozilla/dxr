@@ -1,5 +1,6 @@
 DXR
 ---
+**Warning** this document is **outdated**. The DXR master branch contains DXR as deployed on dxr.mozilla.org, at this point in time new deployments are recommended to use the testing branch.
 
 Introduction:
 -------------
