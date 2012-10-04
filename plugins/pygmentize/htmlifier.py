@@ -36,7 +36,7 @@ def htmlify(path, text):
   # TODO Enable C++ highlighting using pygments, pending fix for infinite
   # looping that we don't like, see:
   # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
-  if any((path.endswith(e) for e in ('.c', '.cc', '.cpp', '.h', '.hpp'))):
+  if any((path.endswith(e) for e in ('.c', '.cc', '.cpp', '.cxx', '.h', '.hpp'))):
     return None
   # Options and filename
   options   = {'encoding': 'utf-8'}

@@ -349,7 +349,7 @@ def load(tree, conn):
   _conn = conn
 
 #tokenizers = None
-_patterns = ('*.c', '*.cc', '*.cpp', '*.h', '*.hpp')
+_patterns = ('*.c', '*.cc', '*.cpp', '*.cxx', '*.h', '*.hpp')
 def htmlify(path, text):
   #if not tokenizers:
   #  # HACK around the fact that we can't load modules from plugin folders
