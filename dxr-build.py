@@ -46,7 +46,7 @@ def main(argv):
         sys.exit(1)
       tree = opt
     elif arg in ('-j', '--jobs'):
-      nb_jobs = int(opt)
+      nb_jobs = opt
     elif arg in ('-s', '--server'):
       make_server = True
     else:
