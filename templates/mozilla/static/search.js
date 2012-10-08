@@ -23,7 +23,8 @@ var lines_template = ""
 /** Format a template and return it */
 function format_template(template, vars){
   for(var k in vars){
-    template = template.replace(new RegExp("\\{\\{" + k + "\\}\\}", "g"), vars[k]);
+    var value = vars[k].toString().replace(new RegExp("\\$", "g"), "$$$$");
+    template = template.replace(new RegExp("\\{\\{" + k + "\\}\\}", "g"), value);
   }
   return template;
 }
