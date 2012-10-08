@@ -82,6 +82,8 @@ schema = dxr.schema.Schema({
   # Warnings found while compiling
   "warnings": [
     ("wmsg", "VARCHAR(256)", False), # Text of the warning
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True),
   ],
   # Declaration/definition mapping
@@ -311,6 +313,7 @@ def process_ref(args, conn):
 def process_warning(args, conn):
   if not fixupEntryPath(args, 'wloc', conn):
     return None
+  fixupExtent(args, 'extent')
   return schema.get_insert_sql('warnings', args)
 
 def process_macro(args, conn):
