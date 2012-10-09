@@ -14,7 +14,7 @@ import re
 # List of parameters to isolate in the search query, ie. path:mypath
 _parameters = ["path", "ext", "type", "type-ref", "function", "function-ref",
 "var", "var-ref", "macro", "macro-ref", "callers", "called-by", "warning",
-"bases", "derived", "member"]
+"warning-opt", "bases", "derived", "member"]
 
 _parameters += ["-" + param for param in _parameters] + ["+" + param for param
     in _parameters] + ["-+" + param for param in _parameters] + ["+-" + param for param in _parameters]
@@ -783,6 +783,22 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "warnings.wmsg",
     qual_name     = "warnings.wmsg" 
+))
+
+
+#warning-opt filter
+filters.append(ExistsLikeFilter(
+    param         = "warning-opt",
+    filter_sql    = """SELECT 1 FROM warnings
+                        WHERE %s
+                          AND warnings.file_id = files.ID """,
+    ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
+                         FROM warnings
+                        WHERE warnings.file_id = ?
+                          AND %s
+                    """,
+    like_name     = "warnings.wopt",
+    qual_name     = "warnings.wopt"
 ))
 
 

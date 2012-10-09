@@ -82,6 +82,7 @@ schema = dxr.schema.Schema({
   # Warnings found while compiling
   "warnings": [
     ("wmsg", "VARCHAR(256)", False), # Text of the warning
+    ("wopt", "VARCHAR(64)", True),   # option controlling this warning (-Wxxx)
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
