@@ -8,13 +8,10 @@ all: build
 
 
 build: $(BUILD_PLUGINS)
-	$(MAKE) -C sqlite-tokenizer build
 
 check: $(CHECK_PLUGINS)
-	$(MAKE) -C sqlite-tokenizer check
 
 clean: $(CLEAN_PLUGINS)
-	$(MAKE) -C sqlite-tokenizer clean
 
 
 $(BUILD_PLUGINS):
