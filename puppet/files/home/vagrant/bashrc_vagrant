@@ -1,0 +1,2 @@
+# appended to Vagrant's default bashrc
+export LD_LIBRARY_PATH=/home/vagrant/dxr/trilite
