@@ -53,7 +53,7 @@ def WriteOpenSearch(name, hosturl, virtroot, wwwdir):
     finally:
       fp.close()
   except IOError:
-    print('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
+    debugprint('Error writing opensearchfile (%s): %s' % (name, sys.exc_info()[1]))
     return None
 
 def async_toHTML(treeconfig, srcpath, dstfile, dbdir):
@@ -63,7 +63,7 @@ def async_toHTML(treeconfig, srcpath, dstfile, dbdir):
   try:
     dxr.htmlbuilders.make_html(srcpath, dstfile, treeconfig, big_blob, conn)
   except Exception, e:
-    print 'Error on file %s:' % srcpath
+    debugprint('Error on file %s:' % srcpath)
     import traceback
     traceback.print_exc()
   finally:
@@ -95,7 +95,7 @@ def make_index(file_list, dbdir, treecfg):
       if cur.lastrowid % 100 == 0:
         conn.commit()
     except:
-      print "Error inserting FTS for file '%s': %s" % (fname[0], sys.exc_info()[1])
+      debugprint("Error inserting FTS for file '%s': %s" % (fname[0], sys.exc_info()[1]))
 
   cur.close()
   conn.commit()
@@ -194,6 +194,10 @@ def getdbconn(treecfg, dbdir):
 
   return conn
 
+def debugprint(string):
+  print string
+  sys.stdout.flush()
+
 
 def builddb(treecfg, dbdir, tmproot):
   """ Post-process the build and make the SQL directory """
@@ -202,7 +206,7 @@ def builddb(treecfg, dbdir, tmproot):
   # Build the sql for later queries. This is a combination of the main language
   # schema as well as plugin-specific information. The pragmas that are
   # executed should make the sql stage go faster.
-  print "Building SQL..."
+  debugprint("Building SQL...")
   conn = getdbconn(treecfg, dbdir)
 
   # We use this all over the place, cache it here.
@@ -282,7 +286,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     n = cpu_count()
     p = Pool(processes=n)
 
-    print 'Building HTML files for %s...' % treecfg.tree
+    debugprint('Building HTML files for %s...' % treecfg.tree)
 
     debug = (debugfile is not None)
 
@@ -300,7 +304,7 @@ def indextree(treecfg, doxref, dohtml, debugfile):
     if debugfile:
       output_files = glob.glob (treecfg.sourcedir + '/' + debugfile)
       if output_files == []:
-        print 'Error: Glob %s doesn\'t match any files' % debugfile
+        debugprint('Error: Glob %s doesn\'t match any files' % debugfile)
         sys.exit (1)
     last_dir = None
     conn = getdbconn(treecfg, dbdir)
@@ -344,12 +348,12 @@ def indextree(treecfg, doxref, dohtml, debugfile):
       try:
         dxr.htmlbuilders.make_html(srcpath, cpypath + ".html", treecfg, big_blob, conn, dbpath)
       except Exception, e:
-        print 'Error on file %s:' % srcpath
+        debugprint('Error on file %s:' % srcpath)
         import traceback
         traceback.print_exc()
 
     if file_list == []:
-        print 'Error: No files found to index'
+        debugprint('Error: No files found to index')
         sys.exit (0)
 
     p.apply_async(make_index, [file_list, dbdir, treecfg])
@@ -449,7 +453,7 @@ def main(argv):
     ctypes_init_tokenizer()
   except:
     msg = sys.exc_info()[1] # Python 2/3 compatibility
-    print "Could not load tokenizer: %s" % msg
+    debugprint("Could not load tokenizer: %s" % msg)
     sys.exit(2)
 
   try:
