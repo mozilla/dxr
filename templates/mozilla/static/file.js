@@ -248,7 +248,7 @@ window.addEventListener('load', function (){
   init_tip();
   init_menu();
   hijackBlame();
-  hashchanged();
+  setTimeout(hashchanged, 0);
 }, false);
 
 }());

@@ -503,6 +503,16 @@ public:
   }
 
   // Warnings!
+  SourceLocation getWarningExtentLocation(SourceLocation loc) {
+    while (loc.isMacroID()) {
+      if (sm.isMacroArgExpansion(loc))
+        loc = sm.getImmediateSpellingLoc(loc);
+      else
+        loc = sm.getImmediateExpansionRange(loc).first;
+    }
+    return loc;
+  }
+
   virtual void HandleDiagnostic(DiagnosticsEngine::Level level,
       const Diagnostic &info) {
     DiagnosticConsumer::HandleDiagnostic(level, info);
@@ -517,6 +527,17 @@ public:
     beginRecord("warning", info.getLocation());
     recordValue("wloc", locationToString(info.getLocation()));
     recordValue("wmsg", message.c_str(), true);
+    StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
+    if (!opt.empty())
+      recordValue("wopt", ("-W" + opt).str());
+    if (info.getNumRanges() > 0) {
+      const CharSourceRange &range = info.getRange(0);
+      printExtent(getWarningExtentLocation(range.getBegin()),
+                  getWarningExtentLocation(range.getEnd()));
+    } else {
+      SourceLocation loc = getWarningExtentLocation(info.getLocation());
+      printExtent(loc, loc);
+    }
     *out << std::endl;
   }
 

@@ -100,7 +100,7 @@ function parseQuery(q, params){
 
 
 /** Used to parse advanced search query */
-var regexpFieldParser = /^((.)(?:(?!\2).)+\2)|^(\s+)/;
+var regexpFieldParser = /^((\S)(?:(?!\2).)+\2)|^(\s+)/;
 
 /** Build a query from advanced search */
 function buildQueryFromAdvanced(){
@@ -111,7 +111,8 @@ function buildQueryFromAdvanced(){
     // Just add terms flat
     if(!field.dataset.param){
       // Notice how we normalize whitespace
-      query = [].concat(query, field.value.split("\\s+"));
+      if (field.value != "")
+        query = [].concat(query, field.value.split(/\s+/));
       continue;
     }
     // Magic to handle regular expressions
@@ -135,7 +136,7 @@ function buildQueryFromAdvanced(){
       continue;
     }
     // Split at every whitespace
-    var args = field.value.split("\\s+");
+    var args = field.value.split(/\s+/);
     for(var j = 0; j < args.length; j++){
       var arg = args[j];
       if(arg == "") continue;
@@ -204,6 +205,12 @@ function initAdvancedSearch(){
 /** Update advanced fields to match content of q */
 function updateAdvancedFields(){
   var q = document.getElementById("query");
+  // If only inconsequential things like whitespace have changed, don't modify
+  // the advanced fields.  This avoids trailing whitespace getting eaten and
+  // the regexp field from behaving oddly when it doesn't yet have matching
+  // beginning and ending delimiters.
+  if (q.value == buildQueryFromAdvanced())
+    return;
   var fields = document.querySelectorAll("#advanced-search input[type=text]");
   var params = [];
   for(var i = 0; i < fields.length; i++){
