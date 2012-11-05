@@ -202,7 +202,11 @@ div .line-numbers{
 }
 
 .annotation-set{
-  height: 15px;
+  font-family: monospace;
+}
+
+.annotation-set:after{
+  content: "\a0";  /* non-breaking space */
 }
 
 .result div.path{

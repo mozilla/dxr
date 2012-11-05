@@ -1,7 +1,7 @@
 LLVM_LIBS := $(shell llvm-config --libdir)
 CXXFLAGS := $(shell llvm-config --cflags) -Wall \
 	-fno-exceptions -fno-rtti \
-	-I$(shell llvm-config --includedir)
+	-I$(shell llvm-config --includedir) $(if $(DEBUG),-O0 -g)
 LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' -L$(LLVM_LIBS) -shared
 
 build: libclang-index-plugin.so
