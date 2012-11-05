@@ -271,6 +271,7 @@ function createSearchUrl(params){
   }
   return wwwroot + "/search?" + elements.join("&");
 }
+window.createSearchUrl = createSearchUrl;  // used in advanced-search.js
 
 
 /** Initialize the context menu */
