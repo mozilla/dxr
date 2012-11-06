@@ -5,6 +5,11 @@ var menu = {};
 /** Menu id */
 var _menu_id = 'inline-menu';
 
+/** Escape HTML Entitites */
+function htmlEntities(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /** Launch a menu under element el */
 menu.launch = function(el){
   var x, y;
@@ -21,10 +26,10 @@ menu.populate = function(links){
   for(var i = 0; i < links.length; i++){
     var link = links[i];
     var icon = wwwroot + "/static/icons/" + link.icon + ".png";
-    content += "<a href='" + link.href + "'";
-    content += " title='" + link.title + "'";
+    content += "<a href=\"" + htmlEntities(link.href) + "\"";
+    content += " title=\"" + htmlEntities(link.title) + "\"";
     content += " style=\"background-image: url('" + icon + "')\">";
-    content += link.text + "</a>";
+    content += htmlEntities(link.text) + "</a>";
   }
   var m = document.getElementById(_menu_id);
   m.innerHTML = content;
