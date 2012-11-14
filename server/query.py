@@ -24,7 +24,7 @@ _parameters += ["-" + param for param in _parameters] + ["+" + param for param
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
 _pat = "(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
-_pat += "(?:(?P<param>%s):(?P<arg>[^ ]+))|"
+_pat += "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
 _pat += "(?:\"(?P<phrase>[^\"]+)\")|"
 _pat += "(?:-\"(?P<notphrase>[^\"]+)\")|"
 _pat += "(?P<keyword>[^ \"]+)"
@@ -51,8 +51,11 @@ class Query:
     self.notphrases = []
     # We basically iterate over the set of matches left to right
     for token in (match.groupdict() for match in _pat.finditer(querystr)):
-      if token["param"] and token["arg"]:
-        self.params[token["param"]].append(token["arg"])
+      if token["param"]:
+        if token["arg"]:
+          self.params[token["param"]].append(token["arg"])
+        elif token["qarg"]:
+          self.params[token["param"]].append(token["qarg"])
       if token["regpar"] and token["regarg"]:
         self.params[token["regpar"]].append(token["regarg"])
       if token["phrase"]:
