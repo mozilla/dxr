@@ -169,12 +169,14 @@ def fetch_results(conn, query,
 
       # Find newline before and after offset
       end       = content.find("\n", estart)
-      start     = max(content.rfind("\n", 0, end), 0)
+      if end == -1:
+        end = len(content)
+      start     = content.rfind("\n", 0, end) + 1
       src_line  = content[start:end]
 
-      # Build line, start from mend = 1 just past the \n
+      # Build line
       out_line = ""
-      mend = 1      # Invariant: Offset where last write ended
+      mend = 0      # Invariant: Offset where last write ended
 
       # Add some markup to highlight hits
       while content.count("\n", last_pos, estart) == 0:
