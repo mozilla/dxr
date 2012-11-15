@@ -84,7 +84,7 @@ function showHintBox(form_id, id, link_id, string) {
 
   url += "&string=" + encodeURIComponent(string);
 
-  link.innerHTML = string;
+  link.textContent = string;
   link.href= url
   div.style.display = "block";
 }
