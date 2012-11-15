@@ -55,12 +55,12 @@ class ClangHtmlifier:
 
     # Extents for types defined here
     sql = """
-      SELECT extent_start, extent_end, tqualname
+      SELECT extent_start, extent_end, tqualname, tkind
         FROM types
        WHERE file_id = ?
     """
-    for start, end, tqualname in self.conn.execute(sql, args):
-      yield start, end, self.type_menu(tqualname)
+    for start, end, tqualname, tkind in self.conn.execute(sql, args):
+      yield start, end, self.type_menu(tqualname, tkind)
 
     # Extents for macros defined here
     sql = """
@@ -78,13 +78,14 @@ class ClangHtmlifier:
     sql = """
       SELECT refs.extent_start, refs.extent_end,
              types.tqualname,
+             types.tkind,
              (SELECT path FROM files WHERE files.ID = types.file_id),
              types.file_line
         FROM types, refs
        WHERE types.tid = refs.refid AND refs.file_id = ?
     """
-    for start, end, tqualname, path, line in self.conn.execute(sql, args):
-      menu = self.type_menu(tqualname)
+    for start, end, tqualname, tkind, path, line in self.conn.execute(sql, args):
+      menu = self.type_menu(tqualname, tkind)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -190,22 +191,23 @@ class ClangHtmlifier:
       'icon':   'jump'
     })
 
-  def type_menu(self, tqualname):
+  def type_menu(self, tqualname, tkind):
     """ Build menu for type """
     menu = []
     # Things we can do with tqualname
-    menu.append({
-      'text':   "Find sub classes",
-      'title':  "Find sub classes of this class",
-      'href':   self.search("+derived:%s" % tqualname),
-      'icon':   'type'
-    })
-    menu.append({
-      'text':   "Find base classes",
-      'title':  "Find base classes of this class",
-      'href':   self.search("+bases:%s" % tqualname),
-      'icon':   'type'
-    })
+    if tkind == 'class' or tkind == 'struct':
+      menu.append({
+        'text':   "Find sub classes",
+        'title':  "Find sub classes of this class",
+        'href':   self.search("+derived:%s" % tqualname),
+        'icon':   'type'
+      })
+      menu.append({
+        'text':   "Find base classes",
+        'title':  "Find base classes of this class",
+        'href':   self.search("+bases:%s" % tqualname),
+        'icon':   'type'
+      })
     menu.append({
       'text':   "Find members",
       'title':  "Find members of this class",
