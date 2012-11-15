@@ -608,7 +608,7 @@ filters.append(ExistsLikeFilter(
                        ORDER BY variables.extent_start
                     """,
     like_name     = "variables.vname",
-    qual_name     = "variables.vname"
+    qual_name     = "variables.vqualname"
 ))
 
 
@@ -627,7 +627,7 @@ filters.append(ExistsLikeFilter(
                        ORDER BY refs.extent_start
                     """,
     like_name     = "variables.vname",
-    qual_name     = "variables.vname"
+    qual_name     = "variables.vqualname"
 ))
 
 

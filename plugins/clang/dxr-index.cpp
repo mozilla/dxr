@@ -45,6 +45,55 @@ const char *hash(std::string &str) {
   return hashstr;
 }
 
+// This is a wrapper around NamedDecl::getQualifiedNameAsString.
+// It produces more qualified output to distinguish several cases
+// which would otherwise be ambiguous.
+std::string getQualifiedName(const NamedDecl &d) {
+  std::string ret;
+  const DeclContext *ctx = d.getDeclContext();
+  if (ctx->isFunctionOrMethod() && isa<NamedDecl>(ctx))
+  {
+    // This is a local variable.
+    // d.getQualifiedNameAsString() will return the unqualifed name for this
+    // but we want an actual qualified name so we can distinguish variables
+    // with the same name but that are in different functions.
+    ret = getQualifiedName(*cast<NamedDecl>(ctx)) + "::" + d.getNameAsString();
+  }
+  else
+  {
+    ret = d.getQualifiedNameAsString();
+  }
+
+  if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d))
+  {
+    // This is a function.  getQualifiedNameAsString will return a string
+    // like "ANamespace::AFunction".  To this we append the list of parameters
+    // so that we can distinguish correctly between
+    // void ANamespace::AFunction(int);
+    //    and
+    // void ANamespace::AFunction(float);
+    ret += "(";
+    if (const FunctionProtoType *ft = dyn_cast<FunctionProtoType>(fd->getType()->castAs<FunctionType>()))
+    {
+      unsigned num_params = fd->getNumParams();
+      for (unsigned i = 0; i < num_params; ++i) {
+        if (i)
+          ret += ", ";
+        ret += fd->getParamDecl(i)->getType().getAsString();
+      }
+
+      if (ft->isVariadic()) {
+        if (num_params > 0)
+          ret += ", ";
+        ret += "...";
+      }
+    }
+    ret += ")";
+  }
+
+  return ret;
+}
+
 std::string srcdir;
 std::string output;
 std::string tmpdir; // Place to save all the csv files to
@@ -200,7 +249,7 @@ public:
         if (redecl)
           namesource = redecl;
       }
-      recordValue("scopename", namesource->getQualifiedNameAsString());
+      recordValue("scopename", getQualifiedName(*namesource));
       recordValue("scopeloc", locationToString(scope->getLocation()));
     }
   }
@@ -210,7 +259,7 @@ public:
       return;
 
     beginRecord("decldef", decl->getLocation());
-    recordValue("name", decl->getQualifiedNameAsString());
+    recordValue("name", getQualifiedName(*decl));
     recordValue("declloc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));
     printExtent(begin, end);
@@ -270,7 +319,7 @@ public:
     if (!nd)
       nd = definition;
     recordValue("tname", nd->getNameAsString());
-    recordValue("tqualname", nd->getQualifiedNameAsString());
+    recordValue("tqualname", getQualifiedName(*nd));
     recordValue("tloc", locationToString(definition->getLocation()));
     recordValue("tkind", definition->getKindName());
     printScope(definition);
@@ -295,9 +344,9 @@ public:
       if (!base)
         return true;
       beginRecord("impl", d->getLocation());
-      recordValue("tcname", d->getQualifiedNameAsString());
+      recordValue("tcname", getQualifiedName(*d));
       recordValue("tcloc", locationToString(d->getLocation()));
-      recordValue("tbname", base->getQualifiedNameAsString());
+      recordValue("tbname", getQualifiedName(*base));
       recordValue("tbloc", locationToString(base->getLocation()));
       *out << ",access,\"";
       switch ((*iter).getAccessSpecifierAsWritten()) {
@@ -323,7 +372,7 @@ public:
 
     beginRecord("function", d->getLocation());
     recordValue("fname", d->getNameAsString());
-    recordValue("fqualname", d->getQualifiedNameAsString());
+    recordValue("fqualname", getQualifiedName(*d));
     recordValue("ftype", d->getResultType().getAsString());
     std::string args("(");
     for (FunctionDecl::param_iterator it = d->param_begin();
@@ -343,7 +392,7 @@ public:
       CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
       CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
       if (iter) {
-        recordValue("overridename", (*iter)->getQualifiedNameAsString());
+        recordValue("overridename", getQualifiedName(**iter));
         recordValue("overrideloc", locationToString((*iter)->getLocation()));
       }
     }
@@ -360,6 +409,7 @@ public:
       return;
     beginRecord("variable", d->getLocation());
     recordValue("vname", d->getNameAsString());
+    recordValue("vqualname", getQualifiedName(*d));
     recordValue("vloc", locationToString(d->getLocation()));
     recordValue("vtype", d->getType().getAsString(), true);
     printScope(d);
@@ -391,7 +441,7 @@ public:
 #endif
     beginRecord("typedef", d->getLocation());
     recordValue("tname", d->getNameAsString());
-    recordValue("tqualname", d->getQualifiedNameAsString());
+    recordValue("tqualname", getQualifiedName(*d));
     recordValue("tloc", locationToString(d->getLocation()));
     recordValue("ttypedef", d->getUnderlyingType().getAsString());
     printScope(d);
@@ -423,7 +473,7 @@ public:
       // now.
       return;
     beginRecord("ref", refLoc);
-    recordValue("varname", d->getQualifiedNameAsString());
+    recordValue("varname", getQualifiedName(*d));
     recordValue("varloc", locationToString(d->getLocation()));
     recordValue("refloc", locationToString(refLoc));
     printExtent(refLoc, end);
@@ -454,10 +504,10 @@ public:
     // 3. Virtual functions need not be called virtually!
     beginRecord("call", e->getLocStart());
     if (m_currentFunction) {
-      recordValue("callername", m_currentFunction->getQualifiedNameAsString());
+      recordValue("callername", getQualifiedName(*m_currentFunction));
       recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
     }
-    recordValue("calleename", dyn_cast<NamedDecl>(callee)->getQualifiedNameAsString());
+    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
     recordValue("calleeloc", locationToString(callee->getLocation()));
     // Determine the type of call
     const char *type = "static";

@@ -46,12 +46,12 @@ class ClangHtmlifier:
 
     # Extents for variables defined here
     sql = """
-      SELECT extent_start, extent_end, vname
+      SELECT extent_start, extent_end, vqualname
         FROM variables
        WHERE file_id = ?
     """
-    for start, end, vname in self.conn.execute(sql, args):
-      yield start, end, self.variable_menu(vname)
+    for start, end, vqualname in self.conn.execute(sql, args):
+      yield start, end, self.variable_menu(vqualname)
 
     # Extents for types defined here
     sql = """
@@ -106,14 +106,14 @@ class ClangHtmlifier:
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             variables.vname,
+             variables.vqualname,
              (SELECT path FROM files WHERE files.ID = variables.file_id),
              variables.file_line
         FROM variables, refs
        WHERE variables.varid = refs.refid AND refs.file_id = ?
     """
-    for start, end, vname, path, line in self.conn.execute(sql, args):
-      menu = self.variable_menu(vname)
+    for start, end, vqualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(vqualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -178,6 +178,11 @@ class ClangHtmlifier:
     url += "&q=" + urllib.quote(query)
     return url
 
+  def quote(self, qualname):
+    """ Wrap qualname in quotes if it contains spaces """
+    if ' ' in qualname:
+      qualname = '"' + qualname + '"'
+    return qualname
 
   def add_jump_definition(self, menu, path, line):
     """ Add a jump to definition to the menu """
@@ -199,38 +204,38 @@ class ClangHtmlifier:
       menu.append({
         'text':   "Find sub classes",
         'title':  "Find sub classes of this class",
-        'href':   self.search("+derived:%s" % tqualname),
+        'href':   self.search("+derived:%s" % self.quote(tqualname)),
         'icon':   'type'
       })
       menu.append({
         'text':   "Find base classes",
         'title':  "Find base classes of this class",
-        'href':   self.search("+bases:%s" % tqualname),
+        'href':   self.search("+bases:%s" % self.quote(tqualname)),
         'icon':   'type'
       })
     menu.append({
       'text':   "Find members",
       'title':  "Find members of this class",
-      'href':   self.search("+member:%s" % tqualname),
+      'href':   self.search("+member:%s" % self.quote(tqualname)),
       'icon':   'members'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references to this class",
-      'href':   self.search("+type-ref:%s" % tqualname),
+      'href':   self.search("+type-ref:%s" % self.quote(tqualname)),
       'icon':   'reference'
     })
     return menu
 
 
-  def variable_menu(self, vname):
+  def variable_menu(self, vqualname):
     """ Build menu for a variable """
     menu = []
     # Well, what more than references can we do?
     menu.append({
       'text':   "Find references",
       'title':  "Find reference to this variable",
-      'href':   self.search("+var-ref:%s" % vname),
+      'href':   self.search("+var-ref:%s" % self.quote(vqualname)),
       'icon':   'field'
     })
     # TODO Investigate whether assignments and usages is possible and useful?
@@ -257,19 +262,19 @@ class ClangHtmlifier:
     menu.append({
       'text':   "Find callers",
       'title':  "Find functions that calls this function",
-      'href':   self.search("+callers:%s" % fqualname),
+      'href':   self.search("+callers:%s" % self.quote(fqualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find callees",
       'title':  "Find functions that are called by this function",
-      'href':   self.search("+called-by:%s" % fqualname),
+      'href':   self.search("+called-by:%s" % self.quote(fqualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references of this function",
-      'href':   self.search("+function-ref:%s" % fqualname),
+      'href':   self.search("+function-ref:%s" % self.quote(fqualname)),
       'icon':   'reference'
     })
     #TODO Jump between declaration and definition
