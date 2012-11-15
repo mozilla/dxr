@@ -71,6 +71,7 @@ language_schema = dxr.schema.Schema({
     ("varid", "INTEGER", False),         # Variable ID
     ("scopeid", "INTEGER", True),       # Scope defined in
     ("vname", "VARCHAR(256)", False),    # Short name
+    ("vqualname", "VARCHAR(256)", False),# Fully qualified name
     ("vtype", "VARCHAR(256)", True),     # Full type (including pointer stuff)
     ("modifiers", "VARCHAR(256)", True), # Modifiers for the declaration
     ("language", "_language", True),    # Language of the function

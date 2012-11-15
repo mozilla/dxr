@@ -24,7 +24,7 @@ _parameters += ["-" + param for param in _parameters] + ["+" + param for param
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
 _pat = "(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
-_pat += "(?:(?P<param>%s):(?P<arg>[^ ]+))|"
+_pat += "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
 _pat += "(?:\"(?P<phrase>[^\"]+)\")|"
 _pat += "(?:-\"(?P<notphrase>[^\"]+)\")|"
 _pat += "(?P<keyword>[^ \"]+)"
@@ -51,8 +51,11 @@ class Query:
     self.notphrases = []
     # We basically iterate over the set of matches left to right
     for token in (match.groupdict() for match in _pat.finditer(querystr)):
-      if token["param"] and token["arg"]:
-        self.params[token["param"]].append(token["arg"])
+      if token["param"]:
+        if token["arg"]:
+          self.params[token["param"]].append(token["arg"])
+        elif token["qarg"]:
+          self.params[token["param"]].append(token["qarg"])
       if token["regpar"] and token["regarg"]:
         self.params[token["regpar"]].append(token["regarg"])
       if token["phrase"]:
@@ -166,12 +169,14 @@ def fetch_results(conn, query,
 
       # Find newline before and after offset
       end       = content.find("\n", estart)
-      start     = max(content.rfind("\n", 0, end), 0)
+      if end == -1:
+        end = len(content)
+      start     = content.rfind("\n", 0, end) + 1
       src_line  = content[start:end]
 
-      # Build line, start from mend = 1 just past the \n
+      # Build line
       out_line = ""
-      mend = 1      # Invariant: Offset where last write ended
+      mend = 0      # Invariant: Offset where last write ended
 
       # Add some markup to highlight hits
       while content.count("\n", last_pos, estart) == 0:
@@ -603,7 +608,7 @@ filters.append(ExistsLikeFilter(
                        ORDER BY variables.extent_start
                     """,
     like_name     = "variables.vname",
-    qual_name     = "variables.vname"
+    qual_name     = "variables.vqualname"
 ))
 
 
@@ -622,7 +627,7 @@ filters.append(ExistsLikeFilter(
                        ORDER BY refs.extent_start
                     """,
     like_name     = "variables.vname",
-    qual_name     = "variables.vname"
+    qual_name     = "variables.vqualname"
 ))
 
 

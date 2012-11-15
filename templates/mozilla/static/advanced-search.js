@@ -29,7 +29,7 @@ function parseQuery(q, params){
   var regexp = "^";
   for(var i = 0; i < params.length; i++){
     var param = params[i];
-    regexp += "(" + param + ":[^ ]+)|";
+    regexp += "(" + param + ":(?:\"[^\"]+\"|[^ ]+))|";
     // Add empty list for each parameter
     args[param] = [];
   }
@@ -99,48 +99,36 @@ function parseQuery(q, params){
 }
 
 
-/** Used to parse advanced search query */
-var regexpFieldParser = /^((\S)(?:(?!\2).)+\2)|^(\s+)/;
-
 /** Build a query from advanced search */
 function buildQueryFromAdvanced(){
   var query = [];
   var fields = document.querySelectorAll("#advanced-search input[type=text]");
   for(var i = 0; i < fields.length; i++){
     var field = fields[i];
-    // Just add terms flat
-    if(!field.dataset.param){
-      // Notice how we normalize whitespace
-      if (field.value != "")
-        query = [].concat(query, field.value.split(/\s+/));
-      continue;
-    }
+    var param = field.dataset.param;
+    var v = field.value;
+    var r;
     // Magic to handle regular expressions
-    if(field.dataset.param == "regexp"){
-      var v = field.value;
-      var r;
-      while(r = regexpFieldParser.exec(v)){
-        var len = -1;
-        if(r[1]){
-          query.push("regexp:" + r[1]);
-          len = r[1].length;
-        }else if(r[3])
-          len = r[3].length;
-        // Continue with the rest of the string
-        v = v.substr(len);
+    if(param == "regexp"){
+      var regexpFieldParser = /\s*((\S)(?:(?!\2).)+\2)|\s*(\S.*?)\s*$/g;
+      while((r = regexpFieldParser.exec(v))){
+        if(r[1])
+          query.push(param + ":" + r[1]);
+        else if(r[3]){
+          // Regular expressions should be wrapped with same start and end letter.
+          // We use # if none is specified.
+          query.push(param + ":#" + r[3] + "#");
+        }
       }
-      // Regular expressions should be wrapped with same start and end letter
-      // which, we don't case just the same, we use # if non is specified.
-      if(v != "")
-        query.push("regexp:#" + v + "#");
       continue;
     }
-    // Split at every whitespace
-    var args = field.value.split(/\s+/);
-    for(var j = 0; j < args.length; j++){
-      var arg = args[j];
-      if(arg == "") continue;
-      query.push(field.dataset.param + ":" + arg);
+    // All whitespace outside of quotes gets eaten
+    var fieldParser = /"[^"]+"|\S+/g;
+    while((r = fieldParser.exec(v))){
+      if(param)
+        query.push(param + ":" + r[0]);
+      else
+        query.push(r[0]);
     }
   }
   // Notice whitespace normalization 
