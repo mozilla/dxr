@@ -225,6 +225,8 @@ public:
   }
 
   void printExtent(SourceLocation begin, SourceLocation end) {
+    if (!end.isValid())
+      end = begin;
     if (begin.isMacroID() || end.isMacroID())
       return;
     *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
