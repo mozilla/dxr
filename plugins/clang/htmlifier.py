@@ -21,7 +21,11 @@ class ClangHtmlifier:
     tokenizer = tokenizers.CppTokenizer(self.text)
     for token in tokenizer.getTokens():
       if token.token_type == tokenizer.KEYWORD:
-        yield (token.start, token.end, 'k')
+        # "operator" is going to be part of something bigger like
+        # "operator++" or "operator new" so we don't want to create
+        # a region here that only covers part of that
+        if token.name != "operator":
+          yield (token.start, token.end, 'k')
       elif token.token_type == tokenizer.STRING:
         yield (token.start, token.end, 'str')
       elif token.token_type == tokenizer.COMMENT:
