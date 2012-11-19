@@ -637,6 +637,7 @@ public:
     if (defnStart < length)
       recordValue("macrotext", std::string(contents + defnStart,
         length - defnStart), true);
+    printExtent(nameStart, nameStart);
     *out << std::endl;
   }
   virtual void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {

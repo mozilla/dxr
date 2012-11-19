@@ -638,7 +638,11 @@ filters.append(ExistsLikeFilter(
                        WHERE %s
                          AND macros.file_id = files.ID
                     """,
-    ext_sql       = None, #TODO Add extent_start, extent_end to macros table!
+    ext_sql       = """SELECT macros.extent_start, macros.extent_end FROM macros
+                       WHERE macros.file_id = ?
+                         AND %s
+                       ORDER BY macros.extent_start
+                    """,
     like_name     = "macros.macroname",
     qual_name     = "macros.macroname"
 ))
