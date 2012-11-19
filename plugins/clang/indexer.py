@@ -102,6 +102,8 @@ schema = dxr.schema.Schema({
     ("macroname", "VARCHAR(256)", False), # The name of the macro
     ("macroargs", "VARCHAR(256)", True),  # The args of the macro (if any)
     ("macrotext", "TEXT", True),          # The macro contents
+    ("extent_start", "INTEGER", True),
+    ("extent_end", "INTEGER", True),
     ("_location", True)
   ],
   # The following two tables are combined to form the callgraph implementation.
@@ -323,6 +325,7 @@ def process_macro(args, conn):
     args['macrotext'] = args['macrotext'].replace("\\\n", "\n").strip()
   if not fixupEntryPath(args, 'macroloc', conn):
     return None
+  fixupExtent(args, 'extent')
   return schema.get_insert_sql('macros', args)
 
 def process_call(args, conn):
