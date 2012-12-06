@@ -8,9 +8,9 @@ window.addEventListener('load', function(){
   var qbox = document.getElementById('qbox');
   // Hide box in center and display results
   qbox.addEventListener('keyup', function(e){
-    var content = document.getElementById("content");
-    var querybox = document.getElementById("query");
-    var searchbox = document.getElementById("search-box");
+    var content = document.getElementById('content');
+    var querybox = document.getElementById('query');
+    var searchbox = document.getElementById('search-box');
     searchbox.style.display = 'block';
     query.value = qbox.value;
     query.focus();
@@ -20,11 +20,11 @@ window.addEventListener('load', function(){
     state.eof     = false;
     state.changed = true;
     // Set tree correctly
-    var tree = document.getElementById("tree");
-    var qtree = document.getElementById("qtree");
+    var tree = document.getElementById('tree');
+    var qtree = document.getElementById('qtree');
     tree.value = qtree.value;
     // Clear content
-    content.innerHTML = "";
+    content.innerHTML = '';
     // Dispatch dxr-state-changed
     window.dispatchEvent(
       new CustomEvent( 'dxr-state-changed', {
