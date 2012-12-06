@@ -37,5 +37,3 @@ def load_htmlifiers(tree):
     f.close()
     plugins.append(plugin)
   return plugins
-
-
