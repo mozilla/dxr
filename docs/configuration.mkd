@@ -10,7 +10,7 @@ The configuration file is split into different sections, sections `DXR` and
 Keys that must and can be specified for different sections are listed in
 relevant section below.
 
-The config file must be written in a format compatible with pythins builtin
+The config file must be written in a format compatible with python's built-in
 [ConfigParser](http://docs.python.org/library/configparser.html), see python
 documentation for details.
 
