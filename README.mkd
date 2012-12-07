@@ -5,7 +5,7 @@ Introduction:
 -------------
 DXR is a source code cross-reference tool that uses static analysis data
 collected by instrumented compilers. DXR was created in order to build on
-tools like LXR and MXR. DXR only runs on Linux for the moment.
+tools like LXR and MXR. DXR runs only on Linux for the moment.
 
 
 Documentation
@@ -19,7 +19,7 @@ to deploy and/or develop DXR.
 Quick Start
 -----------
 If you want to try DXR on a HelloWorld size project, one is located in
-`tests/json-test/`. First read and install dependenceis from docs/deployment.mkd.
+`tests/json-test/`. First read and install dependencies from docs/deployment.mkd.
 Then run `make` from `tests/json-test/` to build the index. The `makefile`
 contains instruction for launching the test server as well.
 
@@ -33,9 +33,9 @@ _This is a short list of major things that could be done to improve DXR._
      - Provide data collection API for plugins (ie. no direct database access for plugins)
      - Optimize schema for search queries
         - Split refs into function-refs, type-refs, etc.
-     	- Store extents as a blob in *-refs, types, functions, etc.
-     	- Use trilite for functions, types, macros, etc.
-     	- Store the transitive closure of indirect calls
+        - Store extents as a blob in *-refs, types, functions, etc.
+        - Use trilite for functions, types, macros, etc.
+        - Store the transitive closure of indirect calls
      - Port search logic to new schema
   * Write proper search query parser
      - Space is a delimiter unless in dice `[ ]`, quotes `" "` or escaped `\ `
