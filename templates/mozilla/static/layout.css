@@ -1,312 +1,310 @@
-
-body{
-  margin:           50px 0px 0px 0px;
+body {
+    margin: 50px 0px 0px 0px;
 }
 
-#search-box{
-  font-family:      sans serif;
-  position:         fixed;
-  top:              0px;
-  left:             0px;
-  right:            0px;
-  height:           50px;
-  z-index:          15;
-  background-color: #eee;
+#search-box {
+    font-family: sans serif;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    height: 50px;
+    z-index: 15;
+    background-color: #eee;
 }
 
-#tree{
-  margin:               0px;
-  outline:              none;
-  font-size:            1em;
-  border:               1px solid black;
-  font-weight: bold;
+#tree {
+    margin: 0px;
+    outline: none;
+    font-size: 1em;
+    border: 1px solid black;
+    font-weight: bold;
 }
 
-#dxr{
-  user-select:          none;
-  -moz-user-select:     none;
-  -webkit-user-select:  none;
-  float:                left;
-  display:              block;
+#dxr {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    float: left;
+    display: block;
 }
 
-#search-box-content #tip{
-  padding-top: 3px;
-  font-size: 0.8em;
+#search-box-content #tip {
+    padding-top: 3px;
+    font-size: 0.8em;
 }
 
-#treetip{
-  font-size: 0.8em;
-  padding-top: 1px;
+#treetip {
+    font-size: 0.8em;
+    padding-top: 1px;
 }
 
-#search-box-content #tip{
+#search-box-content #tip {
     float: left;
 }
 
-#treetip{
+#treetip {
     float: right;
 }
 
-#search-box-content{
-    margin-left:    53px;
-    margin-right:   5px;
+#search-box-content {
+    margin-left: 53px;
+    margin-right: 5px;
 }
 
-#formwrap{
-  float: right;
-  width: 100%;
+#formwrap {
+    float: right;
+    width: 100%;
 }
 
-#inputwrap{
-  background-image:     url(icons/page_white_find.png);
-  background-position:  2px 2px;
-  background-repeat:    no-repeat;
-  border:               1px solid #888;
-  padding-left:         20px;
-  background-color:     #fff;
-  margin-top:           3px;
+#inputwrap {
+    background-image: url(icons/page_white_find.png);
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    border: 1px solid #888;
+    padding-left: 20px;
+    background-color: #fff;
+    margin-top: 3px;
 }
 
-#query{
-  width:                100%;
-  border:               none;
-  font-family:          monospace;
-  padding:              0px;
-  outline:              none;
-  height:               20px;
-  vertical-align:       middle;
-  font-size:            14px;
+#query {
+    width: 100%;
+    border: none;
+    font-family: monospace;
+    padding: 0px;
+    outline: none;
+    height: 20px;
+    vertical-align: middle;
+    font-size: 14px;
 }
 
-#panel{
-  background-color: #eee;
-  font-size:        0.8em;
-  position:         absolute;
-  top:              50px;
-  right:            0px;
-  z-index:          10;
-  padding:          1ex;
-  font-family:      sans serif;
+#panel {
+    background-color: #eee;
+    font-size: 0.8em;
+    position: absolute;
+    top: 50px;
+    right: 0px;
+    z-index: 10;
+    padding: 1ex;
+    font-family: sans serif;
 }
 
-#panel-toggle{
-  font-size:        2em;
-  padding-left:     30px;
-  padding-right:    30px;
-  cursor:           pointer;
+#panel-toggle {
+    font-size: 2em;
+    padding-left: 30px;
+    padding-right: 30px;
+    cursor: pointer;
 }
 
-#content{
-  position:         relative;
-  background-color: #ffffff;
-  z-index:          5;
+#contena {
+    position: relative;
+    background-color: #ffffff;
+    z-index: 5;
 }
 
-.section h1{
-  font-size:        1em;
+.section h1 {
+    font-size: 1em;
 }
 
 #panel a {
-  text-decoration:    none;
-  color:              #000;
-  background-position:2px 2px;
-  background-repeat:  no-repeat;
-  padding-left:       24px;
-  padding-top:        2px;
-  padding-bottom:     2px;
-  display:            block;
+    text-decoration: none;
+    color: #000;
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    display: block;
 }
 
 #panel a:hover {
-  background-color:   #ccc;
-  text-decoration:    underline;
+    background-color: #ccc;
+    text-decoration: underline;
 }
 
 
 pre { margin: 0px; }
 
 .ln {
-  display:          block;
-  text-align:       right;
-  color:            #888;
-  -moz-user-select: none;
-  user-select:      none;
-  padding-left:     2ex;
-  padding-right:    4px;
+    display: block;
+    text-align: right;
+    color: #888;
+    -moz-user-select: none;
+    user-select: none;
+    padding-left: 2ex;
+    padding-right: 4px;
 }
 
-.ln, .result a{
-  text-decoration: none;
+.ln, .result a {
+    text-decoration: none;
 }
-.ln:hover, .result a:hover{
-  text-decoration: underline;
-}
-
-.highlight .ln{
-  color: #fff;
+.ln:hover, .result a:hover {
+    text-decoration: underline;
 }
 
-a.snippet{
-  color: #000;
-  display: block;
+.highlight .ln {
+    color: #fff;
 }
 
-a.snippet:hover{
-  text-decoration: none;
-  background-color: #eee;
+a.snippet {
+    color: #000;
+    display: block;
 }
 
-.highlight{
-  background-color: #ccc;
+a.snippet:hover {
+    text-decoration: none;
+    background-color: #eee;
+}
+
+.highlight {
+    background-color: #ccc;
 }
 
 .ln:hover > pre {
-  background-color: #eee;
+    background-color: #eee;
 }
 
-div .line-numbers{
-  margin-right:     4px;
-  border-right:     1px solid #ccc;
-  float:            left;
+div .line-numbers {
+    margin-right: 4px;
+    border-right: 1px solid #ccc;
+    float: left;
 }
 
-.result .line-numbers{
-  width:    8ex;
+.result .line-numbers {
+    width: 8ex;
 }
 
-.file-lines a{
-  cursor:           pointer;
+.file-lines a {
+    cursor: pointer;
 }
 
-.note{
-  float:            left;
-  height:           16px;
-  width:            16px;
-  margin-bottom:    -1px;
+.note {
+    float: left;
+    height: 16px;
+    width: 16px;
+    margin-bottom: -1px;
 }
 
-#annotations .note-blame{
-  display:          none;
-  cursor:           pointer;
+#annotations .note-blame {
+    display: none;
+    cursor: pointer;
 }
-#annotations.blame .note{
-  display:          none;
+#annotations.blame .note {
+    display: none;
 }
-#annotations.blame .note-blame{
-  display:          block;
-}
-
-#annotations{
-  float: left;
+#annotations.blame .note-blame {
+    display: block;
 }
 
-.annotation-set{
-  font-family: monospace;
+#annotations {
+    float: left;
 }
 
-.annotation-set:after{
-  content: "\a0";  /* non-breaking space */
+.annotation-set {
+    font-family: monospace;
 }
 
-.result div.path{
-  font-family:          monospace;
-  background-repeat:    no-repeat;
-  padding-left:         52px;
-  background-position:  32px 2px;
-  padding-top:          2.5px;
-  height:               17.5px;
+.annotation-set:after {
+    content: "\a0"; /* non-breaking space */
 }
 
-table.folder-content{
-  font-family:        monospace;
-  width:              100%;
+.result div.path {
+    font-family: monospace;
+    background-repeat: no-repeat;
+    padding-left: 52px;
+    background-position: 32px 2px;
+    padding-top: 2.5px;
+    height: 17.5px;
 }
 
-.folder-content a{
-  background-position:2px 2px;
-  background-repeat:  no-repeat;
-  padding-left:       24px;
-  padding-top:        2px;
-  padding-bottom:     2px;
+table.folder-content {
+    font-family: monospace;
+    width: 100%;
 }
 
-.folder-content th{
-  text-align:         left;
+.folder-content a {
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    padding-left: 24px;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
-#inline-menu{
-  background-color: #eee;
-  display:          none;
-  position:         absolute;
-  z-index:          10;
+.folder-content th {
+    text-align: left;
 }
 
-#inline-menu a{
-  background-position:  2px 2px;
-  background-repeat:    no-repeat;
-  height:               20px;
-  padding:              0px 20px 0px 20px;
-  text-decoration:      none;
-  display:              block;
-  color:                #000;
+#inline-menu {
+    background-color: #eee;
+    display: none;
+    position: absolute;
+    z-index: 10;
 }
 
-#inline-menu a:hover{
-  background-color:     #ccc;
+#inline-menu a {
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    height: 20px;
+    padding: 0px 20px 0px 20px;
+    text-decoration: none;
+    display: block;
+    color: #000;
 }
 
-#info-box{
-  background-color:     #eee;
-  display:              none;
-  position:             absolute;
-  padding:              5px;
-  z-index:              8;
+#inline-menu a:hover {
+    background-color: #ccc;
 }
 
-#info-box img{ float: left; padding-right: 5px;}
-
-#fetch-results{
-  background-color:     #eee;
-  display:              none;
-  user-select:          none;
-  -moz-user-select:     none;
-  -webkit-user-select:  none;
-  cursor:               default;
-  text-align:           center;
-  font-size:            2em;
+#info-box {
+    background-color: #eee;
+    display: none;
+    position: absolute;
+    padding: 5px;
+    z-index: 8;
 }
 
-#foot{
-  clear:                both;
-  padding:              5px;
-  font-family:          sans-serif;
-  font-size:            0.8em;
-  height:               48px;
+#info-box img { float: left; padding-right: 5px;}
+
+#fetch-results {
+    background-color: #eee;
+    display: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+    text-align: center;
+    font-size: 2em;
 }
 
-#advanced-search div.section input{
-  background-position:  2px 2px;
-  background-repeat:    no-repeat;
-  padding-left:         20px;
-  height:               20px;
-  background-color:     #fff;
-  border:               1px solid #888;
-  font-family:          monospace;
-  margin:               2px;
-  width:                30ex;
+#foot {
+    clear: both;
+    padding: 5px;
+    font-family: sans-serif;
+    font-size: 0.8em;
+    height: 48px;
 }
 
-#advanced-search div.section label{
-  font-family:          monospace;
-  font-size:            12px;
-  width:                15ex;
-  display:              inline-block;
-  text-align:           right;
+#advanced-search div.section input {
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+    height: 20px;
+    background-color: #fff;
+    border: 1px solid #888;
+    font-family: monospace;
+    margin: 2px;
+    width: 30ex;
 }
 
-#no-results{
-  width:                100%;
-  text-align:           center;
+#advanced-search div.section label {
+    font-family: monospace;
+    font-size: 12px;
+    width: 15ex;
+    display: inline-block;
+    text-align: right;
 }
 
+#no-results {
+    width: 100%;
+    text-align: center;
+}
