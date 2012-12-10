@@ -1,2 +1,5 @@
 # appended to Vagrant's default bashrc
+
+# included to link trilite after it builds
+# todo: make uppet symlink it and run ldconfig instead
 export LD_LIBRARY_PATH=/home/vagrant/dxr/trilite
