@@ -104,7 +104,7 @@ function initIncrementalSearch(){
   }, false); 
 
   // Update advanced search fields on change in q
-  q.addEventListener('keyup', function(e){
+  q.addEventListener('input', function(e){
     // Don't do anything if query didn't change
     if(state.query == q.value) return;
     // Reset the state
@@ -127,7 +127,6 @@ function initIncrementalSearch(){
     state.query   = q.value;
     state.offset  = 0;
     state.eof     = false;
-    state.changed = true;
     state.changed = true;
     // Dispatch dxr-state-changed
     window.dispatchEvent(
@@ -198,10 +197,10 @@ function fetch_results(display_fetcher){
       }
       // Display a nice tip
       dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
-      var content = document.getElementById("content");
+      var results = document.getElementById("results");
       // Clear results if necessary
       if(clear_on_set && !data["error"]){
-        content.innerHTML = "";
+        results.innerHTML = "";
         // Scroll to top of page
         window.scroll(0, 0);
 
@@ -211,7 +210,7 @@ function fetch_results(display_fetcher){
         fetcher.style.display    = 'block';
         fetcher.style.visibility = 'hidden';
       }
-      content.innerHTML += format_results(data);
+      results.innerHTML += format_results(data);
       // Set error as tip
       if(data["error"])
         dxr.setErrorTip(data["error"]);

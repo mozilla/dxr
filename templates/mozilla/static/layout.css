@@ -1,16 +1,111 @@
-body {
-    margin: 50px 0px 0px 0px;
+#search-box {
+    text-align: center;  /* For big logo */
+    width: 100%;
+}
+.with-results {
+    left: 0;
+    position: fixed;
+    top: 0;
+    z-index: 100;
 }
 
-#search-box {
-    font-family: sans serif;
-    position: fixed;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-    height: 50px;
-    z-index: 15;
+#width-limiter {
+    font-family: sans-serif;
+    margin: auto;
+    max-width: 30em;
+    text-align: left;
+}
+.with-results #width-limiter {
+    font-size: 0.8em;
+    margin-left: 53px;
+    margin-right: 5px;
+    max-width: none;
+    padding: 2px;
+}
+
+#big-logo {
+    max-width: 40%;
+    max-height: 35%;
+    width: 400px;
+}
+.with-results #big-logo {
+    display: none;
+}
+
+#small-logo {
+    width: 51px;
+    height: 49px;
+}
+
+#dxr {
+    display: none;
+    float: left;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+.with-results #dxr {
+    display: inline;
+}
+
+/* I use these to show and hide things that don't otherwise have a distinguishing ID or class. */
+.shown-with-results {
+    display: none;
+}
+.with-results .shown-with-results {
+    display: block;
+}
+.with-results .hidden-with-results {
+    display: none;
+}
+
+#search-background {
     background-color: #eee;
+    padding: 2ex;
+}
+.with-results #search-background {
+    padding: 0;
+    min-height: 49px;
+}
+
+#query {
+    border: 1px solid #888;
+    font-family: monospace;
+    font-size: 14px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    min-height: 20px;
+    outline: none;
+    vertical-align: middle;
+    width: 100%;
+}
+.with-results #query {
+    background-image: url("/static/icons/page_white_find.png");
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+}
+
+#tip {
+    float: left;
+}
+#treetip {
+    float: right;
+}
+
+#qtree {
+    border: 1px solid black;
+    font-size: 0.8em;
+    font-weight: bold;
+    height: 18px;
+    margin: 0px;
+    outline: none;
+    padding: 0px;
+}
+
+
+body {
+    margin: 50px 0px 0px 0px;
 }
 
 #tree {
@@ -21,63 +116,6 @@ body {
     font-weight: bold;
 }
 
-#dxr {
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    float: left;
-    display: block;
-}
-
-#search-box-content #tip {
-    padding-top: 3px;
-    font-size: 0.8em;
-}
-
-#treetip {
-    font-size: 0.8em;
-    padding-top: 1px;
-}
-
-#search-box-content #tip {
-    float: left;
-}
-
-#treetip {
-    float: right;
-}
-
-#search-box-content {
-    margin-left: 53px;
-    margin-right: 5px;
-}
-
-#formwrap {
-    float: right;
-    width: 100%;
-}
-
-#inputwrap {
-    background-image: url(icons/page_white_find.png);
-    background-position: 2px 2px;
-    background-repeat: no-repeat;
-    border: 1px solid #888;
-    padding-left: 20px;
-    background-color: #fff;
-    margin-top: 3px;
-}
-
-#query {
-    width: 100%;
-    border: none;
-    font-family: monospace;
-    padding: 0px;
-    outline: none;
-    height: 20px;
-    vertical-align: middle;
-    font-size: 14px;
-}
-
 #panel {
     background-color: #eee;
     font-size: 0.8em;
@@ -86,7 +124,7 @@ body {
     right: 0px;
     z-index: 10;
     padding: 1ex;
-    font-family: sans serif;
+    font-family: sans-serif;
 }
 
 #panel-toggle {
