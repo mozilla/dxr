@@ -7,7 +7,6 @@ DXR is a source code cross-reference tool that uses static analysis data
 collected by instrumented compilers. DXR was created in order to build on
 tools like LXR and MXR. DXR runs only on Linux for the moment.
 
-
 Documentation
 -------------
 DXR is fairly well documented, so whether you're looking to **deploy** DXR,
@@ -15,14 +14,12 @@ DXR is fairly well documented, so whether you're looking to **deploy** DXR,
 The documents in this folder is a great starting point for anybody who wants
 to deploy and/or develop DXR.
 
-
 Quick Start
 -----------
 If you want to try DXR on a HelloWorld size project, one is located in
 `tests/json-test/`. First read and install dependencies from docs/deployment.mkd.
 Then run `make` from `tests/json-test/` to build the index. The `makefile`
 contains instruction for launching the test server as well.
-
 
 Things To Do
 ------------
