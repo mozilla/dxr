@@ -1,3 +1,4 @@
+{% from "macros.html" import search_box %}
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
@@ -36,38 +37,9 @@
   </head>
   <body>
     {% block body %}
-    <div id="search-box">
-      <a id="dxr" href="{{wwwroot}}/">
-        <img src="{{wwwroot}}/static/magmoz.png">
-      </a>
-      <div id="search-box-content">
-        <form method="get" action="{{wwwroot}}/search">
-        <div id="tip">
-          {%- block tip -%}
-            Enter search query here
-          {%- endblock -%}
-        </div>
-        <div id="treetip">You're browsing
-          {% if trees|length > 1%}
-          <select name="tree" id="tree">
-            {% for t in trees %}
-              <option {% if t == tree -%}selected="selected"{%-endif-%}>{{t}}</option>
-            {% endfor %}
-          </select>
-          {% else %}
-            <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
-          {% endif %}
-        </div>
-        <div id="formwrap">
-            <div id="inputwrap">
-              <input type="text" id="query" name="q" value="{{query}}"
-              maxlength="2048" title="Search" accesskey="s">
-            </div>
-            <input type="hidden" name="redirect" value="true" id="redirect">
-        </div>
-        </form>
-      </div>
-    </div>
+      {% block top_search %}
+        {{ search_box(trees, tree, query, at_top=True) }}
+      {% endblock %}
     {% if panel %}
     <div id="panel">
       <a id="panel-toggle">

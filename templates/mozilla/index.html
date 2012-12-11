@@ -1,3 +1,4 @@
+{% from "macros.html" import search_box %}
 {% extends "layout.html" %}
 
 {% set state_eof = True %}
@@ -17,53 +18,11 @@
 </script>
 {% endblock %}
 
+{% block top_search %}{% endblock %}
+
 {% block content %}
-<!-- Container for elements whose styles may change upon first entry of a search string -->
-<div id="search-box">
-  <img src="/static/magmoz.svg" id="big-logo">
-  <div id="search-background">
-    <a id="dxr" href="/"><img src="/static/magmoz.svg" id="small-logo"></a>
-    <form method="get" action="/search" id="width-limiter">
-      <div class="hidden-with-results">
-        You can search
-
-       {% if trees|length > 1 %}
-          <select name="tree" id="tree">
-            {% for tree in trees %}
-              <option{% if loop.first -%} selected="selected"{%-endif-%}>{{tree}}</option>
-            {% endfor %}
-          </select>
-        {% else %}
-          <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
-        {% endif %}
-        here
-      </div>
-      <div class="shown-with-results">
-        <div id="tip">Enter search query here</div>
-        <div id="treetip">You're browsing (splice tree input here or something)</div>
-      </div>
-
-      <input type="text" name="q" value="" maxlength="2048" id="query" accesskey="s"
-      title="Search">
-      <input type="hidden" name="redirect" value="true" id="redirect"><!-- TODO: What's this for? Did I break stuff by moving it? -->
-
-      <div class="hidden-with-results">
-        or browse
-        {% for tree in trees -%}
-          {%- if loop.last and trees|length > 1 %}
-            or
-          {% elif not loop.first and trees|length > 1 -%}
-            ,
-          {% endif -%}
-          <a href="{{tree}}/">{{tree}}</a>
-        {%- endfor -%}
-        .
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="results"></div>
+  {{ search_box(trees, tree, query, at_top=False) }}
+  <div id="results"></div>
 {% endblock %}
 
 {# We want an empty footer #}
