@@ -7,6 +7,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test:
+	fail
 
 build: $(BUILD_PLUGINS) trilite
 
