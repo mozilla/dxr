@@ -6,6 +6,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 
 all: build
 
+test:
 
 build: $(BUILD_PLUGINS) trilite
 
@@ -32,4 +33,4 @@ $(CLEAN_PLUGINS):
 .PHONY: $(BUILD_PLUGINS)
 .PHONY: $(CHECK_PLUGINS)
 .PHONY: $(CLEAN_PLUGINS)
-.PHONY: all build check clean trilite
+.PHONY: all build check clean test trilite trilite-clean
