@@ -27,12 +27,11 @@
   </script>
 {% endblock %}
 
-{% block top_search %}{% endblock %}
-
-{% block content %}
+{% block search_ui %}
   {{ search_box(trees, tree, query, at_top=False) }}
-  <div id="results"></div>
 {% endblock %}
+
+{% block content %}{% endblock %}
 
 {# We want an empty footer #}
 {% block foot %}

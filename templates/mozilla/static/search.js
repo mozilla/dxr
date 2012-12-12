@@ -197,10 +197,10 @@ function fetch_results(display_fetcher){
       }
       // Display a nice tip
       dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
-      var results = document.getElementById("results");
+      var content = document.getElementById("content");
       // Clear results if necessary
       if(clear_on_set && !data["error"]){
-        results.innerHTML = "";
+        content.innerHTML = "";
         // Scroll to top of page
         window.scroll(0, 0);
 
@@ -210,7 +210,7 @@ function fetch_results(display_fetcher){
         fetcher.style.display    = 'block';
         fetcher.style.visibility = 'hidden';
       }
-      results.innerHTML += format_results(data);
+      content.innerHTML += format_results(data);
       // Set error as tip
       if(data["error"])
         dxr.setErrorTip(data["error"]);
