@@ -25,11 +25,12 @@
          {% if trees|length > 1 %}
             <select name="tree" id="tree">
               {% for tree in trees %}
-                <option{% if loop.first -%} selected="selected"{%-endif-%}>{{ tree }}</option>
+                <option{% if ((tree == selected_tree) if selected_tree else loop.first)  %} selected="selected"{% endif %}>{{ tree }}</option>
               {% endfor %}
             </select>
           {% else %}
-            <b>{{ tree }}</b><input type="hidden" name="tree" value="{{ selected_tree }}" id="tree">
+            <b>{{ selected_tree }}</b>
+            <input type="hidden" name="tree" value="{{ selected_tree }}" id="tree">
           {% endif %}
           here
         </div>
