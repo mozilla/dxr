@@ -2,7 +2,7 @@
   {#
   Draw the search box, which can look like either the big, introductory version
   or the compact version for the top of the results page.
-  
+
   :arg trees: An array of tree names that we should offer to search
   :arg selected_tree: The one we're actually searching
   :arg query: The search string
@@ -19,10 +19,11 @@
     <div id="search-background">
       <a id="dxr" href="/"><img src="/static/magmoz.svg" id="small-logo"></a>
       <form method="get" action="/search" id="width-limiter">
+        {% set showing_tree_menu = trees|length > 1 %}
         <div class="hidden-with-results">
           You can search
 
-         {% if trees|length > 1 %}
+          {% if showing_tree_menu %}
             <select name="tree" id="tree">
               {% for tree in trees %}
                 <option{% if ((tree == selected_tree) if selected_tree else loop.first)  %} selected="selected"{% endif %}>{{ tree }}</option>
@@ -35,12 +36,14 @@
           here
         </div>
         <div class="shown-with-results">
+          <div id="tree-tip">
+            Browsing {% if not showing_tree_menu %}<b>{{ selected_tree }}</b>{% endif %}
+          </div>
           <div id="tip">
             {%- block tip -%}
               Enter search query here
             {%- endblock -%}
           </div>
-          <div id="treetip">You're browsing (splice tree input here or something. Remember to select the option that is == to the "tree" Jinja var.)</div>
         </div>
 
         <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s"

@@ -89,7 +89,7 @@
 #tip {
     float: left;
 }
-#treetip {
+#tree-tip {
     float: right;
 }
 
@@ -110,10 +110,7 @@ body {
 
 #tree {
     margin: 0px;
-    outline: none;
     font-size: 1em;
-    border: 1px solid black;
-    font-weight: bold;
 }
 
 #panel {
