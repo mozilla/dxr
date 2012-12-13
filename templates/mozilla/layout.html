@@ -1,4 +1,3 @@
-{% from "macros.html" import search_box %}
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
@@ -37,9 +36,59 @@
   </head>
   <body>
     {% block body %}
-      {% block search_ui %}
-        {{ search_box(trees, tree, query, at_top=True) }}
-      {% endblock %}
+
+    <div id="search-box" class="{% block search_box_class %}with-results{% endblock %}">
+      <img src="/static/magmoz.svg" id="big-logo">
+      <div id="search-background">
+        <a id="dxr" href="/"><img src="/static/magmoz.svg" id="small-logo"></a>
+        <form method="get" action="/search" id="width-limiter">
+          {% set showing_tree_menu = trees|length > 1 %}
+          <div class="hidden-with-results">
+            You can search
+
+            {% if showing_tree_menu %}
+              <select name="tree" id="tree">
+                {% for t in trees %}
+                  <option{% if ((t == tree) if tree else loop.first)  %} selected="selected"{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <b>{{ tree }}</b>
+              <input type="hidden" name="tree" value="{{ tree }}" id="tree">
+            {% endif %}
+            here
+          </div>
+          <div class="shown-with-results">
+            <div id="tree-tip">
+              Browsing {% if not showing_tree_menu %}<b>{{ tree }}</b>{% endif %}
+            </div>
+            <div id="tip">
+              {%- block tip -%}
+                Enter search query here
+              {%- endblock -%}
+            </div>
+          </div>
+
+          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s"
+          title="Search">
+          <input type="hidden" name="redirect" value="true" id="redirect"><!-- TODO: What's this for? Did I break stuff by moving it? -->
+
+          <div class="hidden-with-results">
+            or browse
+            {% for t in trees -%}
+              {%- if loop.last and trees|length > 1 %}
+                or
+              {% elif not loop.first and trees|length > 1 -%}
+                ,
+              {% endif -%}
+              <a href="{{ t }}/">{{ t }}</a>
+            {%- endfor -%}
+            .
+          </div>
+        </form>
+      </div>
+    </div>
+
     {% if panel %}
     <div id="panel">
       <a id="panel-toggle">
