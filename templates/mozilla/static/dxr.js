@@ -7,17 +7,17 @@ var dxr = {};
 dxr.setTip = function(text){
   var tip = document.getElementById("tip");
   tip.innerHTML = text;
-  var inputwrap = document.getElementById("inputwrap");
-  if(inputwrap)
-    inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/page_white_find.png)";
+  var query = document.getElementById("query");
+  if (query)
+    query.style.backgroundImage = "url(" + wwwroot + "/static/icons/page_white_find.png)";
 }
 
 /** Set search tip as error message */
 dxr.setErrorTip = function(text){
   dxr.setTip("<b>" + text + "</b>");
-  var inputwrap = document.getElementById("inputwrap");
-  if(inputwrap)
-    inputwrap.style.backgroundImage = "url(" + wwwroot + "/static/icons/warning.png)";
+  var query = document.getElementById("query");
+  if (query)
+    query.style.backgroundImage = "url(" + wwwroot + "/static/icons/warning.png)";
 }
 
 /** Prettify Date an 822 date */
