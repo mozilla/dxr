@@ -36,38 +36,59 @@
   </head>
   <body>
     {% block body %}
-    <div id="search-box">
-      <a id="dxr" href="{{wwwroot}}/">
-        <img src="{{wwwroot}}/static/magmoz.png">
-      </a>
-      <div id="search-box-content">
-        <form method="get" action="{{wwwroot}}/search">
-        <div id="tip">
-          {%- block tip -%}
-            Enter search query here
-          {%- endblock -%}
-        </div>
-        <div id="treetip">You're browsing
-          {% if trees|length > 1%}
-          <select name="tree" id="tree">
-            {% for t in trees %}
-              <option {% if t == tree -%}selected="selected"{%-endif-%}>{{t}}</option>
-            {% endfor %}
-          </select>
-          {% else %}
-            <b>{{tree}}</b><input type="hidden" name="tree" value="{{tree}}" id="tree">
-          {% endif %}
-        </div>
-        <div id="formwrap">
-            <div id="inputwrap">
-              <input type="text" id="query" name="q" value="{{query}}"
-              maxlength="2048" title="Search" accesskey="s">
+
+    <div id="search-box" class="{% block search_box_class %}with-results{% endblock %}">
+      <img src="/static/magmoz.svg" id="big-logo">
+      <div id="search-background">
+        <a id="dxr" href="/"><img src="/static/magmoz.svg" id="small-logo"></a>
+        <form method="get" action="/search" id="width-limiter">
+          {% set showing_tree_menu = trees|length > 1 %}
+          <div class="hidden-with-results">
+            You can search
+
+            {% if showing_tree_menu %}
+              <select name="tree" id="tree">
+                {% for t in trees %}
+                  <option{% if ((t == tree) if tree else loop.first)  %} selected="selected"{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <b>{{ tree }}</b>
+              <input type="hidden" name="tree" value="{{ tree }}" id="tree">
+            {% endif %}
+            here
+          </div>
+          <div class="shown-with-results">
+            <div id="tree-tip">
+              Browsing {% if not showing_tree_menu %}<b>{{ tree }}</b>{% endif %}
             </div>
-            <input type="hidden" name="redirect" value="true" id="redirect">
-        </div>
+            <div id="tip">
+              {%- block tip -%}
+                Enter search query here
+              {%- endblock -%}
+            </div>
+          </div>
+
+          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s"
+          title="Search">
+          <input type="hidden" name="redirect" value="true" id="redirect"><!-- TODO: What's this for? Did I break stuff by moving it? -->
+
+          <div class="hidden-with-results">
+            or browse
+            {% for t in trees -%}
+              {%- if loop.last and trees|length > 1 %}
+                or
+              {% elif not loop.first and trees|length > 1 -%}
+                ,
+              {% endif -%}
+              <a href="{{ t }}/">{{ t }}</a>
+            {%- endfor -%}
+            .
+          </div>
         </form>
       </div>
     </div>
+
     {% if panel %}
     <div id="panel">
       <a id="panel-toggle">

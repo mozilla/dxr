@@ -18,8 +18,8 @@ Generating a Source Code Index
 ------------------------------
 To build a source code index you will need a project configuration file. Notice
 that this configuration file may contain one or more source trees. The
-configuration file details one DXR deployment. For information one the
-configuration file see configuration.mkd.
+configuration file details one DXR deployment. For information on the
+configuration file, see configuration.mkd.
 
 When you have configured your DXR deployment you can generate the source code
 index using `dxr-build.py -f <config-file>`. This will generate server scripts

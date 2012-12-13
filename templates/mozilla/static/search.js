@@ -104,7 +104,7 @@ function initIncrementalSearch(){
   }, false); 
 
   // Update advanced search fields on change in q
-  q.addEventListener('keyup', function(e){
+  q.addEventListener('input', function(e){
     // Don't do anything if query didn't change
     if(state.query == q.value) return;
     // Reset the state
@@ -127,7 +127,6 @@ function initIncrementalSearch(){
     state.query   = q.value;
     state.offset  = 0;
     state.eof     = false;
-    state.changed = true;
     state.changed = true;
     // Dispatch dxr-state-changed
     window.dispatchEvent(
