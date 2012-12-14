@@ -1,9 +1,0 @@
-Minimal, An HTML-Only Example Template
-======================================
-
-This is **very** minimalistic template for DXR, it here to serve as a basic
-example of how to write a template. That does not mean that this template is
-great starting point for writing a template, although this might be the case
-if you're really good with stylesheets.
-
-See Templating.mkd, for details on writing templates for DXR.
