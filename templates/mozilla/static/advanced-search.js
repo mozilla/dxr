@@ -156,7 +156,7 @@ function initAdvancedSearch(){
   var fields = document.querySelectorAll("#advanced-search input[type=text]");
   var q = document.getElementById("query");
   for(var i = 0; i < fields.length; i++){
-    fields[i].addEventListener('keyup', function(e){
+    fields[i].addEventListener('input', function(e){
       // Don't do anything if query didn't change
       if(state.query == buildQueryFromAdvanced()) return;
       // Reset the state
