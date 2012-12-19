@@ -1,4 +1,4 @@
-/** Menu module for showing nice context menues */
+/** Menu module for showing nice context menus */
 var menu = (function (){
 var menu = {};
 

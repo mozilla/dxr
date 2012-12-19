@@ -51,7 +51,7 @@ DXR uses the following template files:
  - `folder.html`       Folder listing page
  - `error.html`        Error message
 Using Jinja2 template inheritance these templates may reuse the same layout,
-however, this is not required. And DXR only requires these files.
+however, this is not required. And DXR requires only these files.
 
 If the template folder contains an additional folder called `static/` this
 folder will be copied into the www-folder when building the DXR html files.
@@ -109,9 +109,9 @@ the given query. However, the opposite implication doesn't not always hold.
 
 File Template Variables
 -----------------------
-All instances of this template is render statically when the index is generated.
+All instances of this template are rendered statically when the index is generated.
 Please note that the template should have Javascript support for handling the
-querystring `?q={{qyery}}` where users should be offered to see search results at
+querystring `?q={{query}}` where users should be offered to see search results at
 `{{wwwroot}}/search?q?{{query}}&tree={{tree}}&force`, as `?q={{query}}`
 indicates that the user was redirected to a direct result.
 Note: the `query` variable is **not** available in the this template, and must
@@ -159,7 +159,7 @@ Error Template Variables
 Notes on JSON Interface
 -----------------------
 If `&format=json` is appended to the querystring for a search query, the results
-will be returned in JSON format. This option is only available for the search
+will be returned in JSON format. This option is available only for the search
 page. The JSON interface essentially outputs the template variables as documented
 in the "Search Template Variables" section. The only exception to this rule is
 that tuples are converted to dictionaries, as these are more natural in JSON.

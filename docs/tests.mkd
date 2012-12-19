@@ -9,7 +9,7 @@ A DXR test is a folder with the name of the test (e.g. `my-dxr-test`) located in
 the `tests/` subfolder of the DXR source directory. The test folder must
 contains an executable file with the name of the test prefixed with `run-`,
 (e.g. `run-my-dxr-test`). This executable must run the test, clean-up and exit
-non-zero if the test failed. The test script will be called with it's own directory
+non-zero if the test failed. The test script will be called with its own directory
 as current working directory.
 
 It's recommended that the test script is used to wrap whatever test logic you

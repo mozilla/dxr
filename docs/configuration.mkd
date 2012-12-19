@@ -1,6 +1,6 @@
 DXR Configuration
 =================
-_This document describes how to configure you DXR builds, as well as fully
+_This document describes how to configure your DXR builds, as well as fully
 documenting all configuration settings._
 
 Configuration File Format
@@ -47,14 +47,14 @@ is better, but preferable you'd want something on the same file system as the
 `target_folder`.
 
 Please note that `dxr-build.py` assume the plugins in `plugin_folder` are
-already build and ready for use. If you specify your own plugin folder, the
+already built and ready for use. If you specify your own plugin folder, the
 top-level makefile will not do this for you. This setting is mainly here for
 completion, it's not recommended for normal operation.
 
 You might be tempted use `index.html` for `directory_index`, however, this is
 **not** recommened as any indexed files with that name would hide the directory
 index, which must be rather confusing to the users.
-(Notice, this value will also be used in the generated `.htaccess` file).
+(Note: this value will also be used in the generated `.htaccess` file.)
 
 
 Tree Configuration
@@ -83,17 +83,17 @@ keys listed below.
 
 (Refer to the Plugin Configuration section for plugin keys available here).
 
-Notice that is strongly recommended that you don't defined the `temp_folder`,
+Notice that is strongly recommended that you don't define `temp_folder`;
 this feature is just here for completeness. If you define a `build_command`
-without using `$jobs` somewhere in the command you will be warned, but build
-will continue.
+without using `$jobs` somewhere in the command, you will be warned, but the
+build will continue.
 
 
 Template Configuration
 ----------------------
-Configuration keys in the `Template` section will passed on the to the template
+Configuration keys in the `Template` section will passed on to the template
 as properties in the `config` dictionary. Take a look at the documentation for
-you template of choice, to see which keys are relevant here.
+your template of choice to see which keys are relevant here.
 
 Usually this section is used to provide external links to source code
 repositories, or information about which revision of the tree is being indexed.

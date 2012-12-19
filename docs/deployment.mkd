@@ -27,14 +27,14 @@ and source code index for all trees in the configuration file.
 
 If you wish to build the source code index for source trees individually, you
 can do this using `dxr-build.py --file <config-file> --tree <tree>`. This will
-only generated source code index for the specified tree. This can be used to
+generate the source code index for only the specified tree. This can be used to
 distribute the build operation to one build server for each source tree.
 
 Using `dxr-build.py --file <config-file> --server` the server scripts will be
 generated, see "The Generated Source Code Index" section below for details on
 the generated source code index.
 
-DXR have the following dependencies on the build servers
+DXR has the following dependencies on the build servers:
 
  - sqlite (`>= 3.7.4`)
  - trilite (latest git revision)
@@ -54,7 +54,7 @@ you have problems with it, try another revision and file a bug.
 The Generated Source Code Index
 -------------------------------
 The generated index will be stored in `target_folder` (see configuration.mkd),
-when `dxr-build.py` have successfully built the index. The generated index
+when `dxr-build.py` has successfully built the index. The generated index
 consists of a `server/` folder and a folder for each tree with the name of the
 tree (as given in a tree section, see configuration.mkd).
 

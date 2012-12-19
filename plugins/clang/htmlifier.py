@@ -35,7 +35,7 @@ class ClangHtmlifier:
 
 
   def refs(self):
-    """ Generate reference menues """
+    """ Generate reference menus """
     # We'll need this argument for all queries here
     args = (self.file_id,)
 

@@ -14,7 +14,7 @@ the icon filenames are preserved.
 DXR/Plugin Developers
 ---------------------
 If your plugin needs an icon that is not present in the icons/ folder,
-please add it and document it's origin in this document.
+please add it and document its origin in this document.
 Feel free to use icons already existing, but keep in mind that icons have
 semantic naming. So don't use the `search` icon for zoom, because a template
 designer may choose to change the search icon from a magnifying glass to
@@ -107,6 +107,3 @@ Following icons originates from [Tango](http://tango.freedesktop.org/) by the
 Tango desktop project, released into public domain.
 
  - `search`
-
-
-
