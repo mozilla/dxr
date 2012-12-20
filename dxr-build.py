@@ -86,8 +86,8 @@ def main(argv):
 
   # Create config.target_folder (if not exists)
   ensure_folder(config.target_folder, False)
-  ensure_folder(config.temp_folder,	  True)
-  ensure_folder(config.log_folder,    True)
+  ensure_folder(config.temp_folder, True)
+  ensure_folder(config.log_folder, True)
 
   # Make server if requested
   if make_server:
