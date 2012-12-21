@@ -196,6 +196,10 @@ def index_files(tree, conn):
       file_path = os.path.join(root, f)
       path = os.path.join(rel_path, f)
 
+      # Ignore file if its path (relative to the root) matches an ignore path
+      if any((fnmatch.fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths)):
+        continue # Ignore the file
+
       # the file
       with open(file_path, "r") as source_file:
         data = source_file.read()
@@ -222,6 +226,9 @@ def index_files(tree, conn):
     for folder in folders:
       if any((fnmatch.fnmatchcase(folder, e) for e in tree.ignore_patterns)):
         folders.remove(folder)
+      folder_relpath = "/" + os.path.join(rel_path, folder).replace(os.sep, "/") + "/"
+      if any((fnmatch.fnmatchcase(folder_relpath, e) for e in tree.ignore_paths)):
+        continue # Ignore the file
 
     # Now build folder listing and folders for indexed_files
     build_folder(tree, conn, rel_path, indexed_files, folders)
