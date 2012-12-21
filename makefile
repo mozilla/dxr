@@ -7,6 +7,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test:
+	cd tests && ./run-tests.py
 
 build: $(BUILD_PLUGINS) trilite
 
