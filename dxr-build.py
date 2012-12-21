@@ -1,19 +1,21 @@
 #!/usr/bin/env python2
 
+from datetime import datetime
+import fnmatch
+import getopt
+import os
+import shutil
+import sqlite3
+import string
+import subprocess, select
+import sys
+import time
+
 import dxr
 import dxr.utils
 import dxr.plugins
 import dxr.languages
 import dxr.mime
-import os, sys
-import shutil
-import sqlite3
-import string
-import subprocess, select
-import time
-import fnmatch
-import getopt
-from datetime import datetime
 
 def main(argv):
   # Options to read
@@ -431,7 +433,6 @@ def finalize_database(conn):
   conn.commit()
 
 
-import time
 def run_html_workers(tree, conn):
   """ Build HTML for a tree """
   print "Building HTML for the '%s' tree" % tree.name
