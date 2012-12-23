@@ -31,6 +31,12 @@ if tests_requested == []:
 if "-h" in sys.argv or "--help" in sys.argv:
   print "run-tests.py [--list-tests] [test]"
 
+# Set up the environment needed to run tests (to find trilite)
+env = dict(os.environ)
+ld_library_path = filter(bool, env.get("LD_LIBRARY_PATH", "").split(os.pathsep))
+ld_library_path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "trilite")))
+env["LD_LIBRARY_PATH"] = os.pathsep.join(ld_library_path)
+
 # Run tests
 failed = []
 for test in tests_requested:
@@ -44,7 +50,7 @@ for test in tests_requested:
     failed.append(test)
     continue
   # Run test
-  retval = subprocess.call(testscript, stdout = sys.stdout, stderr = sys.stderr, cwd = testdir)
+  retval = subprocess.call(testscript, stdout = sys.stdout, stderr = sys.stderr, cwd = testdir, env = env)
   if retval != 0:
     failed.append(test)
 
