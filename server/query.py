@@ -1,4 +1,5 @@
 import utils, cgi, codecs, struct
+import time
 
 # Register filters by adding them to this list.
 filters = []
@@ -95,11 +96,32 @@ class Query:
 
 #TODO Use named place holders in filters, this would make the filters easier to write
 
+_explain = False
+_sql_profile = []
+def _execute_sql(conn, sql, *parameters):
+  if _explain:
+    _sql_profile.append({
+      "sql" : sql,
+      "parameters" : parameters[0] if len(parameters) >= 1 else [],
+      "explanation" : conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
+    })
+    start_time = time.time()
+  res = conn.execute(sql, *parameters)
+  if _explain:
+    # fetch results eagerly so we can get an accurate time for the entire operation
+    res = res.fetchall()
+    _sql_profile[-1]["elapsed_time"] = time.time() - start_time
+    _sql_profile[-1]["nrows"] = len(res)
+  return res
+
 # Fetch results using a query,
 # See: queryparser.py for details in query specification
 def fetch_results(conn, query,
                   offset = 0, limit = 100,
+                  explain = False,
                   markup = "<b>", markdown = "</b>"):
+  global _explain
+  _explain = explain
   sql = """
     SELECT files.path, files.icon, trg_index.text, files.ID,
     extents(trg_index.contents)
@@ -131,7 +153,7 @@ def fetch_results(conn, query,
   def d(string):
     return decoder(string, errors="replace")[0]
 
-  cursor = conn.execute(sql, arguments)
+  cursor = _execute_sql(conn, sql, arguments)
 
   for path, icon, content, fileid, extents in cursor:
     elist = []
@@ -148,6 +170,8 @@ def fetch_results(conn, query,
       for e in f.extents(conn, query, fileid):
         elist.append(e)
     offsets = list(merge_extents(*elist))
+    if _explain:
+      continue
 
     lines = []
     line_number = 1
@@ -199,6 +223,27 @@ def fetch_results(conn, query,
       lines.append((line_number, out_line))
     # Return result
     yield icon, path, lines
+
+  def number_lines(arr):
+    ret = []
+    for i in range(len(arr)):
+      if arr[i] == "":
+        ret.append((i, " "))  # empty lines cause the <div> to collapse and mess up the formatting
+      else:
+        ret.append((i, arr[i]))
+    return ret
+
+  for i in range(len(_sql_profile)):
+    profile = _sql_profile[i]
+    yield ("",
+           "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
+           number_lines(profile["sql"].split("\n")))
+    yield ("",
+           "parameters %d" % i,
+           number_lines(map(lambda parm: repr(parm), profile["parameters"])));
+    yield ("",
+           "explanation %d" % i,
+           number_lines(map(lambda row: row["detail"], profile["explanation"])))
 
 
 def direct_result(conn, query):
@@ -431,7 +476,7 @@ class SimpleFilter(SearchFilter):
   def extents(self, conn, query, fileid):
     if self.ext_sql:
       for arg in query.params[self.param]:
-        for start, end in conn.execute(self.ext_sql, [fileid] + self.formatter(arg)):
+        for start, end in _execute_sql(conn, self.ext_sql, [fileid] + self.formatter(arg)):
           yield start, end, []
 
 class ExistsLikeFilter(SearchFilter):
@@ -487,7 +532,7 @@ class ExistsLikeFilter(SearchFilter):
         params = [fileid, '%' + like_escape(arg) + '%']
         def builder():
           sql = self.ext_sql % self.like_expr
-          for start, end in conn.execute(sql, params):
+          for start, end in _execute_sql(conn, sql, params):
             # Apparently sometime, None can occur in the database
             if start and end:
               yield (start, end,[])
@@ -496,7 +541,7 @@ class ExistsLikeFilter(SearchFilter):
         params = [fileid, arg]
         def builder():
           sql = self.ext_sql % self.qual_expr
-          for start, end in conn.execute(sql, params):
+          for start, end in _execute_sql(conn, sql, params):
             # Apparently sometime, None can occur in the database
             if start and end:
               yield (start, end,[])

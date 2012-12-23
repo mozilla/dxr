@@ -88,7 +88,8 @@ else:
     try:
       results = list(query.fetch_results(
         conn, q,
-        offset, limit
+        offset, limit,
+        querystring.has_key("explain")
       ))
     except sqlite3.OperationalError, e:
       if e.message.startswith("REGEXP:"):
