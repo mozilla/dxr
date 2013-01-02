@@ -3,7 +3,7 @@ all:
 	# replaces PWD with `pwd` and produces test.config
 	cat test.config.in | sed -e 's?PWD?'`pwd`'?g' > test.config
 	# Navigate into the DXR folder, build using config file
-	cd ../../; ./dxr-build.py --file tests/json-test/test.config; cd -
+	cd ../../; LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./trilite ./dxr-build.py --file tests/json-test/test.config; cd -
 	# Launch test server at port 8000
 	# cd target/server; ./test-server.py --port 8000; cd - 
 clean:

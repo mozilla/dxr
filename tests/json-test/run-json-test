@@ -7,7 +7,7 @@ echo "Ready to test"
 
 # Launch test server in background
 pushd target/server
-./test-server.py --port 3571 2>/dev/null &
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../../../trilite ./test-server.py --port 3571 2>/dev/null &
 popd
 
 # Give the server some time to start
