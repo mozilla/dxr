@@ -1,5 +1,7 @@
 # appended to Vagrant's default bashrc
 
 # included to link trilite after it builds
-# todo: make uppet symlink it and run ldconfig instead
+# todo: make puppet symlink it and run ldconfig instead. Actually, we might not
+# need this at all anymore; I now have the test makefiles setting it
+# themselves.
 export LD_LIBRARY_PATH=/home/vagrant/dxr/trilite
