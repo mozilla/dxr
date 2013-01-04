@@ -18,6 +18,11 @@ import dxr.languages
 import dxr.mime
 
 def main(argv):
+  # Help me figure out why Jenkins can't see trilite:
+  lib_path = os.environ.get('LD_LIBRARY_PATH', 'no LD_LIBRARY_PATH')
+  print 'LD_LIBRARY_PATH:', lib_path
+  print os.listdir(lib_path)  #
+
   # Options to read
   configfile  = None
   nb_jobs     = None # Allow us to overwrite config
