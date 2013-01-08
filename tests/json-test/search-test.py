@@ -10,6 +10,12 @@ def search(query):
 failed = False
 
 def test(query, paths):
+  """Assert that a given query returns results from each of the given file
+  paths.
+
+  Doesn't really properly assert things; just sets global ``failed`` to true.
+
+  """
   global failed
   print "Testing %s for %r" % (query, paths)
   try:

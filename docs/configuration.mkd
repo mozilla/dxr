@@ -3,6 +3,7 @@ DXR Configuration
 _This document describes how to configure your DXR builds, as well as fully
 documenting all configuration settings._
 
+
 Configuration File Format
 -------------------------
 The configuration file is split into different sections, sections `DXR` and
