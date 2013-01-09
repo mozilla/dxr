@@ -25,11 +25,15 @@ Vagrant::Config.run do |config|
 
     config.vm.forward_port 80, 8000
 
+    # Enable symlinks, which trilite uses during build:
+    config.vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
+
     if CONF['boot_mode'] == 'gui'
         config.vm.boot_mode = :gui
     end
 
-    if CONF['nfs'] == false or RUBY_PLATFORM =~ /mswin(32|64)/
+    # Don't mount shared folder over NFS on Jenkins; NFS doesn't work there yet.
+    if ENV['USER'] == 'jenkins' or CONF['nfs'] == false or RUBY_PLATFORM =~ /mswin(32|64)/
         config.vm.share_folder("v-root", MOUNT_POINT, ".")
     else
         config.vm.share_folder("v-root", MOUNT_POINT, ".", :nfs => true)
