@@ -7,6 +7,7 @@ $PROJ_DIR = "/home/vagrant/dxr"
 
 Exec {
     path => "/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin",
+    logoutput => "on_failure"
 }
 
 class dev {
