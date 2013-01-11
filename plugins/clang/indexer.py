@@ -26,6 +26,9 @@ def pre_process(tree, env):
     flags_str += ' -Xclang ' + flag
   env['CC']   = "clang %s"   % flags_str
   env['CXX']  = "clang++ %s" % flags_str
+  env['DXR_CC'] = env['CC']
+  env['DXR_CXX'] = env['CXX']
+  env['DXR_CLANG_FLAGS'] = flags_str
   env['DXR_CXX_CLANG_OBJECT_FOLDER']  = tree.object_folder
   env['DXR_CXX_CLANG_TEMP_FOLDER']    = temp_folder
 
