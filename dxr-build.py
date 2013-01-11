@@ -400,9 +400,10 @@ def build_tree(tree, conn):
 
   # Abort if build failed!
   if r != 0:
-    msg = "Build command for '%s' failed, exited non-zero!"
+    msg = "Build command for '%s' failed, exited non-zero! Log follows:"
     print >> sys.stderr, msg % tree.name
-    print >> sys.stderr, "    | See log: %s " % log.name
+    with open(log.name) as log_file:
+      print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
     sys.exit(1)
 
   # Let plugins post process
