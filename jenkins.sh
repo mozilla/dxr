@@ -3,6 +3,6 @@
 
 /opt/vagrant/bin/vagrant up
 /opt/vagrant/bin/vagrant ssh -c 'cd /home/vagrant/dxr && make test'
-RESULT = $?
+RESULT=$?
 /opt/vagrant/bin/vagrant destroy --force || exit $?
 exit $RESULT
