@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 # Kicks off the Jenkins tests.
 
 /opt/vagrant/bin/vagrant up
