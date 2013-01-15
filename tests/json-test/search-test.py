@@ -45,5 +45,10 @@ test("member:BitField", ["BitField.h"])
 test('+function:ConstOverload::foo()', ["const_overload.cpp"])
 test('+function:"ConstOverload::foo() const"', ["const_overload.cpp"])
 
+test('+var:prototype_parameter_function(int)::prototype_parameter', ['prototype_parameter.cpp'])
+test('+var-ref:prototype_parameter_function(int)::prototype_parameter', ['prototype_parameter.cpp'])
+
+test('+var:StaticMember::static_member', ['static_member.cpp'])
+
 if failed:
   sys.exit(1)
