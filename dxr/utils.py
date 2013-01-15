@@ -8,9 +8,9 @@ import string
 from datetime import datetime
 
 
-# Please keep these config objects as simple as possible, and in sync with
+# Please keep these config objects as simple as possible and in sync with
 # docs/configuration.mkd. I'm well aware that this is not the most compact way
-# of writing things, but it sure is doom to fail when user forgets an important
+# of writing things, but it sure is doomed to fail when user forgets an important
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
 
@@ -50,7 +50,7 @@ class Config:
     # Set configfile
     self.configfile       = configfile
     self.trees            = []
-    # Set template paramters (using new parser to avoid defaults)
+    # Set template parameters (using new parser to avoid defaults)
     tmp_cfg = ConfigParser.ConfigParser()
     tmp_cfg.read(configfile)
     self.template_parameters = dict(tmp_cfg.items('Template'))
