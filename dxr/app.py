@@ -1,6 +1,6 @@
 import os.path
 
-from flask import Blueprint, Flask, request, send_from_directory
+from flask import Blueprint, Flask, send_from_directory, current_app
 
 
 # Look in the 'dxr' package for static files, templates, etc.:
@@ -38,6 +38,5 @@ def browse(tree_and_path):
     """Show a directory listing or a single file from one of the trees."""
     tree, _, path = tree_and_path.partition('/')
     return send_from_directory(
-        os.path.join('/home/vagrant/dxr/tests/json-test/target', tree),
+        os.path.join(current_app.instance_path, 'trees', tree),
         path)
-#NEXT: Make this work. This will lead you to making the CSS (static files) work as well. It'll also make you get the ini file working.
