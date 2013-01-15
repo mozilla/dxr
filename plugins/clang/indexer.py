@@ -578,6 +578,12 @@ def update_defids(conn):
         WHERE functions.file_id   = decldef.definition_file_id
           AND functions.file_line = decldef.definition_file_line
           AND functions.file_col  = decldef.definition_file_col
+     UNION
+       SELECT varid
+         FROM variables
+        WHERE variables.file_id   = decldef.definition_file_id
+          AND variables.file_line = decldef.definition_file_line
+          AND variables.file_col  = decldef.definition_file_col
   )
   """
   conn.execute(sql)
