@@ -73,7 +73,8 @@ std::string getQualifiedName(const NamedDecl &d) {
     //    and
     // void ANamespace::AFunction(float);
     ret += "(";
-    if (const FunctionProtoType *ft = dyn_cast<FunctionProtoType>(fd->getType()->castAs<FunctionType>()))
+    const FunctionType *ft = fd->getType()->castAs<FunctionType>();
+    if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft))
     {
       unsigned num_params = fd->getNumParams();
       for (unsigned i = 0; i < num_params; ++i) {
@@ -82,13 +83,15 @@ std::string getQualifiedName(const NamedDecl &d) {
         ret += fd->getParamDecl(i)->getType().getAsString();
       }
 
-      if (ft->isVariadic()) {
+      if (fpt->isVariadic()) {
         if (num_params > 0)
           ret += ", ";
         ret += "...";
       }
     }
     ret += ")";
+    if (ft->isConst())
+      ret += " const";
   }
 
   return ret;
