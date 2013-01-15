@@ -48,6 +48,13 @@ class python ($project_path) {
             require => Package[$packages],
     }
 
+    exec {
+        "dxr-setup-develop":
+            cwd => "$project_path/dxr"
+            command => "python setup.py develop",
+            require => "pip-install-development",
+    }
+
     #exec { "install-project":
     #   cwd => "$project_path",
     #   command => "pip install -r $project_path/requirements/dev.txt",
