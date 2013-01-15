@@ -1,6 +1,6 @@
 import os.path
 
-from flask import Blueprint, Flask, send_from_directory, current_app
+from flask import Blueprint, Flask, send_from_directory, current_app, send_file
 
 
 # Look in the 'dxr' package for static files, templates, etc.:
@@ -27,7 +27,7 @@ def make_app(instance_folder):
 
 @dxr_blueprint.route('/')
 def index():
-    return 'index!'
+    return send_file(current_app.open_instance_resource('trees/index.html'))
 
 
 @dxr_blueprint.route('/search')
