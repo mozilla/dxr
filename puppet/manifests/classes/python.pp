@@ -44,7 +44,7 @@ class python ($project_path) {
 
     exec {
         "pip-install-development":
-            command => "pip install -r $project_path/requirements/dev.txt",
+            command => "pip install --no-deps -r $project_path/requirements/dev.txt",
             require => Package[$packages],
     }
 
