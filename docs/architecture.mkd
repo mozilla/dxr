@@ -29,12 +29,13 @@ DXR Directory Structure
 -----------------------
 _A brief outline of important directories in the DXR source code._
 
-DXR does two things: build and serve. Both these functions are exposed through the `dxr` Python package.
+DXR does two things: build and serve. Both these functions are exposed through
+the `dxr` Python package.
 
  - `bin/`               Command-line tools for building and serving trees
  - `dxr/`               Supporting shared Python code. This gets installed as a
                         Python package
+ - `dxr/templates/`     Templates (see templating.mkd for details)
  - `tests/`             Automated tests (see tests.mkd for details)
  - `plugins/`           Plugins (see plugins.mkd for details)
  - `docs/`              Documentation of important interfaces
- - `templates/`         Templates (see templating.mkd for details)

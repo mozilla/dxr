@@ -8,7 +8,6 @@ important.
 
 """
 from optparse import OptionParser
-import sys
 
 from dxr.app import make_app
 
@@ -25,7 +24,6 @@ def main():
         app.debug = True
         # Without binding to a public interface (0.0.0.0), you can't get to the
         # Vagrant box's test server from the host machine.
-    #    app.config['ini'] = (app.config, options.config_file_path)
         app.run(host='0.0.0.0', port=options.port)
     else:
         parser.print_usage()
