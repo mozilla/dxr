@@ -1,4 +1,5 @@
 import os.path
+from os.path import isdir
 
 from flask import Blueprint, Flask, send_from_directory, current_app, send_file
 
@@ -40,6 +41,13 @@ def search():
 def browse(tree_and_path):
     """Show a directory listing or a single file from one of the trees."""
     tree, _, path = tree_and_path.partition('/')
-    return send_from_directory(
-        os.path.join(current_app.instance_path, 'trees', tree),
-        path)
+    tree_folder = os.path.join(current_app.instance_path, 'trees', tree)
+
+    if isdir(os.path.join(tree_folder, path)):
+        # It's a bare directory. Add the index file to the end:
+        path = os.path.join(path, current_app.config['DIRECTORY_INDEX'])
+    else:
+        # It's a file. Add the .html extension:
+        path += '.html'
+
+    return send_from_directory(tree_folder, path)
