@@ -8,6 +8,7 @@ important.
 
 """
 from optparse import OptionParser
+from os.path import abspath
 
 from dxr.app import make_app
 
@@ -20,7 +21,7 @@ def main():
                       help='The port to serve on')
     options, args = parser.parse_args()
     if len(args) == 1:
-        app = make_app(args[0])
+        app = make_app(abspath(args[0]))
         app.debug = True
         # Without binding to a public interface (0.0.0.0), you can't get to the
         # Vagrant box's test server from the host machine.
