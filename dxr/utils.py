@@ -131,7 +131,7 @@ class TreeConfig:
     self.ignore_patterns  = parser.get(name, 'ignore_patterns',   False)
 
     # You cannot redefine the target folder!
-    self.target_folder    = os.path.join(config.target_folder, name)
+    self.target_folder    = os.path.join(config.target_folder, 'trees', name)
     # Set config file and DXR config object reference
     self.configfile       = configfile
     self.config           = config
@@ -234,18 +234,6 @@ def next_global_id():
   _next_id += 1
   return n
 
-
-def substitute_in_file(path, **variables):
-  """ Do a simple python string.Template substitution on a file
-      This function is mainly used for code generation, please make sure that
-      input files for this file have comments telling the reader where to look
-      to see declared variables.
-  """
-  with open(path, 'r') as f:
-    data = f.read()
-  data = string.Template(data).safe_substitute(variables)
-  with open(path, 'w') as f:
-    f.write(data)
 
 def open_log(config_or_tree, name):
   """ Get an open log file given config or tree and name """
