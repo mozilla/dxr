@@ -1,11 +1,12 @@
 import sqlite3
 import ctypes
 import ConfigParser
-import __main__
 import os, sys, subprocess
 import jinja2
 import string
 from datetime import datetime
+
+import dxr
 
 
 # Please keep these config objects as simple as possible and in sync with
@@ -20,12 +21,12 @@ class Config:
     # Create parser with sane defaults
     generated_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     parser = ConfigParser.ConfigParser({
-      'dxrroot':          os.path.dirname(__main__.__file__),
+      'dxrroot':          os.path.dirname(dxr.__file__),
       'plugin_folder':    "%(dxrroot)s/plugins",
       'nb_jobs':          "1",
       'temp_folder':      "/tmp/dxr-temp",
       'log_folder':       "%(temp_folder)s/logs",
-      'template':         "%(dxrroot)s/templates/mozilla",
+      'template':         "%(dxrroot)s/templates",
       'wwwroot':          "/",
       'enabled_plugins':  "*",
       'disabled_plugins': " ",

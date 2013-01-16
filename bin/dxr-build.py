@@ -4,6 +4,7 @@ from datetime import datetime
 import fnmatch
 import getopt
 import os
+from os.path import dirname
 import shutil
 import sqlite3
 import string
@@ -309,7 +310,7 @@ def create_server(config):
   # Delete and copy in the server folder as is
   if os.path.isdir(server_folder):
     shutil.rmtree(server_folder, False)
-  shutil.copytree(os.path.join(config.dxrroot, 'server'), server_folder, False)
+  shutil.copytree(os.path.join(config.dxrroot, '..', 'server'), server_folder, False)
 
   # We don't want to load config file on the server, so we just write all the
   # setting into the config.py script, simple as that.
@@ -321,15 +322,6 @@ def create_server(config):
     generated_date      = repr(config.generated_date)
   )
 
-  # Substitution for test-server.py
-  test_server = os.path.join(server_folder, 'test-server.py')
-  dxr.utils.substitute_in_file(test_server, 
-    trees               = repr([t.name for t in config.trees]),
-    wwwroot             = repr(config.wwwroot),
-    template_parameters = repr(config.template_parameters),
-    directory_index     = repr(config.directory_index)
-  )
-
   # Substitution for dot-htaccess
   htaccess = os.path.join(server_folder, 'dot-htaccess')
   dxr.utils.substitute_in_file(htaccess, 
@@ -338,10 +330,6 @@ def create_server(config):
 
   # Create jinja cache folder in server folder
   os.mkdir(os.path.join(server_folder, 'jinja_dxr_cache'))
-
-  # Copy in template folder
-  # We'll use mod_rewrite to map static/ one level up
-  shutil.copytree(config.template, os.path.join(server_folder, 'template'))
 
   # Build index file
   build_index(config)
@@ -475,7 +463,7 @@ def run_html_workers(tree, conn):
       log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
       # Create a worker
       print " - Starting worker %i" % next_id
-      cmd = [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args
+      cmd = [os.path.join(dirname(__file__), 'dxr-worker.py')] + args
       # Write command to log
       log.write(" ".join(cmd) + "\n")
       log.flush()
