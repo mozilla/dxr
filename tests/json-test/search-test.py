@@ -3,13 +3,19 @@
 import sys, urllib2, json, traceback
 
 def search(query):
-  url = "http://localhost:3571/search?format=json&tree=HelloWorld&q=%s&redirect=false" % query
+  url = "http://localhost:3571/search?format=json&tree=HelloWorld&q=%s&redirect=false" % urllib2.quote(query)
   data = urllib2.urlopen(url).read()
   return json.loads(data)
 
 failed = False
 
 def test(query, paths):
+  """Assert that a given query returns results from each of the given file
+  paths.
+
+  Doesn't really properly assert things; just sets global ``failed`` to true.
+
+  """
   global failed
   print "Testing %s for %r" % (query, paths)
   try:
@@ -35,6 +41,9 @@ test("function:getHello", ["hello.h"])
 #test("called-by:main", ["hello.h"])
 
 test("member:BitField", ["BitField.h"])
+
+test('+function:ConstOverload::foo()', ["const_overload.cpp"])
+test('+function:"ConstOverload::foo() const"', ["const_overload.cpp"])
 
 if failed:
   sys.exit(1)

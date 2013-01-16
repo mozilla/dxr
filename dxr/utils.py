@@ -92,7 +92,14 @@ class Config:
       sys.exit(1)
 
     # Load trees
-    for tree in parser.sections():
+    def section_cmp(a, b):
+      if parser.has_option(a, "order") and parser.has_option(b, "order"):
+        return cmp(parser.getint(a, "order"), parser.getint(b, "order"))
+      if (not parser.has_option(a, "order")) and (not parser.has_option(b, "order")):
+        return cmp(a, b)
+      return -1 if parser.has_option(a, "order") else 1
+
+    for tree in sorted(parser.sections(), section_cmp):
       if tree not in ('DXR', 'Template'):
         self.trees.append(TreeConfig(self, self.configfile, tree))
 
