@@ -238,8 +238,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
   """ Build folders and folder listing """
   # Create the sub folder, if it doesn't exist
   path = os.path.join(tree.target_folder, folder)
-  if not os.path.isdir(path):
-    os.mkdir(path)
+  ensure_folder(path)
 
   # Okay, now we build folder listing
   # Name is either basename (or if that is "" name of tree)
@@ -329,7 +328,7 @@ def create_server(config):
     dict(directory_index = repr(config.directory_index)))
 
   # Create jinja cache folder in target folder
-  os.mkdir(os.path.join(config.target_folder, 'jinja_dxr_cache'))
+  ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
 
   # Build index file
   build_index(config)
@@ -337,7 +336,7 @@ def create_server(config):
 
 def build_index(config):
   """ Build index.html for the server """
-  os.mkdir(os.path.join(config.target_folder, 'trees'))
+  ensure_folder(os.path.join(config.target_folder, 'trees'))
   _fill_and_write_template(
     config,
     'index.html',
