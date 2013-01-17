@@ -460,10 +460,10 @@ public:
     }
 #endif
     beginRecord("typedef", d->getLocation());
-    recordValue("tname", d->getNameAsString());
-    recordValue("tqualname", getQualifiedName(*d));
-    recordValue("tloc", locationToString(d->getLocation()));
-    recordValue("ttypedef", d->getUnderlyingType().getAsString());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getLocation()));
+//    recordValue("underlying", d->getUnderlyingType().getAsString());
     printScope(d);
     printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;

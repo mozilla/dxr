@@ -66,13 +66,13 @@ def post_process(tree, conn):
 schema = dxr.schema.Schema({
   # Typedef information in the tables
   "typedefs": [
-    ("tid", "INTEGER", False),           # The typedef's tid (also in types)
-    ("ttypedef", "VARCHAR(256)", False), # The long name of the type
+    ("id", "INTEGER", False),              # The typedef's id
+    ("name", "VARCHAR(256)", False),       # Simple name of the typedef
+    ("qualname", "VARCHAR(256)", False),   # Fully-qualified name of the typedef
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_key", "tid"),
-    ("_index", "ttypedef")
+    ("_key", "id"),
   ],
   # References to functions, types, variables, etc.
   "refs": [
@@ -267,8 +267,8 @@ def process_type(args, conn):
   return language_schema.get_insert_sql('types', args)
 
 def process_typedef(args, conn):
-  args['tid'] = dxr.utils.next_global_id()
-  if not fixupEntryPath(args, 'tloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   fixupExtent(args, 'extent')
 #  handleScope(args, conn)
