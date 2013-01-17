@@ -9,11 +9,11 @@ language_schema = dxr.schema.Schema({
   # IDs in other tables as well; the table its in can disambiguate which type of
   # scope you're looking at.
   "files" : [
-      ("ID", "INTEGER", False),
-      ("path", "VARCHAR(1024)", True),
-      ("icon", "VARCHAR(64)", True),
-      ("_key", "ID"),
-      ("_index", "path")
+    ("id", "INTEGER", False),
+    ("path", "VARCHAR(1024)", True),
+    ("icon", "VARCHAR(64)", True),
+    ("_key", "id"),
+    ("_index", "path")
   ],
   "scopes": [
     ("id", "INTEGER", False),         # An ID for this scope

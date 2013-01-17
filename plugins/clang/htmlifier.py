@@ -53,7 +53,7 @@ class ClangHtmlifier:
       SELECT decldef.extent_start,
              decldef.extent_end,
              functions.qualname,
-             (SELECT path FROM files WHERE files.ID = functions.file_id),
+             (SELECT path FROM files WHERE files.id = functions.file_id),
              functions.file_line
         FROM decldef, functions
        WHERE decldef.defid = functions.id
@@ -78,7 +78,7 @@ class ClangHtmlifier:
       SELECT decldef.extent_start,
              decldef.extent_end,
              variables.qualname,
-             (SELECT path FROM files WHERE files.ID = variables.file_id),
+             (SELECT path FROM files WHERE files.id = variables.file_id),
              variables.file_line
         FROM decldef, variables
        WHERE decldef.defid = variables.id
@@ -115,7 +115,7 @@ class ClangHtmlifier:
       SELECT refs.extent_start, refs.extent_end,
              types.qualname,
              types.kind,
-             (SELECT path FROM files WHERE files.ID = types.file_id),
+             (SELECT path FROM files WHERE files.id = types.file_id),
              types.file_line
         FROM types, refs
        WHERE types.id = refs.refid AND refs.file_id = ?
@@ -129,7 +129,7 @@ class ClangHtmlifier:
     sql = """
       SELECT refs.extent_start, refs.extent_end,
              functions.qualname,
-             (SELECT path FROM files WHERE files.ID = functions.file_id),
+             (SELECT path FROM files WHERE files.id = functions.file_id),
              functions.file_line
         FROM functions, refs
        WHERE functions.id = refs.refid AND refs.file_id = ?
@@ -143,7 +143,7 @@ class ClangHtmlifier:
     sql = """
       SELECT refs.extent_start, refs.extent_end,
              variables.qualname,
-             (SELECT path FROM files WHERE files.ID = variables.file_id),
+             (SELECT path FROM files WHERE files.id = variables.file_id),
              variables.file_line
         FROM variables, refs
        WHERE variables.id = refs.refid AND refs.file_id = ?
@@ -157,7 +157,7 @@ class ClangHtmlifier:
     sql = """
       SELECT refs.extent_start, refs.extent_end,
              macros.name,
-             (SELECT path FROM files WHERE files.ID = macros.file_id),
+             (SELECT path FROM files WHERE files.id = macros.file_id),
              macros.file_line
         FROM macros, refs
        WHERE macros.id = refs.refid AND refs.file_id = ?
@@ -405,7 +405,7 @@ def htmlify(path, text):
   fname = os.path.basename(path)
   if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
     # Get file_id, skip if not in database
-    sql = "SELECT files.ID FROM files WHERE path = ? LIMIT 1"
+    sql = "SELECT files.id FROM files WHERE path = ? LIMIT 1"
     row = _conn.execute(sql, (path,)).fetchone()
     if row:
       return ClangHtmlifier(_tree, _conn, path, text, row[0])

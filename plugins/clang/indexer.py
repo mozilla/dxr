@@ -146,7 +146,7 @@ def getFileID(conn, path):
     return file_id
 
   cur = conn.cursor()
-  row = cur.execute("SELECT ID FROM files where path=?", (path,)).fetchone()
+  row = cur.execute("SELECT id FROM files where path=?", (path,)).fetchone()
   file_id = None
   if row:
     file_id = row[0]
