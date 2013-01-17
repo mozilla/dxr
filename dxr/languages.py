@@ -24,18 +24,18 @@ language_schema = dxr.schema.Schema({
   ],
   # Type definitions: anything that defines a type per the relevant specs.
   "types": [
-    ("tid", "INTEGER", False),            # Unique ID for the type
+    ("id", "INTEGER", False),            # Unique ID for the type
     ("scopeid", "INTEGER", True),        # Scope this type is defined in
-    ("tname", "VARCHAR(256)", False),     # Simple name of the type
-    ("tqualname", "VARCHAR(256)", False), # Fully-qualified name of the type
-    ("tkind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union, struct, enum)
+    ("name", "VARCHAR(256)", False),     # Simple name of the type
+    ("qualname", "VARCHAR(256)", False), # Fully-qualified name of the type
+    ("kind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union, struct, enum)
     ("language", "_language", True),     # Language of the type
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_key", "tid"),
+    ("_key", "id"),
     ("_fkey", "scopeid", "scopes", "scopeid")
-#    ("_index", "tqualname", "tloc")
+#    ("_index", "qualname", "loc")
   ],
   # Inheritance relations: note that we store the full transitive closure in
   # this table, so if A extends B and B extends C, we'd have (A, C) stored in

@@ -316,10 +316,10 @@ public:
       NamedDecl *nd = d->getTypedefNameForAnonDecl();
       if (!nd)
         nd = d;
-      recordValue("tname", nd->getNameAsString());
-      recordValue("tqualname", getQualifiedName(*nd));
-      recordValue("tloc", locationToString(d->getLocation()));
-      recordValue("tkind", d->getKindName());
+      recordValue("name", nd->getNameAsString());
+      recordValue("qualname", getQualifiedName(*nd));
+      recordValue("loc", locationToString(d->getLocation()));
+      recordValue("kind", d->getKindName());
       printScope(d);
       // Linkify the name, not the `enum'
       printExtent(nd->getLocation(), nd->getLocation());

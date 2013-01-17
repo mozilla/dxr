@@ -266,7 +266,7 @@ def direct_result(conn, query):
     SELECT
       (SELECT path FROM files WHERE files.ID = types.file_id) as path,
       types.file_line
-     FROM types WHERE types.tname = ? LIMIT 2
+     FROM types WHERE types.name = ? LIMIT 2
   """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
@@ -290,7 +290,7 @@ def direct_result(conn, query):
       SELECT
          (SELECT path FROM files WHERE files.ID = types.file_id) as path,
          types.file_line
-        FROM types WHERE types.tqualname LIKE ? LIMIT 2
+        FROM types WHERE types.qualname LIKE ? LIMIT 2
     """, ("%" + term,))
     rows = cur.fetchall()
     if rows and len(rows) == 1:
@@ -312,7 +312,7 @@ def direct_result(conn, query):
   SELECT
      (SELECT path FROM files WHERE files.ID = types.file_id) as path,
      types.file_line
-    FROM types WHERE types.tname LIKE ? LIMIT 2
+    FROM types WHERE types.name LIKE ? LIMIT 2
   """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
@@ -581,8 +581,8 @@ filters.append(ExistsLikeFilter(
                          AND %s
                        ORDER BY types.extent_start
                     """,
-    like_name     = "types.tname",
-    qual_name     = "types.tqualname"
+    like_name     = "types.name",
+    qual_name     = "types.qualname"
 ))
 
 
@@ -591,17 +591,17 @@ filters.append(ExistsLikeFilter(
     param         = "type-ref",
     filter_sql    = """SELECT 1 FROM types, refs
                        WHERE %s
-                         AND types.tid = refs.refid AND refs.file_id = files.ID
+                         AND types.id = refs.refid AND refs.file_id = files.ID
                     """,
     ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM types
                                      WHERE %s
-                                       AND types.tid = refs.refid)
+                                       AND types.id = refs.refid)
                        ORDER BY refs.extent_start
                     """,
-    like_name     = "types.tname",
-    qual_name     = "types.tqualname"
+    like_name     = "types.name",
+    qual_name     = "types.qualname"
 ))
 
 # function filter
@@ -861,20 +861,20 @@ filters.append(ExistsLikeFilter(
     param         = "bases",
     filter_sql    = """SELECT 1 FROM types as base, impl, types
                         WHERE %s
-                          AND impl.tbase = base.tid
-                          AND impl.tderived = types.tid
+                          AND impl.tbase = base.id
+                          AND impl.tderived = types.id
                           AND base.file_id = files.ID""",
     ext_sql       = """SELECT base.extent_start, base.extent_end
                         FROM types as base
                        WHERE base.file_id = ?
                          AND EXISTS (SELECT 1 FROM impl, types
-                                     WHERE impl.tbase = base.tid
-                                       AND impl.tderived = types.tid
+                                     WHERE impl.tbase = base.id
+                                       AND impl.tderived = types.id
                                        AND %s
                                     )
                     """,
-    like_name     = "types.tname",
-    qual_name     = "types.tqualname"
+    like_name     = "types.name",
+    qual_name     = "types.qualname"
 ))
 
 
@@ -883,20 +883,20 @@ filters.append(ExistsLikeFilter(
     param         = "derived",
     filter_sql    = """SELECT 1 FROM types as sub, impl, types
                         WHERE %s
-                          AND impl.tbase = types.tid
-                          AND impl.tderived = sub.tid
+                          AND impl.tbase = types.id
+                          AND impl.tderived = sub.id
                           AND sub.file_id = files.ID""",
     ext_sql       = """SELECT sub.extent_start, sub.extent_end
                         FROM types as sub
                        WHERE sub.file_id = ?
                          AND EXISTS (SELECT 1 FROM impl, types
-                                     WHERE impl.tbase = types.tid
-                                       AND impl.tderived = sub.tid
+                                     WHERE impl.tbase = types.id
+                                       AND impl.tderived = sub.id
                                        AND %s
                                     )
                     """,
-    like_name     = "types.tname",
-    qual_name     = "types.tqualname"
+    like_name     = "types.name",
+    qual_name     = "types.qualname"
 ))
 
 
@@ -905,17 +905,17 @@ filters.append(ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, functions as mem
                         WHERE %s
-                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                          AND mem.scopeid = type.id AND mem.file_id = files.ID
                     """,
     ext_sql       = """ SELECT extent_start, extent_end
                           FROM functions as mem WHERE mem.file_id = ?
                                   AND EXISTS ( SELECT 1 FROM types as type
                                                 WHERE %s
-                                                  AND type.tid = mem.scopeid)
+                                                  AND type.id = mem.scopeid)
                        ORDER BY mem.extent_start
                     """,
-    like_name     = "type.tname",
-    qual_name     = "type.tqualname"
+    like_name     = "type.name",
+    qual_name     = "type.qualname"
 ))
 
 # member filter for types
@@ -923,17 +923,17 @@ filters.append(ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, types as mem
                         WHERE %s
-                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                          AND mem.scopeid = type.id AND mem.file_id = files.ID
                     """,
     ext_sql       = """ SELECT extent_start, extent_end
                           FROM types as mem WHERE mem.file_id = ?
                                   AND EXISTS ( SELECT 1 FROM types as type
                                                 WHERE %s
-                                                  AND type.tid = mem.scopeid)
+                                                  AND type.id = mem.scopeid)
                        ORDER BY mem.extent_start
                     """,
-    like_name     = "type.tname",
-    qual_name     = "type.tqualname"
+    like_name     = "type.name",
+    qual_name     = "type.qualname"
 ))
 
 # member filter for variables
@@ -941,17 +941,17 @@ filters.append(ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, variables as mem
                         WHERE %s
-                          AND mem.scopeid = type.tid AND mem.file_id = files.ID
+                          AND mem.scopeid = type.id AND mem.file_id = files.ID
                     """,
     ext_sql       = """ SELECT extent_start, extent_end
                           FROM variables as mem WHERE mem.file_id = ?
                                   AND EXISTS ( SELECT 1 FROM types as type
                                                 WHERE %s
-                                                  AND type.tid = mem.scopeid)
+                                                  AND type.id = mem.scopeid)
                        ORDER BY mem.extent_start
                     """,
-    like_name     = "type.tname",
-    qual_name     = "type.tqualname"
+    like_name     = "type.name",
+    qual_name     = "type.qualname"
 ))
 
 #TODO typedef filter

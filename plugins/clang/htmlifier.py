@@ -91,12 +91,12 @@ class ClangHtmlifier:
 
     # Extents for types defined here
     sql = """
-      SELECT extent_start, extent_end, tqualname, tkind
+      SELECT extent_start, extent_end, qualname, kind
         FROM types
        WHERE file_id = ?
     """
-    for start, end, tqualname, tkind in self.conn.execute(sql, args):
-      yield start, end, self.type_menu(tqualname, tkind)
+    for start, end, qualname, kind in self.conn.execute(sql, args):
+      yield start, end, self.type_menu(qualname, kind)
 
     # Extents for macros defined here
     sql = """
@@ -113,15 +113,15 @@ class ClangHtmlifier:
     # Add references to types
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             types.tqualname,
-             types.tkind,
+             types.qualname,
+             types.kind,
              (SELECT path FROM files WHERE files.ID = types.file_id),
              types.file_line
         FROM types, refs
-       WHERE types.tid = refs.refid AND refs.file_id = ?
+       WHERE types.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, tqualname, tkind, path, line in self.conn.execute(sql, args):
-      menu = self.type_menu(tqualname, tkind)
+    for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
+      menu = self.type_menu(qualname, kind)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -232,33 +232,33 @@ class ClangHtmlifier:
       'icon':   'jump'
     })
 
-  def type_menu(self, tqualname, tkind):
+  def type_menu(self, qualname, kind):
     """ Build menu for type """
     menu = []
-    # Things we can do with tqualname
-    if tkind == 'class' or tkind == 'struct':
+    # Things we can do with qualname
+    if kind == 'class' or kind == 'struct':
       menu.append({
         'text':   "Find sub classes",
         'title':  "Find sub classes of this class",
-        'href':   self.search("+derived:%s" % self.quote(tqualname)),
+        'href':   self.search("+derived:%s" % self.quote(qualname)),
         'icon':   'type'
       })
       menu.append({
         'text':   "Find base classes",
         'title':  "Find base classes of this class",
-        'href':   self.search("+bases:%s" % self.quote(tqualname)),
+        'href':   self.search("+bases:%s" % self.quote(qualname)),
         'icon':   'type'
       })
     menu.append({
       'text':   "Find members",
       'title':  "Find members of this class",
-      'href':   self.search("+member:%s" % self.quote(tqualname)),
+      'href':   self.search("+member:%s" % self.quote(qualname)),
       'icon':   'members'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references to this class",
-      'href':   self.search("+type-ref:%s" % self.quote(tqualname)),
+      'href':   self.search("+type-ref:%s" % self.quote(qualname)),
       'icon':   'reference'
     })
     return menu
@@ -331,9 +331,9 @@ class ClangHtmlifier:
 
   def links(self):
     # For each type add a section with members
-    sql = "SELECT tname, tid, file_line, tkind FROM types WHERE file_id = ?"
-    for tname, tid, tline, tkind in self.conn.execute(sql, (self.file_id,)):
-      if len(tname) == 0: continue
+    sql = "SELECT name, id, file_line, kind FROM types WHERE file_id = ?"
+    for name, tid, line, kind in self.conn.execute(sql, (self.file_id,)):
+      if len(name) == 0: continue
       links = []
       links += list(self.member_functions(tid))
       links += list(self.member_variables(tid))
@@ -341,16 +341,16 @@ class ClangHtmlifier:
       # Sort them by line
       links = sorted(links, key = lambda link: link[1])
 
-      # Make sure we have a sane limitation of tkind
-      if tkind not in ('class', 'struct', 'enum', 'union'):
-        print >> sys.stderr, "tkind '%s' was replaced for 'type'!" % tkind
-        tkind = 'type'
+      # Make sure we have a sane limitation of kind
+      if kind not in ('class', 'struct', 'enum', 'union'):
+        print >> sys.stderr, "kind '%s' was replaced for 'type'!" % kind
+        kind = 'type'
 
       # Add the outer type as the first link
-      links.insert(0, (tkind, tname, "#l%s" % tline))
+      links.insert(0, (kind, name, "#l%s" % line))
 
       # Now return the type
-      yield (30, tname, links)
+      yield (30, name, links)
 
     # Add all macros to the macro section
     links = []

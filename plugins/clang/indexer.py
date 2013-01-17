@@ -249,17 +249,17 @@ def process_decldef(args, conn):
   return schema.get_insert_sql('decldef', args)
 
 def process_type(args, conn):
-  if not fixupEntryPath(args, 'tloc', conn):
+  if not fixupEntryPath(args, 'loc', conn):
     return None
 
   # Scope might have been previously added to satisfy other process_* call
   scopeid = getScope(args, conn)
 
   if scopeid is not None:
-    args['tid'] = scopeid
+    args['id'] = scopeid
   else:
-    args['tid'] = dxr.utils.next_global_id()
-    addScope(args, conn, 'tname', 'tid')
+    args['id'] = dxr.utils.next_global_id()
+    addScope(args, conn, 'name', 'id')
 
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -432,7 +432,7 @@ def generate_inheritance(conn):
   childMap, parentMap = {}, {}
   types = {}
 
-  for row in conn.execute("SELECT tqualname, file_id, file_line, file_col, tid from types").fetchall():
+  for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id from types").fetchall():
     types[(row[0], row[1], row[2], row[3])] = row[4]
 
   for infoKey in inheritance:
@@ -567,7 +567,7 @@ def generate_callgraph(conn):
 def update_defids(conn):
   sql = """
     UPDATE decldef SET defid = (
-       SELECT tid
+       SELECT id
          FROM types
         WHERE types.file_id       = decldef.definition_file_id
           AND types.file_line     = decldef.definition_file_line
@@ -598,7 +598,7 @@ def update_refs(conn):
            AND macros.file_line     = refs.referenced_file_line
            AND macros.file_col      = refs.referenced_file_col
       UNION
-        SELECT tid
+        SELECT id
           FROM types
          WHERE types.file_id        = refs.referenced_file_id
            AND types.file_line      = refs.referenced_file_line
