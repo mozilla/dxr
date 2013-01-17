@@ -14,22 +14,22 @@
     <td></td>
     <td>-</td>
   </tr>
-{% for icon, name, modified in folders %}
+{% for icon, name, modified, relative_url in folders %}
   <tr>
-    <td><a href="{{wwwroot}}/{{tree}}/{{path}}/{{name}}"
+    <td><a href="{{ wwwroot }}/{{ relative_url }}"
            style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')">
            {{name}}/</a></td>
     <td>{{modified.strftime("%Y-%b-%d %H:%m")}}</td>
     <td>-</td>
   </tr>
 {% endfor %}
-{% for icon, name, modified, size in files %}
+{% for icon, name, modified, size, relative_url in files %}
   <tr>
-    <td><a href="{{wwwroot}}/{{tree}}/{{path}}/{{name}}"
+    <td><a href="{{ wwwroot }}/{{ relative_url }}"
            style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')">
            {{name}}</a></td>
     <td>{{modified.strftime("%Y-%b-%d %H:%m")}}</td>
-    <td>{{size}}</td>
+    <td>{{ size|filesizeformat }}</td>
   </tr>
 {% endfor %}
 </table>

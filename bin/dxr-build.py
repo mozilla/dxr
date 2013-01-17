@@ -4,6 +4,7 @@ from datetime import datetime
 import fnmatch
 import getopt
 import os
+from os import stat
 from os.path import dirname
 import shutil
 import sqlite3
@@ -235,47 +236,36 @@ def index_files(tree, conn):
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
-  """ Build folders and folder listing """
-  # Create the sub folder, if it doesn't exist
-  path = os.path.join(tree.target_folder, folder)
-  ensure_folder(path)
+  """Build folders and folder listings."""
+  # Create the subfolder if it doesn't exist:
+  ensure_folder(os.path.join(tree.target_folder, folder))
 
-  # Okay, now we build folder listing
+  # Build the folder listing:
   # Name is either basename (or if that is "" name of tree)
   name = os.path.basename(folder) or tree.name
 
-  # Generate list of folders (with meta-data)
-  folders = []
-  for f in indexed_folders:
-    # Get folder path on disk
-    path = os.path.join(tree.source_folder, folder, f)
-    # stat the folder
-    stat = os.stat(path)
-    modified = datetime.fromtimestamp(stat.st_mtime)
-    # Okay, this is what we give the template:
-    folders.append(('folder', f, modified))
+  # Generate list of folders and their mod dates:
+  folders = [('folder',
+              f,
+              datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
+                                                       folder,
+                                                       f)).st_mtime),
+              _join_url(tree.name, folder, f))
+             for f in indexed_folders]
 
-  # Generate list of files
+  # Generate list of files:
   files = []
   for f in indexed_files:
     # Get file path on disk
     path = os.path.join(tree.source_folder, folder, f)
-    # stat the file
-    stat = os.stat(path)
-    modified = datetime.fromtimestamp(stat.st_mtime)
-    # Format the size
-    size = stat.st_size # TODO Make this a bit prettier, ie. 4 decimals
-    if size > 2 ** 30:
-      size = str(size / 2 ** 30) + 'G'
-    elif size > 2 ** 20:
-      size = str(size / 2 ** 20) + 'M'
-    elif size > 2 ** 10:
-      size = str(size / 2 ** 10) + 'K'
-    else:
-      size = str(size)
-    # Now give this stuff to list template
-    files.append((dxr.mime.icon(path), f, modified, size))
+    file_info = stat(path)
+    files.append((dxr.mime.icon(path),
+                  f,
+                  datetime.fromtimestamp(file_info.st_mtime),
+                  file_info.st_size,
+                  _join_url(tree.name, folder, f)))
 
+  # Lay down the HTML:
   dst_path = os.path.join(tree.target_folder,
                           folder,
                           tree.config.directory_index)
@@ -295,6 +285,11 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
      'path':           folder,
      'folders':        folders,
      'files':          files})
+
+
+def _join_url(*args):
+  """Join URL path segments with "/", skipping empty segments."""
+  return '/'.join(a for a in args if a)
 
 
 def _fill_and_write_template(config, template_name, out_path, vars):
