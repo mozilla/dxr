@@ -364,10 +364,9 @@ public:
   bool VisitFunctionDecl(FunctionDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
-    else if (!d->isDefined())
-      return true;
 
-    if (d->isThisDeclarationADefinition())
+    if (d->isThisDeclarationADefinition() ||
+        d->isPure())  // until we have better support for pure-virtual functions
     {
       beginRecord("function", d->getLocation());
       recordValue("fname", d->getNameAsString());
