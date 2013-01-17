@@ -66,26 +66,26 @@ class ClangHtmlifier:
 
     # Extents for variables defined here
     sql = """
-      SELECT extent_start, extent_end, vqualname
+      SELECT extent_start, extent_end, qualname
         FROM variables
        WHERE file_id = ?
     """
-    for start, end, vqualname in self.conn.execute(sql, args):
-      yield start, end, self.variable_menu(vqualname)
+    for start, end, qualname in self.conn.execute(sql, args):
+      yield start, end, self.variable_menu(qualname)
 
     # Extents for variables declared here
     sql = """
       SELECT decldef.extent_start,
              decldef.extent_end,
-             variables.vqualname,
+             variables.qualname,
              (SELECT path FROM files WHERE files.ID = variables.file_id),
              variables.file_line
         FROM decldef, variables
-       WHERE decldef.defid = variables.varid
+       WHERE decldef.defid = variables.id
          AND decldef.file_id = ?
     """
-    for start, end, vqualname, path, line in self.conn.execute(sql, args):
-      menu = self.variable_menu(vqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -142,14 +142,14 @@ class ClangHtmlifier:
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             variables.vqualname,
+             variables.qualname,
              (SELECT path FROM files WHERE files.ID = variables.file_id),
              variables.file_line
         FROM variables, refs
-       WHERE variables.varid = refs.refid AND refs.file_id = ?
+       WHERE variables.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, vqualname, path, line in self.conn.execute(sql, args):
-      menu = self.variable_menu(vqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -264,14 +264,14 @@ class ClangHtmlifier:
     return menu
 
 
-  def variable_menu(self, vqualname):
+  def variable_menu(self, qualname):
     """ Build menu for a variable """
     menu = []
     # Well, what more than references can we do?
     menu.append({
       'text':   "Find references",
       'title':  "Find reference to this variable",
-      'href':   self.search("+var-ref:%s" % self.quote(vqualname)),
+      'href':   self.search("+var-ref:%s" % self.quote(qualname)),
       'icon':   'field'
     })
     # TODO Investigate whether assignments and usages is possible and useful?
@@ -377,14 +377,14 @@ class ClangHtmlifier:
   def member_variables(self, tid):
     """ Fetch member variables given a type id """
     sql = """
-      SELECT vname, file_line
+      SELECT name, file_line
       FROM variables
       WHERE file_id = ? AND scopeid = ?
     """
-    for vname, line in self.conn.execute(sql, (self.file_id, tid)):
+    for name, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
-      if len(vname) == 0: continue
-      yield 'field', vname, "#l%s" % line
+      if len(name) == 0: continue
+      yield 'field', name, "#l%s" % line
 
 _tree = None
 _conn = None

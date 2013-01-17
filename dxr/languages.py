@@ -68,19 +68,19 @@ language_schema = dxr.schema.Schema({
   # Variables are of course not scopes, but for ease of use, they use IDs from
   # the same namespace, no scope will have the same ID as a variable and v.v.
   "variables": [
-    ("varid", "INTEGER", False),         # Variable ID
+    ("id", "INTEGER", False),           # Variable ID
     ("scopeid", "INTEGER", True),       # Scope defined in
-    ("vname", "VARCHAR(256)", False),    # Short name
-    ("vqualname", "VARCHAR(256)", False),# Fully qualified name
-    ("vtype", "VARCHAR(256)", True),     # Full type (including pointer stuff)
+    ("name", "VARCHAR(256)", False),    # Short name
+    ("qualname", "VARCHAR(256)", False),# Fully qualified name
+    ("type", "VARCHAR(256)", True),     # Full type (including pointer stuff)
     ("modifiers", "VARCHAR(256)", True), # Modifiers for the declaration
     ("language", "_language", True),    # Language of the function
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_key", "varid"),
+    ("_key", "id"),
     ("_fkey", "scopeid", "scopes", "scopeid"),
-#    ("_index", "vname", "vloc")
+#    ("_index", "name", "loc")
   ],
   "crosslang": [
     ("canonid", "INTEGER", False),

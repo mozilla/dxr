@@ -425,10 +425,10 @@ public:
     if (treatThisValueDeclAsADefinition(d))
     {
       beginRecord("variable", d->getLocation());
-      recordValue("vname", d->getNameAsString());
-      recordValue("vqualname", getQualifiedName(*d));
-      recordValue("vloc", locationToString(d->getLocation()));
-      recordValue("vtype", d->getType().getAsString(), true);
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("loc", locationToString(d->getLocation()));
+      recordValue("type", d->getType().getAsString(), true);
       printScope(d);
       printExtent(d->getLocation(), d->getLocation());
       *out << std::endl;

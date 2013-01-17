@@ -297,8 +297,8 @@ def process_impl(args, conn):
   return None
 
 def process_variable(args, conn):
-  args['varid'] = dxr.utils.next_global_id()
-  if not fixupEntryPath(args, 'vloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -482,7 +482,7 @@ def generate_callgraph(conn):
   for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions").fetchall():
     functions[(row[0], row[1], row[2], row[3])] = row[4]
 
-  for row in conn.execute("SELECT vname, file_id, file_line, file_col, varid FROM variables").fetchall():
+  for row in conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables").fetchall():
     variables[(row[0], row[1], row[2], row[3])] = row[4]
 
   # Generate callers table
@@ -579,7 +579,7 @@ def update_defids(conn):
           AND functions.file_line = decldef.definition_file_line
           AND functions.file_col  = decldef.definition_file_col
      UNION
-       SELECT varid
+       SELECT id
          FROM variables
         WHERE variables.file_id   = decldef.definition_file_id
           AND variables.file_line = decldef.definition_file_line
@@ -616,7 +616,7 @@ def update_refs(conn):
            AND decldef.file_line    = refs.referenced_file_line
            AND decldef.file_col     = refs.referenced_file_col
       UNION 
-        SELECT varid
+        SELECT id
           FROM variables
          WHERE variables.file_id    = refs.referenced_file_id
            AND variables.file_line  = refs.referenced_file_line

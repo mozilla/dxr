@@ -652,8 +652,8 @@ filters.append(ExistsLikeFilter(
                          AND %s
                        ORDER BY variables.extent_start
                     """,
-    like_name     = "variables.vname",
-    qual_name     = "variables.vqualname"
+    like_name     = "variables.name",
+    qual_name     = "variables.qualname"
 ))
 
 
@@ -662,17 +662,17 @@ filters.append(ExistsLikeFilter(
     param         = "var-ref",
     filter_sql    = """SELECT 1 FROM variables, refs
                        WHERE %s
-                         AND variables.varid = refs.refid AND refs.file_id = files.ID
+                         AND variables.id = refs.refid AND refs.file_id = files.ID
                     """,
     ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM variables
                                      WHERE %s
-                                       AND variables.varid = refs.refid)
+                                       AND variables.id = refs.refid)
                        ORDER BY refs.extent_start
                     """,
-    like_name     = "variables.vname",
-    qual_name     = "variables.vqualname"
+    like_name     = "variables.name",
+    qual_name     = "variables.qualname"
 ))
 
 
