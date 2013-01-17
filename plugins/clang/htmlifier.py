@@ -41,26 +41,26 @@ class ClangHtmlifier:
 
     # Extents for functions defined here
     sql = """
-      SELECT extent_start, extent_end, fqualname
+      SELECT extent_start, extent_end, qualname
         FROM functions
        WHERE file_id = ?
     """
-    for start, end, fqualname in self.conn.execute(sql, args):
-      yield start, end, self.function_menu(fqualname)
+    for start, end, qualname in self.conn.execute(sql, args):
+      yield start, end, self.function_menu(qualname)
 
     # Extents for functions declared here
     sql = """
       SELECT decldef.extent_start,
              decldef.extent_end,
-             functions.fqualname,
+             functions.qualname,
              (SELECT path FROM files WHERE files.ID = functions.file_id),
              functions.file_line
         FROM decldef, functions
-       WHERE decldef.defid = functions.funcid
+       WHERE decldef.defid = functions.id
          AND decldef.file_id = ?
     """
-    for start, end, fqualname, path, line in self.conn.execute(sql, args):
-      menu = self.function_menu(fqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.function_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -128,14 +128,14 @@ class ClangHtmlifier:
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             functions.fqualname,
+             functions.qualname,
              (SELECT path FROM files WHERE files.ID = functions.file_id),
              functions.file_line
         FROM functions, refs
-       WHERE functions.funcid = refs.refid AND refs.file_id = ?
+       WHERE functions.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, fqualname, path, line in self.conn.execute(sql, args):
-      menu = self.function_menu(fqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.function_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -291,26 +291,26 @@ class ClangHtmlifier:
     return menu
 
 
-  def function_menu(self, fqualname):
+  def function_menu(self, qualname):
     """ Build menu for a function """
     menu = []
     # Things we can do with qualified name
     menu.append({
       'text':   "Find callers",
       'title':  "Find functions that calls this function",
-      'href':   self.search("+callers:%s" % self.quote(fqualname)),
+      'href':   self.search("+callers:%s" % self.quote(qualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find callees",
       'title':  "Find functions that are called by this function",
-      'href':   self.search("+called-by:%s" % self.quote(fqualname)),
+      'href':   self.search("+called-by:%s" % self.quote(qualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references of this function",
-      'href':   self.search("+function-ref:%s" % self.quote(fqualname)),
+      'href':   self.search("+function-ref:%s" % self.quote(qualname)),
       'icon':   'reference'
     })
     #TODO Jump between declaration and definition
@@ -364,14 +364,14 @@ class ClangHtmlifier:
   def member_functions(self, tid):
     """ Fetch member functions given a type id """
     sql = """
-      SELECT fname, file_line
+      SELECT name, file_line
       FROM functions
       WHERE file_id = ? AND scopeid = ?
     """
-    for fname, line in self.conn.execute(sql, (self.file_id, tid)):
+    for name, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
-      if len(fname) == 0: continue
-      yield 'method', fname, "#l%s" % line
+      if len(name) == 0: continue
+      yield 'method', name, "#l%s" % line
 
 
   def member_variables(self, tid):

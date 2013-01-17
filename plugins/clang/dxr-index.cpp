@@ -369,9 +369,9 @@ public:
         d->isPure())  // until we have better support for pure-virtual functions
     {
       beginRecord("function", d->getLocation());
-      recordValue("fname", d->getNameAsString());
-      recordValue("fqualname", getQualifiedName(*d));
-      recordValue("ftype", d->getResultType().getAsString());
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("type", d->getResultType().getAsString());
       std::string args("(");
       for (FunctionDecl::param_iterator it = d->param_begin();
           it != d->param_end(); it++) {
@@ -381,8 +381,8 @@ public:
       if (d->getNumParams() > 0)
         args.erase(1, 2);
       args += ")";
-      recordValue("fargs", args);
-      recordValue("floc", locationToString(d->getLocation()));
+      recordValue("args", args);
+      recordValue("loc", locationToString(d->getLocation()));
       printScope(d);
       printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
       // Print out overrides

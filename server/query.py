@@ -277,7 +277,7 @@ def direct_result(conn, query):
     SELECT
         (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
         functions.file_line
-      FROM functions WHERE functions.fname = ? LIMIT 2
+      FROM functions WHERE functions.name = ? LIMIT 2
   """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
@@ -301,7 +301,7 @@ def direct_result(conn, query):
     SELECT
        (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
        functions.file_line
-      FROM functions WHERE functions.fqualname LIKE ? LIMIT 2
+      FROM functions WHERE functions.qualname LIKE ? LIMIT 2
     """, ("%" + term,))
     rows = cur.fetchall()
     if rows and len(rows) == 1:
@@ -323,7 +323,7 @@ def direct_result(conn, query):
   SELECT
      (SELECT path FROM files WHERE files.ID = functions.file_id) as path,
      functions.file_line
-    FROM functions WHERE functions.fname LIKE ? LIMIT 2
+    FROM functions WHERE functions.name LIKE ? LIMIT 2
   """, (term,))
   rows = cur.fetchall()
   if rows and len(rows) == 1:
@@ -616,8 +616,8 @@ filters.append(ExistsLikeFilter(
                          AND %s
                        ORDER BY functions.extent_start
                     """,
-    like_name     = "functions.fname",
-    qual_name     = "functions.fqualname"
+    like_name     = "functions.name",
+    qual_name     = "functions.qualname"
 ))
 
 
@@ -626,17 +626,17 @@ filters.append(ExistsLikeFilter(
     param         = "function-ref",
     filter_sql    = """SELECT 1 FROM functions, refs
                        WHERE %s
-                         AND functions.funcid = refs.refid AND refs.file_id = files.ID
+                         AND functions.id = refs.refid AND refs.file_id = files.ID
                     """,
     ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions
                                      WHERE %s
-                                       AND functions.funcid = refs.refid)
+                                       AND functions.id = refs.refid)
                        ORDER BY refs.extent_start
                     """,
-    like_name     = "functions.fname",
-    qual_name     = "functions.fqualname"
+    like_name     = "functions.name",
+    qual_name     = "functions.qualname"
 ))
 
 
@@ -718,8 +718,8 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1
                         FROM functions as caller, functions as target, callers
                        WHERE %s
-                         AND callers.targetid = target.funcid
-                         AND callers.callerid = caller.funcid
+                         AND callers.targetid = target.id
+                         AND callers.callerid = caller.id
                          AND caller.file_id = files.ID
                     """,
     ext_sql       = """SELECT functions.extent_start, functions.extent_end
@@ -727,13 +727,13 @@ filters.append(ExistsLikeFilter(
                        WHERE functions.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions as target, callers
                                       WHERE %s
-                                        AND callers.targetid = target.funcid
-                                        AND callers.callerid = functions.funcid
+                                        AND callers.targetid = target.id
+                                        AND callers.callerid = functions.id
                                     )
                        ORDER BY functions.extent_start
                     """,
-    like_name     = "target.fname",
-    qual_name     = "target.fqualname"
+    like_name     = "target.name",
+    qual_name     = "target.qualname"
 ))
 
 # callers filter (indirect-calls
@@ -743,10 +743,10 @@ filters.append(ExistsLikeFilter(
                         FROM functions as caller, functions as target, callers
                        WHERE %s
                          AND  EXISTS ( SELECT 1 FROM targets
-                                        WHERE targets.funcid = target.funcid
+                                        WHERE targets.funcid = target.id
                                           AND targets.targetid = callers.targetid
                                      )
-                         AND callers.callerid = caller.funcid
+                         AND callers.callerid = caller.id
                          AND caller.file_id = files.ID
                     """,
     ext_sql       = """SELECT functions.extent_start, functions.extent_end
@@ -756,16 +756,16 @@ filters.append(ExistsLikeFilter(
                                       WHERE %s
                                         AND EXISTS (
                                    SELECT 1 FROM targets
-                                    WHERE targets.funcid = target.funcid
+                                    WHERE targets.funcid = target.id
                                       AND targets.targetid = callers.targetid
-                                      AND callers.callerid = target.funcid
+                                      AND callers.callerid = target.id
                                             )
-                                        AND callers.callerid = functions.funcid
+                                        AND callers.callerid = functions.id
                                     )
                        ORDER BY functions.extent_start
                     """,
-    like_name     = "target.fname",
-    qual_name     = "target.fqualname"
+    like_name     = "target.name",
+    qual_name     = "target.qualname"
 ))
 
 # called-by filter (direct calls)
@@ -774,8 +774,8 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1
                          FROM functions as target, functions as caller, callers
                         WHERE %s
-                          AND callers.callerid = caller.funcid
-                          AND callers.targetid = target.funcid
+                          AND callers.callerid = caller.id
+                          AND callers.targetid = target.id
                           AND target.file_id = files.ID
                     """,
     ext_sql       = """SELECT functions.extent_start, functions.extent_end 
@@ -783,13 +783,13 @@ filters.append(ExistsLikeFilter(
                        WHERE functions.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions as caller, callers
                                       WHERE %s
-                                        AND caller.funcid = callers.callerid
-                                        AND callers.targetid = functions.funcid
+                                        AND caller.id = callers.callerid
+                                        AND callers.targetid = functions.id
                                     )
                        ORDER BY functions.extent_start
                     """,
-    like_name     = "caller.fname",
-    qual_name     = "caller.fqualname"
+    like_name     = "caller.name",
+    qual_name     = "caller.qualname"
 ))
 
 # called-by filter (indirect calls)
@@ -798,9 +798,9 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1
                          FROM functions as target, functions as caller, callers
                         WHERE %s
-                          AND callers.callerid = caller.funcid
+                          AND callers.callerid = caller.d
                           AND ( EXISTS (SELECT 1 FROM targets
-                                         WHERE targets.funcid = target.funcid
+                                         WHERE targets.funcid = target.id
                                            AND targets.targetid = callers.targetid
                                        )
                               )
@@ -811,17 +811,17 @@ filters.append(ExistsLikeFilter(
                        WHERE functions.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions as caller, callers
                                       WHERE %s
-                                        AND caller.funcid = callers.callerid
+                                        AND caller.id = callers.callerid
                                         AND EXISTS (
                                     SELECT 1 FROM targets
-                                     WHERE targets.funcid = functions.funcid
+                                     WHERE targets.funcid = functions.id
                                        AND targets.targetid = callers.targetid
                                             )
                                     )
                        ORDER BY functions.extent_start
                     """,
-    like_name     = "caller.fname",
-    qual_name     = "caller.fqualname"
+    like_name     = "caller.name",
+    qual_name     = "caller.qualname"
 ))
 
 #warning filter

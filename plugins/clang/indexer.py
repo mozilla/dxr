@@ -120,13 +120,13 @@ schema = dxr.schema.Schema({
     ("callerid", "INTEGER", False), # The function in which the call occurs
     ("targetid", "INTEGER", False), # The target of the call
     ("_key", "callerid", "targetid"),
-    ("_fkey", "callerid", "functions", "funcid")
+    ("_fkey", "callerid", "functions", "id")
   ],
   "targets": [
     ("targetid", "INTEGER", False), # The target of the call
     ("funcid", "INTEGER", False),   # One of the functions in the target set
     ("_key", "targetid", "funcid"),
-    ("_fkey", "targetid", "functions", "funcid")
+    ("_fkey", "targetid", "functions", "id")
   ]
 })
 
@@ -275,18 +275,18 @@ def process_typedef(args, conn):
   return schema.get_insert_sql('typedefs', args)
 
 def process_function(args, conn):
-  if not fixupEntryPath(args, 'floc', conn):
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   scopeid = getScope(args, conn)
 
   if scopeid is not None:
-    args['funcid'] = scopeid
+    args['id'] = scopeid
   else:
-    args['funcid'] = dxr.utils.next_global_id()
-    addScope(args, conn, 'fname', 'funcid')
+    args['id'] = dxr.utils.next_global_id()
+    addScope(args, conn, 'name', 'id')
 
   if 'overridename' in args:
-    overrides[args['funcid']] = (args['overridename'], args['overrideloc'])
+    overrides[args['id']] = (args['overridename'], args['overrideloc'])
 
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -479,7 +479,7 @@ def generate_callgraph(conn):
   variables = {}
   callgraph = []
 
-  for row in conn.execute("SELECT fqualname, file_id, file_line, file_col, funcid FROM functions").fetchall():
+  for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions").fetchall():
     functions[(row[0], row[1], row[2], row[3])] = row[4]
 
   for row in conn.execute("SELECT vname, file_id, file_line, file_col, varid FROM variables").fetchall():
@@ -573,7 +573,7 @@ def update_defids(conn):
           AND types.file_line     = decldef.definition_file_line
           AND types.file_col      = decldef.definition_file_col
      UNION 
-       SELECT funcid
+       SELECT id
          FROM functions
         WHERE functions.file_id   = decldef.definition_file_id
           AND functions.file_line = decldef.definition_file_line
@@ -604,7 +604,7 @@ def update_refs(conn):
            AND types.file_line      = refs.referenced_file_line
            AND types.file_col       = refs.referenced_file_col
       UNION 
-        SELECT funcid
+        SELECT id
           FROM functions
          WHERE functions.file_id    = refs.referenced_file_id
            AND functions.file_line  = refs.referenced_file_line

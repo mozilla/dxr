@@ -49,20 +49,20 @@ language_schema = dxr.schema.Schema({
   ],
   # Functions: functions, methods, constructors, operator overloads, etc.
   "functions": [
-    ("funcid", "INTEGER", False),         # Function ID (also in scopes)
+    ("id", "INTEGER", False),            # Function ID (also in scopes)
     ("scopeid", "INTEGER", True),        # Scope defined in
-    ("fname", "VARCHAR(256)", False),     # Short name (no args)
-    ("fqualname", "VARCHAR(512)", False), # Fully qualified name, excluding args
-    ("fargs", "VARCHAR(256)", False),     # Argument string, including parens
-    ("ftype", "VARCHAR(256)", False),     # Full return type, as a string
+    ("name", "VARCHAR(256)", False),     # Short name (no args)
+    ("qualname", "VARCHAR(512)", False), # Fully qualified name, excluding args
+    ("args", "VARCHAR(256)", False),     # Argument string, including parens
+    ("type", "VARCHAR(256)", False),     # Full return type, as a string
     ("modifiers", "VARCHAR(256)", True),  # Modifiers (e.g., private)
     ("language", "_language", True),     # Language of the function
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_key", "funcid"),
+    ("_key", "id"),
     ("_fkey", "scopeid", "scopes", "scopeid"),
-#    ("_index", "fqualname", "floc")
+#    ("_index", "qualname", "loc")
   ],
   # Variables: class, global, local, enum constants; they're all in here
   # Variables are of course not scopes, but for ease of use, they use IDs from
