@@ -183,7 +183,7 @@ def fixupExtent(args, extents_key):
   del args[extents_key]
 
 def getScope(args, conn):
-  row = conn.execute("SELECT scopeid FROM scopes WHERE file_id=? AND file_line=? AND file_col=?",
+  row = conn.execute("SELECT id FROM scopes WHERE file_id=? AND file_line=? AND file_col=?",
                      (args['file_id'], args['file_line'], args['file_col'])).fetchone()
 
   if row is not None:
@@ -193,8 +193,8 @@ def getScope(args, conn):
 
 def addScope(args, conn, name, id):
   scope = {}
-  scope['sname'] = args[name]
-  scope['scopeid'] = args[id]
+  scope['name'] = args[name]
+  scope['id'] = args[id]
   scope['file_id'] = args['file_id']
   scope['file_line'] = args['file_line']
   scope['file_col'] = args['file_col']
@@ -209,20 +209,20 @@ def handleScope(args, conn, canonicalize=False):
   if 'scopename' not in args:
     return
 
-  scope['sname'] = args['scopename']
-  scope['scopeloc'] = args['scopeloc']
+  scope['name'] = args['scopename']
+  scope['loc'] = args['scopeloc']
   scope['language'] = 'native'
-  if not fixupEntryPath(scope, 'scopeloc', conn):
+  if not fixupEntryPath(scope, 'loc', conn):
     return None
 
   if canonicalize is True:
-    decl = canonicalize_decl(scope['sname'], scope['file_id'], scope['file_line'], scope['file_col'])
+    decl = canonicalize_decl(scope['name'], scope['file_id'], scope['file_line'], scope['file_col'])
     scope['file_id'], scope['file_line'], scope['file_col'] = decl[1], decl[2], decl[3]
 
   scopeid = getScope(scope, conn)
 
   if scopeid is None:
-    scope['scopeid'] = scopeid = dxr.utils.next_global_id()
+    scope['id'] = scopeid = dxr.utils.next_global_id()
     stmt = language_schema.get_insert_sql('scopes', scope)
     conn.execute(stmt[0], stmt[1])
 
@@ -411,13 +411,13 @@ def recanon_decl(name, loc):
   return (name, loc)
 
 def fixup_scope(conn):
-  conn.execute ("UPDATE types SET scopeid = (SELECT scopeid FROM scopes WHERE " +
+  conn.execute ("UPDATE types SET scopeid = (SELECT id FROM scopes WHERE " +
                 "scopes.file_id = types.file_id AND scopes.file_line = types.file_line " +
                 "AND scopes.file_col = types.file_col) WHERE scopeid IS NULL")
-  conn.execute ("UPDATE functions SET scopeid = (SELECT scopeid from scopes where " +
+  conn.execute ("UPDATE functions SET scopeid = (SELECT id from scopes where " +
                 "scopes.file_id = functions.file_id AND scopes.file_line = functions.file_line " +
                 "AND scopes.file_col = functions.file_col) WHERE scopeid IS NULL")
-  conn.execute ("UPDATE variables SET scopeid = (SELECT scopeid from scopes where " +
+  conn.execute ("UPDATE variables SET scopeid = (SELECT id from scopes where " +
                 "scopes.file_id = variables.file_id AND scopes.file_line = variables.file_line " +
                 "AND scopes.file_col = variables.file_col) WHERE scopeid IS NULL")
 

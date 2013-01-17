@@ -16,11 +16,11 @@ language_schema = dxr.schema.Schema({
       ("_index", "path")
   ],
   "scopes": [
-    ("scopeid", "INTEGER", False),    # An ID for this scope
-    ("sname", "VARCHAR(256)", True),  # Name of the scope
+    ("id", "INTEGER", False),         # An ID for this scope
+    ("name", "VARCHAR(256)", True),   # Name of the scope
     ("language", "_language", False), # The language of the scope
     ("_location", True),
-    ("_key", "scopeid")
+    ("_key", "id")
   ],
   # Type definitions: anything that defines a type per the relevant specs.
   "types": [
@@ -34,7 +34,7 @@ language_schema = dxr.schema.Schema({
     ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "id"),
-    ("_fkey", "scopeid", "scopes", "scopeid")
+    ("_fkey", "scopeid", "scopes", "id")
 #    ("_index", "qualname", "loc")
   ],
   # Inheritance relations: note that we store the full transitive closure in
@@ -61,7 +61,7 @@ language_schema = dxr.schema.Schema({
     ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "id"),
-    ("_fkey", "scopeid", "scopes", "scopeid"),
+    ("_fkey", "scopeid", "scopes", "id"),
 #    ("_index", "qualname", "loc")
   ],
   # Variables: class, global, local, enum constants; they're all in here
@@ -79,7 +79,7 @@ language_schema = dxr.schema.Schema({
     ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "id"),
-    ("_fkey", "scopeid", "scopes", "scopeid"),
+    ("_fkey", "scopeid", "scopes", "id"),
 #    ("_index", "name", "loc")
   ],
   "crosslang": [
