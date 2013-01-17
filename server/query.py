@@ -835,8 +835,8 @@ filters.append(ExistsLikeFilter(
                         WHERE warnings.file_id = ?
                           AND %s
                     """,
-    like_name     = "warnings.wmsg",
-    qual_name     = "warnings.wmsg" 
+    like_name     = "warnings.msg",
+    qual_name     = "warnings.msg"
 ))
 
 
@@ -851,8 +851,8 @@ filters.append(ExistsLikeFilter(
                         WHERE warnings.file_id = ?
                           AND %s
                     """,
-    like_name     = "warnings.wopt",
-    qual_name     = "warnings.wopt"
+    like_name     = "warnings.opt",
+    qual_name     = "warnings.opt"
 ))
 
 

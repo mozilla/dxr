@@ -595,11 +595,11 @@ public:
     info.FormatDiagnostic(message);
 
     beginRecord("warning", info.getLocation());
-    recordValue("wloc", locationToString(info.getLocation()));
-    recordValue("wmsg", message.c_str(), true);
+    recordValue("loc", locationToString(info.getLocation()));
+    recordValue("msg", message.c_str(), true);
     StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
     if (!opt.empty())
-      recordValue("wopt", ("-W" + opt).str());
+      recordValue("opt", ("-W" + opt).str());
     if (info.getNumRanges() > 0) {
       const CharSourceRange &range = info.getRange(0);
       printExtent(getWarningExtentLocation(range.getBegin()),

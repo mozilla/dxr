@@ -319,7 +319,7 @@ class ClangHtmlifier:
 
   def annotations(self):
     icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
-    sql = "SELECT wmsg, wopt, file_line FROM warnings WHERE file_id = ?"
+    sql = "SELECT msg, opt, file_line FROM warnings WHERE file_id = ?"
     for msg, opt, line in self.conn.execute(sql, (self.file_id,)):
       if opt:
         msg = msg + " [" + opt + "]"
