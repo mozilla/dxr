@@ -73,6 +73,22 @@ class ClangHtmlifier:
     for start, end, vqualname in self.conn.execute(sql, args):
       yield start, end, self.variable_menu(vqualname)
 
+    # Extents for variables declared here
+    sql = """
+      SELECT decldef.extent_start,
+             decldef.extent_end,
+             variables.vqualname,
+             (SELECT path FROM files WHERE files.ID = variables.file_id),
+             variables.file_line
+        FROM decldef, variables
+       WHERE decldef.defid = variables.varid
+         AND decldef.file_id = ?
+    """
+    for start, end, vqualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(vqualname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
+
     # Extents for types defined here
     sql = """
       SELECT extent_start, extent_end, tqualname, tkind

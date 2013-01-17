@@ -405,17 +405,37 @@ public:
     return true;
   }
 
+  bool treatThisValueDeclAsADefinition(const ValueDecl *d)
+  {
+    const VarDecl *vd = dyn_cast<VarDecl>(d);
+    if (!vd)
+      return true;  // Things that are not VarDecls (FieldDecl, EnumConstantDecl) are always treated as definitions
+    if (!vd->isThisDeclarationADefinition())
+      return false;
+    if (!isa<ParmVarDecl>(d))
+      return true;
+    // This var is part of a parameter list.  Only treat it as
+    // a definition if a function is also being defined.
+    const FunctionDecl *fd = dyn_cast<FunctionDecl>(d->getDeclContext());
+    return fd && fd->isThisDeclarationADefinition();
+  }
+
   void visitVariableDecl(ValueDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return;
-    beginRecord("variable", d->getLocation());
-    recordValue("vname", d->getNameAsString());
-    recordValue("vqualname", getQualifiedName(*d));
-    recordValue("vloc", locationToString(d->getLocation()));
-    recordValue("vtype", d->getType().getAsString(), true);
-    printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
-    *out << std::endl;
+    if (treatThisValueDeclAsADefinition(d))
+    {
+      beginRecord("variable", d->getLocation());
+      recordValue("vname", d->getNameAsString());
+      recordValue("vqualname", getQualifiedName(*d));
+      recordValue("vloc", locationToString(d->getLocation()));
+      recordValue("vtype", d->getType().getAsString(), true);
+      printScope(d);
+      printExtent(d->getLocation(), d->getLocation());
+      *out << std::endl;
+    }
+    if (VarDecl *vd = dyn_cast<VarDecl>(d))
+      declDef(vd, vd->getDefinition(), vd->getLocation(), vd->getLocation());
   }
 
   bool VisitEnumConstantDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
