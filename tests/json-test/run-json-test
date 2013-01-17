@@ -6,9 +6,7 @@ make
 echo "Ready to test"
 
 # Launch test server in background
-pushd target/server
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../../../trilite ./test-server.py --port 3571 2>/dev/null &
-popd
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite ../../bin/dxr-serve.py --port 3571 target 2>/dev/null &
 
 # Give the server some time to start
 # Not starting in a sec is also a bug :)
