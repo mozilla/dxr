@@ -100,15 +100,15 @@ class ClangHtmlifier:
 
     # Extents for macros defined here
     sql = """
-      SELECT file_line, file_col, macroname
+      SELECT file_line, file_col, name
         FROM macros
        WHERE file_id = ?
     """
-    for line, col, macroname in self.conn.execute(sql, args):
+    for line, col, name in self.conn.execute(sql, args):
       # TODO Refactor macro table and remove the (line, col) scheme!
       start = (line, col)
-      end   = (line, col + len(macroname))
-      yield start, end, self.macro_menu(macroname)
+      end   = (line, col + len(name))
+      yield start, end, self.macro_menu(name)
 
     # Add references to types
     sql = """
@@ -156,14 +156,14 @@ class ClangHtmlifier:
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             macros.macroname,
+             macros.name,
              (SELECT path FROM files WHERE files.ID = macros.file_id),
              macros.file_line
         FROM macros, refs
-       WHERE macros.macroid = refs.refid AND refs.file_id = ?
+       WHERE macros.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, macroname, path, line in self.conn.execute(sql, args):
-      menu = self.macro_menu(macroname)
+    for start, end, name, path, line in self.conn.execute(sql, args):
+      menu = self.macro_menu(name)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -278,14 +278,14 @@ class ClangHtmlifier:
     return menu
 
 
-  def macro_menu(self, macroname):
+  def macro_menu(self, name):
     menu = []
     # Things we can do with macros
     self.tree.config.wwwroot
     menu.append({
       'text':   "Find references",
       'title':  "Find references to macros with this name",
-      'href':    self.search("+macro-ref:%s" % macroname),
+      'href':    self.search("+macro-ref:%s" % name),
       'icon':   'reference'
     })
     return menu
@@ -354,9 +354,9 @@ class ClangHtmlifier:
 
     # Add all macros to the macro section
     links = []
-    sql = "SELECT macroname, file_line FROM macros WHERE file_id = ?"
-    for macro, line in self.conn.execute(sql, (self.file_id,)):
-      links.append(('macro', macro, "#l%s" % line))
+    sql = "SELECT name, file_line FROM macros WHERE file_id = ?"
+    for name, line in self.conn.execute(sql, (self.file_id,)):
+      links.append(('macro', name, "#l%s" % line))
     if links:
       yield (100, "Macros", links)
 

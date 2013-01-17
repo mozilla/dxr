@@ -647,13 +647,13 @@ public:
       break;
     }
     beginRecord("macro", nameStart);
-    recordValue("macroloc", locationToString(nameStart));
-    recordValue("macroname", std::string(contents, nameLen));
+    recordValue("loc", locationToString(nameStart));
+    recordValue("name", std::string(contents, nameLen));
     if (argsStart > 0)
-      recordValue("macroargs", std::string(contents + argsStart,
+      recordValue("args", std::string(contents + argsStart,
         argsEnd - argsStart), true);
     if (defnStart < length)
-      recordValue("macrotext", std::string(contents + defnStart,
+      recordValue("text", std::string(contents + defnStart,
         length - defnStart), true);
     printExtent(nameStart, nameStart);
     *out << std::endl;

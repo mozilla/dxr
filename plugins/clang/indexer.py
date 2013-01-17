@@ -101,10 +101,10 @@ schema = dxr.schema.Schema({
   ],
   # Macros: this is a table of all of the macros we come across in the code.
   "macros": [
-    ("macroid", "INTEGER", False),        # The macro id, for references
-    ("macroname", "VARCHAR(256)", False), # The name of the macro
-    ("macroargs", "VARCHAR(256)", True),  # The args of the macro (if any)
-    ("macrotext", "TEXT", True),          # The macro contents
+    ("id", "INTEGER", False),        # The macro id, for references
+    ("name", "VARCHAR(256)", False), # The name of the macro
+    ("args", "VARCHAR(256)", True),  # The args of the macro (if any)
+    ("text", "TEXT", True),          # The macro contents
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True)
@@ -323,10 +323,10 @@ def process_warning(args, conn):
   return schema.get_insert_sql('warnings', args)
 
 def process_macro(args, conn):
-  args['macroid'] = dxr.utils.next_global_id()
-  if 'macrotext' in args:
-    args['macrotext'] = args['macrotext'].replace("\\\n", "\n").strip()
-  if not fixupEntryPath(args, 'macroloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if 'text' in args:
+    args['text'] = args['text'].replace("\\\n", "\n").strip()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   fixupExtent(args, 'extent')
   return schema.get_insert_sql('macros', args)
@@ -592,7 +592,7 @@ def update_defids(conn):
 def update_refs(conn):
   sql = """
     UPDATE refs SET refid = (
-        SELECT macroid
+        SELECT id
           FROM macros
          WHERE macros.file_id       = refs.referenced_file_id
            AND macros.file_line     = refs.referenced_file_line

@@ -688,8 +688,8 @@ filters.append(ExistsLikeFilter(
                          AND %s
                        ORDER BY macros.extent_start
                     """,
-    like_name     = "macros.macroname",
-    qual_name     = "macros.macroname"
+    like_name     = "macros.name",
+    qual_name     = "macros.name"
 ))
 
 
@@ -698,17 +698,17 @@ filters.append(ExistsLikeFilter(
     param         = "macro-ref",
     filter_sql    = """SELECT 1 FROM macros, refs
                        WHERE %s
-                         AND macros.macroid = refs.refid AND refs.file_id = files.ID
+                         AND macros.id = refs.refid AND refs.file_id = files.ID
                     """,
     ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM macros
                                      WHERE %s
-                                       AND macros.macroid = refs.refid)
+                                       AND macros.id = refs.refid)
                        ORDER BY refs.extent_start
                     """,
-    like_name     = "macros.macroname",
-    qual_name     = "macros.macroname"
+    like_name     = "macros.name",
+    qual_name     = "macros.name"
 ))
 
 
