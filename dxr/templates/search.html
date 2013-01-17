@@ -112,16 +112,14 @@
           </a>
          {%- endfor -%}
       </div>
-      {% if lines|length > 0 %}
       {% for number, line in lines %}
       <a class="snippet" href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}">
         <div class="line-numbers">
         <pre><span class="ln">{{number}}</span></pre>
         </div>
-        <div class="file-lines"><pre><code>{{line}}</code></pre></div>
+        <div class="file-lines"><pre><code>{{ line|safe }}</code></pre></div>
       </a>
       {%- endfor %}
-      {% endif %}
     </div>
   {% else %}
   <div id="no-results">
