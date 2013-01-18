@@ -798,7 +798,7 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1
                          FROM functions as target, functions as caller, callers
                         WHERE %s
-                          AND callers.callerid = caller.d
+                          AND callers.callerid = caller.id
                           AND ( EXISTS (SELECT 1 FROM targets
                                          WHERE targets.funcid = target.id
                                            AND targets.targetid = callers.targetid
