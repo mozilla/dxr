@@ -1,11 +1,11 @@
 # Install python and compiled modules for project
 class python ($project_path) {
 
-    $packages = ["python2.6-dev",
+    $packages = ["libapache2-mod-wsgi",
+                 "python2.6-dev",
                  "python2.6",
                  "python-wsgi-intercept",
                  "python-pip"]
-                 # "libapache2-mod-wsgi"
 
     package {
         $packages:
@@ -50,9 +50,10 @@ class python ($project_path) {
 
     exec {
         "dxr-setup-develop":
-            cwd => "$project_path/dxr"
+            cwd => "$project_path",
+            # TODO: Change this to python2.6 once we get pip using 2.6:
             command => "python setup.py develop",
-            require => "pip-install-development",
+            require => Exec["pip-install-development"],
     }
 
     #exec { "install-project":

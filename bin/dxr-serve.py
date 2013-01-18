@@ -1,10 +1,8 @@
 #!/usr/bin/env python2
 """
-A simple test server for DXR, NOT a deployment server
+A simple test server for DXR, not suitable for production
 
-Use Apache or something else for deployments; this is NOT designed with
-security in mind. Note: support for mod_rewrite or something similar is quite
-important.
+Use a web server with WSGI support for actual deployments.
 
 """
 from optparse import OptionParser
