@@ -13,7 +13,7 @@ language_schema = dxr.schema.Schema({
     ("path", "VARCHAR(1024)", True),
     ("icon", "VARCHAR(64)", True),
     ("_key", "id"),
-    ("_index", "path")
+    ("_index", "path"),               # TODO: Make this a unique index
   ],
   "scopes": [
     ("id", "INTEGER", False),         # An ID for this scope
@@ -34,8 +34,8 @@ language_schema = dxr.schema.Schema({
     ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "id"),
-    ("_fkey", "scopeid", "scopes", "id")
-#    ("_index", "qualname", "loc")
+    ("_fkey", "scopeid", "scopes", "id"),
+    ("_index", "qualname"),
   ],
   # Inheritance relations: note that we store the full transitive closure in
   # this table, so if A extends B and B extends C, we'd have (A, C) stored in
@@ -62,7 +62,7 @@ language_schema = dxr.schema.Schema({
     ("_location", True),
     ("_key", "id"),
     ("_fkey", "scopeid", "scopes", "id"),
-#    ("_index", "qualname", "loc")
+    ("_index", "qualname"),
   ],
   # Variables: class, global, local, enum constants; they're all in here
   # Variables are of course not scopes, but for ease of use, they use IDs from
@@ -80,7 +80,7 @@ language_schema = dxr.schema.Schema({
     ("_location", True),
     ("_key", "id"),
     ("_fkey", "scopeid", "scopes", "id"),
-#    ("_index", "name", "loc")
+    ("_index", "qualname"),
   ],
   "crosslang": [
     ("canonid", "INTEGER", False),

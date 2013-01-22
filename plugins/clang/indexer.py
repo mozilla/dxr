@@ -73,6 +73,7 @@ schema = dxr.schema.Schema({
     ("extent_end", "INTEGER", True),
     ("_location", True),
     ("_key", "id"),
+    ("_index", "qualname"),
   ],
   # References to functions, types, variables, etc.
   "refs": [
@@ -80,7 +81,8 @@ schema = dxr.schema.Schema({
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_location", True, 'referenced')
+    ("_location", True, 'referenced'),
+    ("_index", "refid"),
   ],
   # Warnings found while compiling
   "warnings": [
@@ -97,7 +99,8 @@ schema = dxr.schema.Schema({
     ("_location", True, 'definition'),
     # Extents of the declaration
     ("extent_start", "INTEGER", True),
-    ("extent_end", "INTEGER", True)
+    ("extent_end", "INTEGER", True),
+    ("_index", "defid"),
   ],
   # Macros: this is a table of all of the macros we come across in the code.
   "macros": [
