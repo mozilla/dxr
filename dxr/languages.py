@@ -13,7 +13,7 @@ language_schema = dxr.schema.Schema({
     ("path", "VARCHAR(1024)", True),
     ("icon", "VARCHAR(64)", True),
     ("_key", "id"),
-    ("_index", "path")
+    ("_index", "path"),               # TODO: Make this a unique index
   ],
   "scopes": [
     ("id", "INTEGER", False),         # An ID for this scope
