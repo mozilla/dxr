@@ -114,7 +114,7 @@ class SchemaTable:
     sql += ',\n  '.join(colstrs)
     sql += '\n);\n'
     if self.index is not None:
-      sql += 'CREATE UNIQUE INDEX %s_index on %s (%s);\n' % (self.name, self.name, ','.join(self.index))
+      sql += 'CREATE INDEX %s_%s_index on %s (%s);\n' % (self.name, '_'.join(self.index), self.name, ','.join(self.index))
     if self.needFileKey is True:
       sql += 'CREATE UNIQUE INDEX %s_file_index on %s (file_id, file_line, file_col);' % (self.name, self.name)
     return sql
