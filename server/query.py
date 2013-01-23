@@ -502,45 +502,59 @@ class ExistsLikeFilter(SearchFilter):
     self.qual_expr = " %s = ? " % qual_name
     self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
   def filter(self, query):
+    param_count = self.filter_sql.count("%s")
+    like_tuple = (self.like_expr, ) * param_count
+    qual_tuple = (self.qual_expr, ) * param_count
     for arg in query.params[self.param]:
       yield (
-              "EXISTS (%s)" % (self.filter_sql % self.like_expr),
-              ['%' + like_escape(arg) + '%'],
+              "EXISTS (%s)" % (self.filter_sql % like_tuple),
+              ['%' + like_escape(arg) + '%'] * param_count,
               self.ext_sql is not None
             )
     for arg in query.params["+" + self.param]:
       yield (
-              "EXISTS (%s)" % (self.filter_sql % self.qual_expr),
-              [arg],
+              "EXISTS (%s)" % (self.filter_sql % qual_tuple),
+              [arg] * param_count,
               self.ext_sql is not None
             )
     for arg in query.params["+-" + self.param] + query.params["-+" + self.param]:
       yield (
-              "NOT EXISTS (%s)" % (self.filter_sql % self.qual_expr),
-              [arg],
+              "NOT EXISTS (%s)" % (self.filter_sql % qual_tuple),
+              [arg] * param_count,
               False
             )
     for arg in query.params["-" + self.param]:
       yield (
-              "NOT EXISTS (%s)" % (self.filter_sql % self.like_expr),
-              ['%' + like_escape(arg) + '%'],
+              "NOT EXISTS (%s)" % (self.filter_sql % like_tuple),
+              ['%' + like_escape(arg) + '%'] * param_count,
               False
             )
   def extents(self, conn, query, fileid):
     if self.ext_sql:
+      param_count = self.ext_sql.count("%s")
+      like_tuple = (self.like_expr, ) * param_count
+      qual_tuple = (self.qual_expr, ) * param_count
+      def build_params(expr):
+        ret = []
+        for p in re.findall('\?|%s', self.ext_sql):
+          if p == '?':
+            ret.append(fileid)
+          elif p == '%s':
+            ret.append(expr)
+        return ret
       for arg in query.params[self.param]:
-        params = [fileid, '%' + like_escape(arg) + '%']
+        params = build_params('%' + like_escape(arg) + '%')
         def builder():
-          sql = self.ext_sql % self.like_expr
+          sql = self.ext_sql % like_tuple
           for start, end in _execute_sql(conn, sql, params):
             # Apparently sometime, None can occur in the database
             if start and end:
               yield (start, end,[])
         yield builder()
       for arg in query.params["+" + self.param]:
-        params = [fileid, arg]
+        params = build_params(arg)
         def builder():
-          sql = self.ext_sql % self.qual_expr
+          sql = self.ext_sql % qual_tuple
           for start, end in _execute_sql(conn, sql, params):
             # Apparently sometime, None can occur in the database
             if start and end:
@@ -575,10 +589,20 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1 FROM types
                        WHERE %s
                          AND types.file_id = files.id
+                       UNION
+                       SELECT 1 FROM typedefs AS types
+                       WHERE %s
+                         AND types.file_id = files.id
                     """,
-    ext_sql       = """SELECT types.extent_start, types.extent_end FROM types
-                       WHERE types.file_id = ?
-                         AND %s
+    ext_sql       = """SELECT types.extent_start, types.extent_end FROM (
+                         SELECT extent_start, extent_end, file_id, name, qualname FROM types
+                         WHERE types.file_id = ?
+                           AND %s
+                         UNION
+                         SELECT extent_start, extent_end, file_id, name, qualname FROM typedefs AS types
+                         WHERE types.file_id = ?
+                           AND %s
+                       ) AS types
                        ORDER BY types.extent_start
                     """,
     like_name     = "types.name",
@@ -592,10 +616,18 @@ filters.append(ExistsLikeFilter(
     filter_sql    = """SELECT 1 FROM types, refs
                        WHERE %s
                          AND types.id = refs.refid AND refs.file_id = files.id
+                       UNION
+                       SELECT 1 FROM typedefs as types, refs
+                       WHERE %s
+                         AND types.id = refs.refid AND refs.file_id = files.id
                     """,
     ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM types
+                                     WHERE %s
+                                       AND types.id = refs.refid
+                                     UNION
+                                     SELECT 1 FROM typedefs as types
                                      WHERE %s
                                        AND types.id = refs.refid)
                        ORDER BY refs.extent_start
@@ -953,5 +985,3 @@ filters.append(ExistsLikeFilter(
     like_name     = "type.name",
     qual_name     = "type.qualname"
 ))
-
-#TODO typedef filter

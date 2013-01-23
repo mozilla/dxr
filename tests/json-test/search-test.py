@@ -50,5 +50,8 @@ test('+var-ref:prototype_parameter_function(int)::prototype_parameter', ['protot
 
 test('+var:StaticMember::static_member', ['static_member.cpp'])
 
+test('+type:MyTypedef', ['typedef.h'])
+test('+type-ref:MyTypedef', ['typedef.cpp'])
+
 if failed:
   sys.exit(1)
