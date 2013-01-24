@@ -14,15 +14,14 @@ when the HTML is generated.
 The build process looks like this:
 
  1. Read user-supplied configuration file (see configuration.mkd).
- 2. Copy `server/` and template to `target_folder`.
- 3. Store relevant configuration keys in `server/config.py`.
- 4. For each source tree...
+ 2. Store relevant configuration keys in `server/config.py`.
+ 3. For each source tree...
     1. Run `pre_process` from `indexer.py` for all plugins.
     2. Build the tree using `build_command`.
     3. Run `post_process` from `indexer.py` for all plugins.
     4. Launch subprocessees of `dxr-worker.py` to generate HTML.
        (These reads configuration file and uses plugins `htmlifier` module)
- 5. Optimize and verify integrity of the database.
+ 4. Optimize and verify integrity of the database.
 
 
 DXR Directory Structure
@@ -33,9 +32,9 @@ DXR does two things: build and serve. Both these functions are exposed through
 the `dxr` Python package.
 
  - `bin/`               Command-line tools for building and serving trees
+ - `docs/`              Documentation of important interfaces
  - `dxr/`               Supporting shared Python code. This gets installed as a
                         Python package
+ - `dxr/plugins/`       Plugins (see plugins.mkd for details)
  - `dxr/templates/`     Templates (see templating.mkd for details)
  - `tests/`             Automated tests (see tests.mkd for details)
- - `plugins/`           Plugins (see plugins.mkd for details)
- - `docs/`              Documentation of important interfaces
