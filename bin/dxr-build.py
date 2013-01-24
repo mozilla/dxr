@@ -24,11 +24,10 @@ def main(argv):
   configfile  = None
   nb_jobs     = None # Allow us to overwrite config
   tree        = None
-  make_server = False
 
   # Parse arguments
   try:
-    params = ["help", "file=", "tree=", "jobs=", "server"]
+    params = ["help", "file=", "tree=", "jobs="]
     options, args = getopt.getopt(argv, "hf:t:j:s", params)
   except getopt.GetoptError:
     print >> sys.stderr, "Failed to parse options"
@@ -51,17 +50,10 @@ def main(argv):
       tree = opt
     elif arg in ('-j', '--jobs'):
       nb_jobs = opt
-    elif arg in ('-s', '--server'):
-      make_server = True
     else:
       print >> sys.stderr, "Unknown option '%s'" % arg
       print_usage()
       sys.exit(1)
-
-  # Complain if conflicting --tree and --server arguments
-  if tree and make_server:
-    print >> sys.stderr, "Can't combine --tree and --server arguments"
-    sys.exit(1)
 
   # Abort if we didn't get a config file
   if not configfile:
@@ -81,21 +73,43 @@ def main(argv):
     if len(trees) == 0:
       print >> sys.stderr, "Tree '%s' is not defined in config file!" % tree
       sys.exit(1)
-  elif not make_server:
-    # Build everything if no tree or action is provided
-    trees = config.trees
-    make_server = True
   else:
-    trees = []
+    # Build everything if no tree is provided
+    trees = config.trees
 
   # Create config.target_folder (if not exists)
+  print "Generating target folder"
   ensure_folder(config.target_folder, False)
   ensure_folder(config.temp_folder, True)
   ensure_folder(config.log_folder, True)
 
-  # Make server if requested
-  if make_server:
-    create_server(config)
+  # We don't want to load config file on the server, so we just write all the
+  # setting into the config.py script, simple as that.
+  _fill_and_write_template(
+    config,
+    'config.py',
+    os.path.join(config.target_folder, 'config.py'),
+    dict(trees = repr([t.name for t in config.trees]),
+         wwwroot = repr(config.wwwroot),
+         template_parameters = repr(config.template_parameters),
+         generated_date = repr(config.generated_date),
+         directory_index = repr(config.directory_index)))
+
+  # Create jinja cache folder in target folder
+  ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
+
+  # Build root-level index.html:
+  ensure_folder(os.path.join(config.target_folder, 'trees'))
+  _fill_and_write_template(
+    config,
+    'index.html',
+    os.path.join(config.target_folder, 'trees', 'index.html'),
+    {'wwwroot': config.wwwroot,
+     'tree': config.trees[0].name,
+     'trees': [t.name for t in config.trees],
+     'config': config.template_parameters,
+     'generated_date': config.generated_date})
+  # TODO Make open-search.xml things (or make the server so it can do them!)
 
   # Build trees requested
   for tree in trees:
@@ -152,12 +166,11 @@ def print_help():
   -h, --help                     Show help information.
   -f, --file    FILE             Use FILE as config file
   -t, --tree    TREE             Index and Build only section TREE (default is all)
-  -s, --server                   Build only the server scripts
   -j, --jobs    JOBS             Use JOBS number of parallel processes (default 1)"""
 
 
 def print_usage():
-  print "Usage: dxr-index.py -f FILE (--server | --tree TREE)"
+  print "Usage: dxr-index.py -f FILE (--tree TREE)"
 
 
 def ensure_folder(folder, clean = False):
@@ -298,43 +311,6 @@ def _fill_and_write_template(config, template_name, out_path, vars):
   env = dxr.utils.load_template_env(config)
   template = env.get_template(template_name)
   template.stream(**vars).dump(out_path, encoding='utf-8')
-
-
-def create_server(config):
-  """Create a target folder containing the DXR indexes."""
-  print "Generating target folder"
-
-  # We don't want to load config file on the server, so we just write all the
-  # setting into the config.py script, simple as that.
-  _fill_and_write_template(
-    config,
-    'config.py',
-    os.path.join(config.target_folder, 'config.py'),
-    dict(trees = repr([t.name for t in config.trees]),
-         wwwroot = repr(config.wwwroot),
-         template_parameters = repr(config.template_parameters),
-         generated_date = repr(config.generated_date),
-         directory_index = repr(config.directory_index)))
-
-  # Create jinja cache folder in target folder
-  ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
-
-  # Build index file
-  build_index(config)
-  # TODO Make open-search.xml things (or make the server so it can do them!)
-
-def build_index(config):
-  """ Build index.html for the server """
-  ensure_folder(os.path.join(config.target_folder, 'trees'))
-  _fill_and_write_template(
-    config,
-    'index.html',
-    os.path.join(config.target_folder, 'trees', 'index.html'),
-    {'wwwroot': config.wwwroot,
-     'tree': config.trees[0].name,
-     'trees': [t.name for t in config.trees],
-     'config': config.template_parameters,
-     'generated_date': config.generated_date})
 
 
 def build_tree(tree, conn):
