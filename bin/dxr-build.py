@@ -316,12 +316,6 @@ def create_server(config):
          generated_date = repr(config.generated_date),
          directory_index = repr(config.directory_index)))
 
-  _fill_and_write_template(
-    config,
-    'dot-htaccess',
-    os.path.join(config.target_folder, 'dot-htaccess'),
-    dict(directory_index = repr(config.directory_index)))
-
   # Create jinja cache folder in target folder
   ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
 
