@@ -1,0 +1,1 @@
+int prototype_parameter_function(int prototype_parameter);

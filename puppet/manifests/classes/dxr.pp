@@ -5,20 +5,17 @@ class dxr ($project_path){
          "python-jinja2": ensure => installed;
          "python-pygments": ensure => installed;
          "libsqlite3-dev": ensure => installed;
-         "libclang-dev": ensure => installed;
-         "clang": ensure => installed;
          "git": ensure => installed;
          "mercurial": ensure => installed;
-         "llvm-dev": ensure => installed;
     }
 
     exec { "install-builddeps":
         command => "/usr/bin/sudo /usr/bin/apt-get -y build-dep firefox";
     }
 
-    exec { "use-llvm-3":
-        command => "sudo cp /usr/bin/llvm-config-3.0 /usr/bin/llvm-config",
-        require => [Package["llvm-dev"], Package["libclang-dev"], Package["clang"]],
+    exec { "install_llvm":
+        command => "sudo /home/vagrant/install_llvm.sh",
+        require => File["/home/vagrant/install_llvm.sh"],
         logoutput => "on_failure",
     }
 
@@ -26,6 +23,12 @@ class dxr ($project_path){
     file { "/usr/local/lib/libtrilite.so":
         ensure => "link",
         target => "/home/vagrant/dxr/trilite/libtrilite.so"
+    }
+
+    file { "/home/vagrant/install_llvm.sh":
+        ensure => file,
+        source => "$project_path/puppet/files/home/vagrant/install_llvm.sh",
+        owner  => "vagrant", group => "vagrant", mode => 0755;
     }
 
     exec { "ldconfig":

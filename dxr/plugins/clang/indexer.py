@@ -66,13 +66,14 @@ def post_process(tree, conn):
 schema = dxr.schema.Schema({
   # Typedef information in the tables
   "typedefs": [
-    ("tid", "INTEGER", False),           # The typedef's tid (also in types)
-    ("ttypedef", "VARCHAR(256)", False), # The long name of the type
+    ("id", "INTEGER", False),              # The typedef's id
+    ("name", "VARCHAR(256)", False),       # Simple name of the typedef
+    ("qualname", "VARCHAR(256)", False),   # Fully-qualified name of the typedef
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_key", "tid"),
-    ("_index", "ttypedef")
+    ("_key", "id"),
+    ("_index", "qualname"),
   ],
   # References to functions, types, variables, etc.
   "refs": [
@@ -80,12 +81,13 @@ schema = dxr.schema.Schema({
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
-    ("_location", True, 'referenced')
+    ("_location", True, 'referenced'),
+    ("_index", "refid"),
   ],
   # Warnings found while compiling
   "warnings": [
-    ("wmsg", "VARCHAR(256)", False), # Text of the warning
-    ("wopt", "VARCHAR(64)", True),   # option controlling this warning (-Wxxx)
+    ("msg", "VARCHAR(256)", False), # Text of the warning
+    ("opt", "VARCHAR(64)", True),   # option controlling this warning (-Wxxx)
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True),
@@ -97,14 +99,15 @@ schema = dxr.schema.Schema({
     ("_location", True, 'definition'),
     # Extents of the declaration
     ("extent_start", "INTEGER", True),
-    ("extent_end", "INTEGER", True)
+    ("extent_end", "INTEGER", True),
+    ("_index", "defid"),
   ],
   # Macros: this is a table of all of the macros we come across in the code.
   "macros": [
-    ("macroid", "INTEGER", False),        # The macro id, for references
-    ("macroname", "VARCHAR(256)", False), # The name of the macro
-    ("macroargs", "VARCHAR(256)", True),  # The args of the macro (if any)
-    ("macrotext", "TEXT", True),          # The macro contents
+    ("id", "INTEGER", False),        # The macro id, for references
+    ("name", "VARCHAR(256)", False), # The name of the macro
+    ("args", "VARCHAR(256)", True),  # The args of the macro (if any)
+    ("text", "TEXT", True),          # The macro contents
     ("extent_start", "INTEGER", True),
     ("extent_end", "INTEGER", True),
     ("_location", True)
@@ -120,13 +123,13 @@ schema = dxr.schema.Schema({
     ("callerid", "INTEGER", False), # The function in which the call occurs
     ("targetid", "INTEGER", False), # The target of the call
     ("_key", "callerid", "targetid"),
-    ("_fkey", "callerid", "functions", "funcid")
+    ("_fkey", "callerid", "functions", "id")
   ],
   "targets": [
     ("targetid", "INTEGER", False), # The target of the call
     ("funcid", "INTEGER", False),   # One of the functions in the target set
     ("_key", "targetid", "funcid"),
-    ("_fkey", "targetid", "functions", "funcid")
+    ("_fkey", "targetid", "functions", "id")
   ]
 })
 
@@ -146,7 +149,7 @@ def getFileID(conn, path):
     return file_id
 
   cur = conn.cursor()
-  row = cur.execute("SELECT ID FROM files where path=?", (path,)).fetchone()
+  row = cur.execute("SELECT id FROM files where path=?", (path,)).fetchone()
   file_id = None
   if row:
     file_id = row[0]
@@ -183,7 +186,7 @@ def fixupExtent(args, extents_key):
   del args[extents_key]
 
 def getScope(args, conn):
-  row = conn.execute("SELECT scopeid FROM scopes WHERE file_id=? AND file_line=? AND file_col=?",
+  row = conn.execute("SELECT id FROM scopes WHERE file_id=? AND file_line=? AND file_col=?",
                      (args['file_id'], args['file_line'], args['file_col'])).fetchone()
 
   if row is not None:
@@ -193,8 +196,8 @@ def getScope(args, conn):
 
 def addScope(args, conn, name, id):
   scope = {}
-  scope['sname'] = args[name]
-  scope['scopeid'] = args[id]
+  scope['name'] = args[name]
+  scope['id'] = args[id]
   scope['file_id'] = args['file_id']
   scope['file_line'] = args['file_line']
   scope['file_col'] = args['file_col']
@@ -209,20 +212,20 @@ def handleScope(args, conn, canonicalize=False):
   if 'scopename' not in args:
     return
 
-  scope['sname'] = args['scopename']
-  scope['scopeloc'] = args['scopeloc']
+  scope['name'] = args['scopename']
+  scope['loc'] = args['scopeloc']
   scope['language'] = 'native'
-  if not fixupEntryPath(scope, 'scopeloc', conn):
+  if not fixupEntryPath(scope, 'loc', conn):
     return None
 
   if canonicalize is True:
-    decl = canonicalize_decl(scope['sname'], scope['file_id'], scope['file_line'], scope['file_col'])
+    decl = canonicalize_decl(scope['name'], scope['file_id'], scope['file_line'], scope['file_col'])
     scope['file_id'], scope['file_line'], scope['file_col'] = decl[1], decl[2], decl[3]
 
   scopeid = getScope(scope, conn)
 
   if scopeid is None:
-    scope['scopeid'] = scopeid = dxr.utils.next_global_id()
+    scope['id'] = scopeid = dxr.utils.next_global_id()
     stmt = language_schema.get_insert_sql('scopes', scope)
     conn.execute(stmt[0], stmt[1])
 
@@ -249,17 +252,17 @@ def process_decldef(args, conn):
   return schema.get_insert_sql('decldef', args)
 
 def process_type(args, conn):
-  if not fixupEntryPath(args, 'tloc', conn):
+  if not fixupEntryPath(args, 'loc', conn):
     return None
 
   # Scope might have been previously added to satisfy other process_* call
   scopeid = getScope(args, conn)
 
   if scopeid is not None:
-    args['tid'] = scopeid
+    args['id'] = scopeid
   else:
-    args['tid'] = dxr.utils.next_global_id()
-    addScope(args, conn, 'tname', 'tid')
+    args['id'] = dxr.utils.next_global_id()
+    addScope(args, conn, 'name', 'id')
 
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -267,26 +270,26 @@ def process_type(args, conn):
   return language_schema.get_insert_sql('types', args)
 
 def process_typedef(args, conn):
-  args['tid'] = dxr.utils.next_global_id()
-  if not fixupEntryPath(args, 'tloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   fixupExtent(args, 'extent')
 #  handleScope(args, conn)
   return schema.get_insert_sql('typedefs', args)
 
 def process_function(args, conn):
-  if not fixupEntryPath(args, 'floc', conn):
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   scopeid = getScope(args, conn)
 
   if scopeid is not None:
-    args['funcid'] = scopeid
+    args['id'] = scopeid
   else:
-    args['funcid'] = dxr.utils.next_global_id()
-    addScope(args, conn, 'fname', 'funcid')
+    args['id'] = dxr.utils.next_global_id()
+    addScope(args, conn, 'name', 'id')
 
   if 'overridename' in args:
-    overrides[args['funcid']] = (args['overridename'], args['overrideloc'])
+    overrides[args['id']] = (args['overridename'], args['overrideloc'])
 
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -297,8 +300,8 @@ def process_impl(args, conn):
   return None
 
 def process_variable(args, conn):
-  args['varid'] = dxr.utils.next_global_id()
-  if not fixupEntryPath(args, 'vloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   handleScope(args, conn)
   fixupExtent(args, 'extent')
@@ -317,16 +320,16 @@ def process_ref(args, conn):
   return schema.get_insert_sql('refs', args)
 
 def process_warning(args, conn):
-  if not fixupEntryPath(args, 'wloc', conn):
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   fixupExtent(args, 'extent')
   return schema.get_insert_sql('warnings', args)
 
 def process_macro(args, conn):
-  args['macroid'] = dxr.utils.next_global_id()
-  if 'macrotext' in args:
-    args['macrotext'] = args['macrotext'].replace("\\\n", "\n").strip()
-  if not fixupEntryPath(args, 'macroloc', conn):
+  args['id'] = dxr.utils.next_global_id()
+  if 'text' in args:
+    args['text'] = args['text'].replace("\\\n", "\n").strip()
+  if not fixupEntryPath(args, 'loc', conn):
     return None
   fixupExtent(args, 'extent')
   return schema.get_insert_sql('macros', args)
@@ -411,13 +414,13 @@ def recanon_decl(name, loc):
   return (name, loc)
 
 def fixup_scope(conn):
-  conn.execute ("UPDATE types SET scopeid = (SELECT scopeid FROM scopes WHERE " +
+  conn.execute ("UPDATE types SET scopeid = (SELECT id FROM scopes WHERE " +
                 "scopes.file_id = types.file_id AND scopes.file_line = types.file_line " +
                 "AND scopes.file_col = types.file_col) WHERE scopeid IS NULL")
-  conn.execute ("UPDATE functions SET scopeid = (SELECT scopeid from scopes where " +
+  conn.execute ("UPDATE functions SET scopeid = (SELECT id from scopes where " +
                 "scopes.file_id = functions.file_id AND scopes.file_line = functions.file_line " +
                 "AND scopes.file_col = functions.file_col) WHERE scopeid IS NULL")
-  conn.execute ("UPDATE variables SET scopeid = (SELECT scopeid from scopes where " +
+  conn.execute ("UPDATE variables SET scopeid = (SELECT id from scopes where " +
                 "scopes.file_id = variables.file_id AND scopes.file_line = variables.file_line " +
                 "AND scopes.file_col = variables.file_col) WHERE scopeid IS NULL")
 
@@ -432,7 +435,7 @@ def generate_inheritance(conn):
   childMap, parentMap = {}, {}
   types = {}
 
-  for row in conn.execute("SELECT tqualname, file_id, file_line, file_col, tid from types").fetchall():
+  for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id from types").fetchall():
     types[(row[0], row[1], row[2], row[3])] = row[4]
 
   for infoKey in inheritance:
@@ -479,10 +482,10 @@ def generate_callgraph(conn):
   variables = {}
   callgraph = []
 
-  for row in conn.execute("SELECT fqualname, file_id, file_line, file_col, funcid FROM functions").fetchall():
+  for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions").fetchall():
     functions[(row[0], row[1], row[2], row[3])] = row[4]
 
-  for row in conn.execute("SELECT vname, file_id, file_line, file_col, varid FROM variables").fetchall():
+  for row in conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables").fetchall():
     variables[(row[0], row[1], row[2], row[3])] = row[4]
 
   # Generate callers table
@@ -567,17 +570,23 @@ def generate_callgraph(conn):
 def update_defids(conn):
   sql = """
     UPDATE decldef SET defid = (
-       SELECT tid
+       SELECT id
          FROM types
         WHERE types.file_id       = decldef.definition_file_id
           AND types.file_line     = decldef.definition_file_line
           AND types.file_col      = decldef.definition_file_col
      UNION 
-       SELECT funcid
+       SELECT id
          FROM functions
         WHERE functions.file_id   = decldef.definition_file_id
           AND functions.file_line = decldef.definition_file_line
           AND functions.file_col  = decldef.definition_file_col
+     UNION
+       SELECT id
+         FROM variables
+        WHERE variables.file_id   = decldef.definition_file_id
+          AND variables.file_line = decldef.definition_file_line
+          AND variables.file_col  = decldef.definition_file_col
   )
   """
   conn.execute(sql)
@@ -586,19 +595,19 @@ def update_defids(conn):
 def update_refs(conn):
   sql = """
     UPDATE refs SET refid = (
-        SELECT macroid
+        SELECT id
           FROM macros
          WHERE macros.file_id       = refs.referenced_file_id
            AND macros.file_line     = refs.referenced_file_line
            AND macros.file_col      = refs.referenced_file_col
       UNION
-        SELECT tid
+        SELECT id
           FROM types
          WHERE types.file_id        = refs.referenced_file_id
            AND types.file_line      = refs.referenced_file_line
            AND types.file_col       = refs.referenced_file_col
       UNION 
-        SELECT funcid
+        SELECT id
           FROM functions
          WHERE functions.file_id    = refs.referenced_file_id
            AND functions.file_line  = refs.referenced_file_line
@@ -610,7 +619,7 @@ def update_refs(conn):
            AND decldef.file_line    = refs.referenced_file_line
            AND decldef.file_col     = refs.referenced_file_col
       UNION 
-        SELECT varid
+        SELECT id
           FROM variables
          WHERE variables.file_id    = refs.referenced_file_id
            AND variables.file_line  = refs.referenced_file_line

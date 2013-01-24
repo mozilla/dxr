@@ -41,113 +41,129 @@ class ClangHtmlifier:
 
     # Extents for functions defined here
     sql = """
-      SELECT extent_start, extent_end, fqualname
+      SELECT extent_start, extent_end, qualname
         FROM functions
        WHERE file_id = ?
     """
-    for start, end, fqualname in self.conn.execute(sql, args):
-      yield start, end, self.function_menu(fqualname)
+    for start, end, qualname in self.conn.execute(sql, args):
+      yield start, end, self.function_menu(qualname)
 
     # Extents for functions declared here
     sql = """
       SELECT decldef.extent_start,
              decldef.extent_end,
-             functions.fqualname,
-             (SELECT path FROM files WHERE files.ID = functions.file_id),
+             functions.qualname,
+             (SELECT path FROM files WHERE files.id = functions.file_id),
              functions.file_line
         FROM decldef, functions
-       WHERE decldef.defid = functions.funcid
+       WHERE decldef.defid = functions.id
          AND decldef.file_id = ?
     """
-    for start, end, fqualname, path, line in self.conn.execute(sql, args):
-      menu = self.function_menu(fqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.function_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
     # Extents for variables defined here
     sql = """
-      SELECT extent_start, extent_end, vqualname
+      SELECT extent_start, extent_end, qualname
         FROM variables
        WHERE file_id = ?
     """
-    for start, end, vqualname in self.conn.execute(sql, args):
-      yield start, end, self.variable_menu(vqualname)
+    for start, end, qualname in self.conn.execute(sql, args):
+      yield start, end, self.variable_menu(qualname)
+
+    # Extents for variables declared here
+    sql = """
+      SELECT decldef.extent_start,
+             decldef.extent_end,
+             variables.qualname,
+             (SELECT path FROM files WHERE files.id = variables.file_id),
+             variables.file_line
+        FROM decldef, variables
+       WHERE decldef.defid = variables.id
+         AND decldef.file_id = ?
+    """
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(qualname)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
 
     # Extents for types defined here
     sql = """
-      SELECT extent_start, extent_end, tqualname, tkind
+      SELECT extent_start, extent_end, qualname, kind
         FROM types
        WHERE file_id = ?
     """
-    for start, end, tqualname, tkind in self.conn.execute(sql, args):
-      yield start, end, self.type_menu(tqualname, tkind)
+    for start, end, qualname, kind in self.conn.execute(sql, args):
+      yield start, end, self.type_menu(qualname, kind)
 
     # Extents for macros defined here
     sql = """
-      SELECT file_line, file_col, macroname
+      SELECT file_line, file_col, name
         FROM macros
        WHERE file_id = ?
     """
-    for line, col, macroname in self.conn.execute(sql, args):
+    for line, col, name in self.conn.execute(sql, args):
       # TODO Refactor macro table and remove the (line, col) scheme!
       start = (line, col)
-      end   = (line, col + len(macroname))
-      yield start, end, self.macro_menu(macroname)
+      end   = (line, col + len(name))
+      yield start, end, self.macro_menu(name)
 
     # Add references to types
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             types.tqualname,
-             types.tkind,
-             (SELECT path FROM files WHERE files.ID = types.file_id),
+             types.qualname,
+             types.kind,
+             (SELECT path FROM files WHERE files.id = types.file_id),
              types.file_line
         FROM types, refs
-       WHERE types.tid = refs.refid AND refs.file_id = ?
+       WHERE types.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, tqualname, tkind, path, line in self.conn.execute(sql, args):
-      menu = self.type_menu(tqualname, tkind)
+    for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
+      menu = self.type_menu(qualname, kind)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             functions.fqualname,
-             (SELECT path FROM files WHERE files.ID = functions.file_id),
+             functions.qualname,
+             (SELECT path FROM files WHERE files.id = functions.file_id),
              functions.file_line
         FROM functions, refs
-       WHERE functions.funcid = refs.refid AND refs.file_id = ?
+       WHERE functions.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, fqualname, path, line in self.conn.execute(sql, args):
-      menu = self.function_menu(fqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.function_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             variables.vqualname,
-             (SELECT path FROM files WHERE files.ID = variables.file_id),
+             variables.qualname,
+             (SELECT path FROM files WHERE files.id = variables.file_id),
              variables.file_line
         FROM variables, refs
-       WHERE variables.varid = refs.refid AND refs.file_id = ?
+       WHERE variables.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, vqualname, path, line in self.conn.execute(sql, args):
-      menu = self.variable_menu(vqualname)
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.variable_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
     # Add references to functions
     sql = """
       SELECT refs.extent_start, refs.extent_end,
-             macros.macroname,
-             (SELECT path FROM files WHERE files.ID = macros.file_id),
+             macros.name,
+             (SELECT path FROM files WHERE files.id = macros.file_id),
              macros.file_line
         FROM macros, refs
-       WHERE macros.macroid = refs.refid AND refs.file_id = ?
+       WHERE macros.id = refs.refid AND refs.file_id = ?
     """
-    for start, end, macroname, path, line in self.conn.execute(sql, args):
-      menu = self.macro_menu(macroname)
+    for start, end, name, path, line in self.conn.execute(sql, args):
+      menu = self.macro_menu(name)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -216,85 +232,85 @@ class ClangHtmlifier:
       'icon':   'jump'
     })
 
-  def type_menu(self, tqualname, tkind):
+  def type_menu(self, qualname, kind):
     """ Build menu for type """
     menu = []
-    # Things we can do with tqualname
-    if tkind == 'class' or tkind == 'struct':
+    # Things we can do with qualname
+    if kind == 'class' or kind == 'struct':
       menu.append({
         'text':   "Find sub classes",
         'title':  "Find sub classes of this class",
-        'href':   self.search("+derived:%s" % self.quote(tqualname)),
+        'href':   self.search("+derived:%s" % self.quote(qualname)),
         'icon':   'type'
       })
       menu.append({
         'text':   "Find base classes",
         'title':  "Find base classes of this class",
-        'href':   self.search("+bases:%s" % self.quote(tqualname)),
+        'href':   self.search("+bases:%s" % self.quote(qualname)),
         'icon':   'type'
       })
     menu.append({
       'text':   "Find members",
       'title':  "Find members of this class",
-      'href':   self.search("+member:%s" % self.quote(tqualname)),
+      'href':   self.search("+member:%s" % self.quote(qualname)),
       'icon':   'members'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references to this class",
-      'href':   self.search("+type-ref:%s" % self.quote(tqualname)),
+      'href':   self.search("+type-ref:%s" % self.quote(qualname)),
       'icon':   'reference'
     })
     return menu
 
 
-  def variable_menu(self, vqualname):
+  def variable_menu(self, qualname):
     """ Build menu for a variable """
     menu = []
     # Well, what more than references can we do?
     menu.append({
       'text':   "Find references",
       'title':  "Find reference to this variable",
-      'href':   self.search("+var-ref:%s" % self.quote(vqualname)),
+      'href':   self.search("+var-ref:%s" % self.quote(qualname)),
       'icon':   'field'
     })
     # TODO Investigate whether assignments and usages is possible and useful?
     return menu
 
 
-  def macro_menu(self, macroname):
+  def macro_menu(self, name):
     menu = []
     # Things we can do with macros
     self.tree.config.wwwroot
     menu.append({
       'text':   "Find references",
       'title':  "Find references to macros with this name",
-      'href':    self.search("+macro-ref:%s" % macroname),
+      'href':    self.search("+macro-ref:%s" % name),
       'icon':   'reference'
     })
     return menu
 
 
-  def function_menu(self, fqualname):
+  def function_menu(self, qualname):
     """ Build menu for a function """
     menu = []
     # Things we can do with qualified name
     menu.append({
       'text':   "Find callers",
       'title':  "Find functions that calls this function",
-      'href':   self.search("+callers:%s" % self.quote(fqualname)),
+      'href':   self.search("+callers:%s" % self.quote(qualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find callees",
       'title':  "Find functions that are called by this function",
-      'href':   self.search("+called-by:%s" % self.quote(fqualname)),
+      'href':   self.search("+called-by:%s" % self.quote(qualname)),
       'icon':   'method'
     })
     menu.append({
       'text':   "Find references",
       'title':  "Find references of this function",
-      'href':   self.search("+function-ref:%s" % self.quote(fqualname)),
+      'href':   self.search("+function-ref:%s" % self.quote(qualname)),
       'icon':   'reference'
     })
     #TODO Jump between declaration and definition
@@ -303,7 +319,7 @@ class ClangHtmlifier:
 
   def annotations(self):
     icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
-    sql = "SELECT wmsg, wopt, file_line FROM warnings WHERE file_id = ?"
+    sql = "SELECT msg, opt, file_line FROM warnings WHERE file_id = ?"
     for msg, opt, line in self.conn.execute(sql, (self.file_id,)):
       if opt:
         msg = msg + " [" + opt + "]"
@@ -315,9 +331,9 @@ class ClangHtmlifier:
 
   def links(self):
     # For each type add a section with members
-    sql = "SELECT tname, tid, file_line, tkind FROM types WHERE file_id = ?"
-    for tname, tid, tline, tkind in self.conn.execute(sql, (self.file_id,)):
-      if len(tname) == 0: continue
+    sql = "SELECT name, id, file_line, kind FROM types WHERE file_id = ?"
+    for name, tid, line, kind in self.conn.execute(sql, (self.file_id,)):
+      if len(name) == 0: continue
       links = []
       links += list(self.member_functions(tid))
       links += list(self.member_variables(tid))
@@ -325,22 +341,22 @@ class ClangHtmlifier:
       # Sort them by line
       links = sorted(links, key = lambda link: link[1])
 
-      # Make sure we have a sane limitation of tkind
-      if tkind not in ('class', 'struct', 'enum', 'union'):
-        print >> sys.stderr, "tkind '%s' was replaced for 'type'!" % tkind
-        tkind = 'type'
+      # Make sure we have a sane limitation of kind
+      if kind not in ('class', 'struct', 'enum', 'union'):
+        print >> sys.stderr, "kind '%s' was replaced for 'type'!" % kind
+        kind = 'type'
 
       # Add the outer type as the first link
-      links.insert(0, (tkind, tname, "#l%s" % tline))
+      links.insert(0, (kind, name, "#l%s" % line))
 
       # Now return the type
-      yield (30, tname, links)
+      yield (30, name, links)
 
     # Add all macros to the macro section
     links = []
-    sql = "SELECT macroname, file_line FROM macros WHERE file_id = ?"
-    for macro, line in self.conn.execute(sql, (self.file_id,)):
-      links.append(('macro', macro, "#l%s" % line))
+    sql = "SELECT name, file_line FROM macros WHERE file_id = ?"
+    for name, line in self.conn.execute(sql, (self.file_id,)):
+      links.append(('macro', name, "#l%s" % line))
     if links:
       yield (100, "Macros", links)
 
@@ -348,27 +364,27 @@ class ClangHtmlifier:
   def member_functions(self, tid):
     """ Fetch member functions given a type id """
     sql = """
-      SELECT fname, file_line
+      SELECT name, file_line
       FROM functions
       WHERE file_id = ? AND scopeid = ?
     """
-    for fname, line in self.conn.execute(sql, (self.file_id, tid)):
+    for name, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
-      if len(fname) == 0: continue
-      yield 'method', fname, "#l%s" % line
+      if len(name) == 0: continue
+      yield 'method', name, "#l%s" % line
 
 
   def member_variables(self, tid):
     """ Fetch member variables given a type id """
     sql = """
-      SELECT vname, file_line
+      SELECT name, file_line
       FROM variables
       WHERE file_id = ? AND scopeid = ?
     """
-    for vname, line in self.conn.execute(sql, (self.file_id, tid)):
+    for name, line in self.conn.execute(sql, (self.file_id, tid)):
       # Skip nameless things
-      if len(vname) == 0: continue
-      yield 'field', vname, "#l%s" % line
+      if len(name) == 0: continue
+      yield 'field', name, "#l%s" % line
 
 _tree = None
 _conn = None
@@ -389,7 +405,7 @@ def htmlify(path, text):
   fname = os.path.basename(path)
   if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
     # Get file_id, skip if not in database
-    sql = "SELECT files.ID FROM files WHERE path = ? LIMIT 1"
+    sql = "SELECT files.id FROM files WHERE path = ? LIMIT 1"
     row = _conn.execute(sql, (path,)).fetchone()
     if row:
       return ClangHtmlifier(_tree, _conn, path, text, row[0])

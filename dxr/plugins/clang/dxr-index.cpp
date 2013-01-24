@@ -73,7 +73,8 @@ std::string getQualifiedName(const NamedDecl &d) {
     //    and
     // void ANamespace::AFunction(float);
     ret += "(";
-    if (const FunctionProtoType *ft = dyn_cast<FunctionProtoType>(fd->getType()->castAs<FunctionType>()))
+    const FunctionType *ft = fd->getType()->castAs<FunctionType>();
+    if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft))
     {
       unsigned num_params = fd->getNumParams();
       for (unsigned i = 0; i < num_params; ++i) {
@@ -82,13 +83,15 @@ std::string getQualifiedName(const NamedDecl &d) {
         ret += fd->getParamDecl(i)->getType().getAsString();
       }
 
-      if (ft->isVariadic()) {
+      if (fpt->isVariadic()) {
         if (num_params > 0)
           ret += ", ";
         ret += "...";
       }
     }
     ret += ")";
+    if (ft->isConst())
+      ret += " const";
   }
 
   return ret;
@@ -313,10 +316,10 @@ public:
       NamedDecl *nd = d->getTypedefNameForAnonDecl();
       if (!nd)
         nd = d;
-      recordValue("tname", nd->getNameAsString());
-      recordValue("tqualname", getQualifiedName(*nd));
-      recordValue("tloc", locationToString(d->getLocation()));
-      recordValue("tkind", d->getKindName());
+      recordValue("name", nd->getNameAsString());
+      recordValue("qualname", getQualifiedName(*nd));
+      recordValue("loc", locationToString(d->getLocation()));
+      recordValue("kind", d->getKindName());
       printScope(d);
       // Linkify the name, not the `enum'
       printExtent(nd->getLocation(), nd->getLocation());
@@ -361,15 +364,14 @@ public:
   bool VisitFunctionDecl(FunctionDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
-    else if (!d->isDefined())
-      return true;
 
-    if (d->isThisDeclarationADefinition())
+    if (d->isThisDeclarationADefinition() ||
+        d->isPure())  // until we have better support for pure-virtual functions
     {
       beginRecord("function", d->getLocation());
-      recordValue("fname", d->getNameAsString());
-      recordValue("fqualname", getQualifiedName(*d));
-      recordValue("ftype", d->getResultType().getAsString());
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("type", d->getResultType().getAsString());
       std::string args("(");
       for (FunctionDecl::param_iterator it = d->param_begin();
           it != d->param_end(); it++) {
@@ -379,8 +381,8 @@ public:
       if (d->getNumParams() > 0)
         args.erase(1, 2);
       args += ")";
-      recordValue("fargs", args);
-      recordValue("floc", locationToString(d->getLocation()));
+      recordValue("args", args);
+      recordValue("loc", locationToString(d->getLocation()));
       printScope(d);
       printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
       // Print out overrides
@@ -402,17 +404,37 @@ public:
     return true;
   }
 
+  bool treatThisValueDeclAsADefinition(const ValueDecl *d)
+  {
+    const VarDecl *vd = dyn_cast<VarDecl>(d);
+    if (!vd)
+      return true;  // Things that are not VarDecls (FieldDecl, EnumConstantDecl) are always treated as definitions
+    if (!vd->isThisDeclarationADefinition())
+      return false;
+    if (!isa<ParmVarDecl>(d))
+      return true;
+    // This var is part of a parameter list.  Only treat it as
+    // a definition if a function is also being defined.
+    const FunctionDecl *fd = dyn_cast<FunctionDecl>(d->getDeclContext());
+    return fd && fd->isThisDeclarationADefinition();
+  }
+
   void visitVariableDecl(ValueDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return;
-    beginRecord("variable", d->getLocation());
-    recordValue("vname", d->getNameAsString());
-    recordValue("vqualname", getQualifiedName(*d));
-    recordValue("vloc", locationToString(d->getLocation()));
-    recordValue("vtype", d->getType().getAsString(), true);
-    printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
-    *out << std::endl;
+    if (treatThisValueDeclAsADefinition(d))
+    {
+      beginRecord("variable", d->getLocation());
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("loc", locationToString(d->getLocation()));
+      recordValue("type", d->getType().getAsString(), true);
+      printScope(d);
+      printExtent(d->getLocation(), d->getLocation());
+      *out << std::endl;
+    }
+    if (VarDecl *vd = dyn_cast<VarDecl>(d))
+      declDef(vd, vd->getDefinition(), vd->getLocation(), vd->getLocation());
   }
 
   bool VisitEnumConstantDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
@@ -438,10 +460,10 @@ public:
     }
 #endif
     beginRecord("typedef", d->getLocation());
-    recordValue("tname", d->getNameAsString());
-    recordValue("tqualname", getQualifiedName(*d));
-    recordValue("tloc", locationToString(d->getLocation()));
-    recordValue("ttypedef", d->getUnderlyingType().getAsString());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getLocation()));
+//    recordValue("underlying", d->getUnderlyingType().getAsString());
     printScope(d);
     printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
@@ -573,11 +595,11 @@ public:
     info.FormatDiagnostic(message);
 
     beginRecord("warning", info.getLocation());
-    recordValue("wloc", locationToString(info.getLocation()));
-    recordValue("wmsg", message.c_str(), true);
+    recordValue("loc", locationToString(info.getLocation()));
+    recordValue("msg", message.c_str(), true);
     StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
     if (!opt.empty())
-      recordValue("wopt", ("-W" + opt).str());
+      recordValue("opt", ("-W" + opt).str());
     if (info.getNumRanges() > 0) {
       const CharSourceRange &range = info.getRange(0);
       printExtent(getWarningExtentLocation(range.getBegin()),
@@ -625,13 +647,13 @@ public:
       break;
     }
     beginRecord("macro", nameStart);
-    recordValue("macroloc", locationToString(nameStart));
-    recordValue("macroname", std::string(contents, nameLen));
+    recordValue("loc", locationToString(nameStart));
+    recordValue("name", std::string(contents, nameLen));
     if (argsStart > 0)
-      recordValue("macroargs", std::string(contents + argsStart,
+      recordValue("args", std::string(contents + argsStart,
         argsEnd - argsStart), true);
     if (defnStart < length)
-      recordValue("macrotext", std::string(contents + defnStart,
+      recordValue("text", std::string(contents + defnStart,
         length - defnStart), true);
     printExtent(nameStart, nameStart);
     *out << std::endl;
