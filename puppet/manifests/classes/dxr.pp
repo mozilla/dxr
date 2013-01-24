@@ -21,4 +21,15 @@ class dxr ($project_path){
         require => [Package["llvm-dev"], Package["libclang-dev"], Package["clang"]],
         logoutput => "on_failure",
     }
+
+    # Install libtrilite so Apache WSGI processes can see it:
+    file { "/usr/local/lib/libtrilite.so":
+        ensure => "link",
+        target => "/home/vagrant/dxr/trilite/libtrilite.so"
+    }
+
+    exec { "ldconfig":
+        command => "/sbin/ldconfig",
+        require => File["/usr/local/lib/libtrilite.so"]
+    }
 }
