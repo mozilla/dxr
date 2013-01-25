@@ -4,8 +4,8 @@ class python ($project_path) {
     $packages = ["python2.6-dev",
                  "python2.6",
                  "python-wsgi-intercept",
-                 "python-pip"]
-                 # "libapache2-mod-wsgi"
+                 "python-pip",
+                 "libapache2-mod-wsgi"]
 
     package {
         $packages:
@@ -50,9 +50,9 @@ class python ($project_path) {
 
     exec {
         "dxr-setup-develop":
-            cwd => "$project_path/dxr"
+            cwd => "$project_path",
             command => "python setup.py develop",
-            require => "pip-install-development",
+            require => Exec["pip-install-development"],
     }
 
     #exec { "install-project":
