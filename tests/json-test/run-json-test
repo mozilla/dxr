@@ -10,7 +10,7 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite ../../bin/dxr-serve.py --port 357
 
 # Give the server some time to start
 # Not starting in a sec is also a bug :)
-sleep 1;
+sleep 10;
 
 # This is where we get an interesting result
 ./search-test.py
