@@ -102,7 +102,8 @@ def main(argv):
 
     # Create folders (delete if exists)
     ensure_folder(tree.target_folder, True) # <config.target_folder>/<tree.name>
-    ensure_folder(tree.object_folder, True) # Object folder (user defined!)
+    ensure_folder(tree.object_folder,       # Object folder (user defined!)
+      tree.source_folder != tree.object_folder) # Only clean if not the srcdir
     ensure_folder(tree.temp_folder,   True) # <config.temp_folder>/<tree.name>
                                             # (or user defined)
     ensure_folder(tree.log_folder,    True) # <config.log_folder>/<tree.name>
@@ -381,6 +382,10 @@ def build_tree(tree, conn):
   for indexer in indexers:
     indexer.pre_process(tree, environ)
 
+  # Add source and build directories to the command
+  environ["source_folder"] = tree.source_folder
+  environ["build_folder"] = tree.object_folder
+
   # Open log file
   log = dxr.utils.open_log(tree, "build.log")
 
@@ -392,7 +397,7 @@ def build_tree(tree, conn):
     stdout  = log,
     stderr  = log,
     env     = environ,
-    cwd     = tree.source_folder
+    cwd     = tree.object_folder
   )
 
   # Close log file
