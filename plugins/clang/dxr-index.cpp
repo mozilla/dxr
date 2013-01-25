@@ -572,6 +572,14 @@ public:
     return true;
   }
 
+  bool VisitTypedefTypeLoc(TypedefTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    printReference(l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
+    return true;
+  }
+
   // Warnings!
   SourceLocation getWarningExtentLocation(SourceLocation loc) {
     while (loc.isMacroID()) {

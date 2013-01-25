@@ -98,6 +98,15 @@ class ClangHtmlifier:
     for start, end, qualname, kind in self.conn.execute(sql, args):
       yield start, end, self.type_menu(qualname, kind)
 
+    # Extents for typedefs defined here
+    sql = """
+      SELECT extent_start, extent_end, qualname
+        FROM typedefs
+       WHERE file_id = ?
+    """
+    for start, end, qualname in self.conn.execute(sql, args):
+      yield start, end, self.typedef_menu(qualname)
+
     # Extents for macros defined here
     sql = """
       SELECT file_line, file_col, name
@@ -122,6 +131,20 @@ class ClangHtmlifier:
     """
     for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
       menu = self.type_menu(qualname, kind)
+      self.add_jump_definition(menu, path, line)
+      yield start, end, menu
+
+    # Add references to typedefs
+    sql = """
+      SELECT refs.extent_start, refs.extent_end,
+             typedefs.qualname,
+             (SELECT path FROM files WHERE files.id = typedefs.file_id),
+             typedefs.file_line
+        FROM typedefs, refs
+       WHERE typedefs.id = refs.refid AND refs.file_id = ?
+    """
+    for start, end, qualname, path, line in self.conn.execute(sql, args):
+      menu = self.typedef_menu(qualname)
       self.add_jump_definition(menu, path, line)
       yield start, end, menu
 
@@ -258,6 +281,18 @@ class ClangHtmlifier:
     menu.append({
       'text':   "Find references",
       'title':  "Find references to this class",
+      'href':   self.search("+type-ref:%s" % self.quote(qualname)),
+      'icon':   'reference'
+    })
+    return menu
+
+
+  def typedef_menu(self, qualname):
+    """ Build menu for typedef """
+    menu = []
+    menu.append({
+      'text':   "Find references",
+      'title':  "Find references to this typedef",
       'href':   self.search("+type-ref:%s" % self.quote(qualname)),
       'icon':   'reference'
     })
