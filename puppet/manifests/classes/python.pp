@@ -4,7 +4,6 @@ class python ($project_path) {
     $packages = ["libapache2-mod-wsgi",
                  "python2.6-dev",
                  "python2.6",
-                 "python-wsgi-intercept",
                  "python-pip"]
 
     package {
@@ -44,7 +43,7 @@ class python ($project_path) {
 
     exec {
         "pip-install-development":
-            command => "pip install --no-deps -r $project_path/requirements/dev.txt",
+            command => "pip install --no-deps -r $project_path/requirements.txt",
             require => Package[$packages],
     }
 

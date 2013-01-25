@@ -2,8 +2,6 @@
 
 class dxr ($project_path){
     package {
-         "python-jinja2": ensure => installed;
-         "python-pygments": ensure => installed;
          "libsqlite3-dev": ensure => installed;
          "git": ensure => installed;
          "mercurial": ensure => installed;

@@ -19,6 +19,7 @@ setup(
     author_email='erik@mozilla.com',
     license='MIT',
     packages=find_packages(exclude=['ez_setup']),
+    install_requires=['Flask>=0.9', 'Pygments>=1.4', 'Jinja2>=2.6'],
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
     classifiers=[

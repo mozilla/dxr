@@ -1,0 +1,4 @@
+Jinja2==2.6
+Pygments==1.4
+Flask==0.9
+Werkzeug==0.8.3
