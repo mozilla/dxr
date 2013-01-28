@@ -2,8 +2,8 @@ Mozilla DXR Template
 ====================
 
 This template is specifically designed for the Mozilla DXR deployments.
-However, it should fairly easy to adjust this template for other uses, the
-Mozilla specific hacks should be fairly easy to reuse.
+However, it should fairly easy to adjust this template for other uses; the
+Mozilla-specific hacks should be fairly easy to reuse.
 
 Configuration Keys
 ==================

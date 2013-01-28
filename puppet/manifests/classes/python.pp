@@ -1,24 +1,13 @@
 # Install python and compiled modules for project
 class python ($project_path) {
 
+    $packages = ["libapache2-mod-wsgi",
+                 "python2.6-dev",
+                 "python2.6",
+                 "python-pip"]
+
     package {
-        "python2.6-dev":
-            ensure => installed,
-            require => Exec['update-python-ppa'];
-
-        "python2.6":
-            ensure => installed,
-            require => Exec['update-python-ppa'];
-
-        #"libapache2-mod-wsgi":
-            #ensure => installed,
-            #require => "python2.6";
-
-        "python-wsgi-intercept":
-            ensure => installed,
-            require => Exec['update-python-ppa'];
-
-        "python-pip":
+        $packages:
             ensure => installed,
             require => Exec['update-python-ppa'];
     }
@@ -52,11 +41,19 @@ class python ($project_path) {
     #
     #}
 
-    #exec { "pip-install-development":
-    #   cwd => ,
-    #   command => "pip install -r $project_path/requirements/dev.txt",
-    #   require => Package[$packages],
-    #}
+    exec {
+        "pip-install-development":
+            command => "pip install --no-deps -r $project_path/requirements.txt",
+            require => Package[$packages],
+    }
+
+    exec {
+        "dxr-setup-develop":
+            cwd => "$project_path",
+            # TODO: Change this to python2.6 once we get pip using 2.6:
+            command => "python setup.py develop",
+            require => Exec["pip-install-development"],
+    }
 
     #exec { "install-project":
     #   cwd => "$project_path",

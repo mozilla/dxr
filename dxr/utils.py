@@ -1,16 +1,17 @@
 import sqlite3
 import ctypes
 import ConfigParser
-import __main__
 import os, sys, subprocess
 import jinja2
 import string
 from datetime import datetime
 
+import dxr
 
-# Please keep these config objects as simple as possible, and in sync with
+
+# Please keep these config objects as simple as possible and in sync with
 # docs/configuration.mkd. I'm well aware that this is not the most compact way
-# of writing things, but it sure is doom to fail when user forgets an important
+# of writing things, but it sure is doomed to fail when user forgets an important
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
 
@@ -20,12 +21,12 @@ class Config:
     # Create parser with sane defaults
     generated_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     parser = ConfigParser.ConfigParser({
-      'dxrroot':          os.path.dirname(__main__.__file__),
+      'dxrroot':          os.path.dirname(dxr.__file__),
       'plugin_folder':    "%(dxrroot)s/plugins",
       'nb_jobs':          "1",
       'temp_folder':      "/tmp/dxr-temp",
       'log_folder':       "%(temp_folder)s/logs",
-      'template':         "%(dxrroot)s/templates/mozilla",
+      'template':         "%(dxrroot)s/templates",
       'wwwroot':          "/",
       'enabled_plugins':  "*",
       'disabled_plugins': " ",
@@ -50,7 +51,7 @@ class Config:
     # Set configfile
     self.configfile       = configfile
     self.trees            = []
-    # Set template paramters (using new parser to avoid defaults)
+    # Set template parameters (using new parser to avoid defaults)
     tmp_cfg = ConfigParser.ConfigParser()
     tmp_cfg.read(configfile)
     self.template_parameters = dict(tmp_cfg.items('Template'))
@@ -130,7 +131,7 @@ class TreeConfig:
     self.ignore_patterns  = parser.get(name, 'ignore_patterns',   False)
 
     # You cannot redefine the target folder!
-    self.target_folder    = os.path.join(config.target_folder, name)
+    self.target_folder    = os.path.join(config.target_folder, 'trees', name)
     # Set config file and DXR config object reference
     self.configfile       = configfile
     self.config           = config
@@ -233,18 +234,6 @@ def next_global_id():
   _next_id += 1
   return n
 
-
-def substitute_in_file(path, **variables):
-  """ Do a simple python string.Template substitution on a file
-      This function is mainly used for code generation, please make sure that
-      input files for this file have comments telling the reader where to look
-      to see declared variables.
-  """
-  with open(path, 'r') as f:
-    data = f.read()
-  data = string.Template(data).safe_substitute(variables)
-  with open(path, 'w') as f:
-    f.write(data)
 
 def open_log(config_or_tree, name):
   """ Get an open log file given config or tree and name """

@@ -16,28 +16,24 @@ should be good to go. Notice that this make file also has a `make check` target.
 
 Generating a Source Code Index
 ------------------------------
-To build a source code index you will need a project configuration file. Notice
+To build a source code index, you will need a project configuration file. Notice
 that this configuration file may contain one or more source trees. The
 configuration file details one DXR deployment. For information on the
 configuration file, see configuration.mkd.
 
-When you have configured your DXR deployment you can generate the source code
-index using `dxr-build.py -f <config-file>`. This will generate server scripts
-and source code index for all trees in the configuration file.
+When you have configured your DXR deployment, you can generate the source code
+index using `dxr-build.py -f <config-file>`. This will generate a "DXR
+instance": a folder containing a source code index and HTML-formatted source
+for one or more trees.
 
-If you wish to build the source code index for source trees individually, you
-can do this using `dxr-build.py --file <config-file> --tree <tree>`. This will
-generate the source code index for only the specified tree. This can be used to
-distribute the build operation to one build server for each source tree.
-
-Using `dxr-build.py --file <config-file> --server` the server scripts will be
-generated, see "The Generated Source Code Index" section below for details on
-the generated source code index.
+If you wish to build an instance for an individual source tree, use
+`dxr-build.py --file <config-file> --tree <tree>`. This can, for example, be
+used to build each source tree on its own server.
 
 DXR has the following dependencies on the build servers:
 
  - sqlite (`>= 3.7.4`)
- - trilite (latest git revision)
+ - trilite (pulled in as a git submodule)
  - python (`>= 2.5`)
  - jinja2 (`>= 2.4`)
  - pygments (`>= 1.4`)
@@ -51,36 +47,26 @@ Notice, that TriLite is under active development, and far from stable, so if
 you have problems with it, try another revision and file a bug.
 
 
-The Generated Source Code Index
--------------------------------
-The generated index will be stored in `target_folder` (see configuration.mkd),
-when `dxr-build.py` has successfully built the index. The generated index
-consists of a `server/` folder and a folder for each tree with the name of the
-tree (as given in a tree section, see configuration.mkd).
-
-The `server/` folder contains serverside logic, templates and other things
-necessary to host the source code index. The tree folders contains index and
-pre-render files for given source tree.
-
-As mentioned in the "Building Source Code Index" section above, you can build
-the index for each tree independent of the other trees. If you do this the
-`target_folder` will only contain a tree folder for the desired tree.
-You must combine this tree with the server folder and other tree folder listed
-in the configuration file. But you are free to distribute the index generation
-for trees as you see fit, as long as you combine the result afterwards.
+The Generated Instance
+----------------------
+The generated instance is stored in the folder named by the `target_folder` key
+in configuration.mkd. It contains a minimal configuration file needed by the
+server, a SQLite database to support search, and HTML-formatted versions of all
+the files in the indexed source trees.
 
 
-Deployment of Generated Index to Webserver
+Deployment of the Instance to a Web Server
 ------------------------------------------
-When you have generated a source code index using your configuration and
-uploaded it to the folder where the virtual root is `wwwroot` as specified in
-you configuration file. You must move and rename the `server/dot-htaccess` to
-`.htaccess` in the folder for your virtual root.
+Once you have generated an instance, move it onto your web server, and
+configure it to serve searches via `dxr/dxr.wsgi` and the HTML-formatted source
+and other static resources directly from the filesystem. An example
+configuration for Apache is provided in
+`puppet/files/etc/httpd/conf.d/dxr.conf`.
 
-DXR have the following dependencies on the webserver
+DXR has the following dependencies on the webserver:
 
  - sqlite (`>= 3.7.4`)
  - python (`>= 2.5`)
  - jinja2 (`>= 2.4`)
- - trilite (latest git revision)
- - apache with `mod_rewrite`
+ - trilite (pulled in as a git submodule)
+ - apache with `mod_rewrite` and `mod_wsgi` (or equivalent)

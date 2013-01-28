@@ -25,9 +25,8 @@ cd tests/json-test/
 make
 
 # run the server
-cd target/server
-./test-server.py --port 8000
-# server should be running on 33.33.33.
+../../bin/dxr-serve.py --port 8000 target
+# Server should be running on 33.33.33.77:8000.
 
 # all done? ctrl+c to interrupt the server
 exit

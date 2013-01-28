@@ -1,5 +1,4 @@
 [DXR]
-template            = PWD/../../templates/mozilla
 enabled_plugins     = pygmentize clang
 temp_folder         = PWD/temp
 target_folder       = PWD/target

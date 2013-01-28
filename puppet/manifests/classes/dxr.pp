@@ -2,8 +2,6 @@
 
 class dxr ($project_path){
     package {
-         "python-jinja2": ensure => installed;
-         "python-pygments": ensure => installed;
          "libsqlite3-dev": ensure => installed;
          "git": ensure => installed;
          "mercurial": ensure => installed;
@@ -19,10 +17,10 @@ class dxr ($project_path){
         logoutput => "on_failure",
     }
 
-    file { "/home/vagrant/.bashrc_vagrant":
-        ensure => file,
-        source => "$project_path/puppet/files/home/vagrant/bashrc_vagrant",
-        owner  => "vagrant", group => "vagrant", mode => 0644;
+    # Install libtrilite so Apache WSGI processes can see it:
+    file { "/usr/local/lib/libtrilite.so":
+        ensure => "link",
+        target => "/home/vagrant/dxr/trilite/libtrilite.so"
     }
 
     file { "/home/vagrant/install_llvm.sh":
@@ -31,9 +29,8 @@ class dxr ($project_path){
         owner  => "vagrant", group => "vagrant", mode => 0755;
     }
 
-    exec { "amend_rc":
-        command => "echo 'if [ -f /home/vagrant/.bashrc_vagrant ] && ! shopt -oq posix; then . /home/vagrant/.bashrc_vagrant; fi' >> /home/vagrant/.bashrc",
-        require => File["/home/vagrant/.bashrc_vagrant"],
+    exec { "ldconfig":
+        command => "/sbin/ldconfig",
+        require => File["/usr/local/lib/libtrilite.so"]
     }
-
 }

@@ -48,7 +48,6 @@ _This is a short list of major things that could be done to improve DXR._
   * Minor refactoring of template interface to minimize size
      - Reuse annotations (i.e., don't store the same annotation for each line)
      - Reuse menus (i.e., don't store the same menu for each occurrence)
-  * Migrate `server/search.py` from CGI to WSGI for better performance.
   * Minor UI fixes and cleanup
      - Colorize highlighted matches (highlight with classes, .m1, .m2, ..., use merge-extents)
      - Make the UI pretty

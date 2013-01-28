@@ -17,6 +17,7 @@ class apache {
         onlyif => 'test ! -e /etc/apache2/mods-enabled/rewrite.load';
         'a2enmod proxy':
         onlyif => 'test ! -e /etc/apache2/mods-enabled/proxy.load';
+        'a2dissite 000-default':
     }
 
     service { "apache2":

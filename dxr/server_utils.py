@@ -1,4 +1,8 @@
-import sqlite3, sys, ctypes
+import ctypes
+import os.path
+import sqlite3
+import sys
+
 
 # Load trilite
 _trilite_loaded = False
@@ -24,9 +28,9 @@ def _collate_loc(str1, str2):
   return cmp(parts1, parts2)
 
 # Get database connection for tree
-def connect_db(tree):
+def connect_db(tree, instance_path):
   load_tokenizer()
-  dbname = "../" + tree + "/.dxr-xref.sqlite"
+  dbname = os.path.join(instance_path, 'trees', tree, '.dxr-xref.sqlite')
   try:
     conn = sqlite3.connect(dbname)
     conn.text_factory = str
@@ -34,7 +38,7 @@ def connect_db(tree):
     conn.create_collation("loc", _collate_loc)
     conn.row_factory = sqlite3.Row
     return conn
-  except:
+  except:  # TODO: Die, bare except, die!
     return None
 
 # Log message

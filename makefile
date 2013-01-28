@@ -7,7 +7,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test: build
-	cd tests && ./run-tests.py
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/trilite nosetests
 
 build: $(BUILD_PLUGINS) trilite
 
@@ -22,13 +22,13 @@ trilite-clean:
 	$(MAKE) -C trilite/ clean
 
 $(BUILD_PLUGINS):
-	$(MAKE) -C $(@:build-plugin-%=plugins/%) build
+	$(MAKE) -C $(@:build-plugin-%=dxr/plugins/%) build
 
 $(CHECK_PLUGINS):
-	$(MAKE) -C $(@:check-plugin-%=plugins/%) check
+	$(MAKE) -C $(@:check-plugin-%=dxr/plugins/%) check
 
 $(CLEAN_PLUGINS):
-	$(MAKE) -C $(@:clean-plugin-%=plugins/%) clean
+	$(MAKE) -C $(@:clean-plugin-%=dxr/plugins/%) clean
 
 
 .PHONY: $(BUILD_PLUGINS)

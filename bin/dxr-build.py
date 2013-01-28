@@ -4,6 +4,8 @@ from datetime import datetime
 import fnmatch
 import getopt
 import os
+from os import stat
+from os.path import dirname
 import shutil
 import sqlite3
 import string
@@ -22,11 +24,10 @@ def main(argv):
   configfile  = None
   nb_jobs     = None # Allow us to overwrite config
   tree        = None
-  make_server = False
 
   # Parse arguments
   try:
-    params = ["help", "file=", "tree=", "jobs=", "server"]
+    params = ["help", "file=", "tree=", "jobs="]
     options, args = getopt.getopt(argv, "hf:t:j:s", params)
   except getopt.GetoptError:
     print >> sys.stderr, "Failed to parse options"
@@ -49,17 +50,10 @@ def main(argv):
       tree = opt
     elif arg in ('-j', '--jobs'):
       nb_jobs = opt
-    elif arg in ('-s', '--server'):
-      make_server = True
     else:
       print >> sys.stderr, "Unknown option '%s'" % arg
       print_usage()
       sys.exit(1)
-
-  # Complain if conflicting --tree and --server arguments
-  if tree and make_server:
-    print >> sys.stderr, "Can't combine --tree and --server arguments"
-    sys.exit(1)
 
   # Abort if we didn't get a config file
   if not configfile:
@@ -79,21 +73,43 @@ def main(argv):
     if len(trees) == 0:
       print >> sys.stderr, "Tree '%s' is not defined in config file!" % tree
       sys.exit(1)
-  elif not make_server:
-    # Build everything if no tree or action is provided
-    trees = config.trees
-    make_server = True
   else:
-    trees = []
+    # Build everything if no tree is provided
+    trees = config.trees
 
   # Create config.target_folder (if not exists)
+  print "Generating target folder"
   ensure_folder(config.target_folder, False)
   ensure_folder(config.temp_folder, True)
   ensure_folder(config.log_folder, True)
 
-  # Make server if requested
-  if make_server:
-    create_server(config)
+  # We don't want to load config file on the server, so we just write all the
+  # setting into the config.py script, simple as that.
+  _fill_and_write_template(
+    config,
+    'config.py',
+    os.path.join(config.target_folder, 'config.py'),
+    dict(trees = repr([t.name for t in config.trees]),
+         wwwroot = repr(config.wwwroot),
+         template_parameters = repr(config.template_parameters),
+         generated_date = repr(config.generated_date),
+         directory_index = repr(config.directory_index)))
+
+  # Create jinja cache folder in target folder
+  ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
+
+  # Build root-level index.html:
+  ensure_folder(os.path.join(config.target_folder, 'trees'))
+  _fill_and_write_template(
+    config,
+    'index.html',
+    os.path.join(config.target_folder, 'trees', 'index.html'),
+    {'wwwroot': config.wwwroot,
+     'tree': config.trees[0].name,
+     'trees': [t.name for t in config.trees],
+     'config': config.template_parameters,
+     'generated_date': config.generated_date})
+  # TODO Make open-search.xml things (or make the server so it can do them!)
 
   # Build trees requested
   for tree in trees:
@@ -151,12 +167,11 @@ def print_help():
   -h, --help                     Show help information.
   -f, --file    FILE             Use FILE as config file
   -t, --tree    TREE             Index and Build only section TREE (default is all)
-  -s, --server                   Build only the server scripts
   -j, --jobs    JOBS             Use JOBS number of parallel processes (default 1)"""
 
 
 def print_usage():
-  print "Usage: dxr-index.py -f FILE (--server | --tree TREE)"
+  print "Usage: dxr-index.py -f FILE (--tree TREE)"
 
 
 def ensure_folder(folder, clean = False):
@@ -235,136 +250,68 @@ def index_files(tree, conn):
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
-  """ Build folders and folder listing """
-  # Create the sub folder, if it doesn't exist
-  path = os.path.join(tree.target_folder, folder)
-  if not os.path.isdir(path):
-    os.mkdir(path)
+  """Build folders and folder listings."""
+  # Create the subfolder if it doesn't exist:
+  ensure_folder(os.path.join(tree.target_folder, folder))
 
-  # Okay, now we build folder listing
+  # Build the folder listing:
   # Name is either basename (or if that is "" name of tree)
   name = os.path.basename(folder) or tree.name
 
-  # Generate list of folders (with meta-data)
-  folders = []
-  for f in indexed_folders:
-    # Get folder path on disk
-    path = os.path.join(tree.source_folder, folder, f)
-    # stat the folder
-    stat = os.stat(path)
-    modified = datetime.fromtimestamp(stat.st_mtime)
-    # Okay, this is what we give the template:
-    folders.append(('folder', f, modified))
+  # Generate list of folders and their mod dates:
+  folders = [('folder',
+              f,
+              datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
+                                                       folder,
+                                                       f)).st_mtime),
+              _join_url(tree.name, folder, f))
+             for f in indexed_folders]
 
-  # Generate list of files
+  # Generate list of files:
   files = []
   for f in indexed_files:
     # Get file path on disk
     path = os.path.join(tree.source_folder, folder, f)
-    # stat the file
-    stat = os.stat(path)
-    modified = datetime.fromtimestamp(stat.st_mtime)
-    # Format the size
-    size = stat.st_size # TODO Make this a bit prettier, ie. 4 decimals
-    if size > 2 ** 30:
-      size = str(size / 2 ** 30) + 'G'
-    elif size > 2 ** 20:
-      size = str(size / 2 ** 20) + 'M'
-    elif size > 2 ** 10:
-      size = str(size / 2 ** 10) + 'K'
-    else:
-      size = str(size)
-    # Now give this stuff to list template
-    files.append((dxr.mime.icon(path), f, modified, size))
+    file_info = stat(path)
+    files.append((dxr.mime.icon(path),
+                  f,
+                  datetime.fromtimestamp(file_info.st_mtime),
+                  file_info.st_size,
+                  _join_url(tree.name, folder, f)))
 
-  # Destination file path
+  # Lay down the HTML:
   dst_path = os.path.join(tree.target_folder,
                           folder,
                           tree.config.directory_index)
-  # Fetch template from environment
-  env = dxr.utils.load_template_env(tree.config)  # don't worry it caches the env
-  tmpl = env.get_template('folder.html')
-  arguments = {
-    # Set common template variables
-    'wwwroot':        tree.config.wwwroot,
-    'tree':           tree.name,
-    'trees':          [t.name for t in tree.config.trees],
-    'config':         tree.config.template_parameters,
-    'generated_date': tree.config.generated_date,
-    # Set folder template variables
-    'name':           name,
-    'path':           folder,
-    'folders':        folders,
-    'files':          files
-  }
-  # Fill-in variables and dump to file with utf-8 encoding
-  tmpl.stream(**arguments).dump(dst_path, encoding = 'utf-8')
+  _fill_and_write_template(
+    tree.config,
+    'folder.html',
+    dst_path,
+    {# Common template variables:
+     'wwwroot':        tree.config.wwwroot,
+     'tree':           tree.name,
+     'trees':          [t.name for t in tree.config.trees],
+     'config':         tree.config.template_parameters,
+     'generated_date': tree.config.generated_date,
+
+     # Folder template variables:
+     'name':           name,
+     'path':           folder,
+     'folders':        folders,
+     'files':          files})
 
 
-def create_server(config):
-  """ Create server scripts for hosting the DXR indexes """
-  print "Generating server scripts"
-  # Server folder (located in the target_folder)
-  server_folder = os.path.join(config.target_folder, 'server')
+def _join_url(*args):
+  """Join URL path segments with "/", skipping empty segments."""
+  return '/'.join(a for a in args if a)
 
-  # Delete and copy in the server folder as is
-  if os.path.isdir(server_folder):
-    shutil.rmtree(server_folder, False)
-  shutil.copytree(os.path.join(config.dxrroot, 'server'), server_folder, False)
 
-  # We don't want to load config file on the server, so we just write all the
-  # setting into the config.py script, simple as that.
-  config_file = os.path.join(server_folder, 'config.py')
-  dxr.utils.substitute_in_file(config_file, 
-    trees               = repr([t.name for t in config.trees]),
-    wwwroot             = repr(config.wwwroot),
-    template_parameters = repr(config.template_parameters),
-    generated_date      = repr(config.generated_date)
-  )
-
-  # Substitution for test-server.py
-  test_server = os.path.join(server_folder, 'test-server.py')
-  dxr.utils.substitute_in_file(test_server, 
-    trees               = repr([t.name for t in config.trees]),
-    wwwroot             = repr(config.wwwroot),
-    template_parameters = repr(config.template_parameters),
-    directory_index     = repr(config.directory_index)
-  )
-
-  # Substitution for dot-htaccess
-  htaccess = os.path.join(server_folder, 'dot-htaccess')
-  dxr.utils.substitute_in_file(htaccess, 
-    directory_index     = repr(config.directory_index)
-  )
-
-  # Create jinja cache folder in server folder
-  os.mkdir(os.path.join(server_folder, 'jinja_dxr_cache'))
-
-  # Copy in template folder
-  # We'll use mod_rewrite to map static/ one level up
-  shutil.copytree(config.template, os.path.join(server_folder, 'template'))
-
-  # Build index file
-  build_index(config)
-  # TODO Make open-search.xml things (or make the server so it can do them!)
-
-def build_index(config):
-  """ Build index.html for the server """
-  # Destination path
-  dst_path = os.path.join(config.target_folder, 'server', 'index.html')
-  # Fetch template
-  env   = dxr.utils.load_template_env(config)
-  tmpl  = env.get_template('index.html')
-  arguments = {
-    # Set common template arguments
-    'wwwroot':        config.wwwroot,
-    'tree':           config.trees[0].name,
-    'trees':          [t.name for t in config.trees],
-    'config':         config.template_parameters,
-    'generated_date': config.generated_date
-  }
-  # Fill-in variables and dump to file
-  tmpl.stream(**arguments).dump(dst_path, encoding = 'utf-8')
+def _fill_and_write_template(config, template_name, out_path, vars):
+  """Get the template `template_name` from the template folder, substitute in
+  `vars`, and write the result to `out_path`."""
+  env = dxr.utils.load_template_env(config)
+  template = env.get_template(template_name)
+  template.stream(**vars).dump(out_path, encoding='utf-8')
 
 
 def build_tree(tree, conn):
@@ -480,7 +427,7 @@ def run_html_workers(tree, conn):
       log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
       # Create a worker
       print " - Starting worker %i" % next_id
-      cmd = [os.path.join(tree.config.dxrroot, "dxr-worker.py")] + args
+      cmd = [os.path.join(dirname(__file__), 'dxr-worker.py')] + args
       # Write command to log
       log.write(" ".join(cmd) + "\n")
       log.flush()
@@ -519,4 +466,3 @@ def run_html_workers(tree, conn):
 
 if __name__ == '__main__':
   main(sys.argv[1:])
-
