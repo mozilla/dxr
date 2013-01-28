@@ -144,6 +144,8 @@ class TreeConfig:
 
     # Convert ignore patterns to list
     self.ignore_patterns  = self.ignore_patterns.split()
+    self.ignore_paths     = filter(lambda p: p.startswith("/"), self.ignore_patterns)
+    self.ignore_patterns  = filter(lambda p: not p.startswith("/"), self.ignore_patterns)
 
     # Render all path absolute
     self.temp_folder      = os.path.abspath(self.temp_folder)
