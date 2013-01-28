@@ -8,8 +8,9 @@ from urllib2 import quote
 try:
     from nose.tools import assert_in
 except ImportError:
-    def assert_in(item, coll, msg=None):
-        assert item in coll, msg if msg is not None else '%r not in %r' % (item, coll)
+    from nose.tools import ok_
+    def assert_in(item, container, msg=None):
+        ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
 from dxr.app import make_app
 
