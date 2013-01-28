@@ -7,7 +7,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test: build
-	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/trilite nosetests
+	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:`pwd`/trilite nosetests
 
 build: $(BUILD_PLUGINS) trilite
 
