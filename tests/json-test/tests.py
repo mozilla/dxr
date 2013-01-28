@@ -43,3 +43,7 @@ class JsonTests(DxrInstanceTestCase):
 
     def test_called_by(self):
         self.assert_query_includes("called-by:main", ["hello.h"])
+
+    def test_typedefs(self):
+        self.assert_query_includes('+type:MyTypedef', ['typedef.h'])
+        self.assert_query_includes('+type-ref:MyTypedef', ['typedef.cpp'])

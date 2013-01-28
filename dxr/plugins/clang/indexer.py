@@ -606,6 +606,12 @@ def update_refs(conn):
          WHERE types.file_id        = refs.referenced_file_id
            AND types.file_line      = refs.referenced_file_line
            AND types.file_col       = refs.referenced_file_col
+      UNION
+        SELECT id
+          FROM typedefs
+         WHERE typedefs.file_id     = refs.referenced_file_id
+           AND typedefs.file_line   = refs.referenced_file_line
+           AND typedefs.file_col    = refs.referenced_file_col
       UNION 
         SELECT id
           FROM functions

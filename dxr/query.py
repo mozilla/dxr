@@ -604,7 +604,8 @@ filters.append(SimpleFilter(
 
 
 # type filter
-filters.append(ExistsLikeFilter(
+filters.append(UnionFilter([
+  ExistsLikeFilter(
     param         = "type",
     filter_sql    = """SELECT 1 FROM types
                        WHERE %s
@@ -617,11 +618,27 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "types.name",
     qual_name     = "types.qualname"
-))
+  ),
+  ExistsLikeFilter(
+    param         = "type",
+    filter_sql    = """SELECT 1 FROM typedefs
+                       WHERE %s
+                         AND typedefs.file_id = files.id
+                    """,
+    ext_sql       = """SELECT typedefs.extent_start, typedefs.extent_end FROM typedefs
+                       WHERE typedefs.file_id = ?
+                         AND %s
+                       ORDER BY typedefs.extent_start
+                    """,
+    like_name     = "typedefs.name",
+    qual_name     = "typedefs.qualname"
+  ),
+]))
 
 
 # type-ref filter
-filters.append(ExistsLikeFilter(
+filters.append(UnionFilter([
+  ExistsLikeFilter(
     param         = "type-ref",
     filter_sql    = """SELECT 1 FROM types, refs
                        WHERE %s
@@ -636,7 +653,24 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "types.name",
     qual_name     = "types.qualname"
-))
+  ),
+  ExistsLikeFilter(
+    param         = "type-ref",
+    filter_sql    = """SELECT 1 FROM typedefs, refs
+                       WHERE %s
+                         AND typedefs.id = refs.refid AND refs.file_id = files.id
+                    """,
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+                       WHERE refs.file_id = ?
+                         AND EXISTS (SELECT 1 FROM typedefs
+                                     WHERE %s
+                                       AND typedefs.id = refs.refid)
+                       ORDER BY refs.extent_start
+                    """,
+    like_name     = "typedefs.name",
+    qual_name     = "typedefs.qualname"
+  ),
+]))
 
 # function filter
 filters.append(ExistsLikeFilter(
@@ -991,5 +1025,3 @@ filters.append(ExistsLikeFilter(
     like_name     = "type.name",
     qual_name     = "type.qualname"
 ))
-
-#TODO typedef filter
