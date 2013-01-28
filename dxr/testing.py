@@ -5,7 +5,11 @@ from os.path import dirname
 from unittest import TestCase
 from urllib2 import quote
 
-from nose.tools import assert_in
+try:
+    from nose.tools import assert_in
+except ImportError:
+    def assert_in(item, coll, msg=None):
+        assert item in coll, msg if msg is not None else '%r not in %r' % (item, coll)
 
 from dxr.app import make_app
 
