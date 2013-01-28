@@ -547,6 +547,40 @@ class ExistsLikeFilter(SearchFilter):
               yield (start, end,[])
         yield builder()
 
+
+class UnionFilter(SearchFilter):
+  """ Provides a filter matching the union of the given filters.
+
+      For when you want OR instead of AND.
+  """
+  def __init__(self, filters):
+    SearchFilter.__init__(self)
+    self.filters = filters
+
+  def filter(self, query):
+    sql = []
+    args = []
+    has_ext = True
+    for filt in self.filters:
+      for hit in filt.filter(query):
+        sql.append(hit[0])
+        args.extend(hit[1])
+        has_ext = has_ext or hit[2]
+    if len(sql) == 0:
+      return []
+    return [('(' + ' OR '.join(sql) + ')',
+             args,
+             has_ext)]
+
+  def extents(self, conn, query, fileid):
+    def builder():
+      for filt in self.filters:
+        for hits in filt.extents(conn, query, fileid):
+          for hit in hits:
+            yield hit
+    yield builder()
+
+
 # TriLite Search filter
 filters.append(TriLiteSearchFilter())
 
@@ -712,117 +746,121 @@ filters.append(ExistsLikeFilter(
 ))
 
 
-# callers filter (direct-calls)
-filters.append(ExistsLikeFilter(
-    param         = "callers",
-    filter_sql    = """SELECT 1
-                        FROM functions as caller, functions as target, callers
-                       WHERE %s
-                         AND callers.targetid = target.id
-                         AND callers.callerid = caller.id
-                         AND caller.file_id = files.id
-                    """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                        FROM functions
-                       WHERE functions.file_id = ?
-                         AND EXISTS (SELECT 1 FROM functions as target, callers
-                                      WHERE %s
-                                        AND callers.targetid = target.id
-                                        AND callers.callerid = functions.id
-                                    )
-                       ORDER BY functions.extent_start
-                    """,
-    like_name     = "target.name",
-    qual_name     = "target.qualname"
-))
+filters.append(UnionFilter([
+  # callers filter (direct-calls)
+  ExistsLikeFilter(
+      param         = "callers",
+      filter_sql    = """SELECT 1
+                          FROM functions as caller, functions as target, callers
+                         WHERE %s
+                           AND callers.targetid = target.id
+                           AND callers.callerid = caller.id
+                           AND caller.file_id = files.id
+                      """,
+      ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                          FROM functions
+                         WHERE functions.file_id = ?
+                           AND EXISTS (SELECT 1 FROM functions as target, callers
+                                        WHERE %s
+                                          AND callers.targetid = target.id
+                                          AND callers.callerid = functions.id
+                                      )
+                         ORDER BY functions.extent_start
+                      """,
+      like_name     = "target.name",
+      qual_name     = "target.qualname"
+  ),
 
-# callers filter (indirect-calls
-filters.append(ExistsLikeFilter(
-    param         = "callers",
-    filter_sql    = """SELECT 1
-                        FROM functions as caller, functions as target, callers
-                       WHERE %s
-                         AND  EXISTS ( SELECT 1 FROM targets
-                                        WHERE targets.funcid = target.id
-                                          AND targets.targetid = callers.targetid
-                                     )
-                         AND callers.callerid = caller.id
-                         AND caller.file_id = files.id
-                    """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                        FROM functions
-                       WHERE functions.file_id = ?
-                         AND EXISTS (SELECT 1 FROM functions as target, callers
-                                      WHERE %s
-                                        AND EXISTS (
-                                   SELECT 1 FROM targets
-                                    WHERE targets.funcid = target.id
-                                      AND targets.targetid = callers.targetid
-                                      AND callers.callerid = target.id
-                                            )
-                                        AND callers.callerid = functions.id
-                                    )
-                       ORDER BY functions.extent_start
-                    """,
-    like_name     = "target.name",
-    qual_name     = "target.qualname"
-))
-
-# called-by filter (direct calls)
-filters.append(ExistsLikeFilter(
-    param         = "called-by",
-    filter_sql    = """SELECT 1
-                         FROM functions as target, functions as caller, callers
-                        WHERE %s
-                          AND callers.callerid = caller.id
-                          AND callers.targetid = target.id
-                          AND target.file_id = files.id
-                    """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end 
-                        FROM functions
-                       WHERE functions.file_id = ?
-                         AND EXISTS (SELECT 1 FROM functions as caller, callers
-                                      WHERE %s
-                                        AND caller.id = callers.callerid
-                                        AND callers.targetid = functions.id
-                                    )
-                       ORDER BY functions.extent_start
-                    """,
-    like_name     = "caller.name",
-    qual_name     = "caller.qualname"
-))
-
-# called-by filter (indirect calls)
-filters.append(ExistsLikeFilter(
-    param         = "called-by",
-    filter_sql    = """SELECT 1
-                         FROM functions as target, functions as caller, callers
-                        WHERE %s
-                          AND callers.callerid = caller.id
-                          AND ( EXISTS (SELECT 1 FROM targets
-                                         WHERE targets.funcid = target.id
-                                           AND targets.targetid = callers.targetid
+  # callers filter (indirect-calls)
+  ExistsLikeFilter(
+      param         = "callers",
+      filter_sql    = """SELECT 1
+                          FROM functions as caller, functions as target, callers
+                         WHERE %s
+                           AND  EXISTS ( SELECT 1 FROM targets
+                                          WHERE targets.funcid = target.id
+                                            AND targets.targetid = callers.targetid
                                        )
-                              )
-                          AND target.file_id = files.id
-                    """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                        FROM functions
-                       WHERE functions.file_id = ?
-                         AND EXISTS (SELECT 1 FROM functions as caller, callers
-                                      WHERE %s
-                                        AND caller.id = callers.callerid
-                                        AND EXISTS (
-                                    SELECT 1 FROM targets
-                                     WHERE targets.funcid = functions.id
-                                       AND targets.targetid = callers.targetid
-                                            )
-                                    )
-                       ORDER BY functions.extent_start
-                    """,
-    like_name     = "caller.name",
-    qual_name     = "caller.qualname"
-))
+                           AND callers.callerid = caller.id
+                           AND caller.file_id = files.id
+                      """,
+      ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                          FROM functions
+                         WHERE functions.file_id = ?
+                           AND EXISTS (SELECT 1 FROM functions as target, callers
+                                        WHERE %s
+                                          AND EXISTS (
+                                     SELECT 1 FROM targets
+                                      WHERE targets.funcid = target.id
+                                        AND targets.targetid = callers.targetid
+                                        AND callers.callerid = target.id
+                                              )
+                                          AND callers.callerid = functions.id
+                                      )
+                         ORDER BY functions.extent_start
+                      """,
+      like_name     = "target.name",
+      qual_name     = "target.qualname"
+  ),
+]))
+
+filters.append(UnionFilter([
+  # called-by filter (direct calls)
+  ExistsLikeFilter(
+      param         = "called-by",
+      filter_sql    = """SELECT 1
+                           FROM functions as target, functions as caller, callers
+                          WHERE %s
+                            AND callers.callerid = caller.id
+                            AND callers.targetid = target.id
+                            AND target.file_id = files.id
+                      """,
+      ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                          FROM functions
+                         WHERE functions.file_id = ?
+                           AND EXISTS (SELECT 1 FROM functions as caller, callers
+                                        WHERE %s
+                                          AND caller.id = callers.callerid
+                                          AND callers.targetid = functions.id
+                                      )
+                         ORDER BY functions.extent_start
+                      """,
+      like_name     = "caller.name",
+      qual_name     = "caller.qualname"
+  ),
+
+  # called-by filter (indirect calls)
+  ExistsLikeFilter(
+      param         = "called-by",
+      filter_sql    = """SELECT 1
+                           FROM functions as target, functions as caller, callers
+                          WHERE %s
+                            AND callers.callerid = caller.id
+                            AND ( EXISTS (SELECT 1 FROM targets
+                                           WHERE targets.funcid = target.id
+                                             AND targets.targetid = callers.targetid
+                                         )
+                                )
+                            AND target.file_id = files.id
+                      """,
+      ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                          FROM functions
+                         WHERE functions.file_id = ?
+                           AND EXISTS (SELECT 1 FROM functions as caller, callers
+                                        WHERE %s
+                                          AND caller.id = callers.callerid
+                                          AND EXISTS (
+                                      SELECT 1 FROM targets
+                                       WHERE targets.funcid = functions.id
+                                         AND targets.targetid = callers.targetid
+                                              )
+                                      )
+                         ORDER BY functions.extent_start
+                      """,
+      like_name     = "caller.name",
+      qual_name     = "caller.qualname"
+  ),
+]))
 
 #warning filter
 filters.append(ExistsLikeFilter(

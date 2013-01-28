@@ -39,9 +39,7 @@ class JsonTests(DxrInstanceTestCase):
         self.assert_query_includes('+var:StaticMember::static_member', ['static_member.cpp'])
 
     def test_callers(self):
-        raise SkipTest('known failure')
         self.assert_query_includes("callers:getHello", ["main.c"])
 
     def test_called_by(self):
-        raise SkipTest('known failure')
         self.assert_query_includes("called-by:main", ["hello.h"])
