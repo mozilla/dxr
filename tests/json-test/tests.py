@@ -25,6 +25,16 @@ class JsonTests(DxrInstanceTestCase):
     def test_members(self):
         self.assert_query_includes("member:BitField", ["BitField.h"])
 
+    def test_member_function(self):
+        """Test searching for members of a class (or struct) that contains
+        only member functions"""
+        self.assert_query_includes("+member:MemberFunction", ["member_function.cpp"])
+
+    def test_member_variable(self):
+        """Test searching for members of a class (or struct) that contains
+        only member variables"""
+        self.assert_query_includes("+member:MemberVariable", ["member_variable.cpp"])
+
     def test_const_functions(self):
         """Make sure const functions are indexed separately from non-const but
         otherwise identical signatures."""
