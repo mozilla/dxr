@@ -203,7 +203,7 @@ class ClangHtmlifier:
                     continue
                 inc_name = match.group(1)
                 sql = "SELECT path FROM files WHERE path LIKE ?"
-                rows = self.conn.execute(sql, ("%%%s" % (inc_name),)).fetchall()
+                rows = self.conn.execute(sql, (inc_name,)).fetchall()
 
                 if rows is None or len(rows) == 0:
                     basename = os.path.basename(inc_name)
