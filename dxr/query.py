@@ -973,8 +973,9 @@ filters.append(ExistsLikeFilter(
 ))
 
 
-# member filter for functions
-filters.append(ExistsLikeFilter(
+filters.append(UnionFilter([
+  # member filter for functions
+  ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, functions as mem
                         WHERE %s
@@ -989,10 +990,9 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "type.name",
     qual_name     = "type.qualname"
-))
-
-# member filter for types
-filters.append(ExistsLikeFilter(
+  ),
+  # member filter for types
+  ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, types as mem
                         WHERE %s
@@ -1007,10 +1007,9 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "type.name",
     qual_name     = "type.qualname"
-))
-
-# member filter for variables
-filters.append(ExistsLikeFilter(
+  ),
+  # member filter for variables
+  ExistsLikeFilter(
     param         = "member",
     filter_sql    = """SELECT 1 FROM types as type, variables as mem
                         WHERE %s
@@ -1025,4 +1024,5 @@ filters.append(ExistsLikeFilter(
                     """,
     like_name     = "type.name",
     qual_name     = "type.qualname"
-))
+  ),
+]))
