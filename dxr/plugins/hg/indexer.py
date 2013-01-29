@@ -5,9 +5,9 @@ import dxr.plugins
 # implementation is missing, and thus, something is badly wrong.
 
 def pre_process(tree, environ):
-  pass
+    pass
 
 def post_process(tree, conn):
-  pass
+    pass
 
 __all__ = dxr.plugins.indexer_exports()
