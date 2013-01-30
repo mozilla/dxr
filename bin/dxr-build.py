@@ -7,17 +7,15 @@ import os
 from os import stat
 from os.path import dirname
 import shutil
-import sqlite3
-import string
-import subprocess, select
+import subprocess
 import sys
-import time
 
 import dxr
 import dxr.utils
 import dxr.plugins
 import dxr.languages
 import dxr.mime
+
 
 def main(argv):
     # Options to read
