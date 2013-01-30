@@ -87,11 +87,11 @@ def main(argv):
         config,
         'config.py',
         os.path.join(config.target_folder, 'config.py'),
-        dict(trees = repr([t.name for t in config.trees]),
-                  wwwroot = repr(config.wwwroot),
-                  template_parameters = repr(config.template_parameters),
-                  generated_date = repr(config.generated_date),
-                  directory_index = repr(config.directory_index)))
+        dict(trees=repr([t.name for t in config.trees]),
+             wwwroot=repr(config.wwwroot),
+             template_parameters=repr(config.template_parameters),
+             generated_date=repr(config.generated_date),
+             directory_index=repr(config.directory_index)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
@@ -159,6 +159,7 @@ def main(argv):
 
     # Print a neat summary
 
+
 def print_help():
     print_usage()
     print """Options:
@@ -172,7 +173,7 @@ def print_usage():
     print "Usage: dxr-index.py -f FILE (--tree TREE)"
 
 
-def ensure_folder(folder, clean = False):
+def ensure_folder(folder, clean=False):
     """ Ensures the existence of a folder, if clean is true also ensures that it's empty"""
     if clean and os.path.isdir(folder):
         shutil.rmtree(folder, False)
