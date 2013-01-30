@@ -2,6 +2,7 @@ from commands import getstatusoutput
 import json
 import os.path
 from os.path import dirname
+import sys
 from unittest import TestCase
 from urllib2 import quote
 
@@ -46,13 +47,14 @@ def run(command):
 
 class DxrInstanceTestCase(TestCase):
     """A pile of tests to be run inside a DXR instance after building it"""
-    
+
     @classmethod
     def setup_class(cls):
         """Build the instance."""
-        # TODO: Get rid of this __file__ nonsense.
-        cls._dir = dirname(cls.file)
-        
+        # nose does some amazing magic that makes this work even if there are
+        # multiple test modules with the same name:
+        cls._dir = dirname(sys.modules[cls.__module__].__file__)
+
         # TODO: Escaping doesn't exist. Replace this use of make altogether
         # (here and in teardown) with Python.
         run("cd '%s' && make" % cls._dir)
