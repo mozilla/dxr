@@ -408,7 +408,7 @@ def run_html_workers(tree, conn):
     # Make some slices
     slices = []
     # Don't make slices bigger than 500
-    step = min(500, int(file_count) / int(tree.config.nb_jobs))
+    step = max(min(500, int(file_count) / int(tree.config.nb_jobs)), 1)
     start = None    # None, is not --start argument
     for end in xrange(step, file_count, step):
         slices.append((start, end))
