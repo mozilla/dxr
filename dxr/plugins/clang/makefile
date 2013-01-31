@@ -1,8 +1,7 @@
-LLVM_LIBS := $(shell llvm-config --libdir)
-CXXFLAGS := $(shell llvm-config --cflags) -Wall \
-	-fno-exceptions -fno-rtti \
-	-I$(shell llvm-config --includedir) $(if $(DEBUG),-O0 -g)
-LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' -L$(LLVM_LIBS) -shared
+LLVM_LDFLAGS := $(shell llvm-config --ldflags)
+CXXFLAGS := $(shell llvm-config --cxxflags) -Wall -Wno-strict-aliasing \
+	$(if $(DEBUG),-O0 -g)
+LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' $(LLVM_LDFLAGS) -shared
 
 build: libclang-index-plugin.so
 
@@ -10,13 +9,13 @@ build: libclang-index-plugin.so
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 libclang-index-plugin.so: dxr-index.o sha1.o
-	$(CXX) $(LDFLAGS) $^ -o $@ -shared
+	$(CXX) $(LDFLAGS) $^ -o $@
 
 check: build
 	which clang
 	which clang++
 
 clean:
-	rm -rf *.o libclang-index-plugin.so
+	$(RM) *.o libclang-index-plugin.so
 
 .PHONY: build clean
