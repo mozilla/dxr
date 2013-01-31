@@ -14,14 +14,14 @@ import dxr.languages
 import dxr.mime
 
 
-def build(config_path, nb_jobs=None, tree=None):
+def build_instance(config_path, nb_jobs=None, tree=None):
     """Build a DXR instance.
 
     :arg config_path: The path to a config file
-    :arg nb_jobs: The number of parallel jobs to pass into ``make``. Overrides
-        any such value specified in the config file.
-    :arg tree: A single tree to build. Useful in cases where the config file
-        specifies multiple trees.
+    :arg nb_jobs: The number of parallel jobs to pass into ``make``. Defaults
+        to whatever the config file says.
+    :arg tree: A single tree to build. Defaults to all the trees in the config
+        file.
 
     """
     # Load configuration file

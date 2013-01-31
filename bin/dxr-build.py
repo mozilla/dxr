@@ -3,7 +3,7 @@
 import getopt
 import sys
 
-from dxr.build import build
+from dxr.build import build_instance
 
 
 def main(argv):
@@ -47,7 +47,7 @@ def main(argv):
         print_usage()
         sys.exit(1)
 
-    build(configfile, nb_jobs=nb_jobs, tree=tree)
+    build_instance(configfile, nb_jobs=nb_jobs, tree=tree)
 
 
 def print_help():
