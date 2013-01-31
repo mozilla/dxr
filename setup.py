@@ -24,6 +24,8 @@ setup(
     tests_require=['nose'],
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
+    zip_safe=False,  # So we can find dxr-worker.py as a file to run it as a
+                     # subprocess
     classifiers=[
         'Intended Audience :: Developers',
         'Natural Language :: English',

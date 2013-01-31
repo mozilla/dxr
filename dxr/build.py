@@ -3,6 +3,7 @@ import fnmatch
 import os
 from os import stat
 from os.path import dirname
+from pkg_resources import require
 import shutil
 import subprocess
 import sys
@@ -369,6 +370,13 @@ def run_html_workers(tree, conn):
     # Map from pid to workers
     workers = {}
     next_id = 1   # unique ids for workers, to associate log files
+
+    # Get the correct path to dxr-worker.py, whether dxr is installed or linked
+    # as a development egg:
+    dxr_worker_path = os.path.join(require('dxr')[0].egg_info,
+                                   'scripts',
+                                   'dxr-worker.py')
+
     # While there's slices and workers, we can manage them
     while len(slices) > 0 or len(workers) > 0:
 
@@ -386,7 +394,7 @@ def run_html_workers(tree, conn):
             log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
             # Create a worker
             print " - Starting worker %i" % next_id
-            cmd = [os.path.join(dirname(dirname(dxr.__file__)), 'bin', 'dxr-worker.py')] + args
+            cmd = [dxr_worker_path] + args
             # Write command to log
             log.write(" ".join(cmd) + "\n")
             log.flush()
