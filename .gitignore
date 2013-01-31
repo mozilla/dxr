@@ -8,3 +8,4 @@ tests/json-test/test.config
 vagrantconfig_local.yaml
 .vagrant
 build
+dist
