@@ -85,9 +85,9 @@ def build_instance(config_path, nb_jobs=None, tree=None):
         ensure_folder(tree.object_folder,       # Object folder (user defined!)
             tree.source_folder != tree.object_folder) # Only clean if not the srcdir
         ensure_folder(tree.temp_folder,   True) # <config.temp_folder>/<tree.name>
-                                                                                        # (or user defined)
+                                                # (or user defined)
         ensure_folder(tree.log_folder,    True) # <config.log_folder>/<tree.name>
-                                                                                        # (or user defined)
+                                                # (or user defined)
         # Temporary folders for plugins
         ensure_folder(os.path.join(tree.temp_folder, 'plugins'), True)
         for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
@@ -158,15 +158,15 @@ def index_files(tree, conn):
         for f in files:
             # Ignore file if it matches an ignore pattern
             if any((fnmatch.fnmatchcase(f, e) for e in tree.ignore_patterns)):
-                continue # Ignore the file
+                continue  # Ignore the file.
 
             # file_path and path
             file_path = os.path.join(root, f)
             path = os.path.join(rel_path, f)
 
             # Ignore file if its path (relative to the root) matches an ignore path
-            if any((fnmatch.fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths)):
-                continue # Ignore the file
+            if any(fnmatch.fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths):
+                continue  # Ignore the file.
 
             # the file
             with open(file_path, "r") as source_file:
@@ -210,7 +210,7 @@ def index_files(tree, conn):
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
-    """Build folders and folder listings."""
+    """Build an HTML index file for a single folder."""
     # Create the subfolder if it doesn't exist:
     ensure_folder(os.path.join(tree.target_folder, folder))
 
@@ -220,11 +220,11 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Generate list of folders and their mod dates:
     folders = [('folder',
-                            f,
-                            datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
-                                                                                                              folder,
-                                                                                                              f)).st_mtime),
-                            _join_url(tree.name, folder, f))
+               f,
+               datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
+               folder,
+               f)).st_mtime),
+               _join_url(tree.name, folder, f))
                           for f in indexed_folders]
 
     # Generate list of files:
@@ -241,8 +241,8 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Lay down the HTML:
     dst_path = os.path.join(tree.target_folder,
-                                                    folder,
-                                                    tree.config.directory_index)
+                            folder,
+                            tree.config.directory_index)
     _fill_and_write_template(
         tree.config,
         'folder.html',
@@ -361,7 +361,7 @@ def run_html_workers(tree, conn):
     slices = []
     # Don't make slices bigger than 500
     step = min(500, int(file_count) / int(tree.config.nb_jobs))
-    start = None    # None, is not --start argument
+    start = None  # None, is not --start argument
     for end in xrange(step, file_count, step):
         slices.append((start, end))
         start = end + 1
@@ -372,10 +372,9 @@ def run_html_workers(tree, conn):
     next_id = 1   # unique ids for workers, to associate log files
 
     # While there's slices and workers, we can manage them
-    while len(slices) > 0 or len(workers) > 0:
-
+    while slices or workers:
         # Create workers while we have slots available
-        while len(workers) < int(tree.config.nb_jobs) and len(slices) > 0:
+        while len(workers) < int(tree.config.nb_jobs) and slices:
             # Get slice of work
             start, end = slices.pop()
             # Setup arguments

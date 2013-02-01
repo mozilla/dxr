@@ -19,7 +19,6 @@ class Config:
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
-        generated_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
         parser = ConfigParser.ConfigParser({
             'dxrroot':          os.path.dirname(dxr.__file__),
             'plugin_folder':    "%(dxrroot)s/plugins",
@@ -31,7 +30,7 @@ class Config:
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
-            'generated_date':   generated_date
+            'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
         })
         parser.read(configfile)
 
@@ -165,12 +164,12 @@ class TreeConfig:
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
             self.enabled_plugins = [p for p in config.enabled_plugins
-                                                                if  p not in self.disabled_plugins]
+                                    if p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any((p in self.disabled_plugins for p in self.enabled_plugins)):
+        if any(p in self.disabled_plugins for p in self.enabled_plugins):
             msg = "Plugin: '%s' is both enabled and disabled in '%s'"
             print >> sys.stderr, msg % (p, name)
             sys.exit(1)
