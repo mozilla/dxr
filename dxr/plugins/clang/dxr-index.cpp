@@ -404,6 +404,21 @@ public:
     return true;
   }
 
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+
+    for (CXXConstructorDecl::init_const_iterator it = d->init_begin(), e = d->init_end(); it != e; ++it)
+    {
+      const CXXCtorInitializer *ci = *it;
+      if (!ci->getMember())
+        continue;
+      printReference(ci->getMember(), ci->getSourceLocation(), ci->getSourceLocation());
+    }
+
+    return true;
+  }
+
   bool treatThisValueDeclAsADefinition(const ValueDecl *d)
   {
     const VarDecl *vd = dyn_cast<VarDecl>(d);
@@ -544,6 +559,34 @@ public:
       type = "funcptr";
     }
     recordValue("calltype", type);
+    *out << std::endl;
+    return true;
+  }
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *e) {
+    if (!interestingLocation(e->getLocStart()))
+      return true;
+
+    CXXConstructorDecl *callee = e->getConstructor();
+    if (!callee || !interestingLocation(callee->getLocation()) ||
+        !NamedDecl::classof(callee))
+      return true;
+
+    // Fun facts about call exprs:
+    // 1. callee isn't necessarily a function. Think function pointers.
+    // 2. We might not be in a function. Think global function decls
+    // 3. Virtual functions need not be called virtually!
+    beginRecord("call", e->getLocStart());
+    if (m_currentFunction) {
+      recordValue("callername", getQualifiedName(*m_currentFunction));
+      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
+    }
+    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("calleeloc", locationToString(callee->getLocation()));
+
+    // There are no virtual constructors in C++:
+    recordValue("calltype", "static");
+
     *out << std::endl;
     return true;
   }
