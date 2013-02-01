@@ -371,12 +371,6 @@ def run_html_workers(tree, conn):
     workers = {}
     next_id = 1   # unique ids for workers, to associate log files
 
-    # Get the correct path to dxr-worker.py, whether dxr is installed or linked
-    # as a development egg:
-    dxr_worker_path = os.path.join(require('dxr')[0].egg_info,
-                                   'scripts',
-                                   'dxr-worker.py')
-
     # While there's slices and workers, we can manage them
     while len(slices) > 0 or len(workers) > 0:
 
@@ -394,7 +388,13 @@ def run_html_workers(tree, conn):
             log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
             # Create a worker
             print " - Starting worker %i" % next_id
-            cmd = [dxr_worker_path] + args
+
+            # This depends on dxr-worker.py being on the PATH, which it should
+            # be if the dxr Python package is installed, which it is required
+            # to be. TODO: Switch to multiprocessing instead, as this is still
+            # fragile; someone may have wacky directories on the PATH.
+            cmd = ['dxr-worker.py'] + args
+
             # Write command to log
             log.write(" ".join(cmd) + "\n")
             log.flush()
