@@ -568,9 +568,10 @@ public:
     }
     recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
     recordValue("calleeloc", locationToString(callee->getLocation()));
-    // Determine the type of call
-    const char *type = "static";
-    recordValue("calltype", type);
+
+    // There are no virtual constructors in C++:
+    recordValue("calltype", "static");
+
     *out << std::endl;
     return true;
   }
