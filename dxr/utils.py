@@ -15,7 +15,7 @@ import dxr
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
 
-class Config:
+class Config(object):
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
@@ -105,7 +105,7 @@ class Config:
 
 
 
-class TreeConfig:
+class TreeConfig(object):
     """ Tree configuration for DXR """
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
@@ -208,17 +208,17 @@ def connect_database(tree):
 
 
 _template_env = None
-def load_template_env(config):
+def load_template_env(temp_folder, template_folder):
     """ Load template environment (lazily) """
     global _template_env
     if not _template_env:
         # Cache folder for jinja2
-        tmpl_cache = os.path.join(config.temp_folder, 'jinja2_cache')
+        tmpl_cache = os.path.join(temp_folder, 'jinja2_cache')
         if not os.path.isdir(tmpl_cache):
             os.mkdir(tmpl_cache)
         # Create jinja2 environment
         _template_env = jinja2.Environment(
-                loader          = jinja2.FileSystemLoader(config.template),
+                loader          = jinja2.FileSystemLoader(template_folder),
                 auto_reload     = False,
                 bytecode_cache  = jinja2.FileSystemBytecodeCache(tmpl_cache)
         )

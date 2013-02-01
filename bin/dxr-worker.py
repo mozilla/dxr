@@ -138,7 +138,8 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         if htmlifier:
             htmlifiers.append(htmlifier)
     # Load template
-    env = dxr.utils.load_template_env(tree.config)
+    env = dxr.utils.load_template_env(tree.config.temp_folder,
+                                      tree.config.template)
     tmpl = env.get_template('file.html')
     arguments = {
         # Set common template variables

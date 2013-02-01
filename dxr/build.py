@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 
+from dxr.utils import load_template_env
 import dxr.utils
 import dxr.plugins
 import dxr.languages
@@ -47,10 +48,12 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     ensure_folder(config.temp_folder, True)
     ensure_folder(config.log_folder, True)
 
+    jinja_env = load_template_env(config.temp_folder, config.template)
+
     # We don't want to load config file on the server, so we just write all the
     # setting into the config.py script, simple as that.
     _fill_and_write_template(
-        config,
+        jinja_env,
         'config.py',
         os.path.join(config.target_folder, 'config.py'),
         dict(trees=repr([t.name for t in config.trees]),
@@ -65,7 +68,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # Build root-level index.html:
     ensure_folder(os.path.join(config.target_folder, 'trees'))
     _fill_and_write_template(
-        config,
+        jinja_env,
         'index.html',
         os.path.join(config.target_folder, 'trees', 'index.html'),
         {'wwwroot': config.wwwroot,
@@ -240,11 +243,12 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                                     _join_url(tree.name, folder, f)))
 
     # Lay down the HTML:
+    jinja_env = load_template_env(tree.config.temp_folder, tree.config.template)
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
     _fill_and_write_template(
-        tree.config,
+        jinja_env,
         'folder.html',
         dst_path,
         {# Common template variables:
@@ -266,11 +270,10 @@ def _join_url(*args):
     return '/'.join(a for a in args if a)
 
 
-def _fill_and_write_template(config, template_name, out_path, vars):
+def _fill_and_write_template(jinja_env, template_name, out_path, vars):
     """Get the template `template_name` from the template folder, substitute in
     `vars`, and write the result to `out_path`."""
-    env = dxr.utils.load_template_env(config)
-    template = env.get_template(template_name)
+    template = jinja_env.get_template(template_name)
     template.stream(**vars).dump(out_path, encoding='utf-8')
 
 
