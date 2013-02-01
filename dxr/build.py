@@ -48,7 +48,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     ensure_folder(config.temp_folder, True)
     ensure_folder(config.log_folder, True)
 
-    jinja_env = load_template_env(config.temp_folder, config.template)
+    jinja_env = load_template_env(config.temp_folder, config.template_folder)
 
     # We don't want to load config file on the server, so we just write all the
     # setting into the config.py script, simple as that.
@@ -245,7 +245,8 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                                     _join_url(tree.name, folder, f)))
 
     # Lay down the HTML:
-    jinja_env = load_template_env(tree.config.temp_folder, tree.config.template)
+    jinja_env = load_template_env(tree.config.temp_folder,
+                                  tree.config.template_folder)
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)

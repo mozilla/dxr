@@ -41,7 +41,7 @@ class Config(object):
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.template         = parser.get('DXR', 'template',         False, override)
+        self.template_folder  = parser.get('DXR', 'template',         False, override)
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
@@ -66,7 +66,7 @@ class Config(object):
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
-        self.template         = os.path.abspath(self.template)
+        self.template_folder  = os.path.abspath(self.template_folder)
 
         # Make sure wwwroot doesn't end in /
         if self.wwwroot[-1] == '/':
