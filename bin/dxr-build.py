@@ -239,7 +239,8 @@ def index_files(tree, conn):
 
         # Exclude folders that match an ignore pattern
         # (The top-down walk allows us to do this)
-        for folder in folders:
+        # We need to iterate backwards to avoid skipping elements
+        for folder in reversed(folders):
             if any((fnmatch.fnmatchcase(folder, e) for e in tree.ignore_patterns)):
                 folders.remove(folder)
             else:
