@@ -404,6 +404,21 @@ public:
     return true;
   }
 
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+
+    for (CXXConstructorDecl::init_const_iterator it = d->init_begin(), e = d->init_end(); it != e; ++it)
+    {
+      const CXXCtorInitializer *ci = *it;
+      if (!ci->getMember())
+        continue;
+      printReference(ci->getMember(), ci->getSourceLocation(), ci->getSourceLocation());
+    }
+
+    return true;
+  }
+
   bool treatThisValueDeclAsADefinition(const ValueDecl *d)
   {
     const VarDecl *vd = dyn_cast<VarDecl>(d);
