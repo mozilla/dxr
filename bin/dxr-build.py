@@ -247,6 +247,8 @@ def index_files(tree, conn):
                 if any((fnmatch.fnmatchcase(folder_relpath, e) for e in tree.ignore_paths)):
                     folders.remove(folder)
 
+        indexed_files.sort()
+        folders.sort()
         # Now build folder listing and folders for indexed_files
         build_folder(tree, conn, rel_path, indexed_files, folders)
 
