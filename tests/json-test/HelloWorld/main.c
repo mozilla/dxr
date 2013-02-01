@@ -6,6 +6,7 @@
 // Hello World Example
 int main(int argc, char* argv[]){
   printf("%s\n", getHello());
+  BitField b(8);
   return 0;
 }
 

@@ -548,6 +548,34 @@ public:
     return true;
   }
 
+  bool VisitCXXConstructExpr(CXXConstructExpr *e) {
+    if (!interestingLocation(e->getLocStart()))
+      return true;
+
+    CXXConstructorDecl *callee = e->getConstructor();
+    if (!callee || !interestingLocation(callee->getLocation()) ||
+        !NamedDecl::classof(callee))
+      return true;
+
+    // Fun facts about call exprs:
+    // 1. callee isn't necessarily a function. Think function pointers.
+    // 2. We might not be in a function. Think global function decls
+    // 3. Virtual functions need not be called virtually!
+    beginRecord("call", e->getLocStart());
+    if (m_currentFunction) {
+      recordValue("callername", getQualifiedName(*m_currentFunction));
+      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
+    }
+    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("calleeloc", locationToString(callee->getLocation()));
+
+    // There are no virtual constructors in C++:
+    recordValue("calltype", "static");
+
+    *out << std::endl;
+    return true;
+  }
+
   // For binding stuff inside the directory, we need to find the containing
   // function. Unfortunately, there is no way to do this in clang, so we have
   // to maintain the function stack ourselves. Why is it a stack? Consider:
