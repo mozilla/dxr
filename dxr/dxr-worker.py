@@ -1,4 +1,10 @@
 #!/usr/bin/env python2
+# This is sitting in the package folder just to make it easy to find. It's
+# nearly impossible to figure out where the commandline scripts of a
+# distribution went in all situations (setup.py develop, setup.py install,
+# etc.). Ultimately, this will become a proper module and be called via
+# multiprocessing. For now, it has a hyphen in its name to make it obvious that
+# it's not to be imported.
 
 import dxr
 import dxr.utils

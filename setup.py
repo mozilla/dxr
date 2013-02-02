@@ -19,7 +19,7 @@ setup(
     author_email='erik@mozilla.com',
     license='MIT',
     packages=find_packages(exclude=['ez_setup']),
-    scripts=['bin/dxr-build.py', 'bin/dxr-serve.py', 'bin/dxr-worker.py'],
+    scripts=['bin/dxr-build.py', 'bin/dxr-serve.py'],
     install_requires=['Flask>=0.9', 'Pygments>=1.4', 'Jinja2>=2.6'],
     tests_require=['nose'],
     url='https://github.com/mozilla/dxr',

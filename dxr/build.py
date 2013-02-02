@@ -394,11 +394,8 @@ def run_html_workers(tree, conn):
             # Create a worker
             print " - Starting worker %i" % next_id
 
-            # This depends on dxr-worker.py being on the PATH, which it should
-            # be if the dxr Python package is installed, which it is required
-            # to be. TODO: Switch to multiprocessing instead, as this is still
-            # fragile; someone may have wacky directories on the PATH.
-            cmd = ['dxr-worker.py'] + args
+            # TODO: Switch to multiprocessing.
+            cmd = [os.path.join(dirname(__file__), 'dxr-worker.py')] + args
 
             # Write command to log
             log.write(" ".join(cmd) + "\n")
