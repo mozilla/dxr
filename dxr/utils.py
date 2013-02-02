@@ -15,11 +15,10 @@ import dxr
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
 
-class Config:
+class Config(object):
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
-        generated_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
         parser = ConfigParser.ConfigParser({
             'dxrroot':          os.path.dirname(dxr.__file__),
             'plugin_folder':    "%(dxrroot)s/plugins",
@@ -31,7 +30,7 @@ class Config:
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
-            'generated_date':   generated_date
+            'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
         })
         parser.read(configfile)
 
@@ -42,7 +41,7 @@ class Config:
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.template         = parser.get('DXR', 'template',         False, override)
+        self.template_folder  = parser.get('DXR', 'template',         False, override)
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
@@ -67,7 +66,7 @@ class Config:
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
-        self.template         = os.path.abspath(self.template)
+        self.template_folder  = os.path.abspath(self.template_folder)
 
         # Make sure wwwroot doesn't end in /
         if self.wwwroot[-1] == '/':
@@ -106,7 +105,7 @@ class Config:
 
 
 
-class TreeConfig:
+class TreeConfig(object):
     """ Tree configuration for DXR """
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
@@ -165,12 +164,12 @@ class TreeConfig:
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
             self.enabled_plugins = [p for p in config.enabled_plugins
-                                                                if  p not in self.disabled_plugins]
+                                    if p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any((p in self.disabled_plugins for p in self.enabled_plugins)):
+        if any(p in self.disabled_plugins for p in self.enabled_plugins):
             msg = "Plugin: '%s' is both enabled and disabled in '%s'"
             print >> sys.stderr, msg % (p, name)
             sys.exit(1)
@@ -209,17 +208,17 @@ def connect_database(tree):
 
 
 _template_env = None
-def load_template_env(config):
+def load_template_env(temp_folder, template_folder):
     """ Load template environment (lazily) """
     global _template_env
     if not _template_env:
         # Cache folder for jinja2
-        tmpl_cache = os.path.join(config.temp_folder, 'jinja2_cache')
+        tmpl_cache = os.path.join(temp_folder, 'jinja2_cache')
         if not os.path.isdir(tmpl_cache):
             os.mkdir(tmpl_cache)
         # Create jinja2 environment
         _template_env = jinja2.Environment(
-                loader          = jinja2.FileSystemLoader(config.template),
+                loader          = jinja2.FileSystemLoader(template_folder),
                 auto_reload     = False,
                 bytecode_cache  = jinja2.FileSystemBytecodeCache(tmpl_cache)
         )

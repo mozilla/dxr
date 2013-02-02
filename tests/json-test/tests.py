@@ -7,8 +7,6 @@ class JsonTests(DxrInstanceTestCase):
     """A grab bag of tests which should be broken out into several independent,
     simpler DXR instances"""
 
-    file = __file__
-
     def test_text(self):
         """Assert that a plain text search works."""
         self.assert_query_includes('main', ['main.c', 'makefile'])

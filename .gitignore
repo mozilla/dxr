@@ -7,3 +7,5 @@ tests/json-test/HelloWorld/HelloWorld
 tests/json-test/test.config
 vagrantconfig_local.yaml
 .vagrant
+build
+dist
