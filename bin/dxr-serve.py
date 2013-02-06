@@ -1,6 +1,5 @@
 #!/usr/bin/env python2
-"""
-A simple test server for DXR, not suitable for production
+"""A simple test server for DXR, not suitable for production
 
 Use a web server with WSGI support for actual deployments.
 

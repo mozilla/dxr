@@ -1,67 +1,52 @@
 #!/usr/bin/env python2
+"""Command to build a DXR instance from one or more source trees"""
 
-import getopt
-import sys
+from optparse import OptionParser
+import os.path
+from os.path import isdir
+from sys import stderr
 
 from dxr.build import build_instance
 
 
-def main(argv):
-    # Options to read
-    configfile  = None
-    nb_jobs     = None # Allow us to overwrite config
-    tree        = None
+def main():
+    parser = OptionParser(
+        usage='usage: %prog [options] [folder containing dxr.config | config '
+              'file]',
+        description='If no args are given, defaults to looking for a config '
+                    'file called dxr.config in the current working directory.')
+    parser.add_option('-f', '--file', dest='config_file',
+                      help='A DXR config file. [Deprecated. Use the first '
+                           'positional arg instead.]')
+    parser.add_option('-t', '--tree', dest='tree',
+                      help='An INI section title in the config file, '
+                           'specifying a source tree to build. (Default: all '
+                           'trees.)')
+    parser.add_option('-j', '--jobs', dest='jobs',
+                      type='int',
+                      default=1,
+                      help='Number of parallel processes to use, (Default: 1)')
+    options, args = parser.parse_args()
+    if len(args) > 1:
+        parser.print_usage()
 
-    # Parse arguments
-    try:
-        params = ["help", "file=", "tree=", "jobs="]
-        options, args = getopt.getopt(argv, "hf:t:j:s", params)
-    except getopt.GetoptError:
-        print >> sys.stderr, "Failed to parse options"
-        print_usage()
-        sys.exit(1)
-    for arg, opt in options:
-        if arg in ('-f', '--file'):
-            if not configfile:
-                configfile = opt
-            else:
-                print >> sys.stderr, "Only one config file can be provided"
-                sys.exit(1)
-        elif arg in ('-h', '--help'):
-            print_help()
-            sys.exit(0)
-        elif arg in ('-t', '--tree'):
-            if tree is not None:
-                print >> sys.stderr, "More than one tree option is provided!"
-                sys.exit(1)
-            tree = opt
-        elif arg in ('-j', '--jobs'):
-            nb_jobs = opt
-        else:
-            print >> sys.stderr, "Unknown option '%s'" % arg
-            print_usage()
-            sys.exit(1)
+    if args:
+        # Handle deprecated --file arg:
+        if options.config_file:
+            print >> stderr, ('Warning: overriding the --file or -f flag with '
+                              'the first positional argument.')
+        options.config_file = (os.path.join(args[0], 'dxr.config') if
+                               isdir(args[0]) else args[0])
+    elif not options.config_file:
+        # Assume dxr.config in the cwd:
+        options.config_file = 'dxr.config'
 
-    # Abort if we didn't get a config file
-    if not configfile:
-        print_usage()
-        sys.exit(1)
-
-    build_instance(configfile, nb_jobs=nb_jobs, tree=tree)
-
-
-def print_help():
-    print_usage()
-    print """Options:
-    -h, --help                     Show help information.
-    -f, --file    FILE             Use FILE as config file
-    -t, --tree    TREE             Index and Build only section TREE (default is all)
-    -j, --jobs    JOBS             Use JOBS number of parallel processes (default 1)"""
-
-
-def print_usage():
-    print "Usage: dxr-index.py -f FILE (--tree TREE)"
+    build_instance(options.config_file,
+                   # TODO: Remove this brain-dead cast when we get the types
+                   # right in the Config object:
+                   nb_jobs=str(options.jobs),
+                   tree=options.tree)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
