@@ -641,11 +641,11 @@ filters.append(UnionFilter([
 filters.append(UnionFilter([
   ExistsLikeFilter(
     param         = "type-ref",
-    filter_sql    = """SELECT 1 FROM types, refs
+    filter_sql    = """SELECT 1 FROM types, type_refs AS refs
                        WHERE %s
                          AND types.id = refs.refid AND refs.file_id = files.id
                     """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM type_refs AS refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM types
                                      WHERE %s
@@ -657,11 +657,11 @@ filters.append(UnionFilter([
   ),
   ExistsLikeFilter(
     param         = "type-ref",
-    filter_sql    = """SELECT 1 FROM typedefs, refs
+    filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
                        WHERE %s
                          AND typedefs.id = refs.refid AND refs.file_id = files.id
                     """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM typedef_refs AS refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM typedefs
                                      WHERE %s
@@ -693,11 +693,11 @@ filters.append(ExistsLikeFilter(
 # function-ref filter
 filters.append(ExistsLikeFilter(
     param         = "function-ref",
-    filter_sql    = """SELECT 1 FROM functions, refs
+    filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
                        WHERE %s
                          AND functions.id = refs.refid AND refs.file_id = files.id
                     """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM functions
                                      WHERE %s
@@ -729,11 +729,11 @@ filters.append(ExistsLikeFilter(
 # var-ref filter
 filters.append(ExistsLikeFilter(
     param         = "var-ref",
-    filter_sql    = """SELECT 1 FROM variables, refs
+    filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
                        WHERE %s
                          AND variables.id = refs.refid AND refs.file_id = files.id
                     """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM variable_refs AS refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM variables
                                      WHERE %s
@@ -765,11 +765,11 @@ filters.append(ExistsLikeFilter(
 # macro-ref filter
 filters.append(ExistsLikeFilter(
     param         = "macro-ref",
-    filter_sql    = """SELECT 1 FROM macros, refs
+    filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
                        WHERE %s
                          AND macros.id = refs.refid AND refs.file_id = files.id
                     """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM refs
+    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
                        WHERE refs.file_id = ?
                          AND EXISTS (SELECT 1 FROM macros
                                      WHERE %s
