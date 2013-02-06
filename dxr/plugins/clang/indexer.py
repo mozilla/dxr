@@ -76,13 +76,54 @@ schema = dxr.schema.Schema({
         ("_key", "id"),
         ("_index", "qualname"),
     ],
-    # References to functions, types, variables, etc.
-    "refs": [
-        ("refid", "INTEGER", True),      # ID of the identifier being referenced
+    # References to functions
+    "function_refs": [
+        ("refid", "INTEGER", True),      # ID of the function being referenced
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
         ("_location", True, 'referenced'),
+        ("_fkey", "refid", "functions", "id"),
+        ("_index", "refid"),
+    ],
+    # References to macros
+    "macro_refs": [
+        ("refid", "INTEGER", True),      # ID of the macro being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "macros", "id"),
+        ("_index", "refid"),
+    ],
+    # References to types
+    "type_refs": [
+        ("refid", "INTEGER", True),      # ID of the type being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "types", "id"),
+        ("_index", "refid"),
+    ],
+    # References to typedefs
+    "typedef_refs": [
+        ("refid", "INTEGER", True),      # ID of the typedef being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "typedefs", "id"),
+        ("_index", "refid"),
+    ],
+    # References to variables
+    "variable_refs": [
+        ("refid", "INTEGER", True),      # ID of the variable being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "variables", "id"),
         ("_index", "refid"),
     ],
     # Warnings found while compiling
@@ -93,14 +134,37 @@ schema = dxr.schema.Schema({
         ("extent_end", "INTEGER", True),
         ("_location", True),
     ],
-    # Declaration/definition mapping
-    "decldef": [
+    # Declaration/definition mapping for functions
+    "function_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
+        ("_fkey", "defid", "functions", "id"),
+        ("_index", "defid"),
+    ],
+    # Declaration/definition mapping for types
+    "type_decldef": [
+        ("defid", "INTEGER", True),    # ID of the definition instance
+        ("_location", True),
+        ("_location", True, 'definition'),
+        # Extents of the declaration
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_fkey", "defid", "types", "id"),
+        ("_index", "defid"),
+    ],
+    # Declaration/definition mapping for variables
+    "variable_decldef": [
+        ("defid", "INTEGER", True),    # ID of the definition instance
+        ("_location", True),
+        ("_location", True, 'definition'),
+        # Extents of the declaration
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_fkey", "defid", "variables", "id"),
         ("_index", "defid"),
     ],
     # Macros: this is a table of all of the macros we come across in the code.
@@ -234,6 +298,9 @@ def handleScope(args, conn, canonicalize=False):
         args['scopeid'] = scopeid
 
 def process_decldef(args, conn):
+    if 'kind' not in args:
+        return None
+
     # Store declaration map basics on memory
     name, defloc, declloc = args['name'], args['defloc'], args['declloc']
     defid, defline, defcol = splitLoc(conn, args['defloc'])
@@ -241,6 +308,7 @@ def process_decldef(args, conn):
     if defid is None or declid is None:
         return None
 
+    # FIXME: should kind be included in this mapping?
     decl_master[(name, declid, declline, declcol)] = (defid, defline, defcol)
     decl_master[(name, defid, defline, defcol)] = (defid, defline, defcol)
 
@@ -250,7 +318,7 @@ def process_decldef(args, conn):
         return None
     fixupExtent(args, 'extent')
     
-    return schema.get_insert_sql('decldef', args)
+    return schema.get_insert_sql(args['kind'] + '_decldef', args)
 
 def process_type(args, conn):
     if not fixupEntryPath(args, 'loc', conn):
@@ -311,14 +379,16 @@ def process_variable(args, conn):
 def process_ref(args, conn):
     if 'extent' not in args:
         return None
-
-    if not fixupEntryPath(args, 'refloc', conn):
+    if 'kind' not in args:
         return None
-    if not fixupEntryPath(args, 'varloc', conn, 'referenced'):
+
+    if not fixupEntryPath(args, 'loc', conn):
+        return None
+    if not fixupEntryPath(args, 'declloc', conn, 'referenced'):
         return None
     fixupExtent(args, 'extent')
 
-    return schema.get_insert_sql('refs', args)
+    return schema.get_insert_sql(args['kind'] + '_refs', args)
 
 def process_warning(args, conn):
     if not fixupEntryPath(args, 'loc', conn):
@@ -570,67 +640,108 @@ def generate_callgraph(conn):
 
 def update_defids(conn):
     sql = """
-        UPDATE decldef SET defid = (
+        UPDATE type_decldef SET defid = (
               SELECT id
-                  FROM types
-                WHERE types.file_id       = decldef.definition_file_id
-                    AND types.file_line     = decldef.definition_file_line
-                    AND types.file_col      = decldef.definition_file_col
-          UNION 
+                FROM types AS def
+               WHERE def.file_id   = definition_file_id
+                 AND def.file_line = definition_file_line
+                 AND def.file_col  = definition_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE function_decldef SET defid = (
               SELECT id
-                  FROM functions
-                WHERE functions.file_id   = decldef.definition_file_id
-                    AND functions.file_line = decldef.definition_file_line
-                    AND functions.file_col  = decldef.definition_file_col
-          UNION
+                FROM functions AS def
+               WHERE def.file_id   = definition_file_id
+                 AND def.file_line = definition_file_line
+                 AND def.file_col  = definition_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE variable_decldef SET defid = (
               SELECT id
-                  FROM variables
-                WHERE variables.file_id   = decldef.definition_file_id
-                    AND variables.file_line = decldef.definition_file_line
-                    AND variables.file_col  = decldef.definition_file_col
-    )
-    """
+                FROM variables AS def
+               WHERE def.file_id   = definition_file_id
+                 AND def.file_line = definition_file_line
+                 AND def.file_col  = definition_file_col
+        )"""
     conn.execute(sql)
 
 
 def update_refs(conn):
+    # References to declarations
     sql = """
-        UPDATE refs SET refid = (
-                SELECT id
-                    FROM macros
-                  WHERE macros.file_id       = refs.referenced_file_id
-                      AND macros.file_line     = refs.referenced_file_line
-                      AND macros.file_col      = refs.referenced_file_col
-            UNION
-                SELECT id
-                    FROM types
-                  WHERE types.file_id        = refs.referenced_file_id
-                      AND types.file_line      = refs.referenced_file_line
-                      AND types.file_col       = refs.referenced_file_col
-            UNION
-                SELECT id
-                    FROM typedefs
-                  WHERE typedefs.file_id     = refs.referenced_file_id
-                      AND typedefs.file_line   = refs.referenced_file_line
-                      AND typedefs.file_col    = refs.referenced_file_col
-            UNION 
-                SELECT id
-                    FROM functions
-                  WHERE functions.file_id    = refs.referenced_file_id
-                      AND functions.file_line  = refs.referenced_file_line
-                      AND functions.file_col   = refs.referenced_file_col
-            UNION 
+        UPDATE type_refs SET refid = (
                 SELECT defid
-                    FROM decldef
-                  WHERE decldef.file_id      = refs.referenced_file_id
-                      AND decldef.file_line    = refs.referenced_file_line
-                      AND decldef.file_col     = refs.referenced_file_col
-            UNION 
+                  FROM type_decldef AS decl
+                 WHERE decl.file_id   = referenced_file_id
+                   AND decl.file_line = referenced_file_line
+                   AND decl.file_col  = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE function_refs SET refid = (
+                SELECT defid
+                  FROM function_decldef AS decl
+                 WHERE decl.file_id   = referenced_file_id
+                   AND decl.file_line = referenced_file_line
+                   AND decl.file_col  = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE variable_refs SET refid = (
+                SELECT defid
+                  FROM variable_decldef AS decl
+                 WHERE decl.file_id   = referenced_file_id
+                   AND decl.file_line = referenced_file_line
+                   AND decl.file_col  = referenced_file_col
+        )"""
+    conn.execute(sql)
+
+    # References to definitions
+    sql = """
+        UPDATE macro_refs SET refid = (
                 SELECT id
-                    FROM variables
-                  WHERE variables.file_id    = refs.referenced_file_id
-                      AND variables.file_line  = refs.referenced_file_line
-                      AND variables.file_col   = refs.referenced_file_col
+                  FROM macros AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE type_refs SET refid = (
+                SELECT id
+                  FROM types AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE typedef_refs SET refid = (
+                SELECT id
+                  FROM typedefs AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE function_refs SET refid = (
+                SELECT id
+                  FROM functions AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        )"""
+    conn.execute(sql)
+    sql = """
+        UPDATE variable_refs SET refid = (
+                SELECT id
+                  FROM variables AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
         )
     """
     conn.execute(sql)

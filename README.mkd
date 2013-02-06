@@ -35,8 +35,7 @@ _This is a short list of major things that could be done to improve DXR._
      - Remove plugin specific tables
      - Provide data collection API for plugins (ie. no direct database access for plugins)
      - Optimize schema for search queries
-        - Split refs into function-refs, type-refs, etc.
-        - Store extents as a blob in *-refs, types, functions, etc.
+        - Store extents as a blob in *_refs, types, functions, etc.
         - Use trilite for functions, types, macros, etc.
         - Store the transitive closure of indirect calls
      - Port search logic to new schema
