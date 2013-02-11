@@ -677,7 +677,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE function_refs SET refid = (
@@ -686,7 +686,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE variable_refs SET refid = (
@@ -695,7 +695,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
 
     # References to definitions
@@ -706,7 +706,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE type_refs SET refid = (
@@ -715,7 +715,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE typedef_refs SET refid = (
@@ -724,7 +724,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE function_refs SET refid = (
@@ -733,7 +733,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-        )"""
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
         UPDATE variable_refs SET refid = (
@@ -742,6 +742,5 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-        )
-    """
+        ) WHERE refid IS NULL"""
     conn.execute(sql)
