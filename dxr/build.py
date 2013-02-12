@@ -406,7 +406,7 @@ def run_html_workers(tree, conn):
             print " - Starting worker %i" % next_id
 
             # TODO: Switch to multiprocessing.
-            cmd = [os.path.join(dirname(__file__), 'dxr-worker.py')] + args
+            cmd = [sys.executable, os.path.join(dirname(__file__), 'dxr-worker.py')] + args
 
             # Write command to log
             log.write(" ".join(cmd) + "\n")
