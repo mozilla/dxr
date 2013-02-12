@@ -9,3 +9,4 @@ vagrantconfig_local.yaml
 .vagrant
 build
 dist
+*.egg-info
