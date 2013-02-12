@@ -1,5 +1,6 @@
-LLVM_LDFLAGS := $(shell llvm-config --ldflags)
-CXXFLAGS := $(shell llvm-config --cxxflags) -Wall -Wno-strict-aliasing \
+LLVM_CONFIG ?= llvm-config
+LLVM_LDFLAGS := $(shell ${LLVM_CONFIG} --ldflags)
+CXXFLAGS := $(shell ${LLVM_CONFIG} --cxxflags) -Wall -Wno-strict-aliasing \
 	$(if $(DEBUG),-O0 -g)
 LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' $(LLVM_LDFLAGS) -shared
 
