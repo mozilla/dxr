@@ -154,7 +154,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
     """
     for folder in folders:
         if not any(fnmatchcase(folder, p) for p in ignore_patterns):
-            folder_path = '/' + os.path.join(rel_path, folder).replace(os.sep, '/') + '/'
+            folder_path = '/' + os.path.join(source_path, folder).replace(os.sep, '/') + '/'
             if not any(fnmatchcase(folder_path, p) for p in ignore_paths):
                 yield folder
 
