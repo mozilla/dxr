@@ -8,7 +8,6 @@ all:
 	# ../../bin/dxr-serve.py target
 clean:
 	rm -rf test.config
-	rm -rf HelloWorld-objects
 	rm -rf temp
 	rm -rf target
 	cd HelloWorld; make clean; cd -
