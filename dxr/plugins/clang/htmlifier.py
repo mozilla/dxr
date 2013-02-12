@@ -56,7 +56,7 @@ class ClangHtmlifier:
                           functions.qualname,
                           (SELECT path FROM files WHERE files.id = functions.file_id),
                           functions.file_line
-                FROM decldef, functions
+                FROM function_decldef AS decldef, functions
               WHERE decldef.defid = functions.id
                   AND decldef.file_id = ?
         """
@@ -81,7 +81,7 @@ class ClangHtmlifier:
                           variables.qualname,
                           (SELECT path FROM files WHERE files.id = variables.file_id),
                           variables.file_line
-                FROM decldef, variables
+                FROM variable_decldef AS decldef, variables
               WHERE decldef.defid = variables.id
                   AND decldef.file_id = ?
         """
@@ -107,7 +107,7 @@ class ClangHtmlifier:
                           types.kind,
                           (SELECT path FROM files WHERE files.id = types.file_id),
                           types.file_line
-                FROM decldef, types
+                FROM type_decldef AS decldef, types
               WHERE decldef.defid = types.id
                   AND decldef.file_id = ?
         """
@@ -144,7 +144,7 @@ class ClangHtmlifier:
                           types.kind,
                           (SELECT path FROM files WHERE files.id = types.file_id),
                           types.file_line
-                FROM types, refs
+                FROM types, type_refs AS refs
               WHERE types.id = refs.refid AND refs.file_id = ?
         """
         for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
@@ -158,7 +158,7 @@ class ClangHtmlifier:
                           typedefs.qualname,
                           (SELECT path FROM files WHERE files.id = typedefs.file_id),
                           typedefs.file_line
-                FROM typedefs, refs
+                FROM typedefs, typedef_refs AS refs
               WHERE typedefs.id = refs.refid AND refs.file_id = ?
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
@@ -172,7 +172,7 @@ class ClangHtmlifier:
                           functions.qualname,
                           (SELECT path FROM files WHERE files.id = functions.file_id),
                           functions.file_line
-                FROM functions, refs
+                FROM functions, function_refs AS refs
               WHERE functions.id = refs.refid AND refs.file_id = ?
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
@@ -186,7 +186,7 @@ class ClangHtmlifier:
                           variables.qualname,
                           (SELECT path FROM files WHERE files.id = variables.file_id),
                           variables.file_line
-                FROM variables, refs
+                FROM variables, variable_refs AS refs
               WHERE variables.id = refs.refid AND refs.file_id = ?
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
@@ -200,7 +200,7 @@ class ClangHtmlifier:
                           macros.name,
                           (SELECT path FROM files WHERE files.id = macros.file_id),
                           macros.file_line
-                FROM macros, refs
+                FROM macros, macro_refs AS refs
               WHERE macros.id = refs.refid AND refs.file_id = ?
         """
         for start, end, name, path, line in self.conn.execute(sql, args):

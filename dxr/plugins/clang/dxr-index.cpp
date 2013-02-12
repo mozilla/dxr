@@ -263,7 +263,7 @@ public:
     }
   }
 
-  void declDef(const NamedDecl *decl, const NamedDecl *def, SourceLocation begin, SourceLocation end) {
+  void declDef(const char *kind, const NamedDecl *decl, const NamedDecl *def, SourceLocation begin, SourceLocation end) {
     if (!def || def == decl)
       return;
 
@@ -271,6 +271,8 @@ public:
     recordValue("name", getQualifiedName(*decl));
     recordValue("declloc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));
+    if (kind)
+      recordValue("kind", kind);
     printExtent(begin, end);
     *out << std::endl;
   }
@@ -330,7 +332,7 @@ public:
       *out << std::endl;
     }
 
-    declDef(d, d->getDefinition(), d->getLocation(), d->getLocation());
+    declDef("type", d, d->getDefinition(), d->getLocation(), d->getLocation());
     return true;
   }
 
@@ -403,7 +405,7 @@ public:
 
     const FunctionDecl *def;
     if (d->isDefined(def))
-      declDef(d, def, d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+      declDef("function", d, def, d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
 
     return true;
   }
@@ -417,7 +419,7 @@ public:
       const CXXCtorInitializer *ci = *it;
       if (!ci->getMember())
         continue;
-      printReference(ci->getMember(), ci->getSourceLocation(), ci->getSourceLocation());
+      printReference("variable", ci->getMember(), ci->getSourceLocation(), ci->getSourceLocation());
     }
 
     return true;
@@ -453,7 +455,7 @@ public:
       *out << std::endl;
     }
     if (VarDecl *vd = dyn_cast<VarDecl>(d))
-      declDef(vd, vd->getDefinition(), vd->getLocation(), vd->getLocation());
+      declDef("variable", vd, vd->getDefinition(), vd->getLocation(), vd->getLocation());
   }
 
   bool VisitEnumConstantDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
@@ -502,7 +504,7 @@ public:
   }
 
   // Expressions!
-  void printReference(NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
+  void printReference(const char *kind, NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
     std::string filename = sm.getBufferName(refLoc, NULL);
@@ -512,19 +514,34 @@ public:
       // now.
       return;
     beginRecord("ref", refLoc);
-    recordValue("varname", getQualifiedName(*d));
-    recordValue("varloc", locationToString(d->getLocation()));
-    recordValue("refloc", locationToString(refLoc));
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("declloc", locationToString(d->getLocation()));
+    recordValue("loc", locationToString(refLoc));
+    if (kind)
+      recordValue("kind", kind);
     printExtent(refLoc, end);
     *out << std::endl;
   }
+  const char *kindForDecl(const Decl *d)
+  {
+    if (isa<FunctionDecl>(d))
+      return "function";
+    if (isa<EnumConstantDecl>(d) || isa<VarDecl>(d) || isa<FieldDecl>(d))
+      return "variable";
+    return NULL;   // unhandled for now
+  }
   bool VisitMemberExpr(MemberExpr *e) {
-    printReference(e->getMemberDecl(), e->getExprLoc(), e->getSourceRange().getEnd());
+    printReference(kindForDecl(e->getMemberDecl()),
+                   e->getMemberDecl(),
+                   e->getExprLoc(),
+                   e->getSourceRange().getEnd());
     return true;
   }
   bool VisitDeclRefExpr(DeclRefExpr *e) {
-    printReference(e->getDecl(), e->hasQualifier() ?
-      e->getQualifierLoc().getBeginLoc() : e->getLocation(), e->getNameInfo().getEndLoc());
+    printReference(kindForDecl(e->getDecl()),
+                   e->getDecl(),
+                   e->getLocation(),
+                   e->getNameInfo().getEndLoc());
     return true;
   }
 
@@ -615,7 +632,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference(l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
@@ -623,7 +640,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference(l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
@@ -727,9 +744,10 @@ public:
     SourceLocation macroLoc = MI->getDefinitionLoc();
     SourceLocation refLoc = tok.getLocation();
     beginRecord("ref", refLoc);
-    recordValue("varname", std::string(ii->getNameStart(), ii->getLength()));
-    recordValue("varloc", locationToString(macroLoc));
-    recordValue("refloc", locationToString(refLoc));
+    recordValue("name", std::string(ii->getNameStart(), ii->getLength()));
+    recordValue("declloc", locationToString(macroLoc));
+    recordValue("loc", locationToString(refLoc));
+    recordValue("kind", "macro");
     printExtent(refLoc, refLoc);
     *out << std::endl;
   }
