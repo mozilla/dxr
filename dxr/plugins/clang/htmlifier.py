@@ -107,7 +107,7 @@ class ClangHtmlifier:
                           types.kind,
                           (SELECT path FROM files WHERE files.id = types.file_id),
                           types.file_line
-                FROM decldef, types
+                FROM type_decldef AS decldef, types
               WHERE decldef.defid = types.id
                   AND decldef.file_id = ?
         """
