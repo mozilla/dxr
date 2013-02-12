@@ -1,5 +1,5 @@
 from datetime import datetime
-import fnmatch
+from fnmatch import fnmatchcase
 import os
 from os import stat
 from os.path import dirname
@@ -143,6 +143,22 @@ def create_tables(tree, conn):
     conn.executescript(dxr.languages.language_schema.get_create_sql())
 
 
+def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
+    """Yield the folders from ``folders`` which are not ignored by the given
+    patterns and paths.
+
+    :arg source_path: Relative path to the source directory
+    :arg ignore_patterns: Non-path-based globs to be ignored
+    :arg ignore_paths: Path-based globs to be ignored
+
+    """
+    for folder in folders:
+        if not any(fnmatchcase(folder, p) for p in ignore_patterns):
+            folder_path = '/' + os.path.join(source_path, folder).replace(os.sep, '/') + '/'
+            if not any(fnmatchcase(folder_path, p) for p in ignore_paths):
+                yield folder
+
+
 def index_files(tree, conn):
     """ Index all files from the source directory """
     print "Indexing files from the '%s' tree" % tree.name
@@ -150,7 +166,7 @@ def index_files(tree, conn):
     cur = conn.cursor()
     # Walk the directory tree top-down, this allows us to modify folders to
     # exclude folders matching an ignore_pattern
-    for root, folders, files in os.walk(tree.source_folder, True):
+    for root, folders, files in os.walk(tree.source_folder, topdown=True):
         # Find relative path
         rel_path = os.path.relpath(root, tree.source_folder)
         if rel_path == '.':
@@ -160,7 +176,7 @@ def index_files(tree, conn):
         indexed_files = []
         for f in files:
             # Ignore file if it matches an ignore pattern
-            if any((fnmatch.fnmatchcase(f, e) for e in tree.ignore_patterns)):
+            if any(fnmatchcase(f, e) for e in tree.ignore_patterns):
                 continue  # Ignore the file.
 
             # file_path and path
@@ -168,7 +184,7 @@ def index_files(tree, conn):
             path = os.path.join(rel_path, f)
 
             # Ignore file if its path (relative to the root) matches an ignore path
-            if any(fnmatch.fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths):
+            if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths):
                 continue  # Ignore the file.
 
             # the file
@@ -192,15 +208,10 @@ def index_files(tree, conn):
             # Okay to this file was indexed
             indexed_files.append(f)
 
-        # Exclude folders that match an ignore pattern
-        # (The top-down walk allows us to do this)
-        for folder in folders:
-            if any((fnmatch.fnmatchcase(folder, e) for e in tree.ignore_patterns)):
-                folders.remove(folder)
-            else:
-                folder_relpath = "/" + os.path.join(rel_path, folder).replace(os.sep, "/") + "/"
-                if any((fnmatch.fnmatchcase(folder_relpath, e) for e in tree.ignore_paths)):
-                    folders.remove(folder)
+        # Exclude folders that match an ignore pattern.
+        # os.walk listens to any changes we make in `folders`.
+        folders[:] = _unignored_folders(
+            folders, rel_path, tree.ignore_patterns, tree.ignore_paths)
 
         indexed_files.sort()
         folders.sort()
@@ -395,7 +406,7 @@ def run_html_workers(tree, conn):
             print " - Starting worker %i" % next_id
 
             # TODO: Switch to multiprocessing.
-            cmd = [os.path.join(dirname(__file__), 'dxr-worker.py')] + args
+            cmd = [sys.executable, os.path.join(dirname(__file__), 'dxr-worker.py')] + args
 
             # Write command to log
             log.write(" ".join(cmd) + "\n")

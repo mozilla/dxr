@@ -99,6 +99,23 @@ class ClangHtmlifier:
         for start, end, qualname, kind in self.conn.execute(sql, args):
             yield start, end, self.type_menu(qualname, kind)
 
+        # Extents for types declared here
+        sql = """
+            SELECT decldef.extent_start,
+                          decldef.extent_end,
+                          types.qualname,
+                          types.kind,
+                          (SELECT path FROM files WHERE files.id = types.file_id),
+                          types.file_line
+                FROM decldef, types
+              WHERE decldef.defid = types.id
+                  AND decldef.file_id = ?
+        """
+        for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
+            menu = self.type_menu(qualname, kind)
+            self.add_jump_definition(menu, path, line)
+            yield start, end, menu
+
         # Extents for typedefs defined here
         sql = """
             SELECT extent_start, extent_end, qualname

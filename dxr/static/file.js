@@ -64,8 +64,8 @@ function init_menu(){
     if(!s.isCollapsed) return;
     var offset = s.focusOffset;
     var text  = s.anchorNode.nodeValue;
-    var start = text.regexLastIndexOf(/\s/, offset) + 1;
-    var end   = text.regexIndexOf(/\s/, offset);
+    var start = text.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1;
+    var end   = text.regexIndexOf(/[^A-Z0-9_]/i, offset);
     if(start == -1) start = 0;
     if(end   == -1) end   = text.length;
     var word = text.substr(start, end - start);

@@ -55,3 +55,23 @@ class JsonTests(DxrInstanceTestCase):
     def test_typedefs(self):
         self.assert_query_includes('+type:MyTypedef', ['typedef.h'])
         self.assert_query_includes('+type-ref:MyTypedef', ['typedef.cpp'])
+
+    def test_macro_ifdef(self):
+        """Test that a macro mentioned in an #ifdef directive is treated as a
+        reference"""
+        self.assert_query_includes("+macro-ref:MACRO_IFDEF", ['macro_ifdef.cpp'])
+
+    def test_macro_ifndef(self):
+        """Test that a macro mentioned in an #ifndef directive is treated as a
+        reference"""
+        self.assert_query_includes("+macro-ref:MACRO_IFNDEF", ['macro_ifndef.cpp'])
+
+    def test_macro_undef(self):
+        """Test that a macro mentioned in an #undef directive is treated as a
+        reference"""
+        self.assert_query_includes("+macro-ref:MACRO_UNDEF", ['macro_undef.cpp'])
+
+    def test_macro_if_defined(self):
+        """Test that a macro mentioned in an #if defined() expression is treated
+        as a reference"""
+        self.assert_query_includes("+macro-ref:MACRO_IF_DEFINED", ['macro_if_defined.cpp'])

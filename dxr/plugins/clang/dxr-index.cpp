@@ -128,6 +128,10 @@ public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
   virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
   virtual void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI, SourceRange Range);
+  virtual void MacroUndefined(const Token &tok, const MacroInfo *MI);
+  virtual void Defined(const Token &tok);
+  virtual void Ifdef(SourceLocation loc, const Token &tok);
+  virtual void Ifndef(SourceLocation loc, const Token &tok);
 };
 
 class IndexConsumer : public ASTConsumer,
@@ -726,29 +730,64 @@ public:
     printExtent(nameStart, nameStart);
     *out << std::endl;
   }
-  virtual void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
-    if (MI->isBuiltinMacro()) return;
+
+  void printMacroReference(const Token &tok, const MacroInfo *MI = NULL) {
     if (!interestingLocation(tok.getLocation())) return;
+
+    IdentifierInfo *ii = tok.getIdentifierInfo();
+    if (!MI)
+      MI = ci.getPreprocessor().getMacroInfo(ii);
+    if (!MI)
+      return;
+    if (MI->isBuiltinMacro()) return;
 
     SourceLocation macroLoc = MI->getDefinitionLoc();
     SourceLocation refLoc = tok.getLocation();
-    IdentifierInfo *name = tok.getIdentifierInfo();
     beginRecord("ref", refLoc);
-    recordValue("name", std::string(name->getNameStart(), name->getLength()));
+    recordValue("name", std::string(ii->getNameStart(), ii->getLength()));
     recordValue("declloc", locationToString(macroLoc));
     recordValue("loc", locationToString(refLoc));
     recordValue("kind", "macro");
     printExtent(refLoc, refLoc);
     *out << std::endl;
   }
+
+  virtual void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+    printMacroReference(tok, MI);
+  }
+  virtual void MacroUndefined(const Token &tok, const MacroInfo *MI) {
+    printMacroReference(tok, MI);
+  }
+  virtual void Defined(const Token &tok) {
+    printMacroReference(tok);
+  }
+  virtual void Ifdef(SourceLocation loc, const Token &tok) {
+    printMacroReference(tok);
+  }
+  virtual void Ifndef(SourceLocation loc, const Token &tok) {
+    printMacroReference(tok);
+  }
 };
 
 void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
   real->MacroDefined(tok, MI);
 }
-  void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
   real->MacroExpands(tok, MI, Range);
 }
+void PreprocThunk::MacroUndefined(const Token &tok, const MacroInfo *MI) {
+  real->MacroUndefined(tok, MI);
+}
+void PreprocThunk::Defined(const Token &tok) {
+  real->Defined(tok);
+}
+void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
+  real->Ifdef(loc, tok);
+}
+void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
+  real->Ifndef(loc, tok);
+}
+
 class DXRIndexAction : public PluginASTAction {
 protected:
   ASTConsumer *CreateASTConsumer(CompilerInstance &CI, llvm::StringRef f) {
