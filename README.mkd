@@ -1,0 +1,58 @@
+DXR, A Code Search and Cross-Reference Tool
+===========================================
+
+Introduction:
+-------------
+DXR is a source code cross-reference tool that uses static analysis data
+collected by instrumented compilers. DXR was created in order to build on
+tools like LXR and MXR. DXR runs only on Linux for the moment.
+
+
+Documentation
+-------------
+DXR is fairly well documented, so whether you're looking to **deploy** DXR,
+**write plugins** or **templates** for DXR have a look at the `docs/` folder.
+The documents in this folder is a great starting point for anybody who wants
+to deploy and/or develop DXR.
+
+
+Quick Start
+-----------
+If you want to try DXR on a HelloWorld-size project, one is located in
+`tests/json-test/`. First, read and install dependencies from docs/deployment.mkd.
+Then, run `make` from `tests/json-test/` to build the index. The `makefile`
+contains instruction for launching the test server as well.
+
+
+Things To Do
+------------
+_This is a short list of major things that could be done to improve DXR._
+
+  * Refactor the database schema
+     - Remove plugin specific tables
+     - Provide data collection API for plugins (ie. no direct database access for plugins)
+     - Optimize schema for search queries
+        - Split refs into function-refs, type-refs, etc.
+        - Store extents as a blob in *-refs, types, functions, etc.
+        - Use trilite for functions, types, macros, etc.
+        - Store the transitive closure of indirect calls
+     - Port search logic to new schema
+  * Write proper search query parser
+     - Space is a delimiter unless in dice `[ ]`, quotes `" "` or escaped `\ `
+     - Assume grep syntax for terms, `path:`, `type:`, etc. (ie. `*` is literal, `\*` is kleene star)
+     - Let quotes "text" be literal terms, `path:`, `function:`, etc.
+     - egrep syntax for `regexp:`, `regex:` and `egrep:` ie. `*` is kleene star, `\*` is literal)
+     - Prefix `+` implies case sensitivity (and fully qualified `type:`, `function:`, etc.)
+     - Prefix `-` implies negation (prefix `-+` and `+-` is case sensitive negation)
+     (Prefix `+`, `-`, `+-` and `-+` can be applied to terms, `path:`, `type:`, `egrep:`, etc.)
+  * Minor refactoring of template interface to minimize size
+     - Reuse annotations (i.e., don't store the same annotation for each line)
+     - Reuse menus (i.e., don't store the same menu for each occurrence)
+  * Migrate `server/search.py` from CGI to WSGI for better performance.
+  * Minor UI fixes and cleanup
+     - Colorize highlighted matches (highlight with classes, .m1, .m2, ..., use merge-extents)
+     - Make the UI pretty
+     - Add option in "Advanced" search to disable redirect (use cookies to remember setting)
+     - Minimize template size (at 20 MiB for 20k lines, this is a real issue)
+  * Add tree format version number to generated trees
+    (Don't merge generated output with different formats, when configuring update cron job)

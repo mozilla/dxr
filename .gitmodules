@@ -1,0 +1,3 @@
+[submodule "trilite"]
+	path = trilite
+	url = git://github.com/jonasfj/trilite.git

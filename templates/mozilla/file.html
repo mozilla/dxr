@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block title %}{{name}} - DXR{% endblock %}
+
+{% block head %}
+  <link rel="shortcut icon" href="{{wwwroot}}/static/icons/{{icon}}.png"/>
+  <script src="{{wwwroot}}/static/menu.js"></script>
+  <script src="{{wwwroot}}/static/file.js"></script>
+  <script src="{{wwwroot}}/static/panel.js"></script>
+{% endblock %}
+
+{% set panel = True %}
+{% set state_eof = True %}
+
+{% block panel %}
+  {% for section, items in sections %}
+  <div class="section">
+    <h1>{{section}}</h1>
+    {% for icon, title, href in items %}
+      <a href="{{href}}"
+        title="{{title}}"
+        style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png');"
+        >{{title}}</a>
+    {%- endfor %}
+    </div>
+  {% endfor %}
+{% endblock %}
+
+{% block content %}
+<div id="annotations">
+  {% for number, line, annotations in lines %}
+  <div class="annotation-set" id="aset-{{number}}">
+  {%- for annotation in annotations -%}
+  <div {% for key, value in annotation.items() %}
+        {{key}}="{{value}}"
+     {% endfor %} ></div>
+   {%- endfor -%}
+  </div>
+  {%- endfor -%}
+</div>
+<div class="line-numbers">
+  {% for number, line, annotations in lines %}
+  <pre><a href="{{wwwroot}}/{{tree}}/{{path}}#l{{number}}"
+          class="ln" id="line-{{number}}"
+          name="l{{number}}">{{number}}</a></pre>
+  {%- endfor %}
+</div>
+<div class="file-lines">
+<pre>
+{%- for number, line, annotations in lines %}
+<code aria-labelledby="line-{{number}}">{{line}}</code>
+{%- endfor -%}
+</pre>
+</div>
+{% endblock %}

@@ -1,3 +1,9 @@
 *.pyc
 *.o
 *.so
+tests/json-test/target
+tests/json-test/temp
+tests/json-test/HelloWorld/HelloWorld
+tests/json-test/test.config
+vagrantconfig_local.yaml
+.vagrant

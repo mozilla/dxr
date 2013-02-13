@@ -1,0 +1,24 @@
+Automated Testing of DXR
+========================
+_This document describes the automated testing framework for DXR._
+
+
+Writing Tests for DXR
+---------------------
+A DXR test is a folder with the name of the test (e.g. `my-dxr-test`) located in
+the `tests/` subfolder of the DXR source directory. The test folder must
+contains an executable file with the name of the test prefixed with `run-`,
+(e.g. `run-my-dxr-test`). This executable must run the test, clean-up and exit
+non-zero if the test failed. The test script will be called with its own directory
+as current working directory.
+
+It's recommended that the test script is used to wrap whatever test logic you
+feel like inventing. Have fun...
+
+
+Running Automated DXR Tests
+---------------------------
+To run all the DXR tests run the `run-tests.py` script from the `tests/`
+subdirectory. Output will be printed to terminal.
+Giving the `run-tests.py` script a list of test names as arguments and it will
+only run the specified tests.
