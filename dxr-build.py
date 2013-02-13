@@ -391,6 +391,8 @@ def build_tree(tree, conn):
 
   # Call the make command
   print "Building the '%s' tree" % tree.name
+  # Show log as we build
+  subprocess.Popen("tail -f %s" % log.name, shell=True)
   r = subprocess.call(
     tree.build_command.replace("$jobs", tree.config.nb_jobs),
     shell   = True,
