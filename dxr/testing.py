@@ -60,16 +60,15 @@ class TestCase(unittest.TestCase):
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
 
-    def assert_query_includes(self, query, included_filenames):
-        """Assert that executing the search ``query`` finds results in each of
-        ``included_filenames``."""
+    def found_files_eq(self, query, filenames):
+        """Assert that executing the search ``query`` finds the paths
+        ``filenames``."""
         response = self.client().get(
             '/search?format=json&tree=HelloWorld&q=%s&redirect=false' %
             quote(query))
-        paths = [result['path'] for result in
-                 json.loads(response.data)['results']]
-        for filename in included_filenames:
-            assert_in(filename, paths)
+        paths = set(result['path'] for result in
+                    json.loads(response.data)['results'])
+        eq_(paths, set(filenames))
 
     def search_results(self, query):
         """Return the results of a JSON search query.

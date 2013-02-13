@@ -28,3 +28,13 @@ class ReferenceTests(SingleFileTestCase):
             'function:main', 8, 'int <b>main</b>(int argc, char* argv[]) {')
         self.found_line_eq(
             'function:getHello', 4, 'const char* <b>getHello</b>() {')
+
+    def test_callers(self):
+        """Test that we can find calling functions of another function."""
+        self.found_line_eq(
+            'callers:getHello', 8, 'int <b>main</b>(int argc, char* argv[]) {')
+
+    def test_called_by(self):
+        """Test that we can find the functions a function calls."""
+        self.found_line_eq(
+            'called-by:main', 4, 'const char* <b>getHello</b>() {')
