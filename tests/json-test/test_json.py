@@ -15,11 +15,6 @@ class JsonTests(DxrInstanceTestCase):
         """Try search by filename extension."""
         self.assert_query_includes('ext:h', ['BitField.h', 'hello.h'])
 
-    def test_functions(self):
-        """Try searching for function declarations."""
-        self.assert_query_includes('function:main', ['main.c'])
-        self.assert_query_includes('function:getHello', ['hello.h'])
-
     def test_members(self):
         self.assert_query_includes("member:BitField", ["BitField.h"])
 
