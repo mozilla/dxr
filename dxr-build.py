@@ -392,7 +392,7 @@ def build_tree(tree, conn):
   # Call the make command
   print "Building the '%s' tree" % tree.name
   # Show log as we build
-  subprocess.Popen("tail -f %s" % log.name, shell=True)
+  tail = subprocess.Popen("tail -f %s" % log.name, shell=True)
   r = subprocess.call(
     tree.build_command.replace("$jobs", tree.config.nb_jobs),
     shell   = True,
@@ -401,6 +401,7 @@ def build_tree(tree, conn):
     env     = environ,
     cwd     = tree.object_folder
   )
+  tail.kill()
 
   # Close log file
   log.close()
@@ -461,6 +462,8 @@ def run_html_workers(tree, conn):
     slices.append((start, end))
     start = end + 1
   slices.append((start, None))  # None, means omit --end argument
+
+  print "Will run %d workers" % len(slices)
 
   # Map from pid to workers
   workers = {}
