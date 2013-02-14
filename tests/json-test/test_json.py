@@ -13,20 +13,7 @@ class JsonTests(DxrInstanceTestCase):
 
     def test_extensions(self):
         """Try search by filename extension."""
-        self.found_files_eq('ext:h', ['const_overload.h', 'prototype_parameter.h', 'static_member.h', 'BitField.h', 'typedef.h'])
-
-    def test_members(self):
-        self.found_files_eq("member:BitField", ["BitField.h"])
-
-    def test_member_function(self):
-        """Test searching for members of a class (or struct) that contains
-        only member functions"""
-        self.found_files_eq("+member:MemberFunction", ["member_function.cpp"])
-
-    def test_member_variable(self):
-        """Test searching for members of a class (or struct) that contains
-        only member variables"""
-        self.found_files_eq("+member:MemberVariable", ["member_variable.cpp"])
+        self.found_files_eq('ext:h', ['const_overload.h', 'prototype_parameter.h', 'typedef.h'])
 
     def test_const_functions(self):
         """Make sure const functions are indexed separately from non-const but
@@ -37,9 +24,6 @@ class JsonTests(DxrInstanceTestCase):
     def test_prototype_params(self):
         self.found_files_eq('+var:prototype_parameter_function(int)::prototype_parameter', ['prototype_parameter.cpp'])
         self.found_files_eq('+var-ref:prototype_parameter_function(int)::prototype_parameter', ['prototype_parameter.cpp'])
-
-    def test_static_members(self):
-        self.found_files_eq('+var:StaticMember::static_member', ['static_member.cpp'])
 
     def test_typedefs(self):
         self.found_files_eq('+type:MyTypedef', ['typedef.h'])

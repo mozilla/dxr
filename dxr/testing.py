@@ -63,15 +63,34 @@ class TestCase(unittest.TestCase):
     def found_files_eq(self, query, filenames):
         """Assert that executing the search ``query`` finds the paths
         ``filenames``."""
-        response = self.client().get(
-            '/search?format=json&tree=HelloWorld&q=%s&redirect=false' %
-            quote(query))
-        paths = set(result['path'] for result in
-                    json.loads(response.data)['results'])
+        paths = set(result['path'] for result in self.search_results(query))
         eq_(paths, set(filenames))
 
+    def found_line_eq(self, query, line_number, content):
+        """Assert that a query returns a single file and single matching line
+        and that its line number and content are as expected, modulo leading
+        and trailing whitespace.
+
+        This is a convenience function for searches that return only one
+        matching file and only one line within it so you don't have to do a
+        zillion dereferences in your test.
+
+        """
+        self.found_lines_eq(query, [(line_number, content)])
+
+    def found_lines_eq(self, query, success_lines):
+        """Assert that a query returns a single file and that the highlighted
+        lines are as expected, modulo leading and trailing whitespace."""
+        results = self.search_results(query)
+        num_results = len(results)
+        eq_(num_results, 1, msg='Query passed to found_lines_eq() returned '
+                                 '%s results, not one.' % num_results)
+        lines = results[0]['lines']
+        eq_([(line['line_number'], line['line'].strip()) for line in lines],
+            success_lines)
+
     def search_results(self, query):
-        """Return the results of a JSON search query.
+        """Return the raw results of a JSON search query.
 
         Example::
 
@@ -92,29 +111,6 @@ class TestCase(unittest.TestCase):
         response = self.client().get(
             '/search?format=json&tree=code&q=%s&redirect=false' % quote(query))
         return json.loads(response.data)['results']
-
-    def found_line_eq(self, query, line_number, content):
-        """Assert that a query returns a single file and single matching line
-        and that its line number and content are as expected, modulo leading
-        and trailing whitespace.
-
-        This is a convenience function for searches that return only one
-        matching file and only one line within it so you don't have to do a
-        zillion dereferences in your test.
-
-        """
-        results = self.search_results(query)
-        num_results = len(results)
-        eq_(num_results, 1, msg='Query passed to one_line_result() returned '
-                                 '%s results, not one.' % num_results)
-        lines = results[0]['lines']
-        num_lines = len(lines)
-        eq_(num_lines, 1, msg='The single file found by one_line_result() '
-                              'matched on %s lines, not one.' % num_lines)
-
-        line = lines[0]
-        eq_((line['line_number'], line['line'].strip()),
-            (line_number, content))
 
 
 class DxrInstanceTestCase(TestCase):
@@ -191,3 +187,12 @@ def _make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
     with open(os.path.join(path, filename), 'w') as file:
         file.write(contents.encode('utf-8'))
+
+
+# Tests that don't otherwise need a main() can append this one just to get
+# their code to compile:
+MINIMAL_MAIN = """
+    int main(int argc, char* argv[]) {
+        return 0;
+    }
+    """

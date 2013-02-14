@@ -4,9 +4,9 @@ temp_folder         = PWD/temp
 target_folder       = PWD/target
 nb_jobs             = 4
 
-[HelloWorld]
-source_folder       = PWD/HelloWorld
-object_folder       = PWD/HelloWorld
+[code]
+source_folder       = PWD/code
+object_folder       = PWD/code
 build_command       = make clean; make -j $jobs
 
 [Template]
