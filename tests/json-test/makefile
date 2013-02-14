@@ -10,4 +10,4 @@ clean:
 	rm -rf test.config
 	rm -rf temp
 	rm -rf target
-	cd HelloWorld; make clean; cd -
+	cd code; make clean; cd -
