@@ -61,6 +61,9 @@ dxr.tree = function(){
 window.addEventListener('load', function (){
   prettifyDates();
 }, false);
+window.addEventListener('pageshow', function (){
+  prettifyDates();
+}, false);
 
 /** Export dxr as defined here */
 return dxr;
