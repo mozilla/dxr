@@ -84,7 +84,7 @@ class TestCase(unittest.TestCase):
         results = self.search_results(query)
         num_results = len(results)
         eq_(num_results, 1, msg='Query passed to found_lines_eq() returned '
-                                 '%s results, not one.' % num_results)
+                                 '%s files, not one.' % num_results)
         lines = results[0]['lines']
         eq_([(line['line_number'], line['line'].strip()) for line in lines],
             success_lines)
