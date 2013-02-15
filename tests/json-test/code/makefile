@@ -1,5 +1,5 @@
 all: code
-code: main.c prototype_parameter.cpp
+code: main.c
 	$(CXX) -o $@ $^
 clean:
 	rm -rf code

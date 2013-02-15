@@ -62,3 +62,23 @@ class ConstTests(SingleFileTestCase):
         self.found_line_eq('+function:"ConstOverload::foo() const"',
                             12,
                             'void ConstOverload::<b>foo</b>() const {')
+
+class PrototypeParamTests(SingleFileTestCase):
+    source = """
+        int prototype_parameter_function(int prototype_parameter);
+
+        int prototype_parameter_function(int prototype_parameter) {
+            return prototype_parameter;
+        }
+        """ + MINIMAL_MAIN
+
+    def test_prototype_params(self):
+        # I have no idea what this tests.
+        self.found_line_eq(
+            '+var:prototype_parameter_function(int)::prototype_parameter',
+            4,
+            'int prototype_parameter_function(int <b>prototype_parameter</b>) {')
+        self.found_line_eq(
+            '+var-ref:prototype_parameter_function(int)::prototype_parameter',
+            5,
+            'return <b>prototype_parameter</b>;')
