@@ -1,9 +1,8 @@
 from dxr.testing import DxrInstanceTestCase
 
 
-class JsonTests(DxrInstanceTestCase):
-    """A grab bag of tests which should be broken out into several independent,
-    simpler DXR instances"""
+class BasicTests(DxrInstanceTestCase):
+    """Tests for functionality that isn't specific to particular filters"""
 
     def test_text(self):
         """Assert that a plain text search works."""

@@ -127,13 +127,13 @@ class DxrInstanceTestCase(TestCase):
         # nose does some amazing magic that makes this work even if there are
         # multiple test modules with the same name:
         cls._instance_path = dirname(sys.modules[cls.__module__].__file__)
-        # TODO: Escaping doesn't exist. Replace this use of make altogether
-        # (here and in teardown) with Python.
-        run("cd '%s' && make" % cls._instance_path)
+        chdir(cls._instance_path)
+        run('make')
 
     @classmethod
     def teardown_class(cls):
-        run("cd '%s' && make clean" % cls._instance_path)
+        chdir(cls._instance_path)
+        run('make clean')
 
 
 class SingleFileTestCase(TestCase):
