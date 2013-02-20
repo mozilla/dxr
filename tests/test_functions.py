@@ -22,19 +22,19 @@ class ReferenceTests(SingleFileTestCase):
     def test_functions(self):
         """Try searching for function declarations."""
         self.found_line_eq(
-            'function:main', 8, 'int <b>main</b>(int argc, char* argv[]) {')
+            'function:main', 'int <b>main</b>(int argc, char* argv[]) {')
         self.found_line_eq(
-            'function:getHello', 4, 'const char* <b>getHello</b>() {')
+            'function:getHello', 'const char* <b>getHello</b>() {')
 
     def test_callers(self):
         """Test that we can find calling functions of another function."""
         self.found_line_eq(
-            'callers:getHello', 8, 'int <b>main</b>(int argc, char* argv[]) {')
+            'callers:getHello', 'int <b>main</b>(int argc, char* argv[]) {')
 
     def test_called_by(self):
         """Test that we can find the functions a function calls."""
         self.found_line_eq(
-            'called-by:main', 4, 'const char* <b>getHello</b>() {')
+            'called-by:main', 'const char* <b>getHello</b>() {')
 
 
 class ConstTests(SingleFileTestCase):
@@ -57,11 +57,10 @@ class ConstTests(SingleFileTestCase):
         """Make sure const functions are indexed separately from non-const but
         otherwise identical signatures."""
         self.found_line_eq('+function:ConstOverload::foo()',
-                           9,
                            'void ConstOverload::<b>foo</b>() {')
         self.found_line_eq('+function:"ConstOverload::foo() const"',
-                            12,
                             'void ConstOverload::<b>foo</b>() const {')
+
 
 class PrototypeParamTests(SingleFileTestCase):
     source = """
@@ -76,9 +75,7 @@ class PrototypeParamTests(SingleFileTestCase):
         # I have no idea what this tests.
         self.found_line_eq(
             '+var:prototype_parameter_function(int)::prototype_parameter',
-            4,
             'int prototype_parameter_function(int <b>prototype_parameter</b>) {')
         self.found_line_eq(
             '+var-ref:prototype_parameter_function(int)::prototype_parameter',
-            5,
             'return <b>prototype_parameter</b>;')

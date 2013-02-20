@@ -185,8 +185,11 @@ def fetch_results(conn, query,
             #  extent, and this needs to be supported and used in filters).
             estart, eend, keylist = offsets[i]
 
-            # Skip if we didn't get a new line
+            # Count the newlines from the top of the file to get the line
+            # number. Maybe we could optimize this by storing the line number
+            # in the index with the extent.
             line_diff = content.count("\n", last_pos, estart)
+            # Skip if we didn't get a new line
             if line_diff == 0 and last_pos > 0:
                 continue 
             line_number += line_diff
