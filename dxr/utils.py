@@ -1,9 +1,12 @@
 import sqlite3
 import ctypes
 import ConfigParser
-import os, sys, subprocess
+import os
+from os.path import isdir
 import jinja2
 import string
+import subprocess
+import sys
 from datetime import datetime
 
 import dxr
@@ -81,7 +84,8 @@ class Config(object):
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
             self.enabled_plugins = [p for p in os.listdir(self.plugin_folder)
-                                                                if  p not in self.disabled_plugins]
+                                    if isdir(p) and
+                                    p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
 
