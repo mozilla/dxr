@@ -40,10 +40,7 @@ class WildcardTests(SingleFileTestCase):
 
     def test_function_underscore(self):
         """Test that underscore is treated literally when searching for functions."""
-        self.found_nothing(
-            'function:get_',
-            [
-            ])
+        self.found_nothing('function:get_')
 
     def test_function_ref_asterisk(self):
         """Test searching for function references using an asterisk."""
@@ -55,7 +52,4 @@ class WildcardTests(SingleFileTestCase):
 
     def test_function_ref_underscore(self):
         """Test that underscore is treated literally when searching for function references."""
-        self.found_nothing(
-            'function-ref:get_',
-            [
-            ])
+        self.found_nothing('function-ref:get_')

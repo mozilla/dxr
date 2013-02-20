@@ -89,7 +89,7 @@ class TestCase(unittest.TestCase):
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
             success_lines)
 
-    def found_nothing(self, query, success_lines):
+    def found_nothing(self, query):
         """Assert that a query returns no hits."""
         results = self.search_results(query)
         num_results = len(results)
