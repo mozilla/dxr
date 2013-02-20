@@ -10,7 +10,7 @@ class TypedefTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_typedefs(self):
-        self.found_line_eq('+type:MyTypedef', 2,
+        self.found_line_eq('+type:MyTypedef',
                            'typedef int <b>MyTypedef</b>;')
-        self.found_line_eq('+type-ref:MyTypedef', 4,
+        self.found_line_eq('+type-ref:MyTypedef',
                            'void my_typedef_function(<b>MyTypedef</b>) {')

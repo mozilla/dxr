@@ -23,16 +23,16 @@ class MacroRefTests(SingleFileTestCase):
         self.found_lines_eq('+macro-ref:MACRO', [
             # Test that a macro mentioned in an #ifdef directive is treated as
             # a reference:
-            (4, '#ifdef <b>MACRO</b>'),
+            ('#ifdef <b>MACRO</b>', 4),
 
             # Test that a macro mentioned in an #ifndef directive is treated as
             # a reference:
-            (7, '#ifndef <b>MACRO</b>'),
+            ('#ifndef <b>MACRO</b>', 7),
 
             # Test that a macro mentioned in an #if defined() expression is
             # treated as a reference:
-            (10, '#if defined(<b>MACRO</b>)'),
+            ('#if defined(<b>MACRO</b>)', 10),
 
             # Test that a macro mentioned in an #undef directive is treated as
             # a reference:
-            (13, '#undef <b>MACRO</b>')])
+            ('#undef <b>MACRO</b>', 13)])
