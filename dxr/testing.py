@@ -89,6 +89,13 @@ class TestCase(unittest.TestCase):
         eq_([(line['line_number'], line['line'].strip()) for line in lines],
             success_lines)
 
+    def found_nothing(self, query, success_lines):
+        """Assert that a query returns no hits."""
+        results = self.search_results(query)
+        num_results = len(results)
+        eq_(num_results, 0, msg='Query passed to found_lines_eq() returned '
+                                 '%s files, not zerp.' % num_results)
+
     def search_results(self, query):
         """Return the raw results of a JSON search query.
 

@@ -336,7 +336,11 @@ def direct_result(conn, query):
 
 def like_escape(val):
     """ Escape for usage in as argument to the LIKE operator """
-    return val.replace("\\", "\\\\").replace("_", "\\_").replace("%", "\\%")
+    return (val.replace("\\", "\\\\")
+               .replace("_", "\\_")
+               .replace("%", "\\%")
+               .replace("?", "_")
+               .replace("*", "%"))
 
 
 class genWrap:
@@ -506,7 +510,7 @@ class ExistsLikeFilter(SearchFilter):
         for arg in query.params[self.param]:
             yield (
                             "EXISTS (%s)" % (self.filter_sql % self.like_expr),
-                            ['%' + like_escape(arg) + '%'],
+                            [like_escape(arg)],
                             self.ext_sql is not None
                         )
         for arg in query.params["+" + self.param]:
@@ -524,13 +528,13 @@ class ExistsLikeFilter(SearchFilter):
         for arg in query.params["-" + self.param]:
             yield (
                             "NOT EXISTS (%s)" % (self.filter_sql % self.like_expr),
-                            ['%' + like_escape(arg) + '%'],
+                            [like_escape(arg)],
                             False
                         )
     def extents(self, conn, query, fileid):
         if self.ext_sql:
             for arg in query.params[self.param]:
-                params = [fileid, '%' + like_escape(arg) + '%']
+                params = [fileid, like_escape(arg)]
                 def builder():
                     sql = self.ext_sql % self.like_expr
                     for start, end in _execute_sql(conn, sql, params):
