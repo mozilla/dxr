@@ -76,7 +76,7 @@ class Query:
                     else:
                         self.phrases.append(token["keyword"])
             if token["notphrase"]:
-                self.notphrase.append(token["notphrase"])
+                self.notphrases.append(token["notphrase"])
     def single_term(self):
         """ Returns the single term making up the query, None for complex queries """
         count = 0
