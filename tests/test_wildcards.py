@@ -36,11 +36,7 @@ class WildcardTests(SingleFileTestCase):
 
     def test_function_question(self):
         """Test searching for functions using a question mark."""
-        self.found_lines_eq(
-            'function:get_fo?',
-            [
-                ('int <b>get_foo</b>() {', 2),
-            ])
+        self.found_line_eq('function:get_fo?', 'int <b>get_foo</b>() {')
 
     def test_function_underscore(self):
         """Test that underscore is treated literally when searching for functions."""
@@ -51,19 +47,11 @@ class WildcardTests(SingleFileTestCase):
 
     def test_function_ref_asterisk(self):
         """Test searching for function references using an asterisk."""
-        self.found_lines_eq(
-            'function-ref:get*',
-            [
-                ('return <b>get_foo</b>() + <b>get_bar</b>() + <b>getX</b>();', 15),
-            ])
+        self.found_line_eq('function-ref:get*', 'return <b>get_foo</b>() + <b>get_bar</b>() + <b>getX</b>();')
 
     def test_function_ref_question(self):
         """Test searching for function references using a question mark."""
-        self.found_lines_eq(
-            'function-ref:get_fo?',
-            [
-                ('return <b>get_foo</b>() + get_bar() + getX();', 15),
-            ])
+        self.found_line_eq('function-ref:get_fo?', 'return <b>get_foo</b>() + get_bar() + getX();')
 
     def test_function_ref_underscore(self):
         """Test that underscore is treated literally when searching for function references."""
