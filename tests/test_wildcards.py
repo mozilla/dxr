@@ -29,9 +29,9 @@ class WildcardTests(SingleFileTestCase):
         self.found_lines_eq(
             'function:get*',
             [
-                (2, 'int <b>get_foo</b>() {'),
-                (6, 'int <b>get_bar</b>() {'),
-                (10, 'int <b>getX</b>() {'),
+                ('int <b>get_foo</b>() {', 2),
+                ('int <b>get_bar</b>() {', 6),
+                ('int <b>getX</b>() {', 10),
             ])
 
     def test_function_question(self):
@@ -39,7 +39,7 @@ class WildcardTests(SingleFileTestCase):
         self.found_lines_eq(
             'function:get_fo?',
             [
-                (2, 'int <b>get_foo</b>() {'),
+                ('int <b>get_foo</b>() {', 2),
             ])
 
     def test_function_underscore(self):
@@ -54,7 +54,7 @@ class WildcardTests(SingleFileTestCase):
         self.found_lines_eq(
             'function-ref:get*',
             [
-                (15, 'return <b>get_foo</b>() + <b>get_bar</b>() + <b>getX</b>();'),
+                ('return <b>get_foo</b>() + <b>get_bar</b>() + <b>getX</b>();', 15),
             ])
 
     def test_function_ref_question(self):
@@ -62,7 +62,7 @@ class WildcardTests(SingleFileTestCase):
         self.found_lines_eq(
             'function-ref:get_fo?',
             [
-                (15, 'return <b>get_foo</b>() + get_bar() + getX();'),
+                ('return <b>get_foo</b>() + get_bar() + getX();', 15),
             ])
 
     def test_function_ref_underscore(self):
