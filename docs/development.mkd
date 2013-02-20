@@ -21,7 +21,7 @@ vagrant ssh
 
 cd dxr/
 make
-cd tests/json-test/
+cd tests/test_basic/
 make
 
 # run the server
