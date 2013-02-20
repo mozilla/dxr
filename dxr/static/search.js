@@ -246,6 +246,7 @@ function fetch_results(display_fetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(params), true);
+  dxr.setTip("Search in progress ...");
   request.send();
 }
 
