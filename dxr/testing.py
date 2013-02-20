@@ -94,7 +94,7 @@ class TestCase(unittest.TestCase):
         results = self.search_results(query)
         num_results = len(results)
         eq_(num_results, 0, msg='Query passed to found_lines_eq() returned '
-                                 '%s files, not zerp.' % num_results)
+                                 '%s files, not zero.' % num_results)
 
     def search_results(self, query):
         """Return the raw results of a JSON search query.
