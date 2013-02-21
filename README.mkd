@@ -26,6 +26,8 @@ To try out DXR on a HelloWorld-size project...
 
 On the VM...
 
+    cd ~/dxr
+    make
     cd ~/dxr/tests/test_basic
     make
     dxr-serve.py target
