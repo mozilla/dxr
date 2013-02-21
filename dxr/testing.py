@@ -92,9 +92,7 @@ class TestCase(unittest.TestCase):
     def found_nothing(self, query):
         """Assert that a query returns no hits."""
         results = self.search_results(query)
-        num_results = len(results)
-        eq_(num_results, 0, msg='Query passed to found_lines_eq() returned '
-                                 '%s files, not zero.' % num_results)
+        eq_(results, [])
 
     def search_results(self, query):
         """Return the raw results of a JSON search query.
