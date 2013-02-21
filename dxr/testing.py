@@ -89,6 +89,11 @@ class TestCase(unittest.TestCase):
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
             success_lines)
 
+    def found_nothing(self, query):
+        """Assert that a query returns no hits."""
+        results = self.search_results(query)
+        eq_(results, [])
+
     def search_results(self, query):
         """Return the raw results of a JSON search query.
 
