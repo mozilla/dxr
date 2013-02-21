@@ -1,6 +1,6 @@
 """Tests for searches involving wildcards (*, ?)"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.testing import SingleFileTestCase
 
 
 class WildcardTests(SingleFileTestCase):
