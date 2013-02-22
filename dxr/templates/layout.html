@@ -40,7 +40,7 @@
     <div id="search-box" class="{% block search_box_class %}with-results{% endblock %}">
       <img src="{{wwwroot}}/static/magmoz.svg" id="big-logo">
       <div id="search-background">
-        <a id="dxr" href="{{wwwroot}/"><img src="{{wwwroot}}/static/magmoz.svg" id="small-logo"></a>
+        <a id="dxr" href="{{wwwroot}}/"><img src="{{wwwroot}}/static/magmoz.svg" id="small-logo"></a>
         <form method="get" action="{{wwwroot}}/search" id="width-limiter">
           {% set showing_tree_menu = trees|length > 1 %}
           <div class="hidden-with-results">
