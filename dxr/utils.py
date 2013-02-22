@@ -83,9 +83,10 @@ class Config(object):
 
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
-            self.enabled_plugins = [p for p in os.listdir(self.plugin_folder)
-                                    if isdir(p) and
-                                    p not in self.disabled_plugins]
+            self.enabled_plugins = [
+                p for p in os.listdir(self.plugin_folder) if
+                isdir(os.path.join(self.plugin_folder, p)) and
+                p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
 

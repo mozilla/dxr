@@ -202,7 +202,6 @@ foot_text =
         super(SingleFileTestCase, self).found_line_eq(query, content, line)
 
 
-
 def _make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
     with open(os.path.join(path, filename), 'w') as file:
