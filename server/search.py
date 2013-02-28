@@ -103,7 +103,7 @@ else:
         template = "error.html"
     if template == "search.html":
       # Search Template Variables
-      arguments["query"]            = cgi.escape(qtext, True)
+      arguments["query"]            = qtext
       arguments["results"]          = results
       arguments["offset"]           = offset
       arguments["limit"]            = limit
@@ -139,6 +139,7 @@ import jinja2
 env = jinja2.Environment(
   loader          = jinja2.FileSystemLoader("template"),
   auto_reload     = False,
+  autoescape      = True,
   bytecode_cache  = jinja2.FileSystemBytecodeCache("jinja_dxr_cache", "%s.cache")
 )
 
