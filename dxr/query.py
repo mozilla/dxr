@@ -1,3 +1,4 @@
+import itertools
 import utils, cgi, codecs, struct
 import time
 
@@ -586,7 +587,10 @@ class UnionFilter(SearchFilter):
                 for hits in filt.extents(conn, query, fileid):
                     for hit in hits:
                         yield hit
-        yield builder()
+        def sorter():
+            for hits in itertools.groupby(sorted(builder())):
+                yield hits[0]
+        yield sorter()
 
 
 # TriLite Search filter
