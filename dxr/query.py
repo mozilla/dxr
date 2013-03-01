@@ -567,19 +567,10 @@ class UnionFilter(SearchFilter):
         self.filters = filters
 
     def filter(self, query):
-        sql = []
-        args = []
-        has_ext = True
-        for filt in self.filters:
-            for hit in filt.filter(query):
-                sql.append(hit[0])
-                args.extend(hit[1])
-                has_ext = has_ext or hit[2]
-        if len(sql) == 0:
-            return []
-        return [('(' + ' OR '.join(sql) + ')',
-                          args,
-                          has_ext)]
+        for res in zip(*(filt.filter(query) for filt in self.filters)):
+            yield ('(' + ' OR '.join(conds for (conds, args, exts) in res) + ')',
+                   [arg for (conds, args, exts) in res for arg in args],
+                   any(exts for (conds, args, exts) in res))
 
     def extents(self, conn, query, fileid):
         def builder():
