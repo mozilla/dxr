@@ -8,13 +8,13 @@ def application(environ, start_response):
 
     This prefers the Apache SetEnv sort of environment; but if that's missing,
     try the process-level env var instead since it's easier to set for some
-    users.  It still needs to be set in one of the two places though.
+    users, like those using Stackato.
 
     """
     try:
         dxr_folder = environ['DXR_FOLDER']
     except KeyError:
-        # Not be in WSGI environ, try process environment block
+        # Not found in WSGI env. Try process env:
         # If this still fails, this is a fatal error.
         dxr_folder = os.environ['DXR_FOLDER']
     return make_app(dxr_folder)(environ, start_response)
