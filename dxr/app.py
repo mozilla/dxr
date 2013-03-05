@@ -32,6 +32,11 @@ def make_app(instance_path):
     return app
 
 
+@dxr_blueprint.before_request
+def before_request():
+    Query.before_request()
+
+
 @dxr_blueprint.route('/')
 def index():
     return send_file(current_app.open_instance_resource('trees/index.html'))
