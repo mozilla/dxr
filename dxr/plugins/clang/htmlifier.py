@@ -180,7 +180,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to variables
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           variables.qualname,
@@ -194,7 +194,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to macros
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           macros.name,
@@ -350,7 +350,7 @@ class ClangHtmlifier:
         # Things we can do with qualified name
         menu.append({
             'text':   "Find callers",
-            'title':  "Find functions that calls this function",
+            'title':  "Find functions that call this function",
             'href':   self.search("+callers:%s" % self.quote(qualname)),
             'icon':   'method'
         })
@@ -362,7 +362,7 @@ class ClangHtmlifier:
         })
         menu.append({
             'text':   "Find references",
-            'title':  "Find references of this function",
+            'title':  "Find references to this function",
             'href':   self.search("+function-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
         })
