@@ -180,7 +180,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to variables
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           variables.qualname,
@@ -194,7 +194,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to macros
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           macros.name,
