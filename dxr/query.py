@@ -1,3 +1,4 @@
+import flask
 import itertools
 import utils, cgi, codecs, struct
 import time
@@ -96,34 +97,37 @@ class Query:
             return None
         return term
 
+    @classmethod
+    def before_request(cls):
+        flask.g._should_explain = False
+        flask.g._sql_profile = []
+
+
 #TODO Use named place holders in filters, this would make the filters easier to write
 
-_explain = False
-_sql_profile = []
 def _execute_sql(conn, sql, *parameters):
-    if _explain:
-        _sql_profile.append({
+    if flask.g._should_explain:
+        flask.g._sql_profile.append({
             "sql" : sql,
             "parameters" : parameters[0] if len(parameters) >= 1 else [],
             "explanation" : conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
         })
         start_time = time.time()
     res = conn.execute(sql, *parameters)
-    if _explain:
+    if flask.g._should_explain:
         # fetch results eagerly so we can get an accurate time for the entire operation
         res = res.fetchall()
-        _sql_profile[-1]["elapsed_time"] = time.time() - start_time
-        _sql_profile[-1]["nrows"] = len(res)
+        flask.g._sql_profile[-1]["elapsed_time"] = time.time() - start_time
+        flask.g._sql_profile[-1]["nrows"] = len(res)
     return res
 
 # Fetch results using a query,
 # See: queryparser.py for details in query specification
 def fetch_results(conn, query,
                                     offset = 0, limit = 100,
-                                    explain = False,
+                                    should_explain = False,
                                     markup = "<b>", markdown = "</b>"):
-    global _explain
-    _explain = explain
+    flask.g._should_explain = should_explain
     sql = """
         SELECT files.path, files.icon, trg_index.text, files.id,
         extents(trg_index.contents)
@@ -172,7 +176,7 @@ def fetch_results(conn, query,
             for e in f.extents(conn, query, fileid):
                 elist.append(e)
         offsets = list(merge_extents(*elist))
-        if _explain:
+        if flask.g._should_explain:
             continue
 
         lines = []
@@ -238,8 +242,8 @@ def fetch_results(conn, query,
                 ret.append((i, arr[i]))
         return ret
 
-    for i in range(len(_sql_profile)):
-        profile = _sql_profile[i]
+    for i in range(len(flask.g._sql_profile)):
+        profile = flask.g._sql_profile[i]
         yield ("",
                       "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
                       number_lines(profile["sql"].split("\n")))
