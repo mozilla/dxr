@@ -88,7 +88,7 @@ def search():
         }
         if conn:
             # Parse the search query
-            qtext = querystring.get("q", "").decode('utf-8')
+            qtext = querystring.get("q", "")
             q = Query(conn, qtext, 'explain' in querystring)
 
             result = None
