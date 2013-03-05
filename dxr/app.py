@@ -6,7 +6,7 @@ from time import time
 from flask import (Blueprint, Flask, send_from_directory, current_app, escape,
                    send_file, request, redirect, jsonify, render_template)
 
-from dxr.query import Query, direct_result, fetch_results
+from dxr.query import Query
 from dxr.server_utils import connect_db
 
 
@@ -80,9 +80,6 @@ def search():
         }
         template = "error.html"
     else:
-        # Parse the search query
-        qtext = querystring.get("q", "").decode('utf-8')
-        q = Query(qtext)
         # Connect to database
         conn = connect_db(tree, current_app.instance_path)
         # Arguments for the template
@@ -95,9 +92,13 @@ def search():
             "generated_date": config['GENERATED_DATE']
         }
         if conn:
+            # Parse the search query
+            qtext = querystring.get("q", "").decode('utf-8')
+            q = Query(conn, qtext)
+
             result = None
             if can_redirect:
-                result = direct_result(conn, q)
+                result = q.direct_result()
             if result:
                 path, line = result
                 # TODO: Does this escape qtext properly?
@@ -109,8 +110,7 @@ def search():
             error = None
             start = time()
             try:
-                results = list(fetch_results(
-                    conn, q,
+                results = list(q.fetch_results(
                     offset, limit,
                     querystring.has_key("explain")
                 ))
