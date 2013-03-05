@@ -100,7 +100,7 @@ class Query:
 #TODO Use named place holders in filters, this would make the filters easier to write
 
 def _execute_sql(conn, sql, *parameters):
-    if flask.g._explain:
+    if flask.g._should_explain:
         flask.g._sql_profile.append({
             "sql" : sql,
             "parameters" : parameters[0] if len(parameters) >= 1 else [],
@@ -108,7 +108,7 @@ def _execute_sql(conn, sql, *parameters):
         })
         start_time = time.time()
     res = conn.execute(sql, *parameters)
-    if flask.g._explain:
+    if flask.g._should_explain:
         # fetch results eagerly so we can get an accurate time for the entire operation
         res = res.fetchall()
         flask.g._sql_profile[-1]["elapsed_time"] = time.time() - start_time
@@ -119,9 +119,9 @@ def _execute_sql(conn, sql, *parameters):
 # See: queryparser.py for details in query specification
 def fetch_results(conn, query,
                                     offset = 0, limit = 100,
-                                    explain = False,
+                                    should_explain = False,
                                     markup = "<b>", markdown = "</b>"):
-    flask.g._explain = explain
+    flask.g._should_explain = should_explain
     flask.g._sql_profile = []
     sql = """
         SELECT files.path, files.icon, trg_index.text, files.id,
@@ -171,7 +171,7 @@ def fetch_results(conn, query,
             for e in f.extents(conn, query, fileid):
                 elist.append(e)
         offsets = list(merge_extents(*elist))
-        if flask.g._explain:
+        if flask.g._should_explain:
             continue
 
         lines = []
