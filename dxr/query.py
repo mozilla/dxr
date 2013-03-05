@@ -1,4 +1,3 @@
-import flask
 import itertools
 import utils, cgi, codecs, struct
 import time
@@ -43,8 +42,10 @@ _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query:
     """ Query object, constructor will parse any search query """
-    def __init__(self, conn, querystr):
+    def __init__(self, conn, querystr, should_explain = False):
         self.conn = conn
+        self._should_explain = should_explain
+        self._sql_profile = []
         self.params = {}
         for param in _parameters:
             self.params[param] = []
@@ -80,6 +81,7 @@ class Query:
                         self.phrases.append(token["keyword"])
             if token["notphrase"]:
                 self.notphrases.append(token["notphrase"])
+
     def single_term(self):
         """ Returns the single term making up the query, None for complex queries """
         count = 0
@@ -98,37 +100,30 @@ class Query:
             return None
         return term
 
-    @classmethod
-    def before_request(cls):
-        flask.g._should_explain = False
-        flask.g._sql_profile = []
-
 
     #TODO Use named place holders in filters, this would make the filters easier to write
 
     def _execute_sql(self, sql, *parameters):
-        if flask.g._should_explain:
-            flask.g._sql_profile.append({
+        if self._should_explain:
+            self._sql_profile.append({
                 "sql" : sql,
                 "parameters" : parameters[0] if len(parameters) >= 1 else [],
                 "explanation" : self.conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
             })
             start_time = time.time()
         res = self.conn.execute(sql, *parameters)
-        if flask.g._should_explain:
+        if self._should_explain:
             # fetch results eagerly so we can get an accurate time for the entire operation
             res = res.fetchall()
-            flask.g._sql_profile[-1]["elapsed_time"] = time.time() - start_time
-            flask.g._sql_profile[-1]["nrows"] = len(res)
+            self._sql_profile[-1]["elapsed_time"] = time.time() - start_time
+            self._sql_profile[-1]["nrows"] = len(res)
         return res
 
     # Fetch results using a query,
     # See: queryparser.py for details in query specification
     def fetch_results(self,
                       offset = 0, limit = 100,
-                      should_explain = False,
                       markup = "<b>", markdown = "</b>"):
-        flask.g._should_explain = should_explain
         sql = """
             SELECT files.path, files.icon, trg_index.text, files.id,
             extents(trg_index.contents)
@@ -177,7 +172,7 @@ class Query:
                 for e in f.extents(self.conn, self, fileid):
                     elist.append(e)
             offsets = list(self.merge_extents(*elist))
-            if flask.g._should_explain:
+            if self._should_explain:
                 continue
 
             lines = []
@@ -243,8 +238,8 @@ class Query:
                     ret.append((i, arr[i]))
             return ret
 
-        for i in range(len(flask.g._sql_profile)):
-            profile = flask.g._sql_profile[i]
+        for i in range(len(self._sql_profile)):
+            profile = self._sql_profile[i]
             yield ("",
                           "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
                           number_lines(profile["sql"].split("\n")))
@@ -254,6 +249,7 @@ class Query:
             yield ("",
                           "explanation %d" % i,
                           number_lines(map(lambda row: row["detail"], profile["explanation"])))
+        self.sql_profile = []
 
 
     def direct_result(self):

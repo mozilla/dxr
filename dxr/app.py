@@ -32,11 +32,6 @@ def make_app(instance_path):
     return app
 
 
-@dxr_blueprint.before_request
-def before_request():
-    Query.before_request()
-
-
 @dxr_blueprint.route('/')
 def index():
     return send_file(current_app.open_instance_resource('trees/index.html'))
@@ -94,7 +89,7 @@ def search():
         if conn:
             # Parse the search query
             qtext = querystring.get("q", "").decode('utf-8')
-            q = Query(conn, qtext)
+            q = Query(conn, qtext, querystring.has_key("explain"))
 
             result = None
             if can_redirect:
@@ -111,8 +106,7 @@ def search():
             start = time()
             try:
                 results = list(q.fetch_results(
-                    offset, limit,
-                    querystring.has_key("explain")
+                    offset, limit
                 ))
             except OperationalError, e:
                 if e.message.startswith("REGEXP:"):
