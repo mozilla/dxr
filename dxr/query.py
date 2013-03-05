@@ -97,6 +97,12 @@ class Query:
             return None
         return term
 
+    @classmethod
+    def before_request(cls):
+        flask.g._should_explain = False
+        flask.g._sql_profile = []
+
+
 #TODO Use named place holders in filters, this would make the filters easier to write
 
 def _execute_sql(conn, sql, *parameters):
@@ -122,7 +128,6 @@ def fetch_results(conn, query,
                                     should_explain = False,
                                     markup = "<b>", markdown = "</b>"):
     flask.g._should_explain = should_explain
-    flask.g._sql_profile = []
     sql = """
         SELECT files.path, files.icon, trg_index.text, files.id,
         extents(trg_index.contents)
