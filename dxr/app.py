@@ -89,7 +89,7 @@ def search():
         if conn:
             # Parse the search query
             qtext = querystring.get("q", "").decode('utf-8')
-            q = Query(conn, qtext, querystring.has_key("explain"))
+            q = Query(conn, qtext, 'explain' in querystring)
 
             result = None
             if can_redirect:
