@@ -42,7 +42,7 @@ _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query:
     """ Query object, constructor will parse any search query """
-    def __init__(self, conn, querystr, should_explain = False):
+    def __init__(self, conn, querystr, should_explain=False):
         self.conn = conn
         self._should_explain = should_explain
         self._sql_profile = []
