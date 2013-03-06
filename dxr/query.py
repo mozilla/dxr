@@ -1,4 +1,3 @@
-import flask
 import itertools
 import utils, cgi, codecs, struct
 import time
@@ -43,7 +42,10 @@ _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query:
     """ Query object, constructor will parse any search query """
-    def __init__(self, querystr):
+    def __init__(self, conn, querystr, should_explain=False):
+        self.conn = conn
+        self._should_explain = should_explain
+        self._sql_profile = []
         self.params = {}
         for param in _parameters:
             self.params[param] = []
@@ -79,6 +81,7 @@ class Query:
                         self.phrases.append(token["keyword"])
             if token["notphrase"]:
                 self.notphrases.append(token["notphrase"])
+
     def single_term(self):
         """ Returns the single term making up the query, None for complex queries """
         count = 0
@@ -97,210 +100,226 @@ class Query:
             return None
         return term
 
-    @classmethod
-    def before_request(cls):
-        flask.g._should_explain = False
-        flask.g._sql_profile = []
 
+    #TODO Use named place holders in filters, this would make the filters easier to write
 
-#TODO Use named place holders in filters, this would make the filters easier to write
+    def execute_sql(self, sql, *parameters):
+        if self._should_explain:
+            self._sql_profile.append({
+                "sql" : sql,
+                "parameters" : parameters[0] if len(parameters) >= 1 else [],
+                "explanation" : self.conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
+            })
+            start_time = time.time()
+        res = self.conn.execute(sql, *parameters)
+        if self._should_explain:
+            # fetch results eagerly so we can get an accurate time for the entire operation
+            res = res.fetchall()
+            self._sql_profile[-1]["elapsed_time"] = time.time() - start_time
+            self._sql_profile[-1]["nrows"] = len(res)
+        return res
 
-def _execute_sql(conn, sql, *parameters):
-    if flask.g._should_explain:
-        flask.g._sql_profile.append({
-            "sql" : sql,
-            "parameters" : parameters[0] if len(parameters) >= 1 else [],
-            "explanation" : conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
-        })
-        start_time = time.time()
-    res = conn.execute(sql, *parameters)
-    if flask.g._should_explain:
-        # fetch results eagerly so we can get an accurate time for the entire operation
-        res = res.fetchall()
-        flask.g._sql_profile[-1]["elapsed_time"] = time.time() - start_time
-        flask.g._sql_profile[-1]["nrows"] = len(res)
-    return res
+    # Fetch results using a query,
+    # See: queryparser.py for details in query specification
+    def fetch_results(self,
+                      offset = 0, limit = 100,
+                      markup = "<b>", markdown = "</b>"):
+        sql = """
+            SELECT files.path, files.icon, trg_index.text, files.id,
+            extents(trg_index.contents)
+                FROM trg_index, files
+              WHERE %s LIMIT ? OFFSET ?
+        """
+        conditions = " files.id = trg_index.id "
+        arguments = []
 
-# Fetch results using a query,
-# See: queryparser.py for details in query specification
-def fetch_results(conn, query,
-                                    offset = 0, limit = 100,
-                                    should_explain = False,
-                                    markup = "<b>", markdown = "</b>"):
-    flask.g._should_explain = should_explain
-    sql = """
-        SELECT files.path, files.icon, trg_index.text, files.id,
-        extents(trg_index.contents)
-            FROM trg_index, files
-          WHERE %s LIMIT ? OFFSET ?
-    """
-    conditions = " files.id = trg_index.id "
-    arguments = []
-
-    has_extents = False
-    for f in filters:
-        for conds, args, exts in f.filter(query):
-            has_extents = exts or has_extents
-            conditions += " AND " + conds
-            arguments += args
-
-    sql %= conditions
-    arguments += [limit, offset]
-
-    #TODO Actually do something with the has_extents, ie. don't fetch contents
-
-    #utils.log(sql)
-    #utils.log(arguments)
-
-    # Make a simple decoder for decoding unicode
-    # Note that we need to operate in ascii inorder to handle
-    # compiler offsets
-    decoder = codecs.getdecoder("utf-8")
-    def d(string):
-        return decoder(string, errors="replace")[0]
-
-    cursor = _execute_sql(conn, sql, arguments)
-
-    for path, icon, content, fileid, extents in cursor:
-        elist = []
-
-        # Special hack for TriLite extents
-        if extents:
-            matchExtents = []
-            for i in xrange(0, len(extents), 8):
-                s, e = struct.unpack("II", extents[i:i+8])
-                matchExtents.append((s, e, []))
-            elist.append(fix_extents_overlap(sorted(matchExtents)))
-
+        has_extents = False
         for f in filters:
-            for e in f.extents(conn, query, fileid):
-                elist.append(e)
-        offsets = list(merge_extents(*elist))
-        if flask.g._should_explain:
-            continue
+            for conds, args, exts in f.filter(self):
+                has_extents = exts or has_extents
+                conditions += " AND " + conds
+                arguments += args
 
-        lines = []
-        line_number = 1
-        last_pos = 0
+        sql %= conditions
+        arguments += [limit, offset]
 
-        for i in xrange(0, len(offsets)):
-            # TODO keylist should infact have information about which extent of the
-            # search query caused this hit, we should highlight this extent
-            # (Note. Query object still doesn't provide support for offering this
-            #  extent, and this needs to be supported and used in filters).
-            estart, eend, keylist = offsets[i]
+        #TODO Actually do something with the has_extents, ie. don't fetch contents
 
-            # Count the newlines from the top of the file to get the line
-            # number. Maybe we could optimize this by storing the line number
-            # in the index with the extent.
-            line_diff = content.count("\n", last_pos, estart)
-            # Skip if we didn't get a new line
-            if line_diff == 0 and last_pos > 0:
-                continue 
-            line_number += line_diff
-            last_pos = estart
+        #utils.log(sql)
+        #utils.log(arguments)
 
-            # Find newline before and after offset
-            end       = content.find("\n", estart)
-            if end == -1:
-                end = len(content)
-            start     = content.rfind("\n", 0, end) + 1
-            src_line  = content[start:end]
+        # Make a simple decoder for decoding unicode
+        # Note that we need to operate in ascii inorder to handle
+        # compiler offsets
+        decoder = codecs.getdecoder("utf-8")
+        def d(string):
+            return decoder(string, errors="replace")[0]
 
-            # Build line
-            out_line = ""
-            mend = 0      # Invariant: Offset where last write ended
+        cursor = self.execute_sql(sql, arguments)
 
-            # Add some markup to highlight hits
-            while content.count("\n", last_pos, estart) == 0:
-                last_end = mend
-                mstart = estart - start
-                mend   = eend - start
-                # Output line segment from last_end to markup start
-                out_line += cgi.escape(d(src_line[last_end:mstart]))
-                # Output markup and line segment
-                out_line += markup + cgi.escape(d(src_line[mstart:mend])) + markdown
-                i += 1
-                if i >= len(offsets):
-                    break
+        for path, icon, content, fileid, extents in cursor:
+            elist = []
+
+            # Special hack for TriLite extents
+            if extents:
+                matchExtents = []
+                for i in xrange(0, len(extents), 8):
+                    s, e = struct.unpack("II", extents[i:i+8])
+                    matchExtents.append((s, e, []))
+                elist.append(fix_extents_overlap(sorted(matchExtents)))
+
+            for f in filters:
+                for e in f.extents(self.conn, self, fileid):
+                    elist.append(e)
+            offsets = list(merge_extents(*elist))
+            if self._should_explain:
+                continue
+
+            lines = []
+            line_number = 1
+            last_pos = 0
+
+            for i in xrange(0, len(offsets)):
+                # TODO keylist should infact have information about which extent of the
+                # search query caused this hit, we should highlight this extent
+                # (Note. Query object still doesn't provide support for offering this
+                #  extent, and this needs to be supported and used in filters).
                 estart, eend, keylist = offsets[i]
 
-            # Output the rest of the line when theres no more offsets
-            # Notice that the while loop always goes atleast once
-            out_line += cgi.escape(d(src_line[mend:]))
+                # Count the newlines from the top of the file to get the line
+                # number. Maybe we could optimize this by storing the line number
+                # in the index with the extent.
+                line_diff = content.count("\n", last_pos, estart)
+                # Skip if we didn't get a new line
+                if line_diff == 0 and last_pos > 0:
+                    continue 
+                line_number += line_diff
+                last_pos = estart
 
-            lines.append((line_number, out_line))
-        # Return result
-        yield icon, path, lines
+                # Find newline before and after offset
+                end       = content.find("\n", estart)
+                if end == -1:
+                    end = len(content)
+                start     = content.rfind("\n", 0, end) + 1
+                src_line  = content[start:end]
 
-    def number_lines(arr):
-        ret = []
-        for i in range(len(arr)):
-            if arr[i] == "":
-                ret.append((i, " "))  # empty lines cause the <div> to collapse and mess up the formatting
-            else:
-                ret.append((i, arr[i]))
-        return ret
+                # Build line
+                out_line = ""
+                mend = 0      # Invariant: Offset where last write ended
 
-    for i in range(len(flask.g._sql_profile)):
-        profile = flask.g._sql_profile[i]
-        yield ("",
-                      "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
-                      number_lines(profile["sql"].split("\n")))
-        yield ("",
-                      "parameters %d" % i,
-                      number_lines(map(lambda parm: repr(parm), profile["parameters"])));
-        yield ("",
-                      "explanation %d" % i,
-                      number_lines(map(lambda row: row["detail"], profile["explanation"])))
+                # Add some markup to highlight hits
+                while content.count("\n", last_pos, estart) == 0:
+                    last_end = mend
+                    mstart = estart - start
+                    mend   = eend - start
+                    # Output line segment from last_end to markup start
+                    out_line += cgi.escape(d(src_line[last_end:mstart]))
+                    # Output markup and line segment
+                    out_line += markup + cgi.escape(d(src_line[mstart:mend])) + markdown
+                    i += 1
+                    if i >= len(offsets):
+                        break
+                    estart, eend, keylist = offsets[i]
+
+                # Output the rest of the line when theres no more offsets
+                # Notice that the while loop always goes atleast once
+                out_line += cgi.escape(d(src_line[mend:]))
+
+                lines.append((line_number, out_line))
+            # Return result
+            yield icon, path, lines
+
+        def number_lines(arr):
+            ret = []
+            for i in range(len(arr)):
+                if arr[i] == "":
+                    ret.append((i, " "))  # empty lines cause the <div> to collapse and mess up the formatting
+                else:
+                    ret.append((i, arr[i]))
+            return ret
+
+        for i in range(len(self._sql_profile)):
+            profile = self._sql_profile[i]
+            yield ("",
+                          "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
+                          number_lines(profile["sql"].split("\n")))
+            yield ("",
+                          "parameters %d" % i,
+                          number_lines(map(lambda parm: repr(parm), profile["parameters"])));
+            yield ("",
+                          "explanation %d" % i,
+                          number_lines(map(lambda row: row["detail"], profile["explanation"])))
+        self.sql_profile = []
 
 
-def direct_result(conn, query):
-    """ Get a direct result as tuple of (path, line) or None if not direct result
-            for query, ie. complex query
-    """
-    term = query.single_term()
-    if not term:
-        return None
-    cur = conn.cursor()
-    
-    # See if we can find only one file match
-    cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
-    rows = cur.fetchall()
-    if rows and len(rows) == 1:
-        return (rows[0]['path'], 1)
+    def direct_result(self):
+        """ Get a direct result as tuple of (path, line) or None if not direct result
+                for query, ie. complex query
+        """
+        term = self.single_term()
+        if not term:
+            return None
+        cur = self.conn.cursor()
 
-    # Case sensitive type matching
-    cur.execute("""
-        SELECT
-            (SELECT path FROM files WHERE files.id = types.file_id) as path,
-            types.file_line
-          FROM types WHERE types.name = ? LIMIT 2
-    """, (term,))
-    rows = cur.fetchall()
-    if rows and len(rows) == 1:
-        return (rows[0]['path'], rows[0]['file_line'])
+        # See if we can find only one file match
+        cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], 1)
 
-    # Case sensitive function names
-    cur.execute("""
-        SELECT
-                (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-                functions.file_line
-            FROM functions WHERE functions.name = ? LIMIT 2
-    """, (term,))
-    rows = cur.fetchall()
-    if rows and len(rows) == 1:
-        return (rows[0]['path'], rows[0]['file_line'])
-
-    # Try fully qualified names
-    if "::" in term:
-        # Case insensitive type matching
+        # Case sensitive type matching
         cur.execute("""
             SELECT
-                  (SELECT path FROM files WHERE files.id = types.file_id) as path,
-                  types.file_line
-                FROM types WHERE types.qualname LIKE ? LIMIT 2
-        """, ("%" + term,))
+                (SELECT path FROM files WHERE files.id = types.file_id) as path,
+                types.file_line
+              FROM types WHERE types.name = ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case sensitive function names
+        cur.execute("""
+            SELECT
+                    (SELECT path FROM files WHERE files.id = functions.file_id) as path,
+                    functions.file_line
+                FROM functions WHERE functions.name = ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Try fully qualified names
+        if "::" in term:
+            # Case insensitive type matching
+            cur.execute("""
+                SELECT
+                      (SELECT path FROM files WHERE files.id = types.file_id) as path,
+                      types.file_line
+                    FROM types WHERE types.qualname LIKE ? LIMIT 2
+            """, ("%" + term,))
+            rows = cur.fetchall()
+            if rows and len(rows) == 1:
+                return (rows[0]['path'], rows[0]['file_line'])
+
+            # Case insensitive function names
+            cur.execute("""
+            SELECT
+                  (SELECT path FROM files WHERE files.id = functions.file_id) as path,
+                  functions.file_line
+                FROM functions WHERE functions.qualname LIKE ? LIMIT 2
+            """, ("%" + term,))
+            rows = cur.fetchall()
+            if rows and len(rows) == 1:
+                return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case insensitive type matching
+        cur.execute("""
+        SELECT
+              (SELECT path FROM files WHERE files.id = types.file_id) as path,
+              types.file_line
+            FROM types WHERE types.name LIKE ? LIMIT 2
+        """, (term,))
         rows = cur.fetchall()
         if rows and len(rows) == 1:
             return (rows[0]['path'], rows[0]['file_line'])
@@ -310,36 +329,14 @@ def direct_result(conn, query):
         SELECT
               (SELECT path FROM files WHERE files.id = functions.file_id) as path,
               functions.file_line
-            FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-        """, ("%" + term,))
+            FROM functions WHERE functions.name LIKE ? LIMIT 2
+        """, (term,))
         rows = cur.fetchall()
         if rows and len(rows) == 1:
             return (rows[0]['path'], rows[0]['file_line'])
 
-    # Case insensitive type matching
-    cur.execute("""
-    SELECT
-          (SELECT path FROM files WHERE files.id = types.file_id) as path,
-          types.file_line
-        FROM types WHERE types.name LIKE ? LIMIT 2
-    """, (term,))
-    rows = cur.fetchall()
-    if rows and len(rows) == 1:
-        return (rows[0]['path'], rows[0]['file_line'])
-
-    # Case insensitive function names
-    cur.execute("""
-    SELECT
-          (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-          functions.file_line
-        FROM functions WHERE functions.name LIKE ? LIMIT 2
-    """, (term,))
-    rows = cur.fetchall()
-    if rows and len(rows) == 1:
-        return (rows[0]['path'], rows[0]['file_line'])
-
-    # Okay we've got nothing
-    return None
+        # Okay we've got nothing
+        return None
 
 
 def like_escape(val):
@@ -489,7 +486,7 @@ class SimpleFilter(SearchFilter):
     def extents(self, conn, query, fileid):
         if self.ext_sql:
             for arg in query.params[self.param]:
-                for start, end in _execute_sql(conn, self.ext_sql, [fileid] + self.formatter(arg)):
+                for start, end in query.execute_sql(self.ext_sql, [fileid] + self.formatter(arg)):
                     yield start, end, []
 
 class ExistsLikeFilter(SearchFilter):
@@ -545,7 +542,7 @@ class ExistsLikeFilter(SearchFilter):
                 params = [fileid, like_escape(arg)]
                 def builder():
                     sql = self.ext_sql % self.like_expr
-                    for start, end in _execute_sql(conn, sql, params):
+                    for start, end in query.execute_sql(sql, params):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
@@ -554,7 +551,7 @@ class ExistsLikeFilter(SearchFilter):
                 params = [fileid, arg]
                 def builder():
                     sql = self.ext_sql % self.qual_expr
-                    for start, end in _execute_sql(conn, sql, params):
+                    for start, end in query.execute_sql(sql, params):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
