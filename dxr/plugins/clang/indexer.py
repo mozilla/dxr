@@ -175,7 +175,8 @@ schema = dxr.schema.Schema({
         ("text", "TEXT", True),          # The macro contents
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
-        ("_location", True)
+        ("_location", True),
+        ("_key", "id"),
     ],
     # The following two tables are combined to form the callgraph implementation.
     # In essence, the callgraph can be viewed as a kind of hypergraph, where the
