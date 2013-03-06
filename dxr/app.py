@@ -46,17 +46,17 @@ def search():
     querystring = request.values
 
     # Get output format
-    output_format = querystring.get("format", "html")
-    if output_format not in ("html", "json"):
-        output_format = "html"
+    output_format = querystring.get('format', 'html')
+    if output_format not in ('html', 'json'):
+        output_format = 'html'
 
     # Decide if we can redirect
-    can_redirect = querystring.get("redirect", "true") == "true"
+    can_redirect = querystring.get('redirect', 'true') == 'true'
 
     # Find the offset and limit
     # TODO Handle parsing errors that could occur here
-    offset = int(querystring.get("offset", 0))
-    limit = int(querystring.get("limit", 100))
+    offset = int(querystring.get('offset', 0))
+    limit = int(querystring.get('limit', 100))
 
     # Get and validate tree
     tree = querystring.get('tree')
@@ -65,30 +65,30 @@ def search():
         # Arguments for the template
         arguments = {
             # Common Template Variables
-            "wwwroot": config['WWW_ROOT'],
-            "tree": config['TREES'][0],
-            "trees": config['TREES'],
-            "generated_date": config['GENERATED_DATE'],
-            "config": config['TEMPLATE_PARAMETERS'],
+            'wwwroot': config['WWW_ROOT'],
+            'tree': config['TREES'][0],
+            'trees': config['TREES'],
+            'generated_date': config['GENERATED_DATE'],
+            'config': config['TEMPLATE_PARAMETERS'],
             # Error template Variables
-            "error": "Tree '%s' is not a valid tree." % tree
+            'error': "Tree '%s' is not a valid tree." % tree
         }
-        template = "error.html"
+        template = 'error.html'
     else:
         # Connect to database
         conn = connect_db(tree, current_app.instance_path)
         # Arguments for the template
         arguments = {
             # Common Template Variables
-            "wwwroot": config['WWW_ROOT'],
-            "tree": tree,
-            "trees": config['TREES'],
-            "config": config['TEMPLATE_PARAMETERS'],
-            "generated_date": config['GENERATED_DATE']
+            'wwwroot': config['WWW_ROOT'],
+            'tree': tree,
+            'trees': config['TREES'],
+            'config': config['TEMPLATE_PARAMETERS'],
+            'generated_date': config['GENERATED_DATE']
         }
         if conn:
             # Parse the search query
-            qtext = querystring.get("q", "")
+            qtext = querystring.get('q', '')
             q = Query(conn, qtext, 'explain' in querystring)
 
             result = None
@@ -100,7 +100,7 @@ def search():
                 return redirect('%s/%s/%s?from=%s#l%i' %
                                 (config['WWW_ROOT'], tree, path, qtext, line))
             # Okay let's try to make search results
-            template = "search.html"
+            template = 'search.html'
             # Catching any errors from sqlite, typically, regexp errors
             error = None
             start = time()
@@ -109,40 +109,40 @@ def search():
                     offset, limit
                 ))
             except OperationalError, e:
-                if e.message.startswith("REGEXP:"):
-                    arguments["error"] = e.message[7:]
+                if e.message.startswith('REGEXP:'):
+                    arguments['error'] = e.message[7:]
                     results = []
-                elif e.message.startswith("QUERY:"):
-                    arguments["error"] = e.message[6:]
+                elif e.message.startswith('QUERY:'):
+                    arguments['error'] = e.message[6:]
                     results = []
                 else:
-                    arguments["error"] = "Database error '%s'" % e.message
-                    template = "error.html"
-            if template == "search.html":
+                    arguments['error'] = "Database error '%s'" % e.message
+                    template = 'error.html'
+            if template == 'search.html':
                 # Search Template Variables
-                arguments["query"] = escape(qtext)
-                arguments["results"] = results
-                arguments["offset"] = offset
-                arguments["limit"] = limit
-                arguments["time"] = time() - start
+                arguments['query'] = escape(qtext)
+                arguments['results'] = results
+                arguments['offset'] = offset
+                arguments['limit'] = limit
+                arguments['time'] = time() - start
         else:
-            arguments["error"] = "Failed to establish database connection."
-            template = "error.html"
+            arguments['error'] = 'Failed to establish database connection.'
+            template = 'error.html'
 
     # If json is specified output as json
-    if output_format == "json":
-        #TODO Return 503 if template == "error.html"
+    if output_format == 'json':
+        #TODO Return 503 if template == 'error.html'
         # Tuples are encoded as lists in JSON, and these are not real
         # easy to unpack or read in Javascript. So for ease of use, we
         # convert to dictionaries before returning the json results.
         # If further discrepancies are introduced please document them in
         # templating.mkd
-        arguments["results"] = [
+        arguments['results'] = [
             {
-                "icon": icon,
-                "path": path,
-                "lines": [{"line_number": nb, "line": l} for nb, l in lines]
-            } for icon, path, lines in arguments["results"]
+                'icon': icon,
+                'path': path,
+                'lines': [{'line_number': nb, 'line': l} for nb, l in lines]
+            } for icon, path, lines in arguments['results']
         ]
         return jsonify(arguments)
 
