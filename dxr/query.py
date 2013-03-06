@@ -103,7 +103,7 @@ class Query:
 
     #TODO Use named place holders in filters, this would make the filters easier to write
 
-    def _execute_sql(self, sql, *parameters):
+    def execute_sql(self, sql, *parameters):
         if self._should_explain:
             self._sql_profile.append({
                 "sql" : sql,
@@ -155,7 +155,7 @@ class Query:
         def d(string):
             return decoder(string, errors="replace")[0]
 
-        cursor = self._execute_sql(sql, arguments)
+        cursor = self.execute_sql(sql, arguments)
 
         for path, icon, content, fileid, extents in cursor:
             elist = []
@@ -486,7 +486,7 @@ class SimpleFilter(SearchFilter):
     def extents(self, conn, query, fileid):
         if self.ext_sql:
             for arg in query.params[self.param]:
-                for start, end in query._execute_sql(self.ext_sql, [fileid] + self.formatter(arg)):
+                for start, end in query.execute_sql(self.ext_sql, [fileid] + self.formatter(arg)):
                     yield start, end, []
 
 class ExistsLikeFilter(SearchFilter):
@@ -542,7 +542,7 @@ class ExistsLikeFilter(SearchFilter):
                 params = [fileid, like_escape(arg)]
                 def builder():
                     sql = self.ext_sql % self.like_expr
-                    for start, end in query._execute_sql(sql, params):
+                    for start, end in query.execute_sql(sql, params):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
@@ -551,7 +551,7 @@ class ExistsLikeFilter(SearchFilter):
                 params = [fileid, arg]
                 def builder():
                     sql = self.ext_sql % self.qual_expr
-                    for start, end in query._execute_sql(sql, params):
+                    for start, end in query.execute_sql(sql, params):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
