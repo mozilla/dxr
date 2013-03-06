@@ -138,7 +138,7 @@
    # only be available to non-javascript users. #}
    {% set search_url = wwwroot
                      + '/search?tree=' + tree
-                     + '&q=' + query + '&redirect=false' %}
+                     + '&q=' + quoted_query + '&redirect=false' %}
    {% set prev = offset - results|length %}
    {% set next = offset + results|length %}
   <div id="result-page-switch">

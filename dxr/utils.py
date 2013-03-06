@@ -244,3 +244,15 @@ def next_global_id():
 def open_log(config_or_tree, name):
     """ Get an open log file given config or tree and name """
     return open(os.path.join(config_or_tree.log_folder, name), 'w')
+
+
+def non_negative_int(s, default):
+    """Parse a string into an int >= 0. If parsing fails or the result is out
+    of bounds, return a default."""
+    try:
+        i = int(s)
+        if i >= 0:
+            return i
+    except (ValueError, TypeError):
+        pass
+    return default
