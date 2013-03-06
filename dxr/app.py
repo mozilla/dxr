@@ -64,6 +64,8 @@ def search():
     error = warning = ''
 
     if tree in config['TREES']:
+        arguments['tree'] = tree
+
         # Connect to database
         conn = connect_db(tree, current_app.instance_path)
         if conn:
