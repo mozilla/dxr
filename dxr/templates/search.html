@@ -98,19 +98,17 @@
 {% block content %}
   {% for icon, path, lines in results %}
     <div class="result">
-      <div class="path"
-         style="background-image: url({{ wwwroot }}/static/icons/{{ icon }}.png);"
-         >
-         {%- set folders = path.split('/') -%}
-         {%- for folder in folders -%}
-         <a href="{{ wwwroot }}/{{ tree }}/{{"/".join(folders[0:loop.index])}}"
+      <div class="path" style="background-image: url({{ wwwroot }}/static/icons/{{ icon }}.png);">
+        {%- set folders = path.split('/') -%}
+        {%- for folder in folders -%}
+          <a href="{{ wwwroot }}/{{ tree }}/{{ "/".join(folders[0:loop.index]) }}"
             {% if not loop.last %}
-            data-path="{{"/".join(folders[0:loop.index])}}/"
+              data-path="{{ "/".join(folders[0:loop.index]) }}/"
             {% endif %}
             >{{ folder }}
-           {%- if not loop.last -%} / {%- endif -%}
+            {%- if not loop.last -%} / {%- endif -%}
           </a>
-         {%- endfor -%}
+        {%- endfor -%}
       </div>
       {% for number, line in lines %}
       <a class="snippet" href="{{ wwwroot }}/{{ tree }}/{{ path }}#l{{ number }}">
