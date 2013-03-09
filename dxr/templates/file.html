@@ -40,7 +40,7 @@
 </div>
 <div class="line-numbers">
   {% for number, line, annotations in lines %}
-  <pre><a href="{{ wwwroot }}/{{ tree }}/{{ path }}#l{{ number }}"
+  <pre><a href="#l{{ number }}"
           class="ln" id="line-{{ number }}"
           name="l{{ number }}">{{ number }}</a></pre>
   {%- endfor %}
