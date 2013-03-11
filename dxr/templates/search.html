@@ -101,7 +101,7 @@
       <div class="path" style="background-image: url({{ wwwroot }}/static/icons/{{ icon }}.png);">
         {%- set folders = path.split('/') -%}
         {%- for folder in folders -%}
-          <a href="{{ wwwroot }}/{{ tree }}/{{ "/".join(folders[0:loop.index]) }}"
+          <a href="{{ wwwroot }}/{{ tree }}/source/{{ "/".join(folders[0:loop.index]) }}"
             {% if not loop.last %}
               data-path="{{ "/".join(folders[0:loop.index]) }}/"
             {% endif %}
@@ -111,12 +111,12 @@
         {%- endfor -%}
       </div>
       {% for number, line in lines %}
-      <a class="snippet" href="{{ wwwroot }}/{{ tree }}/{{ path }}#l{{ number }}">
-        <div class="line-numbers">
-        <pre><span class="ln">{{ number }}</span></pre>
-        </div>
-        <div class="file-lines"><pre><code>{{ line|safe }}</code></pre></div>
-      </a>
+        <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#l{{ number }}">
+          <div class="line-numbers">
+          <pre><span class="ln">{{ number }}</span></pre>
+          </div>
+          <div class="file-lines"><pre><code>{{ line|safe }}</code></pre></div>
+        </a>
       {%- endfor %}
     </div>
   {% else %}

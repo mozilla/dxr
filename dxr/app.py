@@ -80,14 +80,14 @@ def search():
                     path, line = result
                     # TODO: Does this escape qtext properly?
                     return redirect(
-                        '%s/%s/%s?from=%s#l%i' %
+                        '%s/%s/source/%s?from=%s#l%i' %
                         (config['WWW_ROOT'], tree, path, qtext, line))
 
             # Return multiple results:
             template = 'search.html'
             start = time()
             try:
-                results = list(q.fetch_results(offset, limit))
+                results = list(q.results(offset, limit))
             except OperationalError as e:
                 if e.message.startswith('REGEXP:'):
                     # Malformed regex
@@ -137,10 +137,10 @@ def search():
                            **arguments)
 
 
-@dxr_blueprint.route('/<path:tree_and_path>')
-def browse(tree_and_path):
+@dxr_blueprint.route('/<tree>/source/')
+@dxr_blueprint.route('/<tree>/source/<path:path>')
+def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees."""
-    tree, _, path = tree_and_path.partition('/')
     tree_folder = os.path.join(current_app.instance_path, 'trees', tree)
 
     if isdir(os.path.join(tree_folder, path)):

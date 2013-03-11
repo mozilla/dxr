@@ -13,7 +13,7 @@ var result_template = ""
 
 var lines_template = ""
  + "<a class=\"snippet\" "
- + "   href=\"{{wwwroot}}/{{tree}}/{{path}}#l{{line_number}}\">"
+ + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
  + "  <div class=\"line-numbers\">"
  + "    <pre><span class=\"ln\">{{line_number}}</span></pre>"
  + "  </div>"
@@ -47,7 +47,7 @@ function format_results(data){
     for(var j = 0; j < folders.length; j++){
       var folder = folders[j];
       var p = folders.slice(0, j + 1).join('/');
-      var href = wwwroot + '/' + dxr.tree() + '/' + p;
+      var href = wwwroot + '/' + dxr.tree() + '/source/' + p;
       pathline += "<a href=\"" + href + "\" ";
       if(j + 1 < folders.length){
         pathline += "data-path=\"" + p + "/\"";
