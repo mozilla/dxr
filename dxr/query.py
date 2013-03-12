@@ -121,9 +121,16 @@ class Query:
 
     # Fetch results using a query,
     # See: queryparser.py for details in query specification
-    def fetch_results(self,
-                      offset = 0, limit = 100,
-                      markup = "<b>", markdown = "</b>"):
+    def results(self,
+                offset=0, limit=100,
+                markup='<b>', markdown='</b>'):
+        """Return search results as an iterable of these::
+
+            (icon,
+             path within tree,
+             (line_number, highlighted_line_of_code)), ...
+
+        """
         sql = """
             SELECT files.path, files.icon, trg_index.text, files.id,
             extents(trg_index.contents)
@@ -253,8 +260,11 @@ class Query:
 
 
     def direct_result(self):
-        """ Get a direct result as tuple of (path, line) or None if not direct result
-                for query, ie. complex query
+        """Return a single search result that is an exact match for the query.
+
+        If there is such a result, return a tuple of (path from root of tree,
+        line number). Otherwise, return None.
+
         """
         term = self.single_term()
         if not term:

@@ -236,12 +236,13 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Generate list of folders and their mod dates:
     folders = [('folder',
-               f,
-               datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
-               folder,
-               f)).st_mtime),
-               _join_url(tree.name, folder, f))
-                          for f in indexed_folders]
+                f,
+                datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
+                                                         folder,
+                                                         f)).st_mtime),
+                # TODO: DRY with Flask route. Use url_for:
+                _join_url(tree.name, 'source', folder, f))
+               for f in indexed_folders]
 
     # Generate list of files:
     files = []
@@ -250,10 +251,10 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
         path = os.path.join(tree.source_folder, folder, f)
         file_info = stat(path)
         files.append((dxr.mime.icon(path),
-                                    f,
-                                    datetime.fromtimestamp(file_info.st_mtime),
-                                    file_info.st_size,
-                                    _join_url(tree.name, folder, f)))
+                      f,
+                      datetime.fromtimestamp(file_info.st_mtime),
+                      file_info.st_size,
+                      _join_url(tree.name, 'source', folder, f)))
 
     # Lay down the HTML:
     jinja_env = load_template_env(tree.config.temp_folder,

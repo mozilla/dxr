@@ -8,7 +8,7 @@ class IgnorePatternTests(DxrInstanceTestCase):
 
     def _top_level_index(self):
         """Return the HTML of the front browse page."""
-        return self.client().get('/code').data
+        return self.client().get('/code/source/').data
 
     def test_non_path(self):
         """Test that non-path-based ignore patterns are obeyed."""

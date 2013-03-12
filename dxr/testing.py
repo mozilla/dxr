@@ -114,7 +114,7 @@ class TestCase(unittest.TestCase):
 
         """
         response = self.client().get(
-            '/search?format=json&tree=code&q=%s&redirect=false' % quote(query))
+            '/code/search?format=json&q=%s&redirect=false' % quote(query))
         return json.loads(response.data)['results']
 
 
