@@ -39,8 +39,8 @@ def index():
     return send_file(current_app.open_instance_resource('trees/index.html'))
 
 
-@dxr_blueprint.route('/search')
-def search():
+@dxr_blueprint.route('/<tree>/search')
+def search(tree):
     """Search by regex, caller, superclass, or whatever."""
     # TODO: This function still does too much.
     querystring = request.values
@@ -49,7 +49,6 @@ def search():
     limit = non_negative_int(querystring.get('limit'), 100)
 
     # Get and validate tree:
-    tree = querystring.get('tree')
     config = current_app.config
 
     # Arguments for the template:
@@ -62,6 +61,7 @@ def search():
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''
+    status_code = None
 
     if tree in config['TREES']:
         arguments['tree'] = tree
@@ -111,6 +111,7 @@ def search():
             error = 'Failed to establish database connection.'
     else:
         error = "Tree '%s' is not a valid tree." % tree
+        status_code = 404
 
     if warning or error:
         arguments['error'] = error or warning
@@ -119,7 +120,7 @@ def search():
         if error:
             # Return a non-OK code so the live search doesn't try to replace
             # the results with our empty ones:
-            return jsonify(arguments), 500
+            return jsonify(arguments), status_code or 500
 
         # Tuples are encoded as lists in JSON, and these are not real
         # easy to unpack or read in Javascript. So for ease of use, we
@@ -133,8 +134,10 @@ def search():
                 for icon, path, lines in arguments['results']]
         return jsonify(arguments)
 
-    return render_template('error.html' if error else 'search.html',
-                           **arguments)
+    if error:
+        return render_template('error.html', **arguments), status_code or 500
+    else:
+        return render_template('search.html', **arguments)
 
 
 @dxr_blueprint.route('/<tree>/source/')

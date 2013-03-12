@@ -144,9 +144,8 @@ function initAdvancedSearch(){
   var as = document.getElementById("advanced-search");
   as.addEventListener('submit', function(e){
     // Change document location
-    document.location = createSearchUrl({
-      q:    buildQueryFromAdvanced(),
-      tree: dxr.tree()
+    document.location = createSearchUrl(dxr.tree(), {
+      q:    buildQueryFromAdvanced()
     });
     e.preventDefault();
     return false;
