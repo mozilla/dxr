@@ -1,4 +1,4 @@
-class Schema:
+class Schema(object):
     """ A representation of SQL table data.
 
         This class allows for easy ways to handle SQL data given blob information,
@@ -26,7 +26,7 @@ class Schema:
     def get_insert_sql(self, tblname, args):
         return self.tables[tblname].get_insert_sql(args)
 
-class SchemaTable:
+class SchemaTable(object):
     """ A table schema dictionary has column names as keys and information tuples
         as values: "col": (type, mayBeNull)
           type is the type string (e.g., VARCHAR(256) or INTEGER), although it

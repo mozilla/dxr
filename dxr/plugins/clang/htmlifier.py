@@ -7,7 +7,7 @@ import urllib, re
 from dxr.utils import search_url
 
 
-class ClangHtmlifier:
+class ClangHtmlifier(object):
     """ Pygmentizer add syntax regions for file """
     def __init__(self, tree, conn, path, text, file_id):
         self.tree    = tree

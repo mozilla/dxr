@@ -40,7 +40,7 @@ _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 # token, in which we'll wrap it anyway :)
 _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
-class Query:
+class Query(object):
     """ Query object, constructor will parse any search query """
     def __init__(self, conn, querystr, should_explain=False):
         self.conn = conn
@@ -367,7 +367,7 @@ def like_escape(val):
                .replace("*", "%"))
 
 
-class genWrap:
+class genWrap(object):
     """ Auxiliary class for wrapping a generator and make it nicer """
     def __init__(self, gen):
         self.gen = gen
@@ -430,7 +430,7 @@ def fix_extents_overlap(extents):
         yield extents[0]
 
 
-class SearchFilter:
+class SearchFilter(object):
     """ Base class for all search filters, plugins subclasses this class and
             registers an instance of them calling register_filter
     """

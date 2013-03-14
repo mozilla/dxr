@@ -5,7 +5,7 @@ from pygments.token import Token
 import os, sys
 import fnmatch
 
-class Pygmentizer:
+class Pygmentizer(object):
     """ Pygmentizer add syntax regions for file """
     def __init__(self, text, lexer):
         self.text   = text
