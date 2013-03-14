@@ -7,6 +7,7 @@ import jinja2
 import string
 import subprocess
 import sys
+from urllib import quote, quote_plus
 from datetime import datetime
 
 import dxr
@@ -256,3 +257,14 @@ def non_negative_int(s, default):
     except (ValueError, TypeError):
         pass
     return default
+
+
+def search_url(www_root, tree, query, redirect=None):
+    """Return the URL to the search endpoint."""
+    ret = '%s/%s/search?q=%s' % (www_root,
+                                 quote(tree),
+                                 # quote_plus needs a string.
+                                 quote_plus(query.encode('utf-8')))
+    if redirect is not None:
+        ret += 'redirect=%s' % ('true' if redirect else 'false')
+    return ret

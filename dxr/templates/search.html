@@ -134,8 +134,6 @@
   {# We don't show next link if there's no more results,
    # and show prev link if offset != 0. Note that these links will
    # only be available to non-javascript users. #}
-   {% set search_url = wwwroot + '/' + tree + '/search?q=' +
-                       quoted_query + '&redirect=false' %}
    {% set prev = offset - results|length %}
    {% set next = offset + results|length %}
   <div id="result-page-switch">

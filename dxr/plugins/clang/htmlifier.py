@@ -4,6 +4,8 @@ import fnmatch
 import clang.tokenizers as tokenizers
 import urllib, re
 
+from dxr.utils import search_url
+
 
 class ClangHtmlifier:
     """ Pygmentizer add syntax regions for file """
@@ -251,9 +253,9 @@ class ClangHtmlifier:
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
-        url = self.tree.config.wwwroot + "/search?tree=" + self.tree.name
-        url += "&q=" + urllib.quote(query)
-        return url
+        return search_url(self.tree.config.wwwroot,
+                          self.tree.name,
+                          query)
 
     def quote(self, qualname):
         """ Wrap qualname in quotes if it contains spaces """

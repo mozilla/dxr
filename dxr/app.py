@@ -9,7 +9,7 @@ from flask import (Blueprint, Flask, send_from_directory, current_app,
 
 from dxr.query import Query
 from dxr.server_utils import connect_db
-from dxr.utils import non_negative_int
+from dxr.utils import non_negative_int, search_url
 
 
 # Look in the 'dxr' package for static files, templates, etc.:
@@ -48,7 +48,6 @@ def search(tree):
     offset = non_negative_int(querystring.get('offset'), 0)
     limit = non_negative_int(querystring.get('limit'), 100)
 
-    # Get and validate tree:
     config = current_app.config
 
     # Arguments for the template:
@@ -101,8 +100,10 @@ def search(tree):
             if not error:
                 # Search template variables:
                 arguments['query'] = qtext
-                # quote_plus needs a string.
-                arguments['quoted_query'] = quote_plus(qtext.encode('utf-8'))
+                arguments['search_url'] = search_url(arguments['wwwroot'],
+                                                     arguments['tree'],
+                                                     qtext,
+                                                     redirect=False)
                 arguments['results'] = results
                 arguments['offset'] = offset
                 arguments['limit'] = limit
