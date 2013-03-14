@@ -320,7 +320,7 @@ def _highlit_line(content, offsets, markup, markdown):
             next_newline = None
         yield cgi.escape(content[chars_before:next_newline])
     ret = ''.join(chunks())
-    return ret.decode('utf-8', errors='replace')
+    return ret.decode('utf-8', 'replace')
 
 
 def _highlit_lines(content, offsets, markup, markdown):
