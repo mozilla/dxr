@@ -5,6 +5,7 @@ import sys
 
 
 # Load trilite
+# TODO: Why do both this and load_trilite() exist?
 _trilite_loaded = False
 def load_tokenizer():
     global _trilite_loaded
@@ -28,6 +29,7 @@ def _collate_loc(str1, str2):
     return cmp(parts1, parts2)
 
 # Get database connection for tree
+# TODO: Why do both this and connect_database() exist?
 def connect_db(tree, instance_path):
     load_tokenizer()
     dbname = os.path.join(instance_path, 'trees', tree, '.dxr-xref.sqlite')
