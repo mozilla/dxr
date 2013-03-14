@@ -1,4 +1,4 @@
-import itertools
+from itertools import groupby
 import utils, cgi, codecs, struct
 import time
 
@@ -37,7 +37,7 @@ _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 # Pattern for recognizing if a word will be tokenized as a single term.
 # Ideally we should reuse our custom sqlite tokenizer, but that'll just
 # complicated things, anyways, if it's not a identifier, it must be a single
-# token, in which we'll wrap it anyway :) 
+# token, in which we'll wrap it anyway :)
 _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query:
@@ -155,13 +155,6 @@ class Query:
         #utils.log(sql)
         #utils.log(arguments)
 
-        # Make a simple decoder for decoding unicode
-        # Note that we need to operate in ascii inorder to handle
-        # compiler offsets
-        decoder = codecs.getdecoder("utf-8")
-        def d(string):
-            return decoder(string, errors="replace")[0]
-
         cursor = self.execute_sql(sql, arguments)
 
         for path, icon, content, fileid, extents in cursor:
@@ -182,59 +175,8 @@ class Query:
             if self._should_explain:
                 continue
 
-            lines = []
-            line_number = 1
-            last_pos = 0
-
-            for i in xrange(0, len(offsets)):
-                # TODO keylist should infact have information about which extent of the
-                # search query caused this hit, we should highlight this extent
-                # (Note. Query object still doesn't provide support for offering this
-                #  extent, and this needs to be supported and used in filters).
-                estart, eend, keylist = offsets[i]
-
-                # Count the newlines from the top of the file to get the line
-                # number. Maybe we could optimize this by storing the line number
-                # in the index with the extent.
-                line_diff = content.count("\n", last_pos, estart)
-                # Skip if we didn't get a new line
-                if line_diff == 0 and last_pos > 0:
-                    continue 
-                line_number += line_diff
-                last_pos = estart
-
-                # Find newline before and after offset
-                end       = content.find("\n", estart)
-                if end == -1:
-                    end = len(content)
-                start     = content.rfind("\n", 0, end) + 1
-                src_line  = content[start:end]
-
-                # Build line
-                out_line = ""
-                mend = 0      # Invariant: Offset where last write ended
-
-                # Add some markup to highlight hits
-                while content.count("\n", last_pos, estart) == 0:
-                    last_end = mend
-                    mstart = estart - start
-                    mend   = eend - start
-                    # Output line segment from last_end to markup start
-                    out_line += cgi.escape(d(src_line[last_end:mstart]))
-                    # Output markup and line segment
-                    out_line += markup + cgi.escape(d(src_line[mstart:mend])) + markdown
-                    i += 1
-                    if i >= len(offsets):
-                        break
-                    estart, eend, keylist = offsets[i]
-
-                # Output the rest of the line when theres no more offsets
-                # Notice that the while loop always goes atleast once
-                out_line += cgi.escape(d(src_line[mend:]))
-
-                lines.append((line_number, out_line))
             # Return result
-            yield icon, path, lines
+            yield icon, path, _highlit_lines(content, offsets, markup, markdown)
 
         def number_lines(arr):
             ret = []
@@ -347,6 +289,73 @@ class Query:
 
         # Okay we've got nothing
         return None
+
+
+def _highlit_line(content, offsets, markup, markdown):
+    """Return a line of string ``content`` with the given ``offsets`` prefixed
+    by ``markup`` and suffixed by ``markdown``.
+
+    We assume that none of the offsets split a Unicode code point. This
+    assumption lets us run one big ``decode`` at the end.
+
+    """
+    def chunks():
+        try:
+            # Start on the line the highlights are on:
+            chars_before = content.rindex('\n', 0, offsets[0][0]) + 1
+        except ValueError:
+            chars_before = None
+        for start, end in offsets:
+            # We can do the escapes before decoding, because all escaped chars
+            # are the same in ASCII and utf-8:
+            yield cgi.escape(content[chars_before:start])
+            yield markup
+            yield cgi.escape(content[start:end])
+            yield markdown
+            chars_before = end
+        # Make sure to get the rest of the line after the last highlight:
+        try:
+            next_newline = content.index('\n', chars_before)
+        except ValueError:  # eof
+            next_newline = None
+        yield cgi.escape(content[chars_before:next_newline])
+    ret = ''.join(chunks())
+    return ret.decode('utf-8', errors='replace')
+
+
+def _highlit_lines(content, offsets, markup, markdown):
+    """Return a list of (line number, highlit line) tuples.
+
+    :arg content: The contents of the file against which the offsets are
+        reported, as a bytestring. (We need to operate in terms of bytestrings,
+        because those are the terms in which the C compiler gives us offsets.)
+    :arg offsets: A sequence of non-overlapping (start offset, end offset,
+        [keylist (presently unused)]) tuples describing each extent to
+        highlight. The sequence must be in order by start offset.
+
+    Assumes no newlines are highlit.
+
+    """
+    line_extents = []  # [(line_number, (start, end)), ...]
+    lines_before = 1
+    chars_before = 0
+    for start, end, _ in offsets:
+        # How many lines we've skipped since we last knew what line we were on:
+        lines_since = content.count('\n', chars_before, start)
+
+        # Figure out what line we're on, and throw this extent into its bucket:
+        line = lines_before + lines_since
+        line_extents.append((line, (start, end)))
+
+        lines_before = line
+        chars_before = end
+
+    # Bucket highlit ranges by line, and build up the marked up strings:
+    return [(line, _highlit_line(content,
+                                 [extent for line, extent in lines_and_extents],
+                                 markup,
+                                 markdown)) for
+            line, lines_and_extents in groupby(line_extents, lambda (l, e): l)]
 
 
 def like_escape(val):
@@ -590,7 +599,7 @@ class UnionFilter(SearchFilter):
                     for hit in hits:
                         yield hit
         def sorter():
-            for hits in itertools.groupby(sorted(builder())):
+            for hits in groupby(sorted(builder())):
                 yield hits[0]
         yield sorter()
 
