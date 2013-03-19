@@ -232,7 +232,7 @@ class ClangHtmlifier(object):
                     path  = rows[0][0]
                     start = token.start + match.start(1)
                     end   = token.start + match.end(1)
-                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
+                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
                     menu  = [{
                         'text':   "Jump to file",
                         'title':  "Jump to what is likely included there",
@@ -266,7 +266,7 @@ class ClangHtmlifier(object):
     def add_jump_definition(self, menu, path, line):
         """ Add a jump to definition to the menu """
         # Definition url
-        url = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
+        url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
         url += "#l%s" % line
         menu.insert(0, { 
             'text':   "Jump to definition",
