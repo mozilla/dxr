@@ -41,9 +41,16 @@ def post_process(tree, conn):
 
     print " - Processing files"
     temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
+    seen_csv_files = {}
     for f in os.listdir(temp_folder):
-        csv_path = os.path.join(temp_folder, f)
-        dump_indexer_output(conn, csv_path)
+        if f.endswith(".lst"):
+            lst_path = os.path.join(temp_folder, f)
+            with open(lst_path) as lst_file:
+                for csv_filename in lst_file:
+                    csv_filename = csv_filename.rstrip('\n')
+                    if csv_filename not in seen_csv_files:
+                        dump_indexer_output(conn, csv_filename)
+                        seen_csv_files[csv_filename] = None
 
     fixup_scope(conn)
     

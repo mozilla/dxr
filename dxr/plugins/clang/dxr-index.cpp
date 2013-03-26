@@ -8,8 +8,10 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -37,12 +39,21 @@ std::string &operator+=(std::string &str, unsigned int i) {
 }
 
 // BEWARE: use only as a temporary
-const char *hash(std::string &str) {
+const char *hash(const std::string &str) {
   static unsigned char rawhash[20];
   static char hashstr[41];
   sha1::calc(str.c_str(), str.size(), rawhash);
   sha1::toHexString(rawhash, hashstr);
   return hashstr;
+}
+
+std::string make_absolute(const std::string &str) {
+  if (!llvm::sys::path::is_relative(str))
+    return str;
+  const std::string current_directory = llvm::sys::Path::GetCurrentDirectory().str();
+  SmallVector<char, 256> path(current_directory.begin(), current_directory.end());
+  llvm::sys::path::append(path, str);
+  return std::string(path.begin(), path.end());
 }
 
 // This is a wrapper around NamedDecl::getQualifiedNameAsString.
@@ -282,6 +293,16 @@ public:
     TraverseDecl(ctx.getTranslationUnitDecl());
 
     // Emit all files now
+    std::string outputFile = ci.getFrontendOpts().OutputFile;
+    if (outputFile.empty())
+      return;
+    outputFile = make_absolute(outputFile);
+
+    const std::string lst_filename = tmpdir + hash(outputFile) + ".lst";
+    std::ofstream fs(lst_filename.c_str(), std::ios::out | std::ios::trunc);
+    if (!fs.is_open())
+      return;
+
     std::map<std::string, FileInfo *>::iterator it;
     for (it = relmap.begin(); it != relmap.end(); it++) {
       if (!it->second->interesting)
@@ -306,6 +327,8 @@ public:
         write(fd, content.c_str(), content.length());
         close(fd);
       }
+
+      fs << filename << std::endl;
     }
   }
 
