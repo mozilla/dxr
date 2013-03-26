@@ -26,6 +26,12 @@ def main():
                       type='int',
                       default=1,
                       help='Number of parallel processes to use, (Default: 1)')
+    parser.add_option('--incremental', dest='incremental',
+                      action='store_true',
+                      default=False,
+                      help='This is an incremental build (the object folder '
+                           'and temp folders will not be removed before '
+                           'running the build command')
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.print_usage()
@@ -45,7 +51,8 @@ def main():
                    # TODO: Remove this brain-dead cast when we get the types
                    # right in the Config object:
                    nb_jobs=str(options.jobs),
-                   tree=options.tree)
+                   tree=options.tree,
+                   incremental=options.incremental)
 
 
 if __name__ == '__main__':

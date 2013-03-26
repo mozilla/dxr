@@ -15,7 +15,7 @@ import dxr.languages
 import dxr.mime
 
 
-def build_instance(config_path, nb_jobs=None, tree=None):
+def build_instance(config_path, nb_jobs=None, tree=None, incremental=False):
     """Build a DXR instance.
 
     :arg config_path: The path to a config file
@@ -45,7 +45,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # Create config.target_folder (if not exists)
     print "Generating target folder"
     ensure_folder(config.target_folder, False)
-    ensure_folder(config.temp_folder, True)
+    ensure_folder(config.temp_folder, not incremental)
     ensure_folder(config.log_folder, True)
 
     jinja_env = load_template_env(config.temp_folder, config.template_folder)
@@ -86,15 +86,16 @@ def build_instance(config_path, nb_jobs=None, tree=None):
         # Create folders (delete if exists)
         ensure_folder(tree.target_folder, True) # <config.target_folder>/<tree.name>
         ensure_folder(tree.object_folder,       # Object folder (user defined!)
-            tree.source_folder != tree.object_folder) # Only clean if not the srcdir
-        ensure_folder(tree.temp_folder,   True) # <config.temp_folder>/<tree.name>
-                                                # (or user defined)
+            tree.source_folder != tree.object_folder # Only clean if not the srcdir
+            and not incremental)                     # and not an incremental build
+        ensure_folder(tree.temp_folder,         # <config.temp_folder>/<tree.name>
+                      not incremental)          # (or user defined)
         ensure_folder(tree.log_folder,    True) # <config.log_folder>/<tree.name>
                                                 # (or user defined)
         # Temporary folders for plugins
-        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), True)
+        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not incremental)
         for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), True)
+            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not incremental)
 
         # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
         conn = dxr.utils.connect_database(tree)
