@@ -260,7 +260,7 @@ class Query(object):
                   (SELECT path FROM files WHERE files.id = functions.file_id) as path,
                   functions.file_line
                 FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-            """, ("%" + term,))
+            """, (term + '%',))  # Trailing % to eat "(int x)" etc.
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
