@@ -29,11 +29,11 @@ class MemberFunctionTests(SingleFileTestCase):
         eq_(Query(conn, query_text).direct_result(), ('main.cpp', line_num))
 
     def test_qualified_function_name_prefix(self):
-        """A unique prefix match on fully qualified function name should take
-        you directly to the result."""
-        self.direct_result_eq('MemberFunction::member_function', 12)
+        """A unique, case-insensitive prefix match on fully qualified function
+        name should take you directly to the result."""
+        self.direct_result_eq('MemberFunction::member_FUNCTION', 12)
 
     def test_qualified_type_name(self):
-        """A unique prefix match on fully qualified type name should take you
-        directly to the result."""
-        self.direct_result_eq('MemberFunction::InnerClass', 8)
+        """A unique, case-insensitive prefix match on fully qualified type name
+        should take you directly to the result."""
+        self.direct_result_eq('MemberFunction::InnerCLASS', 8)

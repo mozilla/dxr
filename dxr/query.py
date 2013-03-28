@@ -249,7 +249,7 @@ class Query(object):
                       (SELECT path FROM files WHERE files.id = types.file_id) as path,
                       types.file_line
                     FROM types WHERE types.qualname LIKE ? LIMIT 2
-            """, ("%" + term,))
+            """, (term,))
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
