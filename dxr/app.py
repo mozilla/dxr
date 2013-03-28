@@ -70,7 +70,7 @@ def search(tree):
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')
-            q = Query(conn, qtext, 'explain' in querystring)
+            q = Query(conn, qtext, should_explain='explain' in querystring)
 
             # Try for a direct result:
             if querystring.get('redirect') == 'true':

@@ -41,7 +41,8 @@ _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
 class Query(object):
-    """ Query object, constructor will parse any search query """
+    """Query object, constructor will parse any search query"""
+
     def __init__(self, conn, querystr, should_explain=False):
         self.conn = conn
         self._should_explain = should_explain
@@ -83,7 +84,7 @@ class Query(object):
                 self.notphrases.append(token["notphrase"])
 
     def single_term(self):
-        """ Returns the single term making up the query, None for complex queries """
+        """Returns the single term making up the query, None for complex queries"""
         count = 0
         term = None
         for param in _parameters:
@@ -99,7 +100,6 @@ class Query(object):
         if count > 1:
             return None
         return term
-
 
     #TODO Use named place holders in filters, this would make the filters easier to write
 
@@ -242,14 +242,14 @@ class Query(object):
             return (rows[0]['path'], rows[0]['file_line'])
 
         # Try fully qualified names
-        if "::" in term:
+        if '::' in term:
             # Case insensitive type matching
             cur.execute("""
                 SELECT
                       (SELECT path FROM files WHERE files.id = types.file_id) as path,
                       types.file_line
                     FROM types WHERE types.qualname LIKE ? LIMIT 2
-            """, ("%" + term,))
+            """, (term,))
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
@@ -260,7 +260,7 @@ class Query(object):
                   (SELECT path FROM files WHERE files.id = functions.file_id) as path,
                   functions.file_line
                 FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-            """, ("%" + term,))
+            """, (term + '%',))  # Trailing % to eat "(int x)" etc.
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
@@ -359,7 +359,7 @@ def _highlit_lines(content, offsets, markup, markdown):
 
 
 def like_escape(val):
-    """ Escape for usage in as argument to the LIKE operator """
+    """Escape for usage in as argument to the LIKE operator """
     return (val.replace("\\", "\\\\")
                .replace("_", "\\_")
                .replace("%", "\\%")
@@ -368,7 +368,7 @@ def like_escape(val):
 
 
 class genWrap(object):
-    """ Auxiliary class for wrapping a generator and make it nicer """
+    """Auxiliary class for wrapping a generator and make it nicer"""
     def __init__(self, gen):
         self.gen = gen
         self.value = None
@@ -379,6 +379,7 @@ class genWrap(object):
         except StopIteration:
             self.value = None
             return False
+
 
 def merge_extents(*elist):
     """
@@ -404,6 +405,7 @@ def merge_extents(*elist):
             e.value = (end, e.value[1], e.value[2])
         yield start, end, keylist
         elist = [e for e in elist if e.value[0] < e.value[1] or e.next()]
+
 
 def fix_extents_overlap(extents):
     """
@@ -431,28 +433,30 @@ def fix_extents_overlap(extents):
 
 
 class SearchFilter(object):
-    """ Base class for all search filters, plugins subclasses this class and
+    """Base class for all search filters, plugins subclasses this class and
             registers an instance of them calling register_filter
     """
     def __init__(self):
-        """ Initialize the filter, self.params is the keywords used by this filter,
+        """Initialize the filter, self.params is the keywords used by this filter,
                 Fail to declare keywords and the query-parser will not parse them!
         """
         self.params = []
+
     def filter(self, query):
-        """ Given a query yield tuples of sql conditions, list of arguments and
+        """Given a query yield tuples of sql conditions, list of arguments and
                 boolean True if this filter offer extents for results,
                 Note the sql conditions must be string and condition on files.id
         """
         return []
+
     def extents(self, conn, query, fileid):
-        """ Given a connection, query and a file id yield a ordered lists of extents to highlight """
+        """Given a connection, query and a file id yield a ordered lists of extents to highlight"""
         return []
 
+
 class TriLiteSearchFilter(SearchFilter):
-    """ TriLite Search filter """
-    def __init__(self):
-        SearchFilter.__init__(self)
+    """TriLite Search filter"""
+
     def filter(self, query):
         for term in query.keywords + query.phrases:
             yield "trg_index.contents MATCH ?", ["substr-extents:" + term], True
@@ -479,7 +483,7 @@ class TriLiteSearchFilter(SearchFilter):
 
 
 class SimpleFilter(SearchFilter):
-    """ Search filter for limited results.
+    """Search filter for limited results.
             This filter take 5 parameters, defined as follows:
                 param           Search parameter from query
                 filter_sql      Sql condition for limited using argument to param
@@ -497,19 +501,22 @@ class SimpleFilter(SearchFilter):
         self.neg_filter_sql = neg_filter_sql
         self.ext_sql = ext_sql
         self.formatter = formatter
+
     def filter(self, query):
         for arg in query.params[self.param]:
             yield self.filter_sql, self.formatter(arg), self.ext_sql is not None
         for arg in query.params["-%s" % self.param]:
             yield self.neg_filter_sql, self.formatter(arg), False
+
     def extents(self, conn, query, fileid):
         if self.ext_sql:
             for arg in query.params[self.param]:
                 for start, end in query.execute_sql(self.ext_sql, [fileid] + self.formatter(arg)):
                     yield start, end, []
 
+
 class ExistsLikeFilter(SearchFilter):
-    """ Search filter for asking of something LIKE this EXISTS,
+    """Search filter for asking of something LIKE this EXISTS,
             This filter takes 5 parameters, param is the search query parameter,
             "-" + param is a assumed to be the negated search filter.
             The filter_sql must be an (SELECT 1 FROM ... WHERE ... %s ...), sql condition on files.id,
@@ -530,6 +537,7 @@ class ExistsLikeFilter(SearchFilter):
         self.ext_sql = ext_sql
         self.qual_expr = " %s = ? " % qual_name
         self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
+
     def filter(self, query):
         for arg in query.params[self.param]:
             yield (
@@ -555,6 +563,7 @@ class ExistsLikeFilter(SearchFilter):
                             [like_escape(arg)],
                             False
                         )
+
     def extents(self, conn, query, fileid):
         if self.ext_sql:
             for arg in query.params[self.param]:
@@ -578,7 +587,7 @@ class ExistsLikeFilter(SearchFilter):
 
 
 class UnionFilter(SearchFilter):
-    """ Provides a filter matching the union of the given filters.
+    """Provides a filter matching the union of the given filters.
 
             For when you want OR instead of AND.
     """
