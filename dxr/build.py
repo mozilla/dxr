@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 
+from dxr.config import Config
 from dxr.utils import load_template_env
 import dxr.utils
 import dxr.plugins
@@ -30,7 +31,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     overrides = {}
     if nb_jobs:
         overrides['nb_jobs'] = nb_jobs
-    config = dxr.utils.Config(config_path, **overrides)
+    config = Config(config_path, **overrides)
 
     # Find trees to make, fail if requested tree isn't available
     if tree:
