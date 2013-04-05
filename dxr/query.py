@@ -1,5 +1,5 @@
 from itertools import groupby
-import utils, cgi, codecs, struct
+import cgi, struct
 import time
 
 

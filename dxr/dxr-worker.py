@@ -7,6 +7,7 @@
 # it's not to be imported.
 
 import dxr
+from dxr.config import Config
 import dxr.utils
 import dxr.plugins
 import os, sys
@@ -57,7 +58,7 @@ def main(argv):
             end = int(opt)
 
     # Load configuration file
-    config = dxr.utils.Config(configfile)
+    config = Config(configfile)
 
     # Find the tree
     for t in config.trees:
