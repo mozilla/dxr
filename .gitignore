@@ -4,7 +4,6 @@
 tests/*/target
 tests/*/temp
 tests/*/code/code
-tests/*/test.config
 tests/*/dxr.config
 vagrantconfig_local.yaml
 .vagrant
