@@ -1,5 +1,7 @@
+import cgi
 from itertools import groupby
-import cgi, struct
+import re
+import struct
 import time
 
 
@@ -9,9 +11,6 @@ filters = []
 # TODO
 #   - Special argument files-only to just search for file names
 #   - If no plugin returns an extents query, don't fetch content
-
-
-import re
 
 #TODO _parameters should be extracted from filters (possible if filters are defined first)
 # List of parameters to isolate in the search query, ie. path:mypath
@@ -140,6 +139,9 @@ class Query(object):
         conditions = " files.id = trg_index.id "
         arguments = []
 
+        # Give each registered filter an opportunity to contribute to the
+        # query. This query narrows down the universe to a set of matching
+        # files:
         has_extents = False
         for f in filters:
             for conds, args, exts in f.filter(self):
@@ -152,11 +154,10 @@ class Query(object):
 
         #TODO Actually do something with the has_extents, ie. don't fetch contents
 
-        #utils.log(sql)
-        #utils.log(arguments)
-
         cursor = self.execute_sql(sql, arguments)
 
+        # For each returned file (including, only in the case of the trilite
+        # filter, a set of extents)...
         for path, icon, content, fileid, extents in cursor:
             elist = []
 
@@ -168,16 +169,22 @@ class Query(object):
                     matchExtents.append((s, e, []))
                 elist.append(fix_extents_overlap(sorted(matchExtents)))
 
+            # Let each filter do one or more additional queries to find the
+            # extents to highlight:
             for f in filters:
                 for e in f.extents(self.conn, self, fileid):
                     elist.append(e)
             offsets = list(merge_extents(*elist))
+
             if self._should_explain:
                 continue
 
-            # Return result
+            # Yield the file, metadata, and iterable of highlighted offsets:
             yield icon, path, _highlit_lines(content, offsets, markup, markdown)
 
+
+        # TODO: Decouple and lexically evacuate this profiling stuff from
+        # results():
         def number_lines(arr):
             ret = []
             for i in range(len(arr)):
@@ -573,7 +580,7 @@ class ExistsLikeFilter(SearchFilter):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
-                yield builder()
+                yield builder()  # TODO: Can this be right? It seems like extents() will yield 2 iterables: one for each builder() proc. Huh?
             for arg in query.params["+" + self.param]:
                 params = [fileid, arg]
                 def builder():
