@@ -198,7 +198,6 @@ class Query(object):
             yield ("",
                           "explanation %d" % i,
                           number_lines(map(lambda row: row["detail"], profile["explanation"])))
-        self.sql_profile = []
 
 
     def direct_result(self):
