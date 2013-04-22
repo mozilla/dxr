@@ -15,6 +15,7 @@ class dxr ($project_path){
         command => "sudo /home/vagrant/install_llvm.sh",
         require => File["/home/vagrant/install_llvm.sh"],
         logoutput => "on_failure",
+        timeout => 600,
     }
 
     # Install libtrilite so Apache WSGI processes can see it:
