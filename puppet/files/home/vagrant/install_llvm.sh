@@ -4,9 +4,9 @@
 
 if [ ! -f /usr/local/.llvm_is_installed ]; then
     cd /tmp
-    wget http://llvm.org/releases/3.2/clang+llvm-3.2-x86-linux-ubuntu-12.04.tar.gz
-    tar -zxf clang+llvm-3.2-x86-linux-ubuntu-12.04.tar.gz
-    cd clang+llvm-3.2-x86-linux-ubuntu-12.04
+    wget http://llvm.org/releases/3.2/clang+llvm-3.2-x86_64-linux-ubuntu-12.04.tar.gz
+    tar -zxf clang+llvm-3.2-x86_64-linux-ubuntu-12.04.tar.gz
+    cd clang+llvm-3.2-x86_64-linux-ubuntu-12.04
     mv bin/* /usr/local/bin/
     mkdir -p /usr/local/docs
     mv docs/* /usr/local/docs/

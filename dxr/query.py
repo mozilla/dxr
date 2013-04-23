@@ -1,17 +1,13 @@
+import cgi
 from itertools import groupby
-import cgi, struct
+import re
+import struct
 import time
 
-
-# Register filters by adding them to this list.
-filters = []
 
 # TODO
 #   - Special argument files-only to just search for file names
 #   - If no plugin returns an extents query, don't fetch content
-
-
-import re
 
 #TODO _parameters should be extracted from filters (possible if filters are defined first)
 # List of parameters to isolate in the search query, ie. path:mypath
@@ -140,6 +136,9 @@ class Query(object):
         conditions = " files.id = trg_index.id "
         arguments = []
 
+        # Give each registered filter an opportunity to contribute to the
+        # query. This query narrows down the universe to a set of matching
+        # files:
         has_extents = False
         for f in filters:
             for conds, args, exts in f.filter(self):
@@ -152,11 +151,10 @@ class Query(object):
 
         #TODO Actually do something with the has_extents, ie. don't fetch contents
 
-        #utils.log(sql)
-        #utils.log(arguments)
-
         cursor = self.execute_sql(sql, arguments)
 
+        # For each returned file (including, only in the case of the trilite
+        # filter, a set of extents)...
         for path, icon, content, fileid, extents in cursor:
             elist = []
 
@@ -168,16 +166,22 @@ class Query(object):
                     matchExtents.append((s, e, []))
                 elist.append(fix_extents_overlap(sorted(matchExtents)))
 
+            # Let each filter do one or more additional queries to find the
+            # extents to highlight:
             for f in filters:
                 for e in f.extents(self.conn, self, fileid):
                     elist.append(e)
             offsets = list(merge_extents(*elist))
+
             if self._should_explain:
                 continue
 
-            # Return result
+            # Yield the file, metadata, and iterable of highlighted offsets:
             yield icon, path, _highlit_lines(content, offsets, markup, markdown)
 
+
+        # TODO: Decouple and lexically evacuate this profiling stuff from
+        # results():
         def number_lines(arr):
             ret = []
             for i in range(len(arr)):
@@ -198,7 +202,6 @@ class Query(object):
             yield ("",
                           "explanation %d" % i,
                           number_lines(map(lambda row: row["detail"], profile["explanation"])))
-        self.sql_profile = []
 
 
     def direct_result(self):
@@ -574,7 +577,7 @@ class ExistsLikeFilter(SearchFilter):
                         # Apparently sometime, None can occur in the database
                         if start and end:
                             yield (start, end,[])
-                yield builder()
+                yield builder()  # TODO: Can this be right? It seems like extents() will yield 2 iterables: one for each builder() proc. Huh?
             for arg in query.params["+" + self.param]:
                 params = [fileid, arg]
                 def builder():
@@ -613,447 +616,438 @@ class UnionFilter(SearchFilter):
         yield sorter()
 
 
-# TriLite Search filter
-filters.append(TriLiteSearchFilter())
+# Register filters by adding them to this list:
+filters = [
+    TriLiteSearchFilter(),
 
-# path filter
-filters.append(SimpleFilter(
-    param             = "path",
-    filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
-    neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-    ext_sql           = None,
-    formatter         = lambda arg: ['%' + like_escape(arg) + '%']
-))
+    # path filter
+    SimpleFilter(
+        param             = "path",
+        filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
+        neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
+        ext_sql           = None,
+        formatter         = lambda arg: ['%' + like_escape(arg) + '%']
+    ),
 
-# ext filter
-filters.append(SimpleFilter(
-    param             = "ext",
-    filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
-    neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-    ext_sql           = None,
-    formatter         = lambda arg: ['%' + like_escape(arg)]
-))
-
-
-# type filter
-filters.append(UnionFilter([
-  ExistsLikeFilter(
-    param         = "type",
-    filter_sql    = """SELECT 1 FROM types
-                       WHERE %s
-                         AND types.file_id = files.id
-                    """,
-    ext_sql       = """SELECT types.extent_start, types.extent_end FROM types
-                       WHERE types.file_id = ?
-                         AND %s
-                       ORDER BY types.extent_start
-                    """,
-    like_name     = "types.name",
-    qual_name     = "types.qualname"
-  ),
-  ExistsLikeFilter(
-    param         = "type",
-    filter_sql    = """SELECT 1 FROM typedefs
-                       WHERE %s
-                         AND typedefs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT typedefs.extent_start, typedefs.extent_end FROM typedefs
-                       WHERE typedefs.file_id = ?
-                         AND %s
-                       ORDER BY typedefs.extent_start
-                    """,
-    like_name     = "typedefs.name",
-    qual_name     = "typedefs.qualname"
-  ),
-]))
+    # ext filter
+    SimpleFilter(
+        param             = "ext",
+        filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
+        neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
+        ext_sql           = None,
+        formatter         = lambda arg: ['%' + like_escape(arg)]
+    ),
 
 
-# type-ref filter
-filters.append(UnionFilter([
-  ExistsLikeFilter(
-    param         = "type-ref",
-    filter_sql    = """SELECT 1 FROM types, type_refs AS refs
-                       WHERE %s
-                         AND types.id = refs.refid AND refs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM type_refs AS refs
-                       WHERE refs.file_id = ?
-                         AND EXISTS (SELECT 1 FROM types
-                                     WHERE %s
-                                       AND types.id = refs.refid)
-                       ORDER BY refs.extent_start
-                    """,
-    like_name     = "types.name",
-    qual_name     = "types.qualname"
-  ),
-  ExistsLikeFilter(
-    param         = "type-ref",
-    filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
-                       WHERE %s
-                         AND typedefs.id = refs.refid AND refs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM typedef_refs AS refs
-                       WHERE refs.file_id = ?
-                         AND EXISTS (SELECT 1 FROM typedefs
-                                     WHERE %s
-                                       AND typedefs.id = refs.refid)
-                       ORDER BY refs.extent_start
-                    """,
-    like_name     = "typedefs.name",
-    qual_name     = "typedefs.qualname"
-  ),
-]))
+    # type filter
+    UnionFilter([
+      ExistsLikeFilter(
+        param         = "type",
+        filter_sql    = """SELECT 1 FROM types
+                           WHERE %s
+                             AND types.file_id = files.id
+                        """,
+        ext_sql       = """SELECT types.extent_start, types.extent_end FROM types
+                           WHERE types.file_id = ?
+                             AND %s
+                           ORDER BY types.extent_start
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+      ),
+      ExistsLikeFilter(
+        param         = "type",
+        filter_sql    = """SELECT 1 FROM typedefs
+                           WHERE %s
+                             AND typedefs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT typedefs.extent_start, typedefs.extent_end FROM typedefs
+                           WHERE typedefs.file_id = ?
+                             AND %s
+                           ORDER BY typedefs.extent_start
+                        """,
+        like_name     = "typedefs.name",
+        qual_name     = "typedefs.qualname"
+      ),
+    ]),
 
-# function filter
-filters.append(ExistsLikeFilter(
-    param         = "function",
-    filter_sql    = """SELECT 1 FROM functions
-                       WHERE %s
-                         AND functions.file_id = files.id
-                    """,
-    ext_sql       = """SELECT functions.extent_start, functions.extent_end FROM functions
-                       WHERE functions.file_id = ?
-                         AND %s
-                       ORDER BY functions.extent_start
-                    """,
-    like_name     = "functions.name",
-    qual_name     = "functions.qualname"
-))
+    # type-ref filter
+    UnionFilter([
+      ExistsLikeFilter(
+        param         = "type-ref",
+        filter_sql    = """SELECT 1 FROM types, type_refs AS refs
+                           WHERE %s
+                             AND types.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM type_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND types.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+      ),
+      ExistsLikeFilter(
+        param         = "type-ref",
+        filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
+                           WHERE %s
+                             AND typedefs.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM typedef_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM typedefs
+                                         WHERE %s
+                                           AND typedefs.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "typedefs.name",
+        qual_name     = "typedefs.qualname"
+      ),
+    ]),
 
+    # function filter
+    ExistsLikeFilter(
+        param         = "function",
+        filter_sql    = """SELECT 1 FROM functions
+                           WHERE %s
+                             AND functions.file_id = files.id
+                        """,
+        ext_sql       = """SELECT functions.extent_start, functions.extent_end FROM functions
+                           WHERE functions.file_id = ?
+                             AND %s
+                           ORDER BY functions.extent_start
+                        """,
+        like_name     = "functions.name",
+        qual_name     = "functions.qualname"
+    ),
 
-# function-ref filter
-filters.append(ExistsLikeFilter(
-    param         = "function-ref",
-    filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
-                       WHERE %s
-                         AND functions.id = refs.refid AND refs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
-                       WHERE refs.file_id = ?
-                         AND EXISTS (SELECT 1 FROM functions
-                                     WHERE %s
-                                       AND functions.id = refs.refid)
-                       ORDER BY refs.extent_start
-                    """,
-    like_name     = "functions.name",
-    qual_name     = "functions.qualname"
-))
+    # function-ref filter
+    ExistsLikeFilter(
+        param         = "function-ref",
+        filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
+                           WHERE %s
+                             AND functions.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions
+                                         WHERE %s
+                                           AND functions.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "functions.name",
+        qual_name     = "functions.qualname"
+    ),
 
+    # var filter
+    ExistsLikeFilter(
+        param         = "var",
+        filter_sql    = """SELECT 1 FROM variables
+                           WHERE %s
+                             AND variables.file_id = files.id
+                        """,
+        ext_sql       = """SELECT variables.extent_start, variables.extent_end FROM variables
+                           WHERE variables.file_id = ?
+                             AND %s
+                           ORDER BY variables.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
+    ),
 
-# var filter
-filters.append(ExistsLikeFilter(
-    param         = "var",
-    filter_sql    = """SELECT 1 FROM variables
-                       WHERE %s
-                         AND variables.file_id = files.id
-                    """,
-    ext_sql       = """SELECT variables.extent_start, variables.extent_end FROM variables
-                       WHERE variables.file_id = ?
-                         AND %s
-                       ORDER BY variables.extent_start
-                    """,
-    like_name     = "variables.name",
-    qual_name     = "variables.qualname"
-))
+    # var-ref filter
+    ExistsLikeFilter(
+        param         = "var-ref",
+        filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
+                           WHERE %s
+                             AND variables.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM variable_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM variables
+                                         WHERE %s
+                                           AND variables.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
+    ),
 
+    # macro filter
+    ExistsLikeFilter(
+        param         = "macro",
+        filter_sql    = """SELECT 1 FROM macros
+                           WHERE %s
+                             AND macros.file_id = files.id
+                        """,
+        ext_sql       = """SELECT macros.extent_start, macros.extent_end FROM macros
+                           WHERE macros.file_id = ?
+                             AND %s
+                           ORDER BY macros.extent_start
+                        """,
+        like_name     = "macros.name",
+        qual_name     = "macros.name"
+    ),
 
-# var-ref filter
-filters.append(ExistsLikeFilter(
-    param         = "var-ref",
-    filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
-                       WHERE %s
-                         AND variables.id = refs.refid AND refs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM variable_refs AS refs
-                       WHERE refs.file_id = ?
-                         AND EXISTS (SELECT 1 FROM variables
-                                     WHERE %s
-                                       AND variables.id = refs.refid)
-                       ORDER BY refs.extent_start
-                    """,
-    like_name     = "variables.name",
-    qual_name     = "variables.qualname"
-))
+    # macro-ref filter
+    ExistsLikeFilter(
+        param         = "macro-ref",
+        filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
+                           WHERE %s
+                             AND macros.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM macros
+                                         WHERE %s
+                                           AND macros.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "macros.name",
+        qual_name     = "macros.name"
+    ),
 
+    UnionFilter([
+      # callers filter (direct-calls)
+      ExistsLikeFilter(
+          param         = "callers",
+          filter_sql    = """SELECT 1
+                              FROM functions as caller, functions as target, callers
+                             WHERE %s
+                               AND callers.targetid = target.id
+                               AND callers.callerid = caller.id
+                               AND caller.file_id = files.id
+                          """,
+          ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                              FROM functions
+                             WHERE functions.file_id = ?
+                               AND EXISTS (SELECT 1 FROM functions as target, callers
+                                            WHERE %s
+                                              AND callers.targetid = target.id
+                                              AND callers.callerid = functions.id
+                                          )
+                             ORDER BY functions.extent_start
+                          """,
+          like_name     = "target.name",
+          qual_name     = "target.qualname"
+      ),
 
-# macro filter
-filters.append(ExistsLikeFilter(
-    param         = "macro",
-    filter_sql    = """SELECT 1 FROM macros
-                       WHERE %s
-                         AND macros.file_id = files.id
-                    """,
-    ext_sql       = """SELECT macros.extent_start, macros.extent_end FROM macros
-                       WHERE macros.file_id = ?
-                         AND %s
-                       ORDER BY macros.extent_start
-                    """,
-    like_name     = "macros.name",
-    qual_name     = "macros.name"
-))
-
-
-# macro-ref filter
-filters.append(ExistsLikeFilter(
-    param         = "macro-ref",
-    filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
-                       WHERE %s
-                         AND macros.id = refs.refid AND refs.file_id = files.id
-                    """,
-    ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
-                       WHERE refs.file_id = ?
-                         AND EXISTS (SELECT 1 FROM macros
-                                     WHERE %s
-                                       AND macros.id = refs.refid)
-                       ORDER BY refs.extent_start
-                    """,
-    like_name     = "macros.name",
-    qual_name     = "macros.name"
-))
-
-
-filters.append(UnionFilter([
-  # callers filter (direct-calls)
-  ExistsLikeFilter(
-      param         = "callers",
-      filter_sql    = """SELECT 1
-                          FROM functions as caller, functions as target, callers
-                         WHERE %s
-                           AND callers.targetid = target.id
-                           AND callers.callerid = caller.id
-                           AND caller.file_id = files.id
-                      """,
-      ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                          FROM functions
-                         WHERE functions.file_id = ?
-                           AND EXISTS (SELECT 1 FROM functions as target, callers
-                                        WHERE %s
-                                          AND callers.targetid = target.id
-                                          AND callers.callerid = functions.id
-                                      )
-                         ORDER BY functions.extent_start
-                      """,
-      like_name     = "target.name",
-      qual_name     = "target.qualname"
-  ),
-
-  # callers filter (indirect-calls)
-  ExistsLikeFilter(
-      param         = "callers",
-      filter_sql    = """SELECT 1
-                          FROM functions as caller, functions as target, callers
-                         WHERE %s
-                           AND  EXISTS ( SELECT 1 FROM targets
+      # callers filter (indirect-calls)
+      ExistsLikeFilter(
+          param         = "callers",
+          filter_sql    = """SELECT 1
+                              FROM functions as caller, functions as target, callers
+                             WHERE %s
+                               AND  EXISTS ( SELECT 1 FROM targets
+                                              WHERE targets.funcid = target.id
+                                                AND targets.targetid = callers.targetid
+                                           )
+                               AND callers.callerid = caller.id
+                               AND caller.file_id = files.id
+                          """,
+          ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                              FROM functions
+                             WHERE functions.file_id = ?
+                               AND EXISTS (SELECT 1 FROM functions as target, callers
+                                            WHERE %s
+                                              AND EXISTS (
+                                         SELECT 1 FROM targets
                                           WHERE targets.funcid = target.id
                                             AND targets.targetid = callers.targetid
-                                       )
-                           AND callers.callerid = caller.id
-                           AND caller.file_id = files.id
-                      """,
-      ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                          FROM functions
-                         WHERE functions.file_id = ?
-                           AND EXISTS (SELECT 1 FROM functions as target, callers
-                                        WHERE %s
-                                          AND EXISTS (
-                                     SELECT 1 FROM targets
-                                      WHERE targets.funcid = target.id
-                                        AND targets.targetid = callers.targetid
-                                        AND callers.callerid = target.id
-                                              )
-                                          AND callers.callerid = functions.id
-                                      )
-                         ORDER BY functions.extent_start
-                      """,
-      like_name     = "target.name",
-      qual_name     = "target.qualname"
-  ),
-]))
+                                            AND callers.callerid = target.id
+                                                  )
+                                              AND callers.callerid = functions.id
+                                          )
+                             ORDER BY functions.extent_start
+                          """,
+          like_name     = "target.name",
+          qual_name     = "target.qualname"
+      ),
+    ]),
 
-filters.append(UnionFilter([
-  # called-by filter (direct calls)
-  ExistsLikeFilter(
-      param         = "called-by",
-      filter_sql    = """SELECT 1
-                           FROM functions as target, functions as caller, callers
-                          WHERE %s
-                            AND callers.callerid = caller.id
-                            AND callers.targetid = target.id
-                            AND target.file_id = files.id
-                      """,
-      ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                          FROM functions
-                         WHERE functions.file_id = ?
-                           AND EXISTS (SELECT 1 FROM functions as caller, callers
-                                        WHERE %s
-                                          AND caller.id = callers.callerid
-                                          AND callers.targetid = functions.id
-                                      )
-                         ORDER BY functions.extent_start
-                      """,
-      like_name     = "caller.name",
-      qual_name     = "caller.qualname"
-  ),
+    UnionFilter([
+      # called-by filter (direct calls)
+      ExistsLikeFilter(
+          param         = "called-by",
+          filter_sql    = """SELECT 1
+                               FROM functions as target, functions as caller, callers
+                              WHERE %s
+                                AND callers.callerid = caller.id
+                                AND callers.targetid = target.id
+                                AND target.file_id = files.id
+                          """,
+          ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                              FROM functions
+                             WHERE functions.file_id = ?
+                               AND EXISTS (SELECT 1 FROM functions as caller, callers
+                                            WHERE %s
+                                              AND caller.id = callers.callerid
+                                              AND callers.targetid = functions.id
+                                          )
+                             ORDER BY functions.extent_start
+                          """,
+          like_name     = "caller.name",
+          qual_name     = "caller.qualname"
+      ),
 
-  # called-by filter (indirect calls)
-  ExistsLikeFilter(
-      param         = "called-by",
-      filter_sql    = """SELECT 1
-                           FROM functions as target, functions as caller, callers
-                          WHERE %s
-                            AND callers.callerid = caller.id
-                            AND ( EXISTS (SELECT 1 FROM targets
-                                           WHERE targets.funcid = target.id
+      # called-by filter (indirect calls)
+      ExistsLikeFilter(
+          param         = "called-by",
+          filter_sql    = """SELECT 1
+                               FROM functions as target, functions as caller, callers
+                              WHERE %s
+                                AND callers.callerid = caller.id
+                                AND ( EXISTS (SELECT 1 FROM targets
+                                               WHERE targets.funcid = target.id
+                                                 AND targets.targetid = callers.targetid
+                                             )
+                                    )
+                                AND target.file_id = files.id
+                          """,
+          ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                              FROM functions
+                             WHERE functions.file_id = ?
+                               AND EXISTS (SELECT 1 FROM functions as caller, callers
+                                            WHERE %s
+                                              AND caller.id = callers.callerid
+                                              AND EXISTS (
+                                          SELECT 1 FROM targets
+                                           WHERE targets.funcid = functions.id
                                              AND targets.targetid = callers.targetid
-                                         )
-                                )
-                            AND target.file_id = files.id
-                      """,
-      ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                          FROM functions
-                         WHERE functions.file_id = ?
-                           AND EXISTS (SELECT 1 FROM functions as caller, callers
-                                        WHERE %s
-                                          AND caller.id = callers.callerid
-                                          AND EXISTS (
-                                      SELECT 1 FROM targets
-                                       WHERE targets.funcid = functions.id
-                                         AND targets.targetid = callers.targetid
-                                              )
-                                      )
-                         ORDER BY functions.extent_start
-                      """,
-      like_name     = "caller.name",
-      qual_name     = "caller.qualname"
-  ),
-]))
+                                                  )
+                                          )
+                             ORDER BY functions.extent_start
+                          """,
+          like_name     = "caller.name",
+          qual_name     = "caller.qualname"
+      ),
+    ]),
 
-#warning filter
-filters.append(ExistsLikeFilter(
-    param         = "warning",
-    filter_sql    = """SELECT 1 FROM warnings
-                        WHERE %s
-                          AND warnings.file_id = files.id """,
-    ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
-                         FROM warnings
-                        WHERE warnings.file_id = ?
-                          AND %s
-                    """,
-    like_name     = "warnings.msg",
-    qual_name     = "warnings.msg"
-))
+    #warning filter
+    ExistsLikeFilter(
+        param         = "warning",
+        filter_sql    = """SELECT 1 FROM warnings
+                            WHERE %s
+                              AND warnings.file_id = files.id """,
+        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
+                             FROM warnings
+                            WHERE warnings.file_id = ?
+                              AND %s
+                        """,
+        like_name     = "warnings.msg",
+        qual_name     = "warnings.msg"
+    ),
 
+    #warning-opt filter
+    ExistsLikeFilter(
+        param         = "warning-opt",
+        filter_sql    = """SELECT 1 FROM warnings
+                            WHERE %s
+                              AND warnings.file_id = files.id """,
+        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
+                             FROM warnings
+                            WHERE warnings.file_id = ?
+                              AND %s
+                        """,
+        like_name     = "warnings.opt",
+        qual_name     = "warnings.opt"
+    ),
 
-#warning-opt filter
-filters.append(ExistsLikeFilter(
-    param         = "warning-opt",
-    filter_sql    = """SELECT 1 FROM warnings
-                        WHERE %s
-                          AND warnings.file_id = files.id """,
-    ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
-                         FROM warnings
-                        WHERE warnings.file_id = ?
-                          AND %s
-                    """,
-    like_name     = "warnings.opt",
-    qual_name     = "warnings.opt"
-))
+    # bases filter
+    ExistsLikeFilter(
+        param         = "bases",
+        filter_sql    = """SELECT 1 FROM types as base, impl, types
+                            WHERE %s
+                              AND impl.tbase = base.id
+                              AND impl.tderived = types.id
+                              AND base.file_id = files.id""",
+        ext_sql       = """SELECT base.extent_start, base.extent_end
+                            FROM types as base
+                           WHERE base.file_id = ?
+                             AND EXISTS (SELECT 1 FROM impl, types
+                                         WHERE impl.tbase = base.id
+                                           AND impl.tderived = types.id
+                                           AND %s
+                                        )
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+    ),
 
+    # derived filter
+    ExistsLikeFilter(
+        param         = "derived",
+        filter_sql    = """SELECT 1 FROM types as sub, impl, types
+                            WHERE %s
+                              AND impl.tbase = types.id
+                              AND impl.tderived = sub.id
+                              AND sub.file_id = files.id""",
+        ext_sql       = """SELECT sub.extent_start, sub.extent_end
+                            FROM types as sub
+                           WHERE sub.file_id = ?
+                             AND EXISTS (SELECT 1 FROM impl, types
+                                         WHERE impl.tbase = types.id
+                                           AND impl.tderived = sub.id
+                                           AND %s
+                                        )
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+    ),
 
-# bases filter
-filters.append(ExistsLikeFilter(
-    param         = "bases",
-    filter_sql    = """SELECT 1 FROM types as base, impl, types
-                        WHERE %s
-                          AND impl.tbase = base.id
-                          AND impl.tderived = types.id
-                          AND base.file_id = files.id""",
-    ext_sql       = """SELECT base.extent_start, base.extent_end
-                        FROM types as base
-                       WHERE base.file_id = ?
-                         AND EXISTS (SELECT 1 FROM impl, types
-                                     WHERE impl.tbase = base.id
-                                       AND impl.tderived = types.id
-                                       AND %s
-                                    )
-                    """,
-    like_name     = "types.name",
-    qual_name     = "types.qualname"
-))
-
-
-# derived filter
-filters.append(ExistsLikeFilter(
-    param         = "derived",
-    filter_sql    = """SELECT 1 FROM types as sub, impl, types
-                        WHERE %s
-                          AND impl.tbase = types.id
-                          AND impl.tderived = sub.id
-                          AND sub.file_id = files.id""",
-    ext_sql       = """SELECT sub.extent_start, sub.extent_end
-                        FROM types as sub
-                       WHERE sub.file_id = ?
-                         AND EXISTS (SELECT 1 FROM impl, types
-                                     WHERE impl.tbase = types.id
-                                       AND impl.tderived = sub.id
-                                       AND %s
-                                    )
-                    """,
-    like_name     = "types.name",
-    qual_name     = "types.qualname"
-))
-
-
-filters.append(UnionFilter([
-  # member filter for functions
-  ExistsLikeFilter(
-    param         = "member",
-    filter_sql    = """SELECT 1 FROM types as type, functions as mem
-                        WHERE %s
-                          AND mem.scopeid = type.id AND mem.file_id = files.id
-                    """,
-    ext_sql       = """ SELECT extent_start, extent_end
-                          FROM functions as mem WHERE mem.file_id = ?
-                                  AND EXISTS ( SELECT 1 FROM types as type
-                                                WHERE %s
-                                                  AND type.id = mem.scopeid)
-                       ORDER BY mem.extent_start
-                    """,
-    like_name     = "type.name",
-    qual_name     = "type.qualname"
-  ),
-  # member filter for types
-  ExistsLikeFilter(
-    param         = "member",
-    filter_sql    = """SELECT 1 FROM types as type, types as mem
-                        WHERE %s
-                          AND mem.scopeid = type.id AND mem.file_id = files.id
-                    """,
-    ext_sql       = """ SELECT extent_start, extent_end
-                          FROM types as mem WHERE mem.file_id = ?
-                                  AND EXISTS ( SELECT 1 FROM types as type
-                                                WHERE %s
-                                                  AND type.id = mem.scopeid)
-                       ORDER BY mem.extent_start
-                    """,
-    like_name     = "type.name",
-    qual_name     = "type.qualname"
-  ),
-  # member filter for variables
-  ExistsLikeFilter(
-    param         = "member",
-    filter_sql    = """SELECT 1 FROM types as type, variables as mem
-                        WHERE %s
-                          AND mem.scopeid = type.id AND mem.file_id = files.id
-                    """,
-    ext_sql       = """ SELECT extent_start, extent_end
-                          FROM variables as mem WHERE mem.file_id = ?
-                                  AND EXISTS ( SELECT 1 FROM types as type
-                                                WHERE %s
-                                                  AND type.id = mem.scopeid)
-                       ORDER BY mem.extent_start
-                    """,
-    like_name     = "type.name",
-    qual_name     = "type.qualname"
-  ),
-]))
+    UnionFilter([
+      # member filter for functions
+      ExistsLikeFilter(
+        param         = "member",
+        filter_sql    = """SELECT 1 FROM types as type, functions as mem
+                            WHERE %s
+                              AND mem.scopeid = type.id AND mem.file_id = files.id
+                        """,
+        ext_sql       = """ SELECT extent_start, extent_end
+                              FROM functions as mem WHERE mem.file_id = ?
+                                      AND EXISTS ( SELECT 1 FROM types as type
+                                                    WHERE %s
+                                                      AND type.id = mem.scopeid)
+                           ORDER BY mem.extent_start
+                        """,
+        like_name     = "type.name",
+        qual_name     = "type.qualname"
+      ),
+      # member filter for types
+      ExistsLikeFilter(
+        param         = "member",
+        filter_sql    = """SELECT 1 FROM types as type, types as mem
+                            WHERE %s
+                              AND mem.scopeid = type.id AND mem.file_id = files.id
+                        """,
+        ext_sql       = """ SELECT extent_start, extent_end
+                              FROM types as mem WHERE mem.file_id = ?
+                                      AND EXISTS ( SELECT 1 FROM types as type
+                                                    WHERE %s
+                                                      AND type.id = mem.scopeid)
+                           ORDER BY mem.extent_start
+                        """,
+        like_name     = "type.name",
+        qual_name     = "type.qualname"
+      ),
+      # member filter for variables
+      ExistsLikeFilter(
+        param         = "member",
+        filter_sql    = """SELECT 1 FROM types as type, variables as mem
+                            WHERE %s
+                              AND mem.scopeid = type.id AND mem.file_id = files.id
+                        """,
+        ext_sql       = """ SELECT extent_start, extent_end
+                              FROM variables as mem WHERE mem.file_id = ?
+                                      AND EXISTS ( SELECT 1 FROM types as type
+                                                    WHERE %s
+                                                      AND type.id = mem.scopeid)
+                           ORDER BY mem.extent_start
+                        """,
+        like_name     = "type.name",
+        qual_name     = "type.qualname"
+      ),
+    ])
+]

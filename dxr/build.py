@@ -162,7 +162,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
 
 
 def index_files(tree, conn):
-    """ Index all files from the source directory """
+    """Build the ``files`` table, the trigram index, and the HTML folder listings."""
     print "Indexing files from the '%s' tree" % tree.name
     started = datetime.now()
     cur = conn.cursor()

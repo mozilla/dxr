@@ -16,14 +16,21 @@ CONF = _config
 MOUNT_POINT = '/home/vagrant/dxr'
 
 Vagrant::Config.run do |config|
-    config.vm.box = "precise32"
-    config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+    config.vm.box = "precise64"
+    config.vm.box_url = "http://files.vagrantup.com/precise64.box"
     config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
 
-    # Add to /etc/hosts: 33.33.33.77 dxr
-    config.vm.network :hostonly, "33.33.33.77"
+    is_jenkins = ENV['USER'] == 'jenkins'
 
-    config.vm.forward_port 80, 8000
+    if not is_jenkins
+        # Don't share these resources when on Jenkins. We want to be able to
+        # parallelize jobs.
+
+        # Add to /etc/hosts: 33.33.33.77 dxr
+        config.vm.network :hostonly, "33.33.33.77"
+
+        config.vm.forward_port 80, 8000
+    end
 
     # Enable symlinks, which trilite uses during build:
     config.vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
@@ -33,7 +40,7 @@ Vagrant::Config.run do |config|
     end
 
     # Don't mount shared folder over NFS on Jenkins; NFS doesn't work there yet.
-    if ENV['USER'] == 'jenkins' or CONF['nfs'] == false or RUBY_PLATFORM =~ /mswin(32|64)/
+    if is_jenkins or CONF['nfs'] == false or RUBY_PLATFORM =~ /mswin(32|64)/
         config.vm.share_folder("v-root", MOUNT_POINT, ".")
     else
         config.vm.share_folder("v-root", MOUNT_POINT, ".", :nfs => true)
