@@ -51,7 +51,10 @@ class Config(object):
         # Set template parameters (using new parser to avoid defaults)
         tmp_cfg = ConfigParser.ConfigParser()
         tmp_cfg.read(configfile)
-        self.template_parameters = dict(tmp_cfg.items('Template'))
+        if tmp_cfg.has_section('Template'):
+            self.template_parameters = dict(tmp_cfg.items('Template'))
+        else:
+            self.template_parameters = dict()
 
         # Read all plugin_ keys
         for key, value in tmp_cfg.items('DXR'):
