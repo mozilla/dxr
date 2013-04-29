@@ -8,6 +8,3 @@ nb_jobs             = 4
 source_folder       = PWD/code
 object_folder       = PWD/code
 build_command       = make clean; make -j $jobs
-
-[Template]
-foot_text           = 

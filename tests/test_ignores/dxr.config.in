@@ -9,6 +9,3 @@ source_folder = PWD/code
 object_folder = PWD/code
 build_command = make clean; make -j $jobs
 ignore_patterns = hello.h hello hello2
-
-[Template]
-foot_text = 
