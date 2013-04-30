@@ -1,5 +1,9 @@
+from codecs import getdecoder
+import cgi
 from datetime import datetime
 from fnmatch import fnmatchcase
+from itertools import chain, izip
+import json
 import os
 from os import stat
 from os.path import dirname
@@ -7,6 +11,8 @@ from pkg_resources import require
 import shutil
 import subprocess
 import sys
+
+from concurrent.futures import as_completed, ProcessPoolExecutor
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
@@ -81,7 +87,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # Build trees requested
     for tree in trees:
         # Note starting time
-        started = datetime.now()
+        start_time = datetime.now()
 
         # Create folders (delete if exists)
         ensure_folder(tree.target_folder, True) # <config.target_folder>/<tree.name>
@@ -123,7 +129,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
         conn.close()
 
         # Save the tree finish time
-        delta = datetime.now() - started
+        delta = datetime.now() - start_time
         print "(finished building '%s' in %s)" % (tree.name, delta)
 
     # Print a neat summary
@@ -166,7 +172,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
 def index_files(tree, conn):
     """Build the ``files`` table, the trigram index, and the HTML folder listings."""
     print "Indexing files from the '%s' tree" % tree.name
-    started = datetime.now()
+    start_time = datetime.now()
     cur = conn.cursor()
     # Walk the directory tree top-down, this allows us to modify folders to
     # exclude folders matching an ignore_pattern
@@ -226,7 +232,7 @@ def index_files(tree, conn):
     conn.commit()
 
     # Print time
-    print "(finished in %s)" % (datetime.now() - started)
+    print "(finished in %s)" % (datetime.now() - start_time)
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
@@ -364,83 +370,310 @@ def finalize_database(conn):
     conn.commit()
 
 
+def _sliced_range_bounds(a, b, slice_size):
+    """Divide ``range(a, b)`` into slices of size ``slice_size``, and
+    return the min and max values of each slice."""
+    this_min = a
+    while this_min == a or this_max < b:
+        this_max = min(b, this_min + slice_size - 1)
+        yield this_min, this_max
+        this_min = this_max + 1
+
+
 def run_html_workers(tree, conn):
-    """ Build HTML for a tree """
-    print "Building HTML for the '%s' tree" % tree.name
+    """Farm out the building of HTML to a pool of processes."""
+    print "Building HTML for the '%s' tree." % tree.name
 
-    # Let's find the number of rows, this is the maximum rowid, assume we didn't
-    # delete files, this assumption should hold, but even if we delete files, it's
-    # fairly like that this partition the work reasonably evenly.
-    sql = "SELECT files.ID FROM files ORDER BY files.ID DESC LIMIT 1"
-    row = conn.execute(sql).fetchone()
-    file_count = row[0]
+    max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
 
-    # Make some slices
-    slices = []
-    # Don't make slices bigger than 500
-    step = max(min(500, int(file_count) / int(tree.config.nb_jobs)), 1)
-    start = None  # None, is not --start argument
-    for end in xrange(step, file_count, step):
-        slices.append((start, end))
-        start = end + 1
-    slices.append((start, None))  # None, means omit --end argument
+    with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
+        futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
+                   (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
+        for num_done, future in enumerate(as_completed(futures), 1):
+            print '%s of %s HTML workers done.' % (num_done, len(futures))
+            try:
+                start, end = future.result()  # raises exc if failed
+            except Exception:
+                print 'Worker working on files %s-%s failed.' % (start, end)
+                # Abort everything if anything fails:
+                raise  # exits with non-zero
 
-    # Map from pid to workers
-    workers = {}
-    next_id = 1   # unique ids for workers, to associate log files
 
-    # While there's slices and workers, we can manage them
-    while slices or workers:
-        # Create workers while we have slots available
-        while len(workers) < int(tree.config.nb_jobs) and slices:
-            # Get slice of work
-            start, end = slices.pop()
-            # Setup arguments
-            args = ['--file', tree.config.configfile, '--tree', tree.name]
-            if start is not None:
-                args += ['--start', str(start)]
-            if end is not None:
-                args += ['--end', str(end)]
-            # Open log file
-            log = dxr.utils.open_log(tree, "dxr-worker-%s.log" % next_id)
-            # Create a worker
-            print " - Starting worker %i" % next_id
+def _build_html_for_file_ids(tree, start, end):
+    """Write HTML files for file IDs from ``start`` to ``end``. Return
+    ``(start, end)``.
 
-            # TODO: Switch to multiprocessing.
-            cmd = [sys.executable, os.path.join(dirname(__file__), 'dxr-worker.py')] + args
+    This is the top-level function of an HTML worker process. Log progress to a
+    file named "build-html-<start>-<end>.log".
 
-            # Write command to log
-            log.write(" ".join(cmd) + "\n")
-            log.flush()
-            worker = subprocess.Popen(
-                cmd,
-                stdout = log,
-                stderr = log
-            )
-            # Add worker
-            workers[worker.pid] = (worker, log, datetime.now(), next_id)
-            next_id += 1
+    """
+    # We might as well have this write its log directly rather than returning
+    # them to the master process, since it's already writing the built HTML
+    # directly, since that probably yields better parallelism.
 
-        # Wait for a subprocess to terminate
-        pid, exit = os.waitpid(0, 0)
-        # Find worker that terminated
-        worker, log, started, wid = workers[pid]
-        print " - Worker %i finished in %s" % (wid, datetime.now() - started)
-        # Remove from workers
-        del workers[pid]
-        # Close log file
-        log.close()
-        # Crash and error if we have problems
-        if exit != 0:
-            print >> sys.stderr, "dxr-worker.py subprocess failed!"
-            print >> sys.stderr, "    | Log from %s:" % log.name
-            # Print log for easy debugging
-            with open(log.name, 'r') as log:
-                for line in log:
-                    print >> sys.stderr, "    | " + line.strip('\n')
-            # Kill co-workers
-            for worker, log, started, wid in workers.values():
-                worker.kill()
-                log.close()
-            # Exit, we're done here
-            sys.exit(1)
+    conn = connect_database(tree)
+    # TODO: Replace this ad hoc logging with the logging module (or something
+    # more humane) so we can get some automatic timestamps. If we get
+    # timestamps spit out in the parent process, we don't need any of the
+    # timing or counting code here.
+    with open_log(tree, 'build-html-%s-%s.log' % (start, end)) as log:
+        # Load htmlifier plugins:
+        plugins = load_htmlifiers(tree)
+        for plugin in plugins:
+            plugin.load(tree, conn)
+
+        start_time = datetime.now()
+
+        # Fetch and htmlify each document:
+        for num_files, (path, icon, text) in enumerate(
+                conn.execute("""
+                             SELECT path, icon, trg_index.text
+                             FROM trg_index, files
+                             WHERE trg_index.id = files.id
+                             AND trg_index.id >= ?
+                             AND trg_index.id <= ?
+                             """,
+                             [start, end]),
+                1):
+            dst_path = os.path.join(tree.target_folder, path + '.html')
+            log.write('Starting %s.\n' % path)
+            htmlify(tree, conn, icon, path, text, dst_path, plugins)
+
+        conn.commit()
+        conn.close()
+
+        # Write time information:
+        time = datetime.now() - start_time
+        log.write('Finished %s files in %s.\n' % (num_files, time))
+    return start, end
+
+
+def htmlify(tree, conn, icon, path, text, dst_path, plugins):
+    """ Build HTML for path, text save it to dst_path """
+    # Create htmlifiers for this source
+    htmlifiers = []
+    for plugin in plugins:
+        htmlifier = plugin.htmlify(path, text)
+        if htmlifier:
+            htmlifiers.append(htmlifier)
+    # Load template
+    env = load_template_env(tree.config.temp_folder,
+                            tree.config.template_folder)
+    tmpl = env.get_template('file.html')
+    arguments = {
+        # Set common template variables
+        'wwwroot':        tree.config.wwwroot,
+        'tree':           tree.name,
+        'trees':          [t.name for t in tree.config.trees],
+        'config':         tree.config.template_parameters,
+        'generated_date': tree.config.generated_date,
+        # Set file template variables
+        'icon':           icon,
+        'path':           path,
+        'name':           os.path.basename(path),
+        'lines':          build_lines(tree, conn, path, text, htmlifiers),
+        'sections':       build_sections(tree, conn, path, text, htmlifiers)
+    }
+    # Fill-in variables and dump to file with utf-8 encoding
+    tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
+
+
+def build_lines(tree, conn, path, text, htmlifiers):
+    """ Build lines for template """
+    # Empty files, have no lines
+    if len(text) == 0:
+        return []
+
+    # Get a decoder
+    decoder = getdecoder("utf-8")
+    # Let's defined a simple way to fetch and decode a slice of source
+    def src(start, end = None):
+        if isinstance(start, tuple):
+            start, end = start[:2]
+        return decoder(text[start:end], errors = 'replace')[0]
+    # We shall decode on-the-fly because we need ascii offsets to do the rendering
+    # of regions correctly. But before we stuff anything into the template engine
+    # we must ensure that it's correct utf-8 encoded string
+    # Yes, we just have to hope that plugin designer don't give us a region that
+    # splits a unicode character in two. But what else can we do?
+    # (Unless we want to make plugins deal with this mess)
+
+    # Build a line map over the source (without exploding it all over the place!)
+    line_map = [0]
+    offset = text.find("\n", 0) + 1
+    while offset > 0:
+        line_map.append(offset)
+        offset = text.find("\n", offset) + 1
+    # If we don't have a line ending at the end improvise one
+    if not text.endswith("\n"):
+        line_map.append(len(text))
+
+    # So, we have a minor issue with writing out the main body. Some of our
+    # information is (line, col) information and others is file offset. Also,
+    # we don't necessarily have the information in sorted order.
+
+    regions = chain(*(htmlifier.regions()     for htmlifier in htmlifiers))
+    refs    = chain(*(htmlifier.refs()        for htmlifier in htmlifiers))
+    notes   = chain(*(htmlifier.annotations() for htmlifier in htmlifiers))
+
+    # Quickly sort the line annotations in reverse order
+    # so we can view it as a stack we just pop annotations off as we generate lines
+    notes   = sorted(notes, reverse = True)
+
+    # start and end, may be either a number (extent) or a tuple of (line, col)
+    # we shall normalize this, and sort according to extent
+    # This is the fastest way to apply everything...
+    def normalize(region):
+        start, end, data = region
+        if end < start:
+            # Regions like this happens when you implement your own operator, ie. &=
+            # apparently the cxx-lang plugin doesn't provide and end for these
+            # operators. Why don't know, also I don't know if it can supply this...
+            # It's a ref regions...
+            # TODO Make a NaziHtmlifierConsumer to complain about stuff like this
+            return (start, start + 1, data)
+        if isinstance(start, tuple):
+            line1, col1 = start
+            line2, col2 = end
+            start = line_map[line1 - 1] + col1 - 1
+            end   = line_map[line2 - 1] + col2 - 1
+            return start, end, data
+        return region
+    # Add sanitizer to remove regions that have None as offsets
+    # They are just stupid and shouldn't be there in the first place!
+    sane    = lambda (start, end, data): start is not None and end is not None
+    regions = (normalize(region) for region in regions if sane(region))
+    refs    = (normalize(region) for region in refs    if sane(region))
+    # That's it we've normalized this mess, so let's just sort it too
+    order   = lambda (start, end, data): (- start, end, data)
+    regions = sorted(regions, key = order)
+    refs    = sorted(refs,    key = order)
+    # Notice that we negate start, larges start first and ties resolved with
+    # smallest end. This way be can pop values of the regions in the order
+    # they occur...
+
+    # Now we create two stacks to keep track of open regions
+    regions_stack = []
+    refs_stack    = []
+
+    # Open/close refs, quite simple
+    def open_ref(ref):
+        start, end, menu = ref
+        # JSON dump the menu and escape it for quotes, etc
+        menu = cgi.escape(json.dumps(menu), True)
+        return "<a data-menu=\"%s\">" % menu
+    def close_ref(ref):
+        return "</a>"
+
+    # Functions for opening the stack of syntax regions
+    # this essential amounts to a span with a set of classes
+    def open_regions():
+        if len(regions_stack) > 0:
+            classes = (data for start, end, data in regions_stack)
+            return "<span class=\"%s\">" % " ".join(classes)
+        return ""
+    def close_regions():
+        if len(regions_stack) > 0:
+            return "</span>"
+        return ""
+
+    lines          = []
+    offset         = 0
+    line_number    = 0
+    while offset < len(text):
+        # Start a new line
+        line_number += 1
+        line = ""
+        # Open all refs on the stack
+        for ref in refs_stack:
+            line += open_ref(ref)
+        # We open regions after refs, because they can be opened and closed
+        # without any effect, ie. inserting <b></b> has no effect...
+        line += open_regions()
+
+        # Append to line while we're still one it
+        while offset < line_map[line_number]:
+            # Find next offset as smallest candidate offset
+            # Notice that we never go longer than to end of line
+            next = line_map[line_number]
+            # Next offset can be the next start of something
+            if len(regions) > 0:
+                next = min(next, regions[-1][0])
+            if len(refs) > 0:
+                next = min(next, refs[-1][0])
+            # Next offset can be the end of something we've opened
+            # notice, stack structure and sorting ensure that we only need test top
+            if len(regions_stack) > 0:
+                next = min(next, regions_stack[-1][1])
+            if len(refs_stack) > 0:
+                next = min(next, refs_stack[-1][1])
+
+            # Output the source text from last offset to next
+            if next < line_map[line_number]:
+                line += cgi.escape(src(offset, next))
+            else:
+                # Throw away newline if at end of line
+                line += cgi.escape(src(offset, next - 1))
+            offset = next
+
+            # Close regions, modify stack and open them again
+            # this makes sense even if there's not change to the stack
+            # as we can't have syntax tags crossing refs tags
+            line += close_regions()
+            while len(regions_stack) > 0 and regions_stack[-1][1] <= next:
+                regions_stack.pop()
+            while len(regions) > 0 and regions[-1][0] <= next:
+                region = regions.pop()
+                # Search for the right place in the stack to insert this
+                # The stack is ordered s.t. we have longest end at the bottom
+                # (with respect to pop())
+                for i in xrange(0, len(regions_stack) + 1):
+                    if len(regions_stack) == i or regions_stack[i][1] < region[1]:
+                        break
+                regions_stack.insert(i, region)
+            # Open regions, if not at end of line
+            if next < line_map[line_number]:
+                line += open_regions()
+
+            # Close and pop refs that end here
+            while len(refs_stack) > 0 and refs_stack[-1][1] <= next:
+                line += close_ref(refs_stack.pop())
+            # Close remaining if at end of line
+            if next < line_map[line_number]:
+                for ref in reversed(refs_stack):
+                    line += close_ref(ref)
+            # Open and pop/push refs that start here
+            while len(refs) > 0 and refs[-1][0] <= next:
+                ref = refs.pop()
+                # If the ref doesn't end before the top of the stack, we have
+                # overlapping regions, this isn't good, so we discard this ref
+                if len(refs_stack) > 0 and refs_stack[-1][1] < ref[1]:
+                    stack_src = text[refs_stack[-1][0]:refs_stack[-1][1]]
+                    print >> sys.stderr, "Error: Ref region overlap"
+                    print >> sys.stderr, "   > '%s' %r" % (text[ref[0]:ref[1]], ref)
+                    print >> sys.stderr, "   > '%s' %r" % (stack_src, refs_stack[-1])
+                    print >> sys.stderr, "   > IN %s" % path
+                    continue  # Okay so skip it
+                # Open ref, if not at end of line
+                if next < line_map[line_number]:
+                    line += open_ref(ref)
+                refs_stack.append(ref)
+
+        # Okay let's pop line annotations of the notes stack
+        current_notes = []
+        while len(notes) > 0 and notes[-1][0] == line_number:
+            current_notes.append(notes.pop()[1])
+
+        lines.append((line_number, line, current_notes))
+    # Return all lines of the file, as we're done
+    return lines
+
+
+def build_sections(tree, conn, path, text, htmlifiers):
+    """ Build navigation sections for template """
+    # Chain links from different htmlifiers
+    links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
+    # Sort by importance (resolve tries by section name)
+    links = sorted(links, key = lambda section: (section[0], section[1]))
+    # Return list of section and items (without importance)
+    return [(section, list(items)) for importance, section, items in links]
