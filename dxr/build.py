@@ -9,11 +9,10 @@ import subprocess
 import sys
 
 from dxr.config import Config
-from dxr.utils import load_template_env
-import dxr.utils
-import dxr.plugins
+from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
+from dxr.utils import load_template_env, connect_database, open_log
 
 
 def build_instance(config_path, nb_jobs=None, tree=None):
@@ -98,7 +97,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
             ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), True)
 
         # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
-        conn = dxr.utils.connect_database(tree)
+        conn = connect_database(tree)
 
         # Create database tables
         create_tables(tree, conn)
@@ -131,7 +130,11 @@ def build_instance(config_path, nb_jobs=None, tree=None):
 
 
 def ensure_folder(folder, clean=False):
-    """ Ensures the existence of a folder, if clean is true also ensures that it's empty"""
+    """Ensure the existence of a folder.
+
+    :arg clean: Whether to ensure that the folder is empty
+
+    """
     if clean and os.path.isdir(folder):
         shutil.rmtree(folder, False)
     if not os.path.isdir(folder):
@@ -294,9 +297,9 @@ def _fill_and_write_template(jinja_env, template_name, out_path, vars):
 
 
 def build_tree(tree, conn):
-    """ Build the tree, pre_process, build and post_process """
+    """Build the tree, pre_process, build and post_process."""
     # Load indexers
-    indexers = dxr.plugins.load_indexers(tree)
+    indexers = load_indexers(tree)
 
     # Get system environment variables
     environ = {}
@@ -313,21 +316,17 @@ def build_tree(tree, conn):
     environ["build_folder"] = tree.object_folder
 
     # Open log file
-    log = dxr.utils.open_log(tree, "build.log")
-
-    # Call the make command
-    print "Building the '%s' tree" % tree.name
-    r = subprocess.call(
-        tree.build_command.replace("$jobs", tree.config.nb_jobs),
-        shell   = True,
-        stdout  = log,
-        stderr  = log,
-        env     = environ,
-        cwd     = tree.object_folder
-    )
-
-    # Close log file
-    log.close()
+    with open_log(tree, "build.log") as log:
+        # Call the make command
+        print "Building the '%s' tree" % tree.name
+        r = subprocess.call(
+            tree.build_command.replace("$jobs", tree.config.nb_jobs),
+            shell   = True,
+            stdout  = log,
+            stderr  = log,
+            env     = environ,
+            cwd     = tree.object_folder
+        )
 
     # Abort if build failed!
     if r != 0:
@@ -343,7 +342,7 @@ def build_tree(tree, conn):
 
 
 def finalize_database(conn):
-    """ Finalize the database """
+    """Finalize the database."""
     print "Finalize database:"
 
     print " - Build database statistics for query optimization"
