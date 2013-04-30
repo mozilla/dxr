@@ -135,7 +135,7 @@ function findPosLeft(obj) {
 /** Initialize search tips */
 function init_tip(){
   // Parse querystring for from=
-  var query = null
+  var query = null;
   var items = window.location.search.substr(1).split("&");
   for(var i = 0; i < items.length; i++){
     var keyvalue = items[i].split("=");
