@@ -1,1 +1,1 @@
-// Just a .h file to test find-by-extension
+// Just a .c file to test find-by-extension

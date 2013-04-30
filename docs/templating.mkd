@@ -112,7 +112,7 @@ File Template Variables
 All instances of this template are rendered statically when the index is generated.
 Please note that the template should have Javascript support for handling the
 querystring `?q={{query}}` where users should be offered to see search results at
-`{{wwwroot}}/search?q?{{query}}&tree={{tree}}&force`, as `?q={{query}}`
+`{{ wwwroot }}/{{ tree }}/search?q={{ query }}&force`, as `?q={{ query }}`
 indicates that the user was redirected to a direct result.
 Note: the `query` variable is **not** available in the this template, and must
 be parsed from querystring using Javascript.

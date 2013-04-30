@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}{{name}} - DXR{% endblock %}
+{% block title %}{{ name }} - DXR{% endblock %}
 
 {% set state_eof = True %}
 
@@ -8,8 +8,8 @@
 <table class="folder-content">
   <tr><th style="padding-left: 24px;">Name</th><th>Modified</th><th>Size</th></tr>
   <tr>
-    <td><a href="{{wwwroot}}/{{tree}}/{{path}}/.."
-           style="background-image: url('{{wwwroot}}/static/icons/folder.png')">
+    <td><a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}/.."
+           style="background-image: url('{{ wwwroot }}/static/icons/folder.png')">
            Parent directory</a></td>
     <td></td>
     <td>-</td>
@@ -17,18 +17,18 @@
 {% for icon, name, modified, relative_url in folders %}
   <tr>
     <td><a href="{{ wwwroot }}/{{ relative_url }}"
-           style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')">
-           {{name}}/</a></td>
-    <td>{{modified.strftime("%Y-%b-%d %H:%m")}}</td>
+           style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png')">
+           {{ name }}/</a></td>
+    <td>{{ modified.strftime("%Y-%b-%d %H:%m") }}</td>
     <td>-</td>
   </tr>
 {% endfor %}
 {% for icon, name, modified, size, relative_url in files %}
   <tr>
     <td><a href="{{ wwwroot }}/{{ relative_url }}"
-           style="background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')">
-           {{name}}</a></td>
-    <td>{{modified.strftime("%Y-%b-%d %H:%m")}}</td>
+           style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png')">
+           {{ name }}</a></td>
+    <td>{{ modified.strftime("%Y-%b-%d %H:%m") }}</td>
     <td>{{ size|filesizeformat }}</td>
   </tr>
 {% endfor %}

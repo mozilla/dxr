@@ -16,7 +16,7 @@ def load(tree, conn):
     # Nothing to do here
     pass
 
-class UrlHtmlifier:
+class UrlHtmlifier(object):
     def __init__(self, text):
         self.text = text
     

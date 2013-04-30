@@ -4,8 +4,10 @@ import fnmatch
 import clang.tokenizers as tokenizers
 import urllib, re
 
+from dxr.utils import search_url
 
-class ClangHtmlifier:
+
+class ClangHtmlifier(object):
     """ Pygmentizer add syntax regions for file """
     def __init__(self, tree, conn, path, text, file_id):
         self.tree    = tree
@@ -180,7 +182,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to variables
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           variables.qualname,
@@ -194,7 +196,7 @@ class ClangHtmlifier:
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Add references to functions
+        # Add references to macros
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           macros.name,
@@ -230,7 +232,7 @@ class ClangHtmlifier:
                     path  = rows[0][0]
                     start = token.start + match.start(1)
                     end   = token.start + match.end(1)
-                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
+                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
                     menu  = [{
                         'text':   "Jump to file",
                         'title':  "Jump to what is likely included there",
@@ -251,9 +253,9 @@ class ClangHtmlifier:
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
-        url = self.tree.config.wwwroot + "/search?tree=" + self.tree.name
-        url += "&q=" + urllib.quote(query)
-        return url
+        return search_url(self.tree.config.wwwroot,
+                          self.tree.name,
+                          query)
 
     def quote(self, qualname):
         """ Wrap qualname in quotes if it contains spaces """
@@ -264,7 +266,7 @@ class ClangHtmlifier:
     def add_jump_definition(self, menu, path, line):
         """ Add a jump to definition to the menu """
         # Definition url
-        url = self.tree.config.wwwroot + '/' + self.tree.name + '/' + path
+        url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
         url += "#l%s" % line
         menu.insert(0, { 
             'text':   "Jump to definition",
@@ -350,7 +352,7 @@ class ClangHtmlifier:
         # Things we can do with qualified name
         menu.append({
             'text':   "Find callers",
-            'title':  "Find functions that calls this function",
+            'title':  "Find functions that call this function",
             'href':   self.search("+callers:%s" % self.quote(qualname)),
             'icon':   'method'
         })
@@ -362,7 +364,7 @@ class ClangHtmlifier:
         })
         menu.append({
             'text':   "Find references",
-            'title':  "Find references of this function",
+            'title':  "Find references to this function",
             'href':   self.search("+function-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
         })

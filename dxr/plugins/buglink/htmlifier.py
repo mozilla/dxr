@@ -25,7 +25,7 @@ def load(tree, conn):
         print >> sys.stderr, "buglink plugin needs plugin_buglink_name configuration key"
         sys.exit(1)
 
-class BugLinkHtmlifier:
+class BugLinkHtmlifier(object):
     def __init__(self, text):
         self.text = text
 

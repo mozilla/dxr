@@ -1,8 +1,8 @@
 DXR, A Code Search and Cross-Reference Tool
 ===========================================
 
-Introduction:
--------------
+Introduction
+------------
 DXR is a source code cross-reference tool that uses static analysis data
 collected by instrumented compilers. DXR was created in order to build on
 tools like LXR and MXR. DXR runs only on Linux for the moment.
@@ -18,8 +18,46 @@ to deploy and/or develop DXR.
 
 Quick Start
 -----------
-In case you would like try DXR on a HelloWorld-size project, one is located in
-`tests/test_basic`. First, read and install dependencies from
+To try out DXR on a HelloWorld-size project...
+
+    git clone --recursive git://github.com/mozilla/dxr.git
+    cd dxr  # (the top level of the repository, not the dxr folder within it)
+
+    # If you want to customize VM configuration for your environment, run the
+    # line below, and change the settings you need, e.g. turning off NFS:
+    cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
+
+    vagrant up
+    vagrant ssh
+
+On the VM...
+
+    cd ~/dxr
+    make
+    cd ~/dxr/tests/test_basic
+    make
+    dxr-serve.py target
+
+Then, on your host box, surf to http://33.33.33.77:8000/, and poke around to
+your heart's content. You may have to substitute the IP address of your Vagrant
+machine.
+
+
+Troubleshooting
+---------------
+If, after trying a search, you see the error...
+
+    Server Error
+    .....
+    Database error: no such module: trilite
+
+SSH into the VM and, run `ldconfig` as root to sort out the shared library
+linking problem. Then restart `dxr-serve.py`, and all should work as expected.
+
+
+Installing on a Real Machine
+----------------------------
+To install DXR on a machine of your choice, install the dependencies in
 `docs/deployment.mkd`. Then, install the `dxr` Python package, either by
 running `python2.6 setup.py develop` (if you want to hack on DXR itself) or
 `python2.6 setup.py install`.
@@ -33,8 +71,8 @@ If you'd like to install it as non-root (recommended), use virtualenv:
     python setup.py develop         # Magic path munging will make this the
                                     # copy of Python in the virtualenv.
 
-Finally, run `make` from `tests/test_basic` to build the index. The `makefile`
-contains instruction for launching the test server as well.
+Finally, run `make` from `tests/test_basic` to build a sample index and
+`dxr-serve.py tests/test_basic/target` to start the server.
 
 
 Things To Do

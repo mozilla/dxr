@@ -15,7 +15,7 @@ DXR supports two kinds of tests:
    instance manually for troubleshooting, set this to `False`.
 
 2. A heavier sort of test which consists of a full DXR instance on disk.
-   `ignore-test` is an example. Within these instances are one or more Python
+   `test_ignores` is an example. Within these instances are one or more Python
    files containing subclasses of `DxrInstanceTestCase` which express the
    actual tests. These instances can be built like any other using
    `dxr-build.py`, in case you want to do manual exploration.

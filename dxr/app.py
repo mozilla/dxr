@@ -2,12 +2,14 @@ import os.path
 from os.path import isdir
 from sqlite3 import OperationalError
 from time import time
+from urllib import quote_plus
 
-from flask import (Blueprint, Flask, send_from_directory, current_app, escape,
+from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template)
 
-from dxr.query import Query, direct_result, fetch_results
+from dxr.query import Query
 from dxr.server_utils import connect_db
+from dxr.utils import non_negative_int, search_url
 
 
 # Look in the 'dxr' package for static files, templates, etc.:
@@ -37,124 +39,112 @@ def index():
     return send_file(current_app.open_instance_resource('trees/index.html'))
 
 
-@dxr_blueprint.route('/search')
-def search():
+@dxr_blueprint.route('/<tree>/search')
+def search(tree):
     """Search by regex, caller, superclass, or whatever."""
-    # TODO: This ugly mess is marring the rest of this file. Rewrite it.
-
-    # Load query parameters
+    # TODO: This function still does too much.
     querystring = request.values
 
-    # Get output format
-    output_format = querystring.get("format", "html")
-    if output_format not in ("html", "json"):
-        output_format = "html"
+    offset = non_negative_int(querystring.get('offset'), 0)
+    limit = non_negative_int(querystring.get('limit'), 100)
 
-    # Decide if we can redirect
-    can_redirect = querystring.get("redirect", "true") == "true"
-
-    # Find the offset and limit
-    # TODO Handle parsing errors that could occur here
-    offset = int(querystring.get("offset", 0))
-    limit = int(querystring.get("limit", 100))
-
-    # Get and validate tree
-    tree = querystring.get('tree')
     config = current_app.config
-    if tree not in config['TREES']:
-        # Arguments for the template
-        arguments = {
-            # Common Template Variables
-            "wwwroot": config['WWW_ROOT'],
-            "tree": config['TREES'][0],
-            "trees": config['TREES'],
-            "generated_date": config['GENERATED_DATE'],
-            "config": config['TEMPLATE_PARAMETERS'],
-            # Error template Variables
-            "error": "Tree '%s' is not a valid tree." % tree
-        }
-        template = "error.html"
-    else:
-        # Parse the search query
-        qtext = querystring.get("q", "").decode('utf-8')
-        q = Query(qtext)
+
+    # Arguments for the template:
+    arguments = {
+        # Common template variables
+        'wwwroot': config['WWW_ROOT'],
+        'tree': config['TREES'][0],
+        'trees': config['TREES'],
+        'config': config['TEMPLATE_PARAMETERS'],
+        'generated_date': config['GENERATED_DATE']}
+
+    error = warning = ''
+    status_code = None
+
+    if tree in config['TREES']:
+        arguments['tree'] = tree
+
         # Connect to database
         conn = connect_db(tree, current_app.instance_path)
-        # Arguments for the template
-        arguments = {
-            # Common Template Variables
-            "wwwroot": config['WWW_ROOT'],
-            "tree": tree,
-            "trees": config['TREES'],
-            "config": config['TEMPLATE_PARAMETERS'],
-            "generated_date": config['GENERATED_DATE']
-        }
         if conn:
-            result = None
-            if can_redirect:
-                result = direct_result(conn, q)
-            if result:
-                path, line = result
-                # TODO: Does this escape qtext properly?
-                return redirect('%s/%s/%s?from=%s#l%i' %
-                                (config['WWW_ROOT'], tree, path, qtext, line))
-            # Okay let's try to make search results
-            template = "search.html"
-            # Catching any errors from sqlite, typically, regexp errors
-            error = None
+            # Parse the search query
+            qtext = querystring.get('q', '')
+            q = Query(conn, qtext, should_explain='explain' in querystring)
+
+            # Try for a direct result:
+            if querystring.get('redirect') == 'true':
+                result = q.direct_result()
+                if result:
+                    path, line = result
+                    # TODO: Does this escape qtext properly?
+                    return redirect(
+                        '%s/%s/source/%s?from=%s#l%i' %
+                        (config['WWW_ROOT'], tree, path, qtext, line))
+
+            # Return multiple results:
+            template = 'search.html'
             start = time()
             try:
-                results = list(fetch_results(
-                    conn, q,
-                    offset, limit,
-                    querystring.has_key("explain")
-                ))
-            except OperationalError, e:
-                if e.message.startswith("REGEXP:"):
-                    arguments["error"] = e.message[7:]
+                results = list(q.results(offset, limit))
+            except OperationalError as e:
+                if e.message.startswith('REGEXP:'):
+                    # Malformed regex
+                    warning = e.message[7:]
                     results = []
-                elif e.message.startswith("QUERY:"):
-                    arguments["error"] = e.message[6:]
+                elif e.message.startswith('QUERY:'):
+                    warning = e.message[6:]
                     results = []
                 else:
-                    arguments["error"] = "Database error '%s'" % e.message
-                    template = "error.html"
-            if template == "search.html":
-                # Search Template Variables
-                arguments["query"] = escape(qtext)
-                arguments["results"] = results
-                arguments["offset"] = offset
-                arguments["limit"] = limit
-                arguments["time"] = time() - start
+                    error = 'Database error: %s' % e.message
+            if not error:
+                # Search template variables:
+                arguments['query'] = qtext
+                arguments['search_url'] = search_url(arguments['wwwroot'],
+                                                     arguments['tree'],
+                                                     qtext,
+                                                     redirect=False)
+                arguments['results'] = results
+                arguments['offset'] = offset
+                arguments['limit'] = limit
+                arguments['time'] = time() - start
         else:
-            arguments["error"] = "Failed to establish database connection."
-            template = "error.html"
+            error = 'Failed to establish database connection.'
+    else:
+        error = "Tree '%s' is not a valid tree." % tree
+        status_code = 404
 
-    # If json is specified output as json
-    if output_format == "json":
-        #TODO Return 503 if template == "error.html"
+    if warning or error:
+        arguments['error'] = error or warning
+
+    if querystring.get('format') == 'json':
+        if error:
+            # Return a non-OK code so the live search doesn't try to replace
+            # the results with our empty ones:
+            return jsonify(arguments), status_code or 500
+
         # Tuples are encoded as lists in JSON, and these are not real
         # easy to unpack or read in Javascript. So for ease of use, we
         # convert to dictionaries before returning the json results.
-        # If further discrepancies are introduced please document them in
-        # templating.mkd
-        arguments["results"] = [
-            {
-                "icon": icon,
-                "path": path,
-                "lines": [{"line_number": nb, "line": l} for nb, l in lines]
-            } for icon, path, lines in arguments["results"]
-        ]
+        # If further discrepancies are introduced, please document them in
+        # templating.mkd.
+        arguments['results'] = [
+            {'icon': icon,
+             'path': path,
+             'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
+                for icon, path, lines in arguments['results']]
         return jsonify(arguments)
 
-    # Get search template and dump it to stdout
-    return render_template(template, **arguments)
+    if error:
+        return render_template('error.html', **arguments), status_code or 500
+    else:
+        return render_template('search.html', **arguments)
 
 
-@dxr_blueprint.route('/<path:tree_and_path>')
-def browse(tree_and_path):
+@dxr_blueprint.route('/<tree>/source/')
+@dxr_blueprint.route('/<tree>/source/<path:path>')
+def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees."""
-    tree, _, path = tree_and_path.partition('/')
     tree_folder = os.path.join(current_app.instance_path, 'trees', tree)
 
     if isdir(os.path.join(tree_folder, path)):

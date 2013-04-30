@@ -75,7 +75,7 @@ function init_menu(){
         icon:   'search', 
         text:   "Search for \"" + htmlEntities(word) + "\"",
         title:  "Search for documents with the substring \"" + htmlEntities(word) + "\"", 
-        href:   wwwroot + "/search?tree=" + encodeURIComponent(dxr.tree()) + "&q=" + encodeURIComponent(word)
+        href:   wwwroot + "/" + encodeURIComponent(dxr.tree()) + "/search?q=" + encodeURIComponent(word)
       });
     }
     // Append menu from target, if any
@@ -144,7 +144,7 @@ function init_tip(){
   }
   if(query){
     // Set a nice search tip, so people can go the results
-    var url = wwwroot + "/search?tree=" + dxr.tree() + "&q=" + query + "&redirect=false";
+    var url = wwwroot + "/" + encodeURIComponent(dxr.tree()) + "/search?q=" + encodeURIComponent(query) + "&redirect=false";
     text = ("You've been taken to a direct result " +
                      "<a href='{{url}}'>click here</a>" + 
                      " to see all search results").replace("{{url}}", url);

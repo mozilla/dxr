@@ -1,6 +1,5 @@
-import os, sys, subprocess
+import os, sys
 import imp
-import dxr.utils
 
 
 def indexer_exports():

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 
+from dxr.config import Config
 from dxr.utils import load_template_env
 import dxr.utils
 import dxr.plugins
@@ -30,7 +31,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     overrides = {}
     if nb_jobs:
         overrides['nb_jobs'] = nb_jobs
-    config = dxr.utils.Config(config_path, **overrides)
+    config = Config(config_path, **overrides)
 
     # Find trees to make, fail if requested tree isn't available
     if tree:
@@ -160,7 +161,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
 
 
 def index_files(tree, conn):
-    """ Index all files from the source directory """
+    """Build the ``files`` table, the trigram index, and the HTML folder listings."""
     print "Indexing files from the '%s' tree" % tree.name
     started = datetime.now()
     cur = conn.cursor()
@@ -236,12 +237,13 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Generate list of folders and their mod dates:
     folders = [('folder',
-               f,
-               datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
-               folder,
-               f)).st_mtime),
-               _join_url(tree.name, folder, f))
-                          for f in indexed_folders]
+                f,
+                datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
+                                                         folder,
+                                                         f)).st_mtime),
+                # TODO: DRY with Flask route. Use url_for:
+                _join_url(tree.name, 'source', folder, f))
+               for f in indexed_folders]
 
     # Generate list of files:
     files = []
@@ -250,10 +252,10 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
         path = os.path.join(tree.source_folder, folder, f)
         file_info = stat(path)
         files.append((dxr.mime.icon(path),
-                                    f,
-                                    datetime.fromtimestamp(file_info.st_mtime),
-                                    file_info.st_size,
-                                    _join_url(tree.name, folder, f)))
+                      f,
+                      datetime.fromtimestamp(file_info.st_mtime),
+                      file_info.st_size,
+                      _join_url(tree.name, 'source', folder, f)))
 
     # Lay down the HTML:
     jinja_env = load_template_env(tree.config.temp_folder,

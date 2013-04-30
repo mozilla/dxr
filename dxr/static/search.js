@@ -13,7 +13,7 @@ var result_template = ""
 
 var lines_template = ""
  + "<a class=\"snippet\" "
- + "   href=\"{{wwwroot}}/{{tree}}/{{path}}#l{{line_number}}\">"
+ + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
  + "  <div class=\"line-numbers\">"
  + "    <pre><span class=\"ln\">{{line_number}}</span></pre>"
  + "  </div>"
@@ -47,7 +47,7 @@ function format_results(data){
     for(var j = 0; j < folders.length; j++){
       var folder = folders[j];
       var p = folders.slice(0, j + 1).join('/');
-      var href = wwwroot + '/' + dxr.tree() + '/' + p;
+      var href = wwwroot + '/' + dxr.tree() + '/source/' + p;
       pathline += "<a href=\"" + href + "\" ";
       if(j + 1 < folders.length){
         pathline += "data-path=\"" + p + "/\"";
@@ -237,7 +237,6 @@ function fetch_results(display_fetcher){
   // parameters for request
   var params = {
     q:              state.query,
-    tree:           dxr.tree(),
     limit:          state.limit,
     offset:         state.offset,
     redirect:       'false',
@@ -245,7 +244,7 @@ function fetch_results(display_fetcher){
   };
 
   // Start a new request
-  request.open("GET", createSearchUrl(params), true);
+  request.open("GET", createSearchUrl(dxr.tree(), params), true);
   dxr.setTip("Search in progress ...");
   request.send();
 }
@@ -262,14 +261,14 @@ function parseQuerystring(){
 }
 
 /** Create search URL from search parameters as querystring */
-function createSearchUrl(params){
+function createSearchUrl(tree, params){
   var elements = []
   for(var key in params){
     var k = encodeURIComponent(key);
     var v = encodeURIComponent(params[key]);
     elements.push(k + "=" + v);
   }
-  return wwwroot + "/search?" + elements.join("&");
+  return wwwroot + "/" + tree + "/search?" + elements.join("&");
 }
 window.createSearchUrl = createSearchUrl;  // used in advanced-search.js
 
@@ -293,18 +292,17 @@ function initMenu(){
 
     // Parse querystring so we can make some urls
     var params = {
-      tree:           dxr.tree(),
       limit:          state.limit,
       redirect:       'false'
     };
 
     // Create url to limit search
     params.q = state.query + " path:" + path;
-    var limit_url = createSearchUrl(params);
+    var limit_url = createSearchUrl(dxr.tree(), params);
 
     // Create url to exclude path from search
     params.q = state.query + " -path:" + path;
-    var exclude_url = createSearchUrl(params);
+    var exclude_url = createSearchUrl(dxr.tree(), params);
 
     // Populate menu with links
     menu.populate([

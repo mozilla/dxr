@@ -55,7 +55,7 @@ class TestCase(unittest.TestCase):
 
     def client(self):
         # TODO: DRY between here and the config file with 'target'.
-        app = make_app(os.path.join(self._instance_path, 'target'))
+        app = make_app(os.path.join(self._config_dir_path, 'target'))
 
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
@@ -89,6 +89,11 @@ class TestCase(unittest.TestCase):
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
             success_lines)
 
+    def found_nothing(self, query):
+        """Assert that a query returns no hits."""
+        results = self.search_results(query)
+        eq_(results, [])
+
     def search_results(self, query):
         """Return the raw results of a JSON search query.
 
@@ -109,7 +114,7 @@ class TestCase(unittest.TestCase):
 
         """
         response = self.client().get(
-            '/search?format=json&tree=code&q=%s&redirect=false' % quote(query))
+            '/code/search?format=json&q=%s&redirect=false' % quote(query))
         return json.loads(response.data)['results']
 
 
@@ -126,13 +131,13 @@ class DxrInstanceTestCase(TestCase):
         """Build the instance."""
         # nose does some amazing magic that makes this work even if there are
         # multiple test modules with the same name:
-        cls._instance_path = dirname(sys.modules[cls.__module__].__file__)
-        chdir(cls._instance_path)
+        cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
+        chdir(cls._config_dir_path)
         run('make')
 
     @classmethod
     def teardown_class(cls):
-        chdir(cls._instance_path)
+        chdir(cls._config_dir_path)
         run('make clean')
 
 
@@ -151,36 +156,36 @@ class SingleFileTestCase(TestCase):
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
-        cls._instance_path = mkdtemp()
-        code_path = os.path.join(cls._instance_path, 'code')
+        cls._config_dir_path = mkdtemp()
+        code_path = os.path.join(cls._config_dir_path, 'code')
         mkdir(code_path)
         _make_file(code_path, 'main.cpp', cls.source)
         # $CXX gets injected by the clang DXR plugin:
-        _make_file(cls._instance_path, 'dxr.config', """
+        _make_file(cls._config_dir_path, 'dxr.config', """
 [DXR]
 enabled_plugins = pygmentize clang
-temp_folder = {instance_path}/temp
-target_folder = {instance_path}/target
+temp_folder = {config_dir_path}/temp
+target_folder = {config_dir_path}/target
 nb_jobs = 4
 
 [code]
-source_folder = {instance_path}/code
-object_folder = {instance_path}/code
+source_folder = {config_dir_path}/code
+object_folder = {config_dir_path}/code
 build_command = $CXX -o main main.cpp
 
 [Template]
 foot_text =
-""".format(instance_path=cls._instance_path))
+""".format(config_dir_path=cls._config_dir_path))
 
-        chdir(cls._instance_path)
+        chdir(cls._config_dir_path)
         run('dxr-build.py')
 
     @classmethod
     def teardown_class(cls):
         if cls.should_delete_instance:
-            rmtree(cls._instance_path)
+            rmtree(cls._config_dir_path)
         else:
-            print 'Not deleting instance %s.' % cls._instance_path
+            print 'Not deleting instance in %s.' % cls._config_dir_path
 
     def found_line_eq(self, query, content, line=None):
         """A specialization of ``found_line_eq`` that computes the line number
@@ -195,7 +200,6 @@ foot_text =
             line = self.source.count( '\n', 0, self.source.index(
                 content.replace('<b>', '').replace('</b>', ''))) + 1
         super(SingleFileTestCase, self).found_line_eq(query, content, line)
-
 
 
 def _make_file(path, filename, contents):

@@ -59,8 +59,8 @@ def load(tree_, conn):
     #  sys.exit(1)
     #bugzilla = tree.plugin_hg_bugzilla
 
-""" Hg htmltifier adds blame and external links to hg web """
-class HgHtmlifier:
+class HgHtmlifier(object):
+    """Htmlifier which adds blame and external links to hgweb"""
     def __init__(self, path):
         self.path = path
         self.blame = hg.annotate(

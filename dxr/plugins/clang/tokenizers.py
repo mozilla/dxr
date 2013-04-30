@@ -46,7 +46,7 @@ class Token(object):
     __repr__ = __str__
 
 
-class BaseTokenizer:
+class BaseTokenizer(object):
     # Token Types
     UNKNOWN = 'unknown'
     NEWLINE = 'newline'
