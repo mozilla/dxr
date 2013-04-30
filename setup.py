@@ -23,7 +23,7 @@ setup(
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',
                       'Jinja2>=2.6',
-                      'Pygments>=1.4']
+                      'Pygments>=1.4'],
     tests_require=['nose'],
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
