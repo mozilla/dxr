@@ -140,7 +140,7 @@ function init_tip(){
   for(var i = 0; i < items.length; i++){
     var keyvalue = items[i].split("=");
     if(keyvalue[0] == "from")
-      query = keyvalue[1];
+      query = decodeURIComponent(keyvalue[1]);
   }
   if(query){
     // Set a nice search tip, so people can go the results
