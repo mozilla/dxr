@@ -1,23 +1,20 @@
-DXR, A Code Search and Cross-Reference Tool
-===========================================
+# DXR, A Code Search and Cross-Reference Tool
 
-Introduction
-------------
+
+## Introduction
 DXR is a source code cross-reference tool that uses static analysis data
 collected by instrumented compilers. DXR was created in order to build on
 tools like LXR and MXR. DXR runs only on Linux for the moment.
 
 
-Documentation
--------------
+## Documentation
 DXR is fairly well documented, so whether you're looking to **deploy** DXR,
 **write plugins** or **templates** for DXR have a look at the `docs/` folder.
 The documents in this folder is a great starting point for anybody who wants
 to deploy and/or develop DXR.
 
 
-Quick Start
------------
+## Quick Start
 To try out DXR on a HelloWorld-size project...
 
     git clone --recursive git://github.com/mozilla/dxr.git
@@ -42,9 +39,12 @@ Then, on your host box, surf to http://33.33.33.77:8000/, and poke around to
 your heart's content. You may have to substitute the IP address of your Vagrant
 machine.
 
+Please note that the vagrant image is built against virtualbox
+4.2.0. If your version is older, the image might not work as expected.
 
-Troubleshooting
----------------
+
+### Troubleshooting
+
 If, after trying a search, you see the error...
 
     Server Error
@@ -55,28 +55,55 @@ SSH into the VM and, run `ldconfig` as root to sort out the shared library
 linking problem. Then restart `dxr-serve.py`, and all should work as expected.
 
 
-Installing on a Real Machine
-----------------------------
-To install DXR on a machine of your choice, install the dependencies in
-`docs/deployment.mkd`. Then, install the `dxr` Python package, either by
-running `python2.6 setup.py develop` (if you want to hack on DXR itself) or
+## Installing on a Real Machine
+To install DXR on a machine of your choice, do the following
+
+1. Install the dependencies in `docs/deployment.mkd`. 
+
+2. To install the `dxr` Python package at the system level, either run
+`python2.6 setup.py develop` (if you want to hack on DXR itself) or
 `python2.6 setup.py install`.
 
-If you'd like to install it as non-root (recommended), use virtualenv:
+3. The recommended way is to install it as an unprivileged (non-root)
+   user. For this, use [virtualenv](http://www.virtualenv.org/en/latest/):
 
-    virtualenv my-dxr-env
-    source my-dxr-env/bin/activate  # You'll have to repeat this line each time
-                                    # you want to use DXR in a new shell.
-    pip install -r requirements.txt
-    python setup.py develop         # Magic path munging will make this the
-                                    # copy of Python in the virtualenv.
+         virtualenv my-dxr-env
+         source my-dxr-env/bin/activate  # You'll have to repeat this line each time
+                                         # you want to use DXR in a new shell.
+         pip install -r requirements.txt
+         python setup.py develop         # Magic path munging will make this the
+                                         # copy of Python in the virtualenv.
 
-Finally, run `make` from `tests/test_basic` to build a sample index and
-`dxr-serve.py tests/test_basic/target` to start the server.
+4. Then you need to build the `trilite` library. For this, do the
+   following in the dxr directory.
+
+       
+         cd trilite
+         make
+
+    
+   This should create `libtrilite.so` in the directory. 
+
+5. To index C files, you'll need to compile the clang plugin found in
+   `dxr/plugins/clang`. Edit the `makefile` there so that
+   `llvm-config` and the locations of `clang` and `clang++` are
+   accurate. Then run `make`. The plugin compiles only against llvm
+   3.2. Anything older or newer and it fails with this message.
+       
+
+          dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
+          dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
+
+6. Once this is built, run `make` from `tests/test_basic` to build a
+   sample index
+   
+7. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py
+   tests/test_basic/target` to start the server. Without the
+   `LD_LIBRARY_PATH`, it will complain about not being able to find
+   the `trilite` module when you do a search on the web interface.
 
 
-Things To Do
-------------
+## Things To Do
 _This is a short list of major things that could be done to improve DXR._
 
   * Refactor the database schema
