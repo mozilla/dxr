@@ -56,51 +56,34 @@ linking problem. Then restart `dxr-serve.py`, and all should work as expected.
 
 
 ## Installing on a Real Machine
+*dxr requires exactly llvm-3.2 to build. Anything newer or older will break the build*
+
 To install DXR on a machine of your choice, do the following
 
 1. Install the dependencies in `docs/deployment.mkd`. 
 
-2. To install the `dxr` Python package at the system level, either run
-`python2.6 setup.py develop` (if you want to hack on DXR itself) or
-`python2.6 setup.py install`.
+2. You can either install `dxr at the system level (requires root) or inside a [virtualenv](http://www.virtualenv.org/en/latest/) which is the recommended way. 
+   * For a system level install, run `python2.6 setup develop` (to hack on DXR itself) or `python2.6 setup.py install` to install it.
+   * The recommended way is to install it as an unprivileged (non-root)
+     user. For this, use [virtualenv](http://www.virtualenv.org/en/latest/):
 
-3. The recommended way is to install it as an unprivileged (non-root)
-   user. For this, use [virtualenv](http://www.virtualenv.org/en/latest/):
+             virtualenv my-dxr-env
+             source my-dxr-env/bin/activate  # You'll have to repeat this line each time
+                                             # you want to use DXR in a new shell.
+             pip install -r requirements.txt
+             python setup.py develop         # Magic path munging will make this the
+                                             # copy of Python in the virtualenv.
 
-         virtualenv my-dxr-env
-         source my-dxr-env/bin/activate  # You'll have to repeat this line each time
-                                         # you want to use DXR in a new shell.
-         pip install -r requirements.txt
-         python setup.py develop         # Magic path munging will make this the
-                                         # copy of Python in the virtualenv.
+4. Next, you need to build the various binaries that `dxr` needs. Running `make` at the top level should do the needful. 
+   * It should build the `libtrilite.so` library inside the `trilite` directory.
+   * It should build the `libclang-index-plugin.so` inside the `dxr/plugins/clang` directory. You might have to edit the `makefile` in that directory to make the locations of `llvm-config`, `clang` and `clang++` accurate. As mentioned earlier, the compile will succeed only with exactly llvm/clang-3.2. Anything else will fail with this message. 
 
-4. Then you need to build the `trilite` library. For this, do the
-   following in the dxr directory.
+              dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
+              dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
 
-       
-         cd trilite
-         make
+5. The `tests/test_basic` directory contains a small tree which you can build an index for to test your build. `cd` into this directory and run `make`. If it successfully runs, your build is fine. 
 
-    
-   This should create `libtrilite.so` in the directory. 
-
-5. To index C files, you'll need to compile the clang plugin found in
-   `dxr/plugins/clang`. Edit the `makefile` there so that
-   `llvm-config` and the locations of `clang` and `clang++` are
-   accurate. Then run `make`. The plugin compiles only against llvm
-   3.2. Anything older or newer and it fails with this message.
-       
-
-          dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
-          dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
-
-6. Once this is built, run `make` from `tests/test_basic` to build a
-   sample index
-   
-7. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py
-   tests/test_basic/target` to start the server. Without the
-   `LD_LIBRARY_PATH`, it will complain about not being able to find
-   the `trilite` module when you do a search on the web interface.
+6. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py tests/test_basic/target` to start the server and browse the code. Without the `LD_LIBRARY_PATH`, it will complain about not being able to find the `trilite` module when you do a search on the web interface.
 
 
 ## Things To Do
