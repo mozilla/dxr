@@ -3,7 +3,7 @@ var menu = (function (){
 var menu = {};
 
 /** Menu id */
-var _menu_id = 'inline-menu';
+var _menuId = 'inline-menu';
 
 /** Escape HTML Entitites */
 function htmlEntities(str) {
@@ -31,13 +31,13 @@ menu.populate = function(links){
     content += " style=\"background-image: url('" + icon + "')\">";
     content += htmlEntities(link.text) + "</a>";
   }
-  var m = document.getElementById(_menu_id);
+  var m = document.getElementById(_menuId);
   m.innerHTML = content;
 };
 
 /** Launch menu at x, y */
 menu.launchAt = function(x, y){
-  var m = document.getElementById(_menu_id);
+  var m = document.getElementById(_menuId);
   m.style.left    = x + "px";
   m.style.top     = y + "px";
   m.style.display = 'block';
@@ -63,7 +63,7 @@ menu.posLeft = function(el){
 
 /** Hide menu */
 menu.hide = function(){
-  var m = document.getElementById(_menu_id);
+  var m = document.getElementById(_menuId);
   m.style.display = 'none';
 };
 
@@ -73,7 +73,7 @@ window.addEventListener('load', function(){
   window.addEventListener('mousedown', menu.hide, false);
 
   // Stop event from propergating to window
-  var m = document.getElementById(_menu_id);
+  var m = document.getElementById(_menuId);
   m.addEventListener('mousedown', function(e) {
     e.stopPropagation();
   }, false);
