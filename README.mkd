@@ -56,16 +56,21 @@ linking problem. Then restart `dxr-serve.py`, and all should work as expected.
 
 
 ## Installing on a Real Machine
-*dxr requires exactly llvm-3.2 to build. Anything newer or older will break the build*
+
+*dxr requires exactly llvm-3.2 to build. Anything newer or older will break the
+build.*
 
 To install DXR on a machine of your choice, do the following
 
-1. Install the dependencies in `docs/deployment.mkd`. 
+1. Install the dependencies in `docs/deployment.mkd`.
 
-2. You can either install `dxr at the system level (requires root) or inside a [virtualenv](http://www.virtualenv.org/en/latest/) which is the recommended way. 
-   * For a system level install, run `python2.6 setup develop` (to hack on DXR itself) or `python2.6 setup.py install` to install it.
-   * The recommended way is to install it as an unprivileged (non-root)
-     user. For this, use [virtualenv](http://www.virtualenv.org/en/latest/):
+2. You can either install dxr at the system level (requires root) or inside a
+   [virtualenv](http://www.virtualenv.org/en/latest/) which is the recommended
+   way.
+   * For a system-level install, run `python2.6 setup develop` (to hack on DXR
+     itself) or `python2.6 setup.py install` to install it.
+   * The recommended way is to install it as an unprivileged (non-root) user.
+     For this, use [virtualenv](http://www.virtualenv.org/en/latest/):
 
              virtualenv my-dxr-env
              source my-dxr-env/bin/activate  # You'll have to repeat this line each time
@@ -74,16 +79,28 @@ To install DXR on a machine of your choice, do the following
              python setup.py develop         # Magic path munging will make this the
                                              # copy of Python in the virtualenv.
 
-4. Next, you need to build the various binaries that `dxr` needs. Running `make` at the top level should do the needful. 
+4. Next, you need to build the various binaries that `dxr` needs. Running
+   `make` at the top level should do the needful.
    * It should build the `libtrilite.so` library inside the `trilite` directory.
-   * It should build the `libclang-index-plugin.so` inside the `dxr/plugins/clang` directory. You might have to edit the `makefile` in that directory to make the locations of `llvm-config`, `clang` and `clang++` accurate. As mentioned earlier, the compile will succeed only with exactly llvm/clang-3.2. Anything else will fail with this message. 
+   * It should build the `libclang-index-plugin.so` inside the
+     `dxr/plugins/clang` directory. You might have to edit the `makefile` in
+     that directory to make the locations of `llvm-config`, `clang` and
+     `clang++` accurate. As mentioned earlier, the compile will succeed only
+     with exactly llvm/clang-3.2. Anything else will fail with this message.
 
-              dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
-              dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
+            dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
+            dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
 
-5. The `tests/test_basic` directory contains a small tree which you can build an index for to test your build. `cd` into this directory and run `make`. If it successfully runs, your build is fine. 
+5. The `tests/test_basic` directory contains a small tree which you can build
+   an index for to test your build. `cd` into this directory and run `make`. If
+   it successfully runs, your build is fine.
 
-6. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py tests/test_basic/target` to start the server and browse the code. Without the `LD_LIBRARY_PATH`, it will complain about not being able to find the `trilite` module when you do a search on the web interface.
+6. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py
+   tests/test_basic/target` to start the server and browse the code. Without
+   the `LD_LIBRARY_PATH`, it will complain about not being able to find the
+   `trilite` module when you do a search on the web interface. You can dispense
+   with this requirement by installing the library globally on your machine: on
+   Linux, move `libtrilite.so` to `/usr/local/lib`, then run `ldconfig`.
 
 
 ## Things To Do
