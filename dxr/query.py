@@ -838,26 +838,20 @@ filters = [
       ExistsLikeFilter(
           param         = "callers",
           filter_sql    = """SELECT 1
-                              FROM functions as caller, functions as target, callers
+                              FROM functions as caller, functions as target, callers, targets
                              WHERE %s
-                               AND  EXISTS ( SELECT 1 FROM targets
-                                              WHERE targets.funcid = target.id
-                                                AND targets.targetid = callers.targetid
-                                           )
+                               AND targets.funcid = target.id
+                               AND targets.targetid = callers.targetid
                                AND callers.callerid = caller.id
                                AND caller.file_id = files.id
                           """,
           ext_sql       = """SELECT functions.extent_start, functions.extent_end
                               FROM functions
                              WHERE functions.file_id = ?
-                               AND EXISTS (SELECT 1 FROM functions as target, callers
+                               AND EXISTS (SELECT 1 FROM functions as target, callers, targets
                                             WHERE %s
-                                              AND EXISTS (
-                                         SELECT 1 FROM targets
-                                          WHERE targets.funcid = target.id
-                                            AND targets.targetid = callers.targetid
-                                            AND callers.callerid = target.id
-                                                  )
+                                              AND targets.funcid = target.id
+                                              AND targets.targetid = callers.targetid
                                               AND callers.callerid = functions.id
                                           )
                              ORDER BY functions.extent_start
@@ -896,27 +890,21 @@ filters = [
       ExistsLikeFilter(
           param         = "called-by",
           filter_sql    = """SELECT 1
-                               FROM functions as target, functions as caller, callers
+                               FROM functions as target, functions as caller, callers, targets
                               WHERE %s
                                 AND callers.callerid = caller.id
-                                AND ( EXISTS (SELECT 1 FROM targets
-                                               WHERE targets.funcid = target.id
-                                                 AND targets.targetid = callers.targetid
-                                             )
-                                    )
+                                AND targets.funcid = target.id
+                                AND targets.targetid = callers.targetid
                                 AND target.file_id = files.id
                           """,
           ext_sql       = """SELECT functions.extent_start, functions.extent_end
                               FROM functions
                              WHERE functions.file_id = ?
-                               AND EXISTS (SELECT 1 FROM functions as caller, callers
+                               AND EXISTS (SELECT 1 FROM functions as caller, callers, targets
                                             WHERE %s
                                               AND caller.id = callers.callerid
-                                              AND EXISTS (
-                                          SELECT 1 FROM targets
-                                           WHERE targets.funcid = functions.id
-                                             AND targets.targetid = callers.targetid
-                                                  )
+                                              AND targets.funcid = functions.id
+                                              AND targets.targetid = callers.targetid
                                           )
                              ORDER BY functions.extent_start
                           """,
