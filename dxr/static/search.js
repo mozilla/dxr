@@ -151,6 +151,18 @@ function setFetchResultsTimer(){
   _fetchResultsTimer = setTimeout(fetchResults, timeout);
 }
 
+var _in_progress_timer = null;
+function clearInProgressTimer() {
+  if (_in_progress_timer) clearTimeout(_in_progress_timer);
+  _in_progress_timer = null;
+}
+function setInProgressTimer(){
+  var timeout = 300;  // use 300 ms
+  clearInProgressTimer();
+  _in_progress_timer = setTimeout(function() {
+    dxr.setTip("Search in progress ...");
+  }, timeout);
+}
 
 
 // Current request
@@ -196,6 +208,7 @@ function fetchResults(displayFetcher){
         state.offset += data["results"].length;
       }
       // Display a nice tip
+      clearInProgressTimer();
       dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
       var content = document.getElementById("content");
       // Clear results if necessary
@@ -245,6 +258,7 @@ function fetchResults(displayFetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+  setInProgressTimer();
   request.send();
 }
 
