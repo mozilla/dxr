@@ -143,25 +143,25 @@ function initIncrementalSearch(){
 
 
 /** Set fetch results timer  */
-var _fetch_results_timer = null;
+var _fetchResultsTimer = null;
 function setFetchResultsTimer(){
-  var timeout = 300;  // use 300 ms
   // Reset the timer
-  if(_fetch_results_timer) clearTimeout(_fetch_results_timer);
-  _fetch_results_timer = setTimeout(fetch_results, timeout);
+  if (_fetchResultsTimer)
+    clearTimeout(_fetchResultsTimer);
+  _fetchResultsTimer = setTimeout(fetch_results, 300);  // timeout: 300 ms
 }
 
-var _in_progress_timer = null;
+var _inProgressTimer = null;
 function clearInProgressTimer() {
-  if (_in_progress_timer) clearTimeout(_in_progress_timer);
-  _in_progress_timer = null;
+  if (_inProgressTimer)
+    clearTimeout(_inProgressTimer);
+  _inProgressTimer = null;
 }
 function setInProgressTimer(){
-  var timeout = 300;  // use 300 ms
   clearInProgressTimer();
-  _in_progress_timer = setTimeout(function() {
+  _inProgressTimer = setTimeout(function() {
     dxr.setTip("Search in progress ...");
-  }, timeout);
+  }, 300);  // timeout: 300 ms
 }
 
 
