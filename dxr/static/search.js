@@ -145,12 +145,24 @@ function initIncrementalSearch(){
 /** Set fetch results timer  */
 var _fetchResultsTimer = null;
 function setFetchResultsTimer(){
-  var timeout = 300;  // use 300 ms
   // Reset the timer
-  if(_fetchResultsTimer) clearTimeout(_fetchResultsTimer);
-  _fetchResultsTimer = setTimeout(fetchResults, timeout);
+  if (_fetchResultsTimer)
+    clearTimeout(_fetchResultsTimer);
+  _fetchResultsTimer = setTimeout(fetchResults, 300);  // timeout: 300 ms
 }
 
+var _inProgressTimer = null;
+function clearInProgressTimer() {
+  if (_inProgressTimer)
+    clearTimeout(_inProgressTimer);
+  _inProgressTimer = null;
+}
+function setInProgressTimer(){
+  clearInProgressTimer();
+  _inProgressTimer = setTimeout(function() {
+    dxr.setTip("Search in progress...");
+  }, 300);  // timeout: 300 ms
+}
 
 
 // Current request
@@ -196,6 +208,7 @@ function fetchResults(displayFetcher){
         state.offset += data["results"].length;
       }
       // Display a nice tip
+      clearInProgressTimer();
       dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
       var content = document.getElementById("content");
       // Clear results if necessary
@@ -245,6 +258,7 @@ function fetchResults(displayFetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+  setInProgressTimer();
   request.send();
 }
 
