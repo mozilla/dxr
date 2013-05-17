@@ -11,8 +11,11 @@ import time
 
 #TODO _parameters should be extracted from filters (possible if filters are defined first)
 # List of parameters to isolate in the search query, ie. path:mypath
-_parameters = ["path", "ext", "type", "type-ref", "function", "function-ref",
-"var", "var-ref", "macro", "macro-ref", "callers", "called-by", "warning",
+_parameters = ["path", "ext",
+"type", "type-ref", "type-decl",
+"function", "function-ref", "function-decl",
+"var", "var-ref", "var-decl",
+"macro", "macro-ref", "callers", "called-by", "warning",
 "warning-opt", "bases", "derived", "member"]
 
 _parameters += ["-" + param for param in _parameters] + ["+" + param for param
@@ -707,6 +710,24 @@ filters = [
       ),
     ]),
 
+    # type-decl filter
+    ExistsLikeFilter(
+      param         = "type-decl",
+      filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
+                         WHERE %s
+                           AND types.id = decldef.defid AND decldef.file_id = files.id
+                      """,
+      ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM type_decldef AS decldef
+                         WHERE decldef.file_id = ?
+                           AND EXISTS (SELECT 1 FROM types
+                                       WHERE %s
+                                         AND types.id = decldef.defid)
+                         ORDER BY decldef.extent_start
+                      """,
+      like_name     = "types.name",
+      qual_name     = "types.qualname"
+    ),
+
     # function filter
     ExistsLikeFilter(
         param         = "function",
@@ -741,6 +762,24 @@ filters = [
         qual_name     = "functions.qualname"
     ),
 
+    # function-decl filter
+    ExistsLikeFilter(
+        param         = "function-decl",
+        filter_sql    = """SELECT 1 FROM functions, function_decldef as decldef
+                           WHERE %s
+                             AND functions.id = decldef.defid AND decldef.file_id = files.id
+                        """,
+        ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM function_decldef AS decldef
+                           WHERE decldef.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions
+                                         WHERE %s
+                                           AND functions.id = decldef.defid)
+                           ORDER BY decldef.extent_start
+                        """,
+        like_name     = "functions.name",
+        qual_name     = "functions.qualname"
+    ),
+
     # var filter
     ExistsLikeFilter(
         param         = "var",
@@ -770,6 +809,24 @@ filters = [
                                          WHERE %s
                                            AND variables.id = refs.refid)
                            ORDER BY refs.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
+    ),
+
+    # var-decl filter
+    ExistsLikeFilter(
+        param         = "var-decl",
+        filter_sql    = """SELECT 1 FROM variables, variable_decldef AS decldef
+                           WHERE %s
+                             AND variables.id = decldef.defid AND decldef.file_id = files.id
+                        """,
+        ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM variable_decldef AS decldef
+                           WHERE decldef.file_id = ?
+                             AND EXISTS (SELECT 1 FROM variables
+                                         WHERE %s
+                                           AND variables.id = decldef.defid)
+                           ORDER BY decldef.extent_start
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname"
@@ -838,26 +895,20 @@ filters = [
       ExistsLikeFilter(
           param         = "callers",
           filter_sql    = """SELECT 1
-                              FROM functions as caller, functions as target, callers
+                              FROM functions as caller, functions as target, callers, targets
                              WHERE %s
-                               AND  EXISTS ( SELECT 1 FROM targets
-                                              WHERE targets.funcid = target.id
-                                                AND targets.targetid = callers.targetid
-                                           )
+                               AND targets.funcid = target.id
+                               AND targets.targetid = callers.targetid
                                AND callers.callerid = caller.id
                                AND caller.file_id = files.id
                           """,
           ext_sql       = """SELECT functions.extent_start, functions.extent_end
                               FROM functions
                              WHERE functions.file_id = ?
-                               AND EXISTS (SELECT 1 FROM functions as target, callers
+                               AND EXISTS (SELECT 1 FROM functions as target, callers, targets
                                             WHERE %s
-                                              AND EXISTS (
-                                         SELECT 1 FROM targets
-                                          WHERE targets.funcid = target.id
-                                            AND targets.targetid = callers.targetid
-                                            AND callers.callerid = target.id
-                                                  )
+                                              AND targets.funcid = target.id
+                                              AND targets.targetid = callers.targetid
                                               AND callers.callerid = functions.id
                                           )
                              ORDER BY functions.extent_start
@@ -896,27 +947,21 @@ filters = [
       ExistsLikeFilter(
           param         = "called-by",
           filter_sql    = """SELECT 1
-                               FROM functions as target, functions as caller, callers
+                               FROM functions as target, functions as caller, callers, targets
                               WHERE %s
                                 AND callers.callerid = caller.id
-                                AND ( EXISTS (SELECT 1 FROM targets
-                                               WHERE targets.funcid = target.id
-                                                 AND targets.targetid = callers.targetid
-                                             )
-                                    )
+                                AND targets.funcid = target.id
+                                AND targets.targetid = callers.targetid
                                 AND target.file_id = files.id
                           """,
           ext_sql       = """SELECT functions.extent_start, functions.extent_end
                               FROM functions
                              WHERE functions.file_id = ?
-                               AND EXISTS (SELECT 1 FROM functions as caller, callers
+                               AND EXISTS (SELECT 1 FROM functions as caller, callers, targets
                                             WHERE %s
                                               AND caller.id = callers.callerid
-                                              AND EXISTS (
-                                          SELECT 1 FROM targets
-                                           WHERE targets.funcid = functions.id
-                                             AND targets.targetid = callers.targetid
-                                                  )
+                                              AND targets.funcid = functions.id
+                                              AND targets.targetid = callers.targetid
                                           )
                              ORDER BY functions.extent_start
                           """,

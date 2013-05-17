@@ -279,6 +279,12 @@ class ClangHtmlifier(object):
         """ Build menu for type """
         menu = []
         # Things we can do with qualname
+        menu.append({
+            'text':   "Find declarations",
+            'title':  "Find declarations of this class",
+            'href':   self.search("+type-decl:%s" % self.quote(qualname)),
+            'icon':   'reference'  # FIXME?
+        })
         if kind == 'class' or kind == 'struct':
             menu.append({
                 'text':   "Find sub classes",
@@ -322,7 +328,12 @@ class ClangHtmlifier(object):
     def variable_menu(self, qualname):
         """ Build menu for a variable """
         menu = []
-        # Well, what more than references can we do?
+        menu.append({
+            'text':   "Find declarations",
+            'title':  "Find declarations of this variable",
+            'href':   self.search("+var-decl:%s" % self.quote(qualname)),
+            'icon':   'reference' # FIXME?
+        })
         menu.append({
             'text':   "Find references",
             'title':  "Find reference to this variable",
@@ -351,6 +362,12 @@ class ClangHtmlifier(object):
         menu = []
         # Things we can do with qualified name
         menu.append({
+            'text':   "Find declarations",
+            'title':  "Find declarations of this function",
+            'href':   self.search("+function-decl:%s" % self.quote(qualname)),
+            'icon':   'reference'  # FIXME?
+        })
+        menu.append({
             'text':   "Find callers",
             'title':  "Find functions that call this function",
             'href':   self.search("+callers:%s" % self.quote(qualname)),
@@ -368,7 +385,6 @@ class ClangHtmlifier(object):
             'href':   self.search("+function-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
         })
-        #TODO Jump between declaration and definition
         return menu
 
 
