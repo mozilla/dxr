@@ -26,32 +26,32 @@ function readCookie(name){
   return null;
 }
 
-var panel_visible = true;
-var panel_title = "";
+var panelVisible = true;
+var panelTitle = "";
 /** Toggle the panel visiblity (save state to cookie) */
-function toggle_panel(){
+function togglePanel(){
   var content = document.getElementById("panel-content");
-  if(panel_visible){
+  if(panelVisible){
     content.style.display = "none";
   }else{
     content.style.display = "block";
   }
-  panel_visible = !panel_visible;
-  createCookie("panel-state" + panel_title, (panel_visible ? "true" : "false"), 42);
+  panelVisible = !panelVisible;
+  createCookie("panel-state" + panelTitle, (panelVisible ? "true" : "false"), 42);
 }
 
 /** Initialize everything */
 window.addEventListener('load', function (){
-  var panel_toggle = document.getElementById("panel-toggle");
-  panel_title = panel_toggle.innerHTML;
-  var val = readCookie("panel-state" + panel_title);
+  var panelToggle = document.getElementById("panel-toggle");
+  panelTitle = panelToggle.innerHTML;
+  var val = readCookie("panel-state" + panelTitle);
   if(val != null){
     // Read and flip it
-    panel_visible = !(val == "true" ? true : false);
+    panelVisible = !(val == "true" ? true : false);
     // Make toggle it back to what we read
-    toggle_panel();
+    togglePanel();
   }
-  panel_toggle.addEventListener('click', toggle_panel, false);
+  panelToggle.addEventListener('click', togglePanel, false);
 }, false);
 
 }());
