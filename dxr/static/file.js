@@ -51,7 +51,7 @@ String.prototype.regexLastIndexOf = function(regex, startpos){
 }
 
 /** Initialize the context menu */
-function init_menu(){
+function initMenu(){
   var pre = document.querySelector(".file-lines pre");
   // Show menu when text is clicked
   pre.addEventListener('click', function(e){
@@ -133,14 +133,14 @@ function findPosLeft(obj) {
 }
 
 /** Initialize search tips */
-function init_tip(){
+function initTip(){
   // Parse querystring for from=
   var query = null;
   var items = window.location.search.substr(1).split("&");
   for(var i = 0; i < items.length; i++){
     var keyvalue = items[i].split("=");
     if(keyvalue[0] == "from")
-      query = keyvalue[1];
+      query = decodeURIComponent(keyvalue[1]);
   }
   if(query){
     // Set a nice search tip, so people can go the results
@@ -245,8 +245,8 @@ function hijackBlame(){
 /** Initialize everything */
 window.addEventListener('load', function (){
   window.addEventListener('hashchange', hashchanged, false);
-  init_tip();
-  init_menu();
+  initTip();
+  initMenu();
   hijackBlame();
   setTimeout(hashchanged, 0);
 }, false);

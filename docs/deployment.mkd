@@ -34,7 +34,7 @@ DXR has the following dependencies on the build servers:
 
  - sqlite (`>= 3.7.4`)
  - trilite (pulled in as a git submodule)
- - python (`>= 2.5`)
+ - python (`>= 2.6`)
  - jinja2 (`>= 2.4`)
  - pygments (`>= 1.4`)
  - clang (`>= 3.0`)
@@ -66,7 +66,7 @@ configuration for Apache is provided in
 DXR has the following dependencies on the webserver:
 
  - sqlite (`>= 3.7.4`)
- - python (`>= 2.5`)
- - jinja2 (`>= 2.4`)
  - trilite (pulled in as a git submodule)
- - apache with `mod_rewrite` and `mod_wsgi` (or equivalent)
+ - python (`>= 2.6`)
+ - jinja2 (`>= 2.4`)
+ - Apache with `mod_rewrite` and `mod_wsgi` (or equivalent)

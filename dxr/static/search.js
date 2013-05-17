@@ -3,15 +3,15 @@
 // TODO Migrate this to use jinja.js, so we can place a template file in static/
 //      and use that template on the server using an include statement and on
 //      client side.
-var result_template = ""
+var resultTemplate = ""
  + "<div class=\"result\">"
  + "<div class=\"path\""
  + " style=\"background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')\""
- + " >{{path_line}}</div>"
- + "{{formatted_lines}}"
+ + " >{{pathLine}}</div>"
+ + "{{formattedLines}}"
  + "</div>";
 
-var lines_template = ""
+var linesTemplate = ""
  + "<a class=\"snippet\" "
  + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
  + "  <div class=\"line-numbers\">"
@@ -21,7 +21,7 @@ var lines_template = ""
  + "</a>";
 
 /** Format a template and return it */
-function format_template(template, vars){
+function formatTemplate(template, vars){
   for(var k in vars){
     var value = vars[k].toString().replace(new RegExp("\\$", "g"), "$$$$");
     template = template.replace(new RegExp("\\{\\{" + k + "\\}\\}", "g"), value);
@@ -30,16 +30,16 @@ function format_template(template, vars){
 }
 
 /** Format results */
-function format_results(data){
+function formatResults(data){
   // Fillout wwwroot and tree
-  var result_tmpl = format_template(result_template, data);
-  var lines_tmpl = format_template(lines_template, data);
+  var resultTmpl = formatTemplate(resultTemplate, data);
+  var linesTmpl = formatTemplate(linesTemplate, data);
   // For each result
   var retval = ""
   for(var i = 0; i < data["results"].length; i++){
     var lines = "";
     for(var j = 0; j < data["results"][i].lines.length; j++){
-      lines += format_template(lines_tmpl, data["results"][i].lines[j]);
+      lines += formatTemplate(linesTmpl, data["results"][i].lines[j]);
     }
     // Yes, the ugly path hack
     var folders = data["results"][i].path.split('/');
@@ -58,9 +58,9 @@ function format_results(data){
       }
       pathline += "</a>";
     }
-    retval += format_template(result_tmpl, {
-      formatted_lines:    lines,
-      path_line:          pathline,
+    retval += formatTemplate(resultTmpl, {
+      formattedLines:    lines,
+      pathLine:          pathline,
       icon:               data["results"][i].icon,
       path:               data["results"][i].path
     });
@@ -89,7 +89,7 @@ function initIncrementalSearch(){
   var pagelinks = document.getElementById("result-page-switch");
   if(pagelinks){
     // If we're in the search.html template, we hide the foot
-    // If not we'll do this in fetch_results, when we got something
+    // If not we'll do this in fetchResults, when we got something
     var foot = document.getElementById("foot");
     foot.style.display        = 'none';
     // Display the fetcher thing with visibility hidden
@@ -100,7 +100,7 @@ function initIncrementalSearch(){
 
   // Fetch results, if any, on scroll to bottom of page
   window.addEventListener('scroll', function(e){
-    if(atPageBottom() && !state.eof) fetch_results(true);
+    if(atPageBottom() && !state.eof) fetchResults(true);
   }, false); 
 
   // Update advanced search fields on change in q
@@ -138,28 +138,40 @@ function initIncrementalSearch(){
 
   // Fetch results if a bottom of page initially
   // this is necessary, otherwise one can't scroll
-  if(atPageBottom() && !state.eof) fetch_results(true);
+  if(atPageBottom() && !state.eof) fetchResults(true);
 }
 
 
 /** Set fetch results timer  */
-var _fetch_results_timer = null;
+var _fetchResultsTimer = null;
 function setFetchResultsTimer(){
-  var timeout = 300;  // use 300 ms
   // Reset the timer
-  if(_fetch_results_timer) clearTimeout(_fetch_results_timer);
-  _fetch_results_timer = setTimeout(fetch_results, timeout);
+  if (_fetchResultsTimer)
+    clearTimeout(_fetchResultsTimer);
+  _fetchResultsTimer = setTimeout(fetchResults, 300);  // timeout: 300 ms
 }
 
+var _inProgressTimer = null;
+function clearInProgressTimer() {
+  if (_inProgressTimer)
+    clearTimeout(_inProgressTimer);
+  _inProgressTimer = null;
+}
+function setInProgressTimer(){
+  clearInProgressTimer();
+  _inProgressTimer = setTimeout(function() {
+    dxr.setTip("Search in progress...");
+  }, 300);  // timeout: 300 ms
+}
 
 
 // Current request
 var request = null;
 // Clear contents of results on set
-var clear_on_set = false;
+var clearOnSet = false;
 
 /** Fetch results, using current state */
-function fetch_results(display_fetcher){
+function fetchResults(displayFetcher){
 
   // Stop if we're at end, nothing more to do
   if(state.eof && !state.changed) return;
@@ -176,7 +188,7 @@ function fetch_results(display_fetcher){
 
   // Show the fetcher line at the bottom
   var fetcher = document.getElementById("fetch-results");
-  if(display_fetcher){
+  if(displayFetcher){
     fetcher.style.visibility = 'visible';
     fetcher.style.display    = 'block';
     // Hide footer
@@ -196,10 +208,11 @@ function fetch_results(display_fetcher){
         state.offset += data["results"].length;
       }
       // Display a nice tip
+      clearInProgressTimer();
       dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
       var content = document.getElementById("content");
       // Clear results if necessary
-      if(clear_on_set && !data["error"]){
+      if(clearOnSet && !data["error"]){
         content.innerHTML = "";
         // Scroll to top of page
         window.scroll(0, 0);
@@ -210,7 +223,7 @@ function fetch_results(display_fetcher){
         fetcher.style.display    = 'block';
         fetcher.style.visibility = 'hidden';
       }
-      content.innerHTML += format_results(data);
+      content.innerHTML += formatResults(data);
       // Set error as tip
       if(data["error"])
         dxr.setErrorTip(data["error"]);
@@ -218,19 +231,19 @@ function fetch_results(display_fetcher){
     }else if(request.readyState == 4){
       // Something failed, who cares try again :)
       request = null;
-      fetch_results();
+      fetchResults();
     }
     // Hide fetcher if finished request
     if(request == null){
       fetcher.style.display    = 'block';
       fetcher.style.visibility = 'hidden';
       // Fetch results if there's no scrollbar initially
-      if(atPageBottom()) fetch_results();
+      if(atPageBottom()) fetchResults();
     }
   }
 
   // Clear on set if this is a new state
-  clear_on_set = state.changed;
+  clearOnSet = state.changed;
   // Set state unchanged
   state.changed = false;
 
@@ -245,6 +258,7 @@ function fetch_results(display_fetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+  setInProgressTimer();
   request.send();
 }
 
@@ -297,11 +311,11 @@ function initMenu(){
 
     // Create url to limit search
     params.q = state.query + " path:" + path;
-    var limit_url = createSearchUrl(dxr.tree(), params);
+    var limitUrl = createSearchUrl(dxr.tree(), params);
 
     // Create url to exclude path from search
     params.q = state.query + " -path:" + path;
-    var exclude_url = createSearchUrl(dxr.tree(), params);
+    var excludeUrl = createSearchUrl(dxr.tree(), params);
 
     // Populate menu with links
     menu.populate([
@@ -313,13 +327,13 @@ function initMenu(){
       },
       {
         icon:   'path_search',
-        href:   limit_url,
+        href:   limitUrl,
         title:  "Only show results from \"" + path + "\"",
         text:   "Limit search to folder"
       },
       {
         icon:   'exclude_path',
-        href:   exclude_url,
+        href:   excludeUrl,
         title:  "Exclude results located in \"" + path + "\"",
         text:   "Exclude folder from search"
       }
