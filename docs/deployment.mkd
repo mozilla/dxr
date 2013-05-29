@@ -58,10 +58,8 @@ the files in the indexed source trees.
 Deployment of the Instance to a Web Server
 ------------------------------------------
 Once you have generated an instance, move it onto your web server, and
-configure it to serve searches via `dxr/dxr.wsgi` and the HTML-formatted source
-and other static resources directly from the filesystem. An example
-configuration for Apache is provided in
-`puppet/files/etc/httpd/conf.d/dxr.conf`.
+configure it to serve searches via `dxr/dxr.wsgi`. An example configuration for
+Apache is provided in `puppet/files/etc/httpd/conf.d/dxr.conf`.
 
 DXR has the following dependencies on the webserver:
 

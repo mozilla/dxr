@@ -1,6 +1,5 @@
 import os.path
 from os.path import isdir
-from sqlite3 import OperationalError
 from time import time
 from urllib import quote_plus
 
@@ -9,7 +8,7 @@ from flask import (Blueprint, Flask, send_from_directory, current_app,
 
 from dxr.query import Query
 from dxr.server_utils import connect_db
-from dxr.utils import non_negative_int, search_url
+from dxr.utils import non_negative_int, search_url, sqlite3  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
 
 
 # Look in the 'dxr' package for static files, templates, etc.:
@@ -87,7 +86,7 @@ def search(tree):
             start = time()
             try:
                 results = list(q.results(offset, limit))
-            except OperationalError as e:
+            except sqlite3.OperationalError as e:
                 if e.message.startswith('REGEXP:'):
                     # Malformed regex
                     warning = e.message[7:]

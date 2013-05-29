@@ -1,25 +1,23 @@
-import sqlite3
 import ctypes
+
+# Load the trilite plugin.
+#
+# If you ``import sqlite3`` before doing this, it's likely that the system
+# version of sqlite will be loaded, and then trilite, if built against a
+# different version, will fail to load. If you're having trouble getting
+# trilite to load, make sure you're not importing sqlite3 beforehand. Afterward
+# is fine.
+ctypes.CDLL('libtrilite.so').load_trilite_extension()
+
 import os
 import jinja2
+import sqlite3
 import string
 from urllib import quote, quote_plus
 
 
-_trilite_loaded = False
-def load_trilite(config):
-    """ Load trilite if not loaded before"""
-    global _trilite_loaded
-    if _trilite_loaded:
-        return
-    ctypes.CDLL("libtrilite.so").load_trilite_extension()
-    _trilite_loaded = True
-
-
 def connect_database(tree):
     """ Connect to database ensuring that dependencies are built first """
-    # Build and load tokenizer if needed
-    load_trilite(tree.config)
     # Create connection
     conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
     # Configure connection
