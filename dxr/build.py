@@ -35,7 +35,9 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # (this will abort on inconsistencies)
     overrides = {}
     if nb_jobs:
-        overrides['nb_jobs'] = nb_jobs
+        # TODO: Remove this brain-dead cast when we get the types right in the
+        # Config object:
+        overrides['nb_jobs'] = str(nb_jobs)
     config = Config(config_path, **overrides)
 
     # Find trees to make, fail if requested tree isn't available
