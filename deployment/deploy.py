@@ -195,7 +195,7 @@ class Deployment(object):
 
     def deploy_if_appropriate(self):
         """Deploy a new build if we should."""
-        with NonblockingLock('dxr-deploy-%s' % self.kind) as got_lock:
+        with nonblocking_lock('dxr-deploy-%s' % self.kind) as got_lock:
             if got_lock:
                 try:
                     rev = self.manual_rev or self.rev_to_deploy()
@@ -246,29 +246,28 @@ def cd(path):
     chdir(old_dir)
 
 
-class NonblockingLock(object):
+@contextmanager
+def nonblocking_lock(lock_name):
     """Context manager that acquires and releases a file-based lock.
 
     If it cannot immediately acquire it, it falls through and returns False.
     Otherwise, it returns True.
 
     """
-    def __init__(self, lock_name):
-        self.lock_path = join(gettempdir(), lock_name + '.lock')
+    lock_path = join(gettempdir(), lock_name + '.lock')
+    try:
+        fd = os.open(lock_path, O_CREAT | O_EXCL, 0644)
+    except OSError:
+        got = False
+    else:
+        got = True
 
-    def __enter__(self):
-        """Return whether we succeeded in acquiring the lock."""
-        try:
-            self.fd = os.open(self.lock_path, O_CREAT | O_EXCL, 0644)
-        except OSError:
-            self.fd = None
-            return False
-        return True
-
-    def __exit__(self, type, value, traceback):
-        if self.fd is not None:
-            os.close(self.fd)
-            remove(self.lock_path)
+    try:
+        yield got
+    finally:
+        if got:
+            os.close(fd)
+            remove(lock_path)
 
 
 class ShouldNotDeploy(Exception):
