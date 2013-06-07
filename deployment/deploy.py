@@ -43,12 +43,28 @@ def main():
     """Handle command-line munging, and pass off control to the interesting
     stuff."""
     parser = OptionParser(
-        usage='usage: %prog <staging | prod>',
+        usage='usage: %prog [options] <staging | prod>',
         description='Deploy a new version of DXR.')
+    parser.add_option('-b', '--base', dest='base_path',
+                      help='Path to the dir containing the builds, instances, '
+                           'and deployment links')
+    parser.add_option('-p', '--python', dest='python_path',
+                      help='Path to the Python executable on which to base the'
+                           ' virtualenvs')
+    parser.add_option('-e', '--repo', dest='repo',
+                      help='URL of the git repo from which to download DXR. '
+                           'Use HTTPS if possible to ward off spoofing.')
+    parser.add_option('-r', '--rev', dest='manual_rev',
+                      help='A hash of the revision to deploy. Defaults to the '
+                           'last successful Jenkins build on master.')
+
     options, args = parser.parse_args()
-    try:
-        Deployment(*args).deploy_if_appropriate()
-    except TypeError:  # wrong number of args
+    if len(args) == 1:
+        non_none_options = dict((k, getattr(options, k)) for k in
+                                (o.dest for o in parser.option_list if o.dest)
+                                if getattr(options, k))
+        Deployment(args[0], **non_none_options).deploy_if_appropriate()
+    else:
         parser.print_usage()
 
 
@@ -58,8 +74,30 @@ class Deployment(object):
     Maybe someday we'll plug in methods to handle a different project.
 
     """
-    def __init__(self, kind):
+    def __init__(self,
+                 kind,
+                 base_path='/data',
+                 python_path='/usr/bin/python2.7',
+                 repo='https://github.com/mozilla/dxr.git',
+                 manual_rev=None):
+        """Construct.
+
+        :arg kind: The type of deployment this is, either "staging" or "prod".
+            Affects only some folder names.
+        :arg base_path: Path to the dir containing the builds, instances, and
+            deployment directories
+        :arg python_path: Path to the Python executable on which to base the
+            virtualenvs
+        :arg repo: URL of the git repo from which to download DXR. Use HTTPS if
+            possible to ward off spoofing.
+        :arg manual_rev: A hash of the revision to deploy. Defaults to the last
+            successful Jenkins build on master.
+        """
         self.kind = kind
+        self.base_path = base_path
+        self.python_path = python_path
+        self.repo = repo
+        self.manual_rev = manual_rev
 
     def rev_to_deploy(self):
         """Return the VCS revision identifier of the version we should
@@ -70,22 +108,23 @@ class Deployment(object):
         deploy), raise ShouldNotDeploy.
 
         """
-        def latest_successful_build():
-            """Return the SHA of the latest test-passing commit on master."""
-            response = requests.get('https://ci.mozilla.org/job/dxr/'
-                                    'lastSuccessfulBuild/git/api/json',
-                                    verify=True)
-            return (response.json()['buildByBranchName']
-                                   ['origin/master']
-                                   ['revision']
-                                   ['SHA1'])
         with cd(self._deployment_path()):
-            old_hash = run('git rev-parse --verify HEAD')
-        new_hash = latest_successful_build()
+            old_hash = run('git rev-parse --verify HEAD').strip()
+        new_hash = self._latest_successful_build()
         if old_hash == new_hash:
             raise ShouldNotDeploy('The latest test-passing revision is already'
                                   ' deployed.')
         return new_hash
+
+    def _latest_successful_build(self):
+        """Return the SHA of the latest test-passing commit on master."""
+        response = requests.get('https://ci.mozilla.org/job/dxr/'
+                                'lastSuccessfulBuild/git/api/json',
+                                verify=True)
+        return (response.json()['buildByBranchName']
+                               ['origin/master']
+                               ['revision']
+                               ['SHA1'])
 
     def build(self, rev):
         """Create and return the path of a new directory containing a new
@@ -99,14 +138,16 @@ class Deployment(object):
 
         """
         VENV_NAME = 'virtualenv'
-        new_build_path = mkdtemp(prefix='%s-' % rev[:6], dir='/data/builds')
+        new_build_path = mkdtemp(prefix='%s-' % rev[:6],
+                                 dir=join(self.base_path, 'builds'))
         with cd(new_build_path):
             # Make a fresh, blank virtualenv:
-            run('virtualenv -p /usr/bin/python2.7 --no-site-packages {venv_name}',
+            run('virtualenv -p {python} --no-site-packages {venv_name}',
+                python=self.python_path,
                 venv_name=VENV_NAME)
 
             # Check out the source, and install DXR and dependencies:
-            run('git clone https://github.com/mozilla/dxr.git')
+            run('git clone {repo}', repo=self.repo)
             with cd('dxr'):
                 run('git checkout', rev)
                 run('git submodule update --init --recursive')
@@ -130,7 +171,7 @@ class Deployment(object):
             # instance to use based on the format version embedded in DXR. If
             # there isn't an instance that new yet, raise ShouldNotDeploy.
             run('ln -s {points_to} target',
-                points_to='/data/instances/0/target')
+                points_to=join(self.base_path, 'instances/0/target'))
 
             run('chmod 755 .')  # mkdtemp uses a very conservative mask.
 
@@ -157,7 +198,7 @@ class Deployment(object):
         with NonblockingLock('dxr-deploy-%s' % self.kind) as got_lock:
             if got_lock:
                 try:
-                    rev = self.rev_to_deploy()
+                    rev = self.manual_rev or self.rev_to_deploy()
                     new_build_path = self.build(rev)
                     self.install(new_build_path)
                 except ShouldNotDeploy:
@@ -169,11 +210,11 @@ class Deployment(object):
 
     def _deployment_path(self):
         """Return the path of the symlink to the deployed build of DXR."""
-        return '/data/dxr-%s' % self.kind
+        return join(self.base_path, 'dxr-%s' % self.kind)
 
 
 def run(command, **kwargs):
-    """Return the output of a command, with any trailing newline stripped.
+    """Return the output of a command.
 
     Pass in any kind of shell-executable line you like, with one or more
     commands, pipes, etc. Any kwargs will be shell-escaped and then subbed into
@@ -193,8 +234,6 @@ def run(command, **kwargs):
     output = check_output(
         command.format(dict((k, quote(v)) for k, v in kwargs.iteritems())),
         shell=True)
-    if output.endswith('\n'):
-        output = output[:-1]
     return output
 
 
