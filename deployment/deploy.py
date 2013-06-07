@@ -3,16 +3,17 @@
 Glossary
 ========
 
-build directory - A folder containing these folders...
+build directory - A folder, typically in the ``builds`` folder, containing
+    these folders...
 
     dxr - A checkout of the DXR source code
     target - A symlink to the instance to serve
     virtualenv - A virtualenv with DXR and its dependencies installed
 
     Builds are named after an excerpt of their git hashes and are symlinked
-    into the deployment directory.
+    into the base directory.
 
-deployment directory - The folder containing these folders...
+base directory - The folder containing these folders...
 
     builds - A folder of builds, including the current production and staging
         ones
@@ -27,10 +28,14 @@ deployment directory - The folder containing these folders...
 # since implemented in Fabric. Fabric has more features and more support and
 # was released more recently. OTOH, Fabric's argument conventions are crazy.
 
+# TODO: Update the deployment script first, and use the new version to deploy.
+# That way, each version is deployed by the deployment script that ships with
+# it.
+
 from contextlib import contextmanager
 from optparse import OptionParser
 import os
-from os import chdir, O_CREAT, O_EXCL
+from os import chdir, O_CREAT, O_EXCL, remove, getcwd
 from os.path import join
 from pipes import quote
 from subprocess import check_output
@@ -85,7 +90,7 @@ class Deployment(object):
         :arg kind: The type of deployment this is, either "staging" or "prod".
             Affects only some folder names.
         :arg base_path: Path to the dir containing the builds, instances, and
-            deployment directories
+            deployment links
         :arg python_path: Path to the Python executable on which to base the
             virtualenvs
         :arg repo: URL of the git repo from which to download DXR. Use HTTPS if
@@ -108,7 +113,7 @@ class Deployment(object):
         deploy), raise ShouldNotDeploy.
 
         """
-        with cd(self._deployment_path()):
+        with cd(join(self._deployment_path(), 'dxr')):
             old_hash = run('git rev-parse --verify HEAD').strip()
         new_hash = self._latest_successful_build()
         if old_hash == new_hash:
@@ -121,7 +126,7 @@ class Deployment(object):
         response = requests.get('https://ci.mozilla.org/job/dxr/'
                                 'lastSuccessfulBuild/git/api/json',
                                 verify=True)
-        return (response.json()['buildByBranchName']
+        return (response.json()['buildsByBranchName']
                                ['origin/master']
                                ['revision']
                                ['SHA1'])
@@ -149,7 +154,7 @@ class Deployment(object):
             # Check out the source, and install DXR and dependencies:
             run('git clone {repo}', repo=self.repo)
             with cd('dxr'):
-                run('git checkout', rev)
+                run('git checkout {rev}', rev=rev)
                 run('git submodule update --init --recursive')
                 # Make sure a malicious server didn't slip us a mickey. TODO:
                 # Does this recurse into submodules?
@@ -174,6 +179,7 @@ class Deployment(object):
                 points_to=join(self.base_path, 'instances/0/target'))
 
             run('chmod 755 .')  # mkdtemp uses a very conservative mask.
+        return new_build_path
 
     def install(self, new_build_path):
         """Install a build at ``self.deployment_path``.
@@ -202,7 +208,7 @@ class Deployment(object):
                     new_build_path = self.build(rev)
                     self.install(new_build_path)
                 except ShouldNotDeploy:
-                    pass  # TODO: log to stdout or stderr
+                    pass
                 else:
                     # if not self.passes_smoke_test():
                     #     self.rollback()
@@ -232,7 +238,7 @@ def run(command, **kwargs):
 
     """
     output = check_output(
-        command.format(dict((k, quote(v)) for k, v in kwargs.iteritems())),
+        command.format(**dict((k, quote(v)) for k, v in kwargs.iteritems())),
         shell=True)
     return output
 
