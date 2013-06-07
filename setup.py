@@ -25,6 +25,7 @@ setup(
                       'Jinja2>=2.6',
                       'Pygments>=1.4'],
     tests_require=['nose'],
+    test_suite='nose.collector',
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
     zip_safe=False,  # So we can find dxr-worker.py as a file to run it as a
