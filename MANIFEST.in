@@ -1,4 +1,4 @@
 include README.mkd
 recursive-include dxr/plugins *.py
 recursive-include dxr/static *.js *.css *.png *.svg
-recursive-include dxr/templates *.html
+recursive-include dxr/templates *.html *.py *.mkd
