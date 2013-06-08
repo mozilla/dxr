@@ -154,11 +154,13 @@ class Deployment(object):
             # Check out the source, and install DXR and dependencies:
             run('git clone {repo}', repo=self.repo)
             with cd('dxr'):
-                run('git checkout {rev}', rev=rev)
-                run('git submodule update --init --recursive')
+                run('git checkout -q {rev}', rev=rev)
+                run('git submodule update -q --init --recursive')
                 # Make sure a malicious server didn't slip us a mickey. TODO:
                 # Does this recurse into submodules?
-                run('git fsck --no-dangling')
+                # TODO: reinstate once we have a new enough git on the server
+                # to support --no-dangling.
+                # run('git fsck --no-dangling')
 
                 # Install stuff:
                 venv_bin_path = join(new_build_path, VENV_NAME, 'bin')
