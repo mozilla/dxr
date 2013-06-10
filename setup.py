@@ -19,6 +19,7 @@ setup(
     author_email='erik@mozilla.com',
     license='MIT',
     packages=find_packages(exclude=['ez_setup']),
+    package_data={'dxr': ['plugins/clang/*.so']},
     scripts=['bin/dxr-build.py', 'bin/dxr-serve.py'],
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',
