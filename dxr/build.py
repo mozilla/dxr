@@ -62,7 +62,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # setting into the config.py script, simple as that.
     _fill_and_write_template(
         jinja_env,
-        'config.py',
+        'config.py.jinja',
         os.path.join(config.target_folder, 'config.py'),
         dict(trees=repr([t.name for t in config.trees]),
              wwwroot=repr(config.wwwroot),
