@@ -321,7 +321,7 @@ function initMenu(){
     menu.populate([
       {
         icon:   'goto_folder',
-        href:    wwwroot + "/" + dxr.tree() + "/" + path,
+        href:    wwwroot + "/" + dxr.tree() + "/source/" + path,
         title:  "Browse the \"" + path + "\" folder",
         text:   "Browse folder contents"
       },
