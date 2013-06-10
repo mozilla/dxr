@@ -1,4 +1,10 @@
 include README.mkd
-recursive-include dxr/plugins *.py *.so
-recursive-include dxr/static *.js *.css *.png *.svg
-recursive-include dxr/templates *.html *.py *.mkd
+recursive-include docs *
+
+# Quietly let the clang plugin's .so through. If we try to include *.so
+# explicitly (which is clearer and less error-prone), the installation
+# procedure complains if it isn't there. Since this is currently the case on
+# our production box, we stay implicit for now.
+recursive-include dxr *
+
+global-exclude .DS_Store *.pyc *.pyo *.o
