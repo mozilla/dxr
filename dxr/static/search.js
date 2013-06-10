@@ -323,12 +323,12 @@ function initMenu(){
         icon:   'goto_folder',
         href:    wwwroot + "/" + dxr.tree() + "/" + path,
         title:  "Browse the \"" + path + "\" folder",
-        text:   "Browser folder contents"
+        text:   "Browse folder contents"
       },
       {
         icon:   'path_search',
         href:   limitUrl,
-        title:  "Only show results from \"" + path + "\"",
+        title:  "Show results from only \"" + path + "\"",
         text:   "Limit search to folder"
       },
       {
