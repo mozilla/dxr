@@ -65,7 +65,9 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # (this will abort on inconsistencies)
     overrides = {}
     if nb_jobs:
-        overrides['nb_jobs'] = nb_jobs
+        # TODO: Remove this brain-dead cast when we get the types right in the
+        # Config object:
+        overrides['nb_jobs'] = str(nb_jobs)
     config = Config(config_path, **overrides)
 
     # Find trees to make, fail if requested tree isn't available
@@ -90,7 +92,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
     # setting into the config.py script, simple as that.
     _fill_and_write_template(
         jinja_env,
-        'config.py',
+        'config.py.jinja',
         os.path.join(config.target_folder, 'config.py'),
         dict(trees=repr([t.name for t in config.trees]),
              wwwroot=repr(config.wwwroot),

@@ -48,7 +48,6 @@ def htmlify(path, text):
         if fnmatch.fnmatchcase(filename, "*.jsm"):
             lexer = pygments.lexers.JavascriptLexer(**options)
         else:
-            print >> sys.stderr, "pygments: No lexer for '%s'" % filename
             return None
     return Pygmentizer(text, lexer)
 

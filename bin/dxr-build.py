@@ -24,8 +24,9 @@ def main():
                            'trees.)')
     parser.add_option('-j', '--jobs', dest='jobs',
                       type='int',
-                      default=1,
-                      help='Number of parallel processes to use, (Default: 1)')
+                      default=None,
+                      help='Number of parallel processes to use, (Default: the'
+                           ' value of nb_jobs in the config file)')
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.print_usage()
@@ -42,9 +43,7 @@ def main():
         options.config_file = 'dxr.config'
 
     build_instance(options.config_file,
-                   # TODO: Remove this brain-dead cast when we get the types
-                   # right in the Config object:
-                   nb_jobs=str(options.jobs),
+                   nb_jobs=options.jobs,
                    tree=options.tree)
 
 

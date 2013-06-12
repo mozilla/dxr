@@ -1,1 +1,6 @@
 include README.mkd
+recursive-include docs *
+
+recursive-include dxr/plugins *.py *.so
+recursive-include dxr/static *.js *.css *.png *.svg
+recursive-include dxr/templates *.html *.jinja *.mkd
