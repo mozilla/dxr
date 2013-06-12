@@ -60,11 +60,10 @@
           </div>
           <div class="shown-with-results">
             <div id="tree-tip">
-              <div class = "file-name"> 
+              <div class="file-name">
                 {%- for path, name in source_components -%}
-                <span class="slash">/</span><a href="{{ path }}">{{ name }}</a>
+                  <span class="slash">/</span><a href="{{ path }}">{{ name }}</a>
                 {%- endfor -%}
-                <!-- Browsing {% if not showing_tree_menu %}<b>{{ tree }}</b>{% endif %} -->
               </div>
             </div>
             <div id="tip">
@@ -74,7 +73,7 @@
             </div>
           </div>
 
-          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s" title="Search" autocomplete="off" autofocus >
+          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s" title="Search" autocomplete="off" autofocus>
           <input type="hidden" name="redirect" value="true" id="redirect">
 
           <div class="hidden-with-results">
