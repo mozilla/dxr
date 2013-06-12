@@ -20,6 +20,36 @@ import dxr.languages
 import dxr.mime
 from dxr.utils import load_template_env, connect_database, open_log
 
+def create_navigable_pathname(path, tree):
+    """Converts pathname into s list of tuples that can be used to display
+    on the header of the file or folder pages
+
+    :arg path: The path that will be split
+    
+    """
+    # Holds the root of the tree
+    components = [("/%s/source"%tree.name, tree.name)]
+    # Populates each sub tree
+    dirs = path.split(os.sep)
+    # A special case when we're dealing with the root tree. Without
+    # this, it repeats.
+    if not path: 
+        return components
+
+    for idx in range(1, len(dirs)+1):
+        sub_tree_path = os.path.join("/",
+                                     tree.name,
+                                     "source",
+                                     os.sep.join(dirs[:idx]))
+        sub_tree_name = os.path.split(sub_tree_path)[1] or tree.name
+        components.append((sub_tree_path, sub_tree_name))
+
+    # print 20*"="
+    # import pprint
+    # pprint.pprint(components)
+    # print 20*"="
+    return components
+
 
 def build_instance(config_path, nb_jobs=None, tree=None):
     """Build a DXR instance.
@@ -274,22 +304,25 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
+
+    source_file_path_components = create_navigable_pathname(folder, tree)
+
     _fill_and_write_template(
         jinja_env,
         'folder.html',
         dst_path,
         {# Common template variables:
-          'wwwroot':        tree.config.wwwroot,
-          'tree':           tree.name,
-          'trees':          [t.name for t in tree.config.trees],
-          'config':         tree.config.template_parameters,
-          'generated_date': tree.config.generated_date,
-
+          'wwwroot':           tree.config.wwwroot,
+          'tree':              tree.name,
+          'trees':             [t.name for t in tree.config.trees],
+          'config':            tree.config.template_parameters,
+          'generated_date':    tree.config.generated_date,
+          'source_components': source_file_path_components,
           # Folder template variables:
-          'name':           name,
-          'path':           folder,
-          'folders':        folders,
-          'files':          files})
+          'name':              name,
+          'path':              folder,
+          'folders':           folders,
+          'files':             files})
 
 
 def _join_url(*args):
@@ -462,19 +495,23 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
     env = load_template_env(tree.config.temp_folder,
                             tree.config.template_folder)
     tmpl = env.get_template('file.html')
+
+    source_file_path_components = create_navigable_pathname(path, tree)
+
     arguments = {
         # Set common template variables
-        'wwwroot':        tree.config.wwwroot,
-        'tree':           tree.name,
-        'trees':          [t.name for t in tree.config.trees],
-        'config':         tree.config.template_parameters,
-        'generated_date': tree.config.generated_date,
-        # Set file template variables
-        'icon':           icon,
-        'path':           path,
-        'name':           os.path.basename(path),
-        'lines':          build_lines(tree, conn, path, text, htmlifiers),
-        'sections':       build_sections(tree, conn, path, text, htmlifiers)
+        'wwwroot':            tree.config.wwwroot,
+        'tree':               tree.name,
+        'trees':              [t.name for t in tree.config.trees],
+        'config':             tree.config.template_parameters,
+        'generated_date':     tree.config.generated_date,
+        # Set file template   variables
+        'source_components':  source_file_path_components,
+        'icon':               icon,
+        'path':               path,
+        'name':               os.path.basename(path),
+        'lines':              build_lines(tree, conn, path, text, htmlifiers),
+        'sections':           build_sections(tree, conn, path, text, htmlifiers)
     }
     # Fill-in variables and dump to file with utf-8 encoding
     tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
