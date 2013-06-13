@@ -13,6 +13,7 @@ import os
 import jinja2
 import sqlite3
 import string
+import sys
 from urllib import quote, quote_plus
 
 
@@ -59,8 +60,10 @@ def next_global_id():
     return n
 
 
-def open_log(config_or_tree, name):
+def open_log(config_or_tree, name, usestdout=False):
     """ Get an open log file given config or tree and name """
+    if usestdout:
+        return os.fdopen(os.dup(sys.stdout.fileno()))
     return open(os.path.join(config_or_tree.log_folder, name), 'w')
 
 
