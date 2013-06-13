@@ -21,6 +21,33 @@ import dxr.mime
 from dxr.utils import load_template_env, connect_database, open_log
 
 
+def linked_pathname(path, tree_name):
+    """Return a list of (server-relative URL, subtree name) tuples that can be
+    used to display linked path components in the headers of file or folder
+    pages.
+
+    :arg path: The path that will be split
+
+    """
+    # Hold the root of the tree:
+    components = [('/%s/source' % tree_name, tree_name)]
+
+    # Populate each subtree:
+    dirs = path.split(os.sep)  # TODO: Trips on \/ in path.
+
+    # A special case when we're dealing with the root tree. Without
+    # this, it repeats:
+    if not path:
+        return components
+
+    for idx in range(1, len(dirs)+1):
+        subtree_path = os.path.join('/', tree_name, 'source', *dirs[:idx])
+        subtree_name = os.path.split(subtree_path)[1] or tree_name
+        components.append((subtree_path, subtree_name))
+
+    return components
+
+
 def build_instance(config_path, nb_jobs=None, tree=None):
     """Build a DXR instance.
 
@@ -274,22 +301,24 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
+
     _fill_and_write_template(
         jinja_env,
         'folder.html',
         dst_path,
         {# Common template variables:
-          'wwwroot':        tree.config.wwwroot,
-          'tree':           tree.name,
-          'trees':          [t.name for t in tree.config.trees],
-          'config':         tree.config.template_parameters,
-          'generated_date': tree.config.generated_date,
+         'wwwroot': tree.config.wwwroot,
+         'tree': tree.name,
+         'trees': [t.name for t in tree.config.trees],
+         'config': tree.config.template_parameters,
+         'generated_date': tree.config.generated_date,
+         'paths_and_names': linked_pathname(folder, tree.name),
 
-          # Folder template variables:
-          'name':           name,
-          'path':           folder,
-          'folders':        folders,
-          'files':          files})
+         # Folder template variables:
+         'name': name,
+         'path': folder,
+         'folders': folders,
+         'files': files})
 
 
 def _join_url(*args):
@@ -462,19 +491,22 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
     env = load_template_env(tree.config.temp_folder,
                             tree.config.template_folder)
     tmpl = env.get_template('file.html')
+
     arguments = {
         # Set common template variables
-        'wwwroot':        tree.config.wwwroot,
-        'tree':           tree.name,
-        'trees':          [t.name for t in tree.config.trees],
-        'config':         tree.config.template_parameters,
+        'wwwroot': tree.config.wwwroot,
+        'tree': tree.name,
+        'trees': [t.name for t in tree.config.trees],
+        'config': tree.config.template_parameters,
         'generated_date': tree.config.generated_date,
-        # Set file template variables
-        'icon':           icon,
-        'path':           path,
-        'name':           os.path.basename(path),
-        'lines':          build_lines(tree, conn, path, text, htmlifiers),
-        'sections':       build_sections(tree, conn, path, text, htmlifiers)
+
+        # Set file template   variables
+        'paths_and_names': linked_pathname(path, tree.name),
+        'icon': icon,
+        'path': path,
+        'name': os.path.basename(path),
+        'lines': build_lines(tree, conn, path, text, htmlifiers),
+        'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
     # Fill-in variables and dump to file with utf-8 encoding
     tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')

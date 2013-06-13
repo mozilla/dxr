@@ -60,11 +60,15 @@
           </div>
           <div class="shown-with-results">
             <div id="tree-tip">
-              Browsing {% if not showing_tree_menu %}<b>{{ tree }}</b>{% endif %}
+              <div class="file-name">
+                {%- for path, name in paths_and_names -%}
+                  <span class="slash">/</span><a href="{{ path }}">{{ name }}</a>
+                {%- endfor -%}
+              </div>
             </div>
             <div id="tip">
               {%- block tip -%}
-                Enter search query here
+              <label for="query">Enter search query here</label>
               {%- endblock -%}
             </div>
           </div>

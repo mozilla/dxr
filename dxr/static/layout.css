@@ -340,3 +340,19 @@ table.folder-content {
     width: 100%;
     text-align: center;
 }
+
+div.file-name { 
+    padding: 0 1em;
+    font-weight: bold;
+}
+div.file-name a { 
+    text-decoration: none;
+}
+div.file-name span.slash { 
+    padding: 0 0.5em;
+}
+
+div.file-name a:hover { 
+    text-decoration: underline;
+    background-color: #eee;
+}
