@@ -342,19 +342,17 @@ table.folder-content {
 }
 
 div.file-name { 
-                /* border: 1px solid black; */
-                padding: 0 1em;
-                font-weight: bold;
- }
+    padding: 0 1em;
+    font-weight: bold;
+}
 div.file-name a { 
-                  text-decoration: none;
- }
+    text-decoration: none;
+}
 div.file-name span.slash { 
-                           padding: 0 0.5em;
- }
+    padding: 0 0.5em;
+}
 
 div.file-name a:hover { 
-                       text-decoration: underline;
-                       background-color: #eee;
- }
-
+    text-decoration: underline;
+    background-color: #eee;
+}
