@@ -21,7 +21,7 @@ import dxr.mime
 from dxr.utils import load_template_env, connect_database, open_log
 
 
-def build_instance(config_path, nb_jobs=None, tree=None):
+def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     """Build a DXR instance.
 
     :arg config_path: The path to a config file
@@ -115,7 +115,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
         index_files(tree, conn)
 
         # Build tree
-        build_tree(tree, conn)
+        build_tree(tree, conn, verbose)
 
         # Optimize and run integrity check on database
         finalize_database(conn)
@@ -304,7 +304,7 @@ def _fill_and_write_template(jinja_env, template_name, out_path, vars):
     template.stream(**vars).dump(out_path, encoding='utf-8')
 
 
-def build_tree(tree, conn):
+def build_tree(tree, conn, verbose):
     """Build the tree, pre_process, build and post_process."""
     # Load indexers
     indexers = load_indexers(tree)
@@ -325,6 +325,8 @@ def build_tree(tree, conn):
 
     # Open log file
     with open_log(tree, "build.log") as log:
+        if verbose:
+            log = None
         # Call the make command
         print "Building the '%s' tree" % tree.name
         r = subprocess.call(
@@ -340,8 +342,9 @@ def build_tree(tree, conn):
     if r != 0:
         msg = "Build command for '%s' failed, exited non-zero! Log follows:"
         print >> sys.stderr, msg % tree.name
-        with open(log.name) as log_file:
-            print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
+        if log is not None:
+            with open(log.name) as log_file:
+                print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         sys.exit(1)
 
     # Let plugins post process

@@ -27,6 +27,10 @@ def main():
                       default=None,
                       help='Number of parallel processes to use, (Default: the'
                            ' value of nb_jobs in the config file)')
+    parser.add_option('-v', '--verbose', dest='verbose',
+                      action='store_true', default=False,
+                      help='Print the logs out as they are building instead of'
+                           ' only on errors')
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.print_usage()
@@ -44,7 +48,8 @@ def main():
 
     build_instance(options.config_file,
                    nb_jobs=options.jobs,
-                   tree=options.tree)
+                   tree=options.tree,
+                   verbose=options.verbose)
 
 
 if __name__ == '__main__':
