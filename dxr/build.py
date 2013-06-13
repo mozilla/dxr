@@ -21,7 +21,7 @@ import dxr.mime
 from dxr.utils import load_template_env, connect_database, open_log
 
 
-def linked_pathname(path, tree):
+def linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be
     used to display linked path components in the headers of file or folder
     pages.
@@ -30,7 +30,7 @@ def linked_pathname(path, tree):
 
     """
     # Hold the root of the tree:
-    components = [('/%s/source' % tree.name, tree.name)]
+    components = [('/%s/source' % tree_name, tree_name)]
 
     # Populate each subtree:
     dirs = path.split(os.sep)  # TODO: Trips on \/ in path.
@@ -41,8 +41,8 @@ def linked_pathname(path, tree):
         return components
 
     for idx in range(1, len(dirs)+1):
-        subtree_path = os.path.join('/', tree.name, 'source', *dirs[:idx])
-        subtree_name = os.path.split(subtree_path)[1] or tree.name
+        subtree_path = os.path.join('/', tree_name, 'source', *dirs[:idx])
+        subtree_name = os.path.split(subtree_path)[1] or tree_name
         components.append((subtree_path, subtree_name))
 
     return components
@@ -312,7 +312,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
           'trees':             [t.name for t in tree.config.trees],
           'config':            tree.config.template_parameters,
           'generated_date':    tree.config.generated_date,
-          'source_components': linked_pathname(folder, tree),
+          'source_components': linked_pathname(folder, tree.name),
 
           # Folder template variables:
           'name':              name,
@@ -501,7 +501,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'generated_date':     tree.config.generated_date,
 
         # Set file template   variables
-        'source_components':  linked_pathname(path, tree),
+        'source_components':  linked_pathname(path, tree.name),
         'icon':               icon,
         'path':               path,
         'name':               os.path.basename(path),
