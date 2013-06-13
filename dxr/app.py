@@ -34,7 +34,7 @@ def make_app(instance_path):
     app.config.from_pyfile(os.path.join(app.instance_path, 'config.py'))
 
     # Log to Apache's error log in production:
-    app.logger.addHandler(StreamHandler(stream=stderr))
+    app.logger.addHandler(StreamHandler(stderr))
     return app
 
 
