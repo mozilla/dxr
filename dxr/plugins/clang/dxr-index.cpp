@@ -494,12 +494,14 @@ public:
   bool VisitDecl(Decl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
+#ifdef DEBUG
     if (!TagDecl::classof(d) && !NamespaceDecl::classof(d) &&
         !FunctionDecl::classof(d) && !FieldDecl::classof(d) &&
         !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
         !EnumConstantDecl::classof(d) && !AccessSpecDecl::classof(d) &&
         !LinkageSpecDecl::classof(d))
       printf("Unprocessed kind %s\n", d->getDeclKindName());
+#endif
     return true;
   }
 
