@@ -10,14 +10,16 @@ import ctypes
 ctypes.CDLL('libtrilite.so').load_trilite_extension()
 
 import os
+from os import dup
 import jinja2
 import sqlite3
 import string
+from sys import stdout
 from urllib import quote, quote_plus
 
 
 def connect_database(tree):
-    """ Connect to database ensuring that dependencies are built first """
+    """Connect to database ensuring that dependencies are built first"""
     # Create connection
     conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
     # Configure connection
@@ -32,7 +34,7 @@ def connect_database(tree):
 
 _template_env = None
 def load_template_env(temp_folder, template_folder):
-    """ Load template environment (lazily) """
+    """Load template environment (lazily)"""
     global _template_env
     if not _template_env:
         # Cache folder for jinja2
@@ -50,7 +52,7 @@ def load_template_env(temp_folder, template_folder):
 
 _next_id = 1
 def next_global_id():
-    """ Source of unique ids """
+    """Source of unique ids"""
     #TODO Please stop using this, it makes distribution and parallelization hard
     # Also it's just stupid!!! When whatever SQL database we use supports this
     global _next_id
@@ -59,8 +61,18 @@ def next_global_id():
     return n
 
 
-def open_log(config_or_tree, name):
-    """ Get an open log file given config or tree and name """
+def open_log(config_or_tree, name, use_stdout=False):
+    """Return a writable file-like object representing a log file.
+
+    :arg config_or_tree: a Config or Tree object which tells us which folder to
+        put the log file in
+    :arg name: The name of the log file
+    :arg use_stdout: If True, return a handle to stdout for verbose output,
+        duplicated so it can be closed with impunity.
+
+    """
+    if use_stdout:
+        return os.fdopen(dup(stdout.fileno()))
     return open(os.path.join(config_or_tree.log_folder, name), 'w')
 
 

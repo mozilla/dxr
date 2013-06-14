@@ -48,7 +48,7 @@ def linked_pathname(path, tree_name):
     return components
 
 
-def build_instance(config_path, nb_jobs=None, tree=None):
+def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     """Build a DXR instance.
 
     :arg config_path: The path to a config file
@@ -142,7 +142,7 @@ def build_instance(config_path, nb_jobs=None, tree=None):
         index_files(tree, conn)
 
         # Build tree
-        build_tree(tree, conn)
+        build_tree(tree, conn, verbose)
 
         # Optimize and run integrity check on database
         finalize_database(conn)
@@ -333,7 +333,7 @@ def _fill_and_write_template(jinja_env, template_name, out_path, vars):
     template.stream(**vars).dump(out_path, encoding='utf-8')
 
 
-def build_tree(tree, conn):
+def build_tree(tree, conn, verbose):
     """Build the tree, pre_process, build and post_process."""
     # Load indexers
     indexers = load_indexers(tree)
@@ -353,11 +353,11 @@ def build_tree(tree, conn):
     environ["build_folder"] = tree.object_folder
 
     # Open log file
-    with open_log(tree, "build.log") as log:
+    with open_log(tree, 'build.log', verbose) as log:
         # Call the make command
         print "Building the '%s' tree" % tree.name
         r = subprocess.call(
-            tree.build_command.replace("$jobs", tree.config.nb_jobs),
+            tree.build_command.replace('$jobs', tree.config.nb_jobs),
             shell   = True,
             stdout  = log,
             stderr  = log,
@@ -367,10 +367,12 @@ def build_tree(tree, conn):
 
     # Abort if build failed!
     if r != 0:
-        msg = "Build command for '%s' failed, exited non-zero! Log follows:"
-        print >> sys.stderr, msg % tree.name
-        with open(log.name) as log_file:
-            print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
+        print >> sys.stderr, ("Build command for '%s' failed, exited non-zero."
+                              % tree.name)
+        if not verbose:
+            print >> sys.stderr, 'Log follows:'
+            with open(log.name) as log_file:
+                print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         sys.exit(1)
 
     # Let plugins post process
