@@ -324,11 +324,11 @@ def build_tree(tree, conn, verbose):
     environ["build_folder"] = tree.object_folder
 
     # Open log file
-    with open_log(tree, "build.log", verbose) as log:
+    with open_log(tree, 'build.log', verbose) as log:
         # Call the make command
         print "Building the '%s' tree" % tree.name
         r = subprocess.call(
-            tree.build_command.replace("$jobs", tree.config.nb_jobs),
+            tree.build_command.replace('$jobs', tree.config.nb_jobs),
             shell   = True,
             stdout  = log,
             stderr  = log,
@@ -338,12 +338,10 @@ def build_tree(tree, conn, verbose):
 
     # Abort if build failed!
     if r != 0:
-        if verbose:
-            msg = "Build command for '%s' failed, exited non-zero!"
-        else:
-            msg = "Build command for '%s' failed, exited non-zero! Log follows:"
-        print >> sys.stderr, msg % tree.name
-        if verbose:
+        print >> sys.stderr, ("Build command for '%s' failed, exited non-zero."
+                              % tree.name)
+        if not verbose:
+            print >> sys.stderr, 'Log follows:'
             with open(log.name) as log_file:
                 print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         sys.exit(1)

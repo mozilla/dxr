@@ -29,8 +29,8 @@ def main():
                            ' value of nb_jobs in the config file)')
     parser.add_option('-v', '--verbose', dest='verbose',
                       action='store_true', default=False,
-                      help='Print the logs out as they are building instead of'
-                           ' only on errors')
+                      help='Display the build logs during the build instead of'
+                           ' only on error.')
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.print_usage()
