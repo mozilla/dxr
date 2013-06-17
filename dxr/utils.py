@@ -72,7 +72,7 @@ def open_log(config_or_tree, name, use_stdout=False):
 
     """
     if use_stdout:
-        return os.fdopen(dup(stdout.fileno()))
+        return os.fdopen(dup(stdout.fileno()), 'w')
     return open(os.path.join(config_or_tree.log_folder, name), 'w')
 
 
