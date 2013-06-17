@@ -2,9 +2,11 @@
 
 
 ## Introduction
-DXR is a source code cross-reference tool that uses static analysis data
-collected by instrumented compilers. DXR was created in order to build on
-tools like LXR and MXR. DXR runs only on Linux for the moment.
+DXR is a source code browser and search engine, building on the work of LXR and
+MXR. It supports full-text and regex searches as well as structural queries
+like "Find all the callers of this function." Behind the scenes, it uses
+trigram indices, the re2 library, and static analysis data collected by
+instrumented compilers. DXR runs only on Linux for the moment.
 
 
 ## Documentation
