@@ -372,7 +372,6 @@ def like_escape(val):
                .replace("?", "_")
                .replace("*", "%"))
 
-
 class genWrap(object):
     """Auxiliary class for wrapping a generator and make it nicer"""
     def __init__(self, gen):
@@ -638,7 +637,8 @@ filters = [
         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
         ext_sql           = None,
-        formatter         = lambda arg: ['%' + like_escape(arg)]
+        formatter         = lambda arg: ['%' + 
+            like_escape(arg if arg.startswith(".") else "." + arg)]
     ),
 
 
