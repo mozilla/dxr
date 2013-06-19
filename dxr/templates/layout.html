@@ -62,7 +62,7 @@
             <div id="tree-tip">
               <div class="file-name">
                 {%- for path, name in paths_and_names -%}
-                  <span class="slash">/</span><a href="{{ path }}">{{ name }}</a>
+                  <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
                 {%- endfor -%}
               </div>
             </div>
