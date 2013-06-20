@@ -491,6 +491,62 @@ public:
     return true;
   }
 
+  // Like "namespace foo;"
+  bool VisitNamespaceDecl(NamespaceDecl *d)
+  {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    beginRecord("namespace", d->getLocation());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getLocation()));
+    printExtent(d->getLocation(), d->getLocation());
+    *out << std::endl;
+    return true;
+  }
+
+  // Like "namespace bar = foo;"
+  bool VisitNamespaceAliasDecl(NamespaceAliasDecl *d)
+  {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+
+    beginRecord("namespace_alias", d->getAliasLoc());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getAliasLoc()));
+    printExtent(d->getAliasLoc(), d->getAliasLoc());
+    *out << std::endl;
+
+    if (d->getQualifierLoc())
+      visitNestedNameSpecifierLoc(d->getQualifierLoc());
+    printReference("namespace", d->getAliasedNamespace(), d->getTargetNameLoc(), d->getTargetNameLoc());
+    return true;
+  }
+
+  // Like "using namespace std;"
+  bool VisitUsingDirectiveDecl(UsingDirectiveDecl *d)
+  {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    if (d->getQualifierLoc())
+      visitNestedNameSpecifierLoc(d->getQualifierLoc());
+    printReference("namespace", d->getNominatedNamespace(), d->getIdentLocation(), d->getIdentLocation());
+    return true;
+  }
+
+  // Like "using std::string;"
+  bool VisitUsingDecl(UsingDecl *d)
+  {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+    if (d->getQualifierLoc())
+      visitNestedNameSpecifierLoc(d->getQualifierLoc());
+    // The part of the name after the last '::' is hard to deal with
+    // since it may refer to more than one thing.  For now it is unhandled.
+    return true;
+  }
+
   bool VisitDecl(Decl *d) {
     if (!interestingLocation(d->getLocation()))
       return true;
@@ -499,7 +555,8 @@ public:
         !FunctionDecl::classof(d) && !FieldDecl::classof(d) &&
         !VarDecl::classof(d) && !TypedefNameDecl::classof(d) &&
         !EnumConstantDecl::classof(d) && !AccessSpecDecl::classof(d) &&
-        !LinkageSpecDecl::classof(d))
+        !LinkageSpecDecl::classof(d) && !NamespaceAliasDecl::classof(d) &&
+        !UsingDirectiveDecl::classof(d) && !UsingDecl::classof(d))
       printf("Unprocessed kind %s\n", d->getDeclKindName());
 #endif
     return true;
@@ -540,6 +597,8 @@ public:
     return true;
   }
   bool VisitDeclRefExpr(DeclRefExpr *e) {
+    if (e->hasQualifier())
+      visitNestedNameSpecifierLoc(e->getQualifierLoc());
     printReference(kindForDecl(e->getDecl()),
                    e->getDecl(),
                    e->getLocation(),
@@ -644,6 +703,54 @@ public:
 
     printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
+  }
+
+  bool VisitElaboratedTypeLoc(ElaboratedTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    if (l.getQualifierLoc())
+      visitNestedNameSpecifierLoc(l.getQualifierLoc());
+    return true;
+  }
+
+  SourceLocation RemoveTrailingColonColon(SourceLocation begin, SourceLocation end)
+  {
+    if (!end.isValid())
+      return end;
+
+    SmallVector<char, 32> buffer;
+    if (Lexer::getSpelling(end, buffer, sm, features) != "::")
+      return end;
+
+    SourceLocation prev;
+    for (SourceLocation loc = begin;
+         loc.isValid() && loc != end && loc != prev;
+         loc = Lexer::getLocForEndOfToken(loc, 0, sm, features))
+    {
+      prev = loc;
+    }
+
+    return prev.isValid() ? prev : end;
+  }
+
+  void visitNestedNameSpecifierLoc(NestedNameSpecifierLoc l)
+  {
+    if (!interestingLocation(l.getBeginLoc()))
+      return;
+
+    if (l.getPrefix())
+      visitNestedNameSpecifierLoc(l.getPrefix());
+
+    SourceLocation begin = l.getLocalBeginLoc(), end = l.getLocalEndLoc();
+    // we don't want the "::" to be part of the link.
+    end = RemoveTrailingColonColon(begin, end);
+
+    NestedNameSpecifier *nss = l.getNestedNameSpecifier();
+    if (nss->getKind() == NestedNameSpecifier::Namespace)
+      printReference("namespace", nss->getAsNamespace(), begin, end);
+    else if (nss->getKind() == NestedNameSpecifier::NamespaceAlias)
+      printReference("namespace_alias", nss->getAsNamespaceAlias(), begin, end);
   }
 
   // Warnings!
