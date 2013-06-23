@@ -22,11 +22,8 @@
 #include <unistd.h>
 #include "sha1.h"
 
-#if CLANG_VERSION_MAJOR > 3 || (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 3)
-#define HAVE_CLANG_VERSION_3_3_OR_GREATER 1
-#else
-#define HAVE_CLANG_VERSION_3_3_OR_GREATER 0
-#endif
+#define CLANG_AT_LEAST(major, minor) \
+  (CLANG_VERSION_MAJOR > (major) || (CLANG_VERSION_MAJOR == (major) && CLANG_VERSION_MINOR >= (minor)))
 
 using namespace clang;
 
@@ -133,7 +130,7 @@ class PreprocThunk : public PPCallbacks {
   IndexConsumer *real;
 public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
-#if HAVE_CLANG_VERSION_3_3_OR_GREATER
+#if CLANG_AT_LEAST(3, 3)
   virtual void MacroDefined(const Token &tok, const MacroDirective *md);
   virtual void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma);
   virtual void MacroUndefined(const Token &tok, const MacroDirective *md);
@@ -795,7 +792,7 @@ public:
   }
 };
 
-#if HAVE_CLANG_VERSION_3_3_OR_GREATER
+#if CLANG_AT_LEAST(3, 3)
 void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
   real->MacroDefined(tok, md->getMacroInfo());
 }
