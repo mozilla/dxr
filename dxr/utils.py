@@ -95,5 +95,5 @@ def search_url(www_root, tree, query, redirect=None):
                                  # quote_plus needs a string.
                                  quote_plus(query.encode('utf-8')))
     if redirect is not None:
-        ret += '&redirect=%s' % ('true' if redirect else 'false')
+        ret += 'redirect=%s' % ('true' if redirect else 'false')
     return ret
