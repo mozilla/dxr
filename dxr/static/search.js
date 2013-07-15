@@ -112,6 +112,7 @@ function initIncrementalSearch(){
     state.offset  = 0;
     state.eof     = false;
     state.changed = true;
+    state.resend  = true;
     // Dispatch dxr-state-changed
     window.dispatchEvent(
       new CustomEvent( 'dxr-state-changed', {
@@ -229,13 +230,16 @@ function fetchResults(displayFetcher){
         if(data["error"])
           dxr.setErrorTip(data["error"]);
         request = null;
+        state.resend = true;
       }else if(request.status == 500){
-        // TODO
         // do something when 500 error received
+        request = null;
+        state.resend = false;
       }else{
         // Something failed, who cares try again :)
         request = null;
         fetchResults();
+        state.resend = true;
       }
     }
     // Hide fetcher if finished request
@@ -261,10 +265,13 @@ function fetchResults(displayFetcher){
     format:         'json'
   };
 
-  // Start a new request
-  request.open("GET", createSearchUrl(dxr.tree(), params), true);
-  setInProgressTimer();
-  request.send();
+  // Start request if resend flag is true
+  if(state.resend == true){
+    // Start a new request
+    request.open("GET", createSearchUrl(dxr.tree(), params), true);
+    setInProgressTimer();
+    request.send();
+  }
 }
 
 /** Parse querystring */
