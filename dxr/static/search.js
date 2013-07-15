@@ -258,6 +258,17 @@ function fetchResults(displayFetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+  
+  // Update title and URL
+  document.title = state.query + "- DXR Search";
+  // parameters for url
+  var param_history = {
+    tree:           dxr.tree(),
+    q:              state.query, 
+    redirect:       'true'
+  };
+  history.replaceState(params, state.query + "- DXR Search", createSearchUrl(dxr.tree(), param_history));
+
   setInProgressTimer();
   request.send();
 }
