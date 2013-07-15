@@ -199,39 +199,44 @@ function fetchResults(displayFetcher){
   // Create request
   request = new XMLHttpRequest();
   request.onreadystatechange = function(){
-    if(request.readyState == 4 && request.status == 200){
-      // Get data
-      var data = JSON.parse(request.responseText);
-      // Update state, if it wasn't changed
-      if(!state.changed){
-        state.eof     = data["results"].length == 0;
-        state.offset += data["results"].length;
-      }
-      // Display a nice tip
-      clearInProgressTimer();
-      dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
-      var content = document.getElementById("content");
-      // Clear results if necessary
-      if(clearOnSet && !data["error"]){
-        content.innerHTML = "";
-        // Scroll to top of page
-        window.scroll(0, 0);
+    if(request.readyState == 4){
+      if(request.status == 200){
+        // Get data
+        var data = JSON.parse(request.responseText);
+        // Update state, if it wasn't changed
+        if(!state.changed){
+          state.eof     = data["results"].length == 0;
+          state.offset += data["results"].length;
+        }
+        // Display a nice tip
+        clearInProgressTimer();
+        dxr.setTip("Incremental search results in " + data["time"].toFixed(3) + "s");
+        var content = document.getElementById("content");
+        // Clear results if necessary
+        if(clearOnSet && !data["error"]){
+          content.innerHTML = "";
+          // Scroll to top of page
+          window.scroll(0, 0);
 
-        // Hide foot, set fetcher hidden
-        var foot = document.getElementById("foot");
-        foot.style.display       = 'none';
-        fetcher.style.display    = 'block';
-        fetcher.style.visibility = 'hidden';
+          // Hide foot, set fetcher hidden
+          var foot = document.getElementById("foot");
+          foot.style.display       = 'none';
+          fetcher.style.display    = 'block';
+          fetcher.style.visibility = 'hidden';
+        }
+        content.innerHTML += formatResults(data);
+        // Set error as tip
+        if(data["error"])
+          dxr.setErrorTip(data["error"]);
+        request = null;
+      }else if(request.status == 500){
+        // TODO
+        // do something when 500 error received
+      }else{
+        // Something failed, who cares try again :)
+        request = null;
+        fetchResults();
       }
-      content.innerHTML += formatResults(data);
-      // Set error as tip
-      if(data["error"])
-        dxr.setErrorTip(data["error"]);
-      request = null;
-    }else if(request.readyState == 4){
-      // Something failed, who cares try again :)
-      request = null;
-      fetchResults();
     }
     // Hide fetcher if finished request
     if(request == null){
