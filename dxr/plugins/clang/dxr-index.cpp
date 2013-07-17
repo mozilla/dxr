@@ -714,7 +714,7 @@ public:
     return true;
   }
 
-  SourceLocation RemoveTrailingColonColon(SourceLocation begin, SourceLocation end)
+  SourceLocation removeTrailingColonColon(SourceLocation begin, SourceLocation end)
   {
     if (!end.isValid())
       return end;
@@ -744,7 +744,7 @@ public:
 
     SourceLocation begin = l.getLocalBeginLoc(), end = l.getLocalEndLoc();
     // we don't want the "::" to be part of the link.
-    end = RemoveTrailingColonColon(begin, end);
+    end = removeTrailingColonColon(begin, end);
 
     NestedNameSpecifier *nss = l.getNestedNameSpecifier();
     if (nss->getKind() == NestedNameSpecifier::Namespace)
