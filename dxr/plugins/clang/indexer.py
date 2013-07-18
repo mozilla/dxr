@@ -76,6 +76,48 @@ schema = dxr.schema.Schema({
         ("_key", "id"),
         ("_index", "qualname"),
     ],
+    # Namespaces
+    "namespaces": [
+        ("id", "INTEGER", False),              # The namespaces's id
+        ("name", "VARCHAR(256)", False),       # Simple name of the namespace
+        ("qualname", "VARCHAR(256)", False),   # Fully-qualified name of the namespace
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_key", "id"),
+        ("_index", "qualname"),
+    ],
+    # References to namespaces
+    "namespace_refs": [
+        ("refid", "INTEGER", True),      # ID of the namespace being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "namespaces", "id"),
+        ("_index", "refid"),
+    ],
+    # Namespace aliases
+    "namespace_aliases": [
+        ("id", "INTEGER", False),              # The namespace alias's id
+        ("name", "VARCHAR(256)", False),       # Simple name of the namespace alias
+        ("qualname", "VARCHAR(256)", False),   # Fully-qualified name of the namespace alias
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_key", "id"),
+        ("_index", "qualname"),
+    ],
+    # References to namespace aliases
+    "namespace_alias_refs": [
+        ("refid", "INTEGER", True),      # ID of the namespace alias being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "namespace_aliases", "id"),
+        ("_index", "refid"),
+    ],
     # References to functions
     "function_refs": [
         ("refid", "INTEGER", True),      # ID of the function being referenced
@@ -415,6 +457,20 @@ def process_call(args, conn):
 
     return None
 
+def process_namespace(args, conn):
+    if not fixupEntryPath(args, 'loc', conn):
+        return None
+    args['id'] = dxr.utils.next_global_id()
+    fixupExtent(args, 'extent')
+    return schema.get_insert_sql('namespaces', args)
+
+def process_namespace_alias(args, conn):
+    if not fixupEntryPath(args, 'loc', conn):
+        return None
+    args['id'] = dxr.utils.next_global_id()
+    fixupExtent(args, 'extent')
+    return schema.get_insert_sql('namespace_aliases', args)
+
 def load_indexer_output(fname):
     f = open(fname, "rb")
     try:
@@ -740,6 +796,24 @@ def update_refs(conn):
         UPDATE variable_refs SET refid = (
                 SELECT id
                   FROM variables AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        ) WHERE refid IS NULL"""
+    conn.execute(sql)
+    sql = """
+        UPDATE namespace_refs SET refid = (
+                SELECT id
+                  FROM namespaces AS def
+                 WHERE def.file_id    = referenced_file_id
+                   AND def.file_line  = referenced_file_line
+                   AND def.file_col   = referenced_file_col
+        ) WHERE refid IS NULL"""
+    conn.execute(sql)
+    sql = """
+        UPDATE namespace_alias_refs SET refid = (
+                SELECT id
+                  FROM namespace_aliases AS def
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
