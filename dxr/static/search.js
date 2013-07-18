@@ -228,17 +228,16 @@ function fetchResults(displayFetcher){
       if(data["error"])
         dxr.setErrorTip(data["error"]);
       request = null;
-    }else if(request.readyState == 4){
-      // Something failed, who cares try again :)
-      request = null;
-      fetchResults();
-    }
-    // Hide fetcher if finished request
-    if(request == null){
+
+      // Hide fetcher when request finished:
       fetcher.style.display    = 'block';
       fetcher.style.visibility = 'hidden';
-      // Fetch results if there's no scrollbar initially
-      if(atPageBottom()) fetchResults();
+
+      // Fetch results again if there's no scrollbar initially. Otherwise, the
+      // user can't scroll to the bottom to let us know he wants even more
+      // results.
+      if(atPageBottom())
+        fetchResults();
     }
   }
 
