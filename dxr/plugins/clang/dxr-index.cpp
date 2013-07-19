@@ -475,8 +475,22 @@ public:
       printExtent(d->getLocation(), d->getLocation());
       *out << std::endl;
     }
-    if (VarDecl *vd = dyn_cast<VarDecl>(d))
-      declDef("variable", vd, vd->getDefinition(), vd->getLocation(), vd->getLocation());
+    if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
+      VarDecl *def = vd->getDefinition();
+      if (!def) {
+        VarDecl *first = vd->getFirstDeclaration();
+        VarDecl *lastTentative = 0;
+        for (VarDecl::redecl_iterator i = first->redecls_begin(), e = first->redecls_end();
+             i != e; ++i) {
+          VarDecl::DefinitionKind kind = i->isThisDeclarationADefinition();
+          if (kind == VarDecl::TentativeDefinition) {
+            lastTentative = *i;
+          }
+        }
+        def = lastTentative;
+      }
+      declDef("variable", vd, def, vd->getLocation(), vd->getLocation());
+    }
   }
 
   bool VisitEnumConstantDecl(EnumConstantDecl *d) { visitVariableDecl(d); return true; }
