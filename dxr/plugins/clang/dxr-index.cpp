@@ -478,16 +478,16 @@ public:
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
       VarDecl *def = vd->getDefinition();
       if (!def) {
-        VarDecl *First = vd->getFirstDeclaration();
-        VarDecl *LastTentative = 0;
-        for (VarDecl::redecl_iterator I = First->redecls_begin(), E = First->redecls_end();
-             I != E; ++I) {
-          VarDecl::DefinitionKind Kind = I->isThisDeclarationADefinition();
-          if (Kind == VarDecl::TentativeDefinition) {
-            LastTentative = *I;
+        VarDecl *first = vd->getFirstDeclaration();
+        VarDecl *lastTentative = 0;
+        for (VarDecl::redecl_iterator i = first->redecls_begin(), e = first->redecls_end();
+             i != e; ++i) {
+          VarDecl::DefinitionKind kind = i->isThisDeclarationADefinition();
+          if (kind == VarDecl::TentativeDefinition) {
+            lastTentative = *i;
           }
         }
-        def = LastTentative;
+        def = lastTentative;
       }
       declDef("variable", vd, def, vd->getLocation(), vd->getLocation());
     }
