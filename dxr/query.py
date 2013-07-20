@@ -15,6 +15,8 @@ _parameters = ["path", "ext",
 "type", "type-ref", "type-decl",
 "function", "function-ref", "function-decl",
 "var", "var-ref", "var-decl",
+"namespace", "namespace-ref",
+"namespace-alias", "namespace-alias-ref",
 "macro", "macro-ref", "callers", "called-by", "warning",
 "warning-opt", "bases", "derived", "member"]
 
@@ -830,6 +832,74 @@ filters = [
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname"
+    ),
+
+    # namespace filter
+    ExistsLikeFilter(
+        param         = "namespace",
+        filter_sql    = """SELECT 1 FROM namespaces
+                           WHERE %s
+                             AND namespaces.file_id = files.id
+                        """,
+        ext_sql       = """SELECT namespaces.extent_start, namespaces.extent_end FROM namespaces
+                           WHERE namespaces.file_id = ?
+                             AND %s
+                           ORDER BY namespaces.extent_start
+                        """,
+        like_name     = "namespaces.name",
+        qual_name     = "namespaces.qualname"
+    ),
+
+    # namespace-ref filter
+    ExistsLikeFilter(
+        param         = "namespace-ref",
+        filter_sql    = """SELECT 1 FROM namespaces, namespace_refs AS refs
+                           WHERE %s
+                             AND namespaces.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM namespaces
+                                         WHERE %s
+                                           AND namespaces.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "namespaces.name",
+        qual_name     = "namespaces.qualname"
+    ),
+
+    # namespace-alias filter
+    ExistsLikeFilter(
+        param         = "namespace-alias",
+        filter_sql    = """SELECT 1 FROM namespace_aliases
+                           WHERE %s
+                             AND namespace_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT namespace_aliases.extent_start, namespace_aliases.extent_end FROM namespace_aliases
+                           WHERE namespace_aliases.file_id = ?
+                             AND %s
+                           ORDER BY namespace_aliases.extent_start
+                        """,
+        like_name     = "namespace_aliases.name",
+        qual_name     = "namespace_aliases.qualname"
+    ),
+
+    # namespace-alias-ref filter
+    ExistsLikeFilter(
+        param         = "namespace-alias-ref",
+        filter_sql    = """SELECT 1 FROM namespace_aliases, namespace_alias_refs AS refs
+                           WHERE %s
+                             AND namespace_aliases.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_alias_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM namespace_aliases
+                                         WHERE %s
+                                           AND namespace_aliases.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "namespace_aliases.name",
+        qual_name     = "namespace_aliases.qualname"
     ),
 
     # macro filter
