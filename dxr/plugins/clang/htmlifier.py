@@ -127,6 +127,24 @@ class ClangHtmlifier(object):
         for start, end, qualname in self.conn.execute(sql, args):
             yield start, end, self.typedef_menu(qualname)
 
+        # Extents for namespaces defined here
+        sql = """
+            SELECT extent_start, extent_end, qualname
+                FROM namespaces
+              WHERE file_id = ?
+        """
+        for start, end, qualname in self.conn.execute(sql, args):
+            yield start, end, self.namespace_menu(qualname)
+
+        # Extents for namespace aliases defined here
+        sql = """
+            SELECT extent_start, extent_end, qualname
+                FROM namespace_aliases
+              WHERE file_id = ?
+        """
+        for start, end, qualname in self.conn.execute(sql, args):
+            yield start, end, self.namespace_alias_menu(qualname)
+
         # Extents for macros defined here
         sql = """
             SELECT file_line, file_col, name
@@ -193,6 +211,33 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
+            self.add_jump_definition(menu, path, line)
+            yield start, end, menu
+
+        # Add references to namespaces
+        sql = """
+            SELECT refs.extent_start, refs.extent_end,
+                          namespaces.qualname,
+                          (SELECT path FROM files WHERE files.id = namespaces.file_id),
+                          namespaces.file_line
+                FROM namespaces, namespace_refs AS refs
+              WHERE namespaces.id = refs.refid AND refs.file_id = ?
+        """
+        for start, end, qualname, path, line in self.conn.execute(sql, args):
+            menu = self.namespace_menu(qualname)
+            yield start, end, menu
+
+        # Add references to namespace aliases
+        sql = """
+            SELECT refs.extent_start, refs.extent_end,
+                          namespace_aliases.qualname,
+                          (SELECT path FROM files WHERE files.id = namespace_aliases.file_id),
+                          namespace_aliases.file_line
+                FROM namespace_aliases, namespace_alias_refs AS refs
+              WHERE namespace_aliases.id = refs.refid AND refs.file_id = ?
+        """
+        for start, end, qualname, path, line in self.conn.execute(sql, args):
+            menu = self.namespace_alias_menu(qualname)
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
@@ -341,6 +386,36 @@ class ClangHtmlifier(object):
             'icon':   'field'
         })
         # TODO Investigate whether assignments and usages is possible and useful?
+        return menu
+
+
+    def namespace_menu(self, qualname):
+        """ Build menu for a namespace """
+        menu = []
+        menu.append({
+            'text':   "Find definitions",
+            'title':  "Find definitions of this namespace",
+            'href':   self.search("+namespace:%s" % self.quote(qualname)),
+            'icon':   'jump'
+        })
+        menu.append({
+            'text':   "Find references",
+            'title':  "Find references to this namespace",
+            'href':   self.search("+namespace-ref:%s" % self.quote(qualname)),
+            'icon':   'reference'
+        })
+        return menu
+
+
+    def namespace_alias_menu(self, qualname):
+        """ Build menu for a namespace """
+        menu = []
+        menu.append({
+            'text':   "Find references",
+            'title':  "Find references to this namespace alias",
+            'href':   self.search("+namespace-alias-ref:%s" % self.quote(qualname)),
+            'icon':   'reference'
+        })
         return menu
 
 
