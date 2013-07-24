@@ -123,15 +123,6 @@ function findPosTop(obj) {
   return top;
 }
 
-/** Find object position from the left */
-function findPosLeft(obj) {
-  var left = 0;
-  do{
-    left += obj.offsetLeft;
-  }while(obj = obj.offsetParent);
-  return left;
-}
-
 /** Initialize search tips */
 function initTip(){
   // Parse querystring for from=
