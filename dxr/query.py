@@ -27,11 +27,11 @@ _parameters += ["-" + param for param in _parameters] + ["+" + param for param
 
 
 # Pattern recognizing a parameter and a argument, a phrase or a keyword
-_pat = "(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
-_pat += "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
-_pat += "(?:\"(?P<phrase>[^\"]+)\")|"
-_pat += "(?:-\"(?P<notphrase>[^\"]+)\")|"
-_pat += "(?P<keyword>[^ \"]+)"
+_pat = ("(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
+        "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
+        "(?:\"(?P<phrase>[^\"]+)\")|"
+        "(?:-\"(?P<notphrase>[^\"]+)\")|"
+        "(?P<keyword>[^ \"]+)")
 # Regexp for parsing regular expression
 _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 
