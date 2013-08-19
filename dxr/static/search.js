@@ -169,7 +169,8 @@ function setInProgressTimer(){
 var request = null;
 // Clear contents of results on set
 var clearOnSet = false;
-
+// Run pushState on the first time
+var firstRun = true;
 /** Fetch results, using current state */
 function fetchResults(displayFetcher){
 
@@ -266,8 +267,14 @@ function fetchResults(displayFetcher){
     q:              state.query, 
     redirect:       'true'
   };
+  
+  if(firstRun == true){
+    history.pushState("", "DXR Search Index", document.URL);
+    console.log("pushState " + document.URL);
+    firstRun = false;
+  }
   history.replaceState(params, state.query + "- DXR Search", createSearchUrl(dxr.tree(), param_history));
-
+  console.log("replaceState");
   setInProgressTimer();
   request.send();
 }
@@ -362,5 +369,12 @@ window.addEventListener('load', function(){
   initMenu();
 }, false);
 
+/* window.addEventListener('popstate', function(event) {
+  if (event.state) {
+    alert('!');
+  } else {
+    console.log("Not State")
+  }
+}, false); */
 
 }());
