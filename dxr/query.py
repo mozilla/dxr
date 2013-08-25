@@ -42,6 +42,9 @@ _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 # token, in which we'll wrap it anyway :)
 _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
+# Pattern for matching a file and line number filename:n
+_line_number = re.compile("^.*:[0-9]+$")
+
 class Query(object):
     """Query object, constructor will parse any search query"""
 
@@ -223,10 +226,19 @@ class Query(object):
             return None
         cur = self.conn.cursor()
 
+        line_number = -1
+        if _line_number.match(term):
+            parts = term.split(":")
+            if len(parts) == 2:
+                term = parts[0]
+                line_number = int(parts[1])
+
         # See if we can find only one file match
         cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
         rows = cur.fetchall()
         if rows and len(rows) == 1:
+            if line_number >= 0:
+                return (rows[0]['path'], line_number)    
             return (rows[0]['path'], 1)
 
         # Case sensitive type matching
