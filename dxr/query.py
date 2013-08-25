@@ -256,8 +256,11 @@ class Query(object):
                 SELECT
                       (SELECT path FROM files WHERE files.id = types.file_id) as path,
                       types.file_line
-                    FROM types WHERE types.qualname LIKE ? LIMIT 2
-            """, (term,))
+                    FROM types WHERE types.qualname LIKE :term
+                        OR types.qualname LIKE :termPre
+                    LIMIT 2
+            """, {"term": term,
+                  "termPre": '%::' + term,})
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
@@ -267,8 +270,15 @@ class Query(object):
             SELECT
                   (SELECT path FROM files WHERE files.id = functions.file_id) as path,
                   functions.file_line
-                FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-            """, (term + '%',))  # Trailing % to eat "(int x)" etc.
+                FROM functions WHERE functions.qualname LIKE :term
+                    OR functions.qualname LIKE :termPre
+                    OR functions.qualname LIKE :termPost
+                    OR functions.qualname LIKE :termPrePost
+                LIMIT 2
+            """, {"term": term,   # Deal with partially qualified names and parameters - "(int x)", etc.
+                  "termPre": '%::' + term,
+                  "termPost": term + '(%',
+                  "termPrePost": '%::' + term + '(%',})
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
