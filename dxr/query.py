@@ -268,7 +268,7 @@ class Query(object):
                 SELECT
                       (SELECT path FROM files WHERE files.id = types.file_id) as path,
                       types.file_line
-                    FROM types WHERE types.qualname = :term
+                    FROM types WHERE types.qualname LIKE :term
                         OR types.qualname LIKE :termPre
                     LIMIT 2
             """, {"term": term,
@@ -282,7 +282,7 @@ class Query(object):
             SELECT
                   (SELECT path FROM files WHERE files.id = functions.file_id) as path,
                   functions.file_line
-                FROM functions WHERE functions.qualname = :term
+                FROM functions WHERE functions.qualname LIKE :term
                     OR functions.qualname LIKE :termPre
                     OR functions.qualname LIKE :termPost
                     OR functions.qualname LIKE :termPrePost
