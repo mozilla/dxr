@@ -234,11 +234,18 @@ class Query(object):
                 line_number = int(parts[1])
 
         # See if we can find only one file match
-        cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
+        cur.execute("""
+            SELECT path FROM files WHERE
+                path LIKE :term
+                OR path LIKE :termPre 
+            LIMIT 2
+        """, {"term": term,
+              "termPre": "%/" + term})
+
         rows = cur.fetchall()
         if rows and len(rows) == 1:
             if line_number >= 0:
-                return (rows[0]['path'], line_number)    
+                return (rows[0]['path'], line_number)
             return (rows[0]['path'], 1)
 
         # Case sensitive type matching
