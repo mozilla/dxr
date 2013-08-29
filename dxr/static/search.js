@@ -258,23 +258,26 @@ function fetchResults(displayFetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+
+  // History Pushstate and Replacestate
+  if(history.pushState && history.replaceState) {  
+    // Update title and URL
+    document.title = state.query + "- DXR Search";
+    // parameters for url
+    var param_history = {
+      tree:           dxr.tree(),
+      q:              state.query, 
+      redirect:       'true'
+    };
   
-  // Update title and URL
-  document.title = state.query + "- DXR Search";
-  // parameters for url
-  var param_history = {
-    tree:           dxr.tree(),
-    q:              state.query, 
-    redirect:       'true'
-  };
-  
-  if(firstRun == true){
-    history.pushState("", "DXR Search Index", document.URL);
-    console.log("pushState " + document.URL);
-    firstRun = false;
+    if(firstRun == true){
+      history.pushState(null, "DXR Search Index", document.URL);
+      loadPage = true;
+      firstRun = false;
+    }
+    history.replaceState(params, state.query + "- DXR Search", createSearchUrl(dxr.tree(), param_history));
   }
-  history.replaceState(params, state.query + "- DXR Search", createSearchUrl(dxr.tree(), param_history));
-  console.log("replaceState");
+  
   setInProgressTimer();
   request.send();
 }
@@ -369,12 +372,11 @@ window.addEventListener('load', function(){
   initMenu();
 }, false);
 
-/* window.addEventListener('popstate', function(event) {
-  if (event.state) {
-    alert('!');
-  } else {
-    console.log("Not State")
-  }
-}, false); */
+var loadPage = window.history.state;
+window.onpopstate = function(event) {
+    if (loadPage) {
+        window.location.reload();
+    }
+};
 
 }());
