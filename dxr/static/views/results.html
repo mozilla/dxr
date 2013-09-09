@@ -1,0 +1,31 @@
+{% for result in results %}
+<div class="result">
+    <!-- This is not ideal but unavoidable as each 'file' might have a different
+         icon so, we cannot have one class to rule them all, and manipulating the
+         class attribute for each path will cause a reflow everytime, dramatically
+         slowing down rendering. Therefore, it is best to handle this with an inline style. -->
+    <div class="path" style="background-image: url('{{ result.iconPath }}.png')">
+        {{ result.pathLine }}
+    </div>
+    <table class="result_snippet">
+        <caption class="visually-hidden">Query matches in {{ result.path }}</caption>
+        <thead>
+            <th scope="col">Line</th>
+            <th scope="col">Code Snippet</th>
+        </thead>
+    {% for entry in result.lines %}
+        <tbody>
+            <tr>
+                <td>{{ entry.line_number }}</td>
+                <td>
+                    <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#l{{ entry.line_number }}">
+                        <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    {% endfor %}
+    </table>
+    <p class="top"><a href="#search-box">Back to Top</a></p>
+</div>
+{% endfor %}
