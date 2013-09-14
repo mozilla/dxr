@@ -62,14 +62,17 @@ def htmlify(path, text):
     # Options and filename
     options   = {'encoding': 'utf-8'}
     filename  = os.path.basename(path)
-    try:
-        lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
-    except pygments.util.ClassNotFound:
-        # Small hack for js highlighting of jsm files
-        if fnmatch.fnmatchcase(filename, "*.jsm"):
-            lexer = pygments.lexers.JavascriptLexer(**options)
-        else:
-            return None
+    if fnmatch.fnmatchcase(filename, "*.js"):
+        lexer = pygments.lexers.JavascriptPreprocLexer(**options)
+    else:
+        try:
+            lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
+        except pygments.util.ClassNotFound:
+            # Small hack for js highlighting of jsm files
+            if fnmatch.fnmatchcase(filename, "*.jsm"):
+                lexer = pygments.lexers.JavascriptPreprocLexer(**options)
+            else:
+                return None
     return Pygmentizer(text, lexer)
 
 __all__ = dxr.plugins.htmlifier_exports()
