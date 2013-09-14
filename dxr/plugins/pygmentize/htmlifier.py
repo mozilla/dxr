@@ -62,9 +62,14 @@ def htmlify(path, text):
     # Options and filename
     options   = {'encoding': 'utf-8'}
     filename  = os.path.basename(path)
-    if fnmatch.fnmatchcase(filename, "*.js"):
-        lexer = pygments.lexers.JavascriptPreprocLexer(**options)
-    else:
+    lexer = None
+    try:
+        if fnmatch.fnmatchcase(filename, "*.js"):
+            lexer = pygments.lexers.JavascriptPreprocLexer(**options)
+    except AttributeError:
+        # JavascriptPreprocLexer not defined in current version of pygments
+        pass
+    if not lexer:
         try:
             lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
         except pygments.util.ClassNotFound:
