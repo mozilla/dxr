@@ -19,7 +19,8 @@ class ClangHtmlifier(object):
     def regions(self):
         tokenizer = tokenizers.CppTokenizer(self.text)
         for token in tokenizer.getTokens():
-            if token.token_type in [tokenizer.KEYWORD, tokenizer.STRING, kenizer.COMMENT, tokenizer.PREPROCESSOR]:
+            if token.token_type in [tokenizer.KEYWORD, tokenizer.STRING,
+                                    tokenizer.COMMENT, tokenizer.PREPROCESSOR]:
                 # "operator" is going to be part of something bigger like
                 # "operator++" or "operator new" so we don't want to create
                 # a region here that only covers part of that
