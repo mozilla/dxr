@@ -17,24 +17,15 @@ class ClangHtmlifier(object):
         self.file_id = file_id
 
     def regions(self):
-        # TODO Don't do syntax highlighting here, we have pygments for this
-        # but for the moment being pygments is disabled for cpp files as it
-        # has an infinite loop, as reported here:
-        # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
         tokenizer = tokenizers.CppTokenizer(self.text)
         for token in tokenizer.getTokens():
-            if token.token_type == tokenizer.KEYWORD:
+            if token.token_type in [tokenizer.KEYWORD, tokenizer.STRING,
+                                    tokenizer.COMMENT, tokenizer.PREPROCESSOR]:
                 # "operator" is going to be part of something bigger like
                 # "operator++" or "operator new" so we don't want to create
                 # a region here that only covers part of that
                 if token.name != "operator":
-                    yield (token.start, token.end, 'k')
-            elif token.token_type == tokenizer.STRING:
-                yield (token.start, token.end, 'str')
-            elif token.token_type == tokenizer.COMMENT:
-                yield (token.start, token.end, 'c')
-            elif token.token_type == tokenizer.PREPROCESSOR:
-                yield (token.start, token.end, 'p')
+                    yield (token.start, token.end, '')
 
 
     def refs(self):
