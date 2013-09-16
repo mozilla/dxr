@@ -749,6 +749,18 @@ public:
     return true;
   }
 
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    CXXRecordDecl *rd = l.getTypePtr()->getAsCXXRecordDecl();
+    if (!rd)
+      return true;
+
+    printReference("type", rd, l.getTemplateNameLoc(), l.getTemplateNameLoc());
+    return true;
+  }
+
   SourceLocation removeTrailingColonColon(SourceLocation begin, SourceLocation end)
   {
     if (!end.isValid())
