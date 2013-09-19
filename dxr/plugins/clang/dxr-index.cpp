@@ -753,11 +753,10 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    CXXRecordDecl *rd = l.getTypePtr()->getAsCXXRecordDecl();
-    if (!rd)
-      return true;
+    TemplateDecl *td = l.getTypePtr()->getTemplateName().getAsTemplateDecl();
+    if (ClassTemplateDecl *d = dyn_cast<ClassTemplateDecl>(td))
+      printReference("type", d, l.getTemplateNameLoc(), l.getTemplateNameLoc());
 
-    printReference("type", rd, l.getTemplateNameLoc(), l.getTemplateNameLoc());
     return true;
   }
 
