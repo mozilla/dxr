@@ -526,6 +526,22 @@ public:
     return true;
   }
 
+  bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+
+    // This is not really a typedef but it is close enough and probably not
+    // worth inventing a new record for.
+    beginRecord("typedef", d->getLocation());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getLocation()));
+    printScope(d);
+    printExtent(d->getLocation(), d->getLocation());
+    *out << std::endl;
+    return true;
+  }
+
   // Like "namespace foo;"
   bool VisitNamespaceDecl(NamespaceDecl *d)
   {
@@ -746,6 +762,25 @@ public:
 
     if (l.getQualifierLoc())
       visitNestedNameSpecifierLoc(l.getQualifierLoc());
+    return true;
+  }
+
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    TemplateDecl *td = l.getTypePtr()->getTemplateName().getAsTemplateDecl();
+    if (ClassTemplateDecl *d = dyn_cast<ClassTemplateDecl>(td))
+      printReference("type", d, l.getTemplateNameLoc(), l.getTemplateNameLoc());
+
+    return true;
+  }
+
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    printReference("typedef", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
