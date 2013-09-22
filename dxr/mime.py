@@ -54,6 +54,7 @@ ext_map = {
     "iso":        'iso',
     "php":        'php',
     "rb":         'rb',
+    "rs":         'rs',
     "ipdl":       'conf',
     "mm":         'mm',
     "tex":        'tex',
