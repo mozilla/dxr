@@ -2,12 +2,10 @@ import dxr.plugins
 import re
 import sys
 
-
-bugFinder = re.compile("(?i)bug\s+#?([0-9]+)")  # also used in hg plugin
-
 # Global variables
 bugzilla  = None
 name      = None
+bugFinder = None
 
 # Load global variables
 def load(tree, conn):
@@ -24,6 +22,12 @@ def load(tree, conn):
     else:
         print >> sys.stderr, "buglink plugin needs plugin_buglink_name configuration key"
         sys.exit(1)
+    # Get bug finder regex
+    if hasattr(tree, 'plugin_buglink_regex'):
+        bugFinder = re.compile(tree.plugin_buglink_regex)
+    else:
+        # default bug finder regex for backwards compatability
+        bugFinder = re.compile("(?i)bug\s+#?([0-9]+)")  # also used in hg plugin
 
 class BugLinkHtmlifier(object):
     def __init__(self, text):
