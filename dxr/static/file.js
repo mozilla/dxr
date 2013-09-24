@@ -162,83 +162,11 @@ function htmlEntities(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** Hijack the blame link, to toggle blame annotations */
-function hijackBlame(){
-  var pc = document.getElementById("panel-content");
-  var annos = document.getElementById("annotations");
-  var blaming = false;
-  // Helper for toggling the blame annotations
-  function toggleBlame(){
-    if(blaming)
-      annos.classList.remove('blame');
-    else
-      annos.classList.add('blame');
-    blaming = !blaming;
-  }
-  // Hijack click we think are hitting the blame link
-  pc.addEventListener('click', function(e){
-    // If the name is 'Blame'
-    if(e.target.innerHTML != "Blame")
-      return;
-    // And it links to some sort of annotate
-    var href = e.target.getAttribute('href');
-    if(href.indexOf("/annotate/") == -1)
-      return;
-    // And it has the blame icon
-    if(e.target.style.backgroundImage.indexOf("blame") == -1)
-      return;
-    // It's probably the blame link and we hijack it :)
-    // I know this ugly, but short of allowing plugins to define
-    // javascript and other bad things, there's no other way to integrate
-    // tightly. Besides all the ugly stuff is in the template in javascript
-    // and javascript can't be pretty anyway.
-    // NOTE: While this is an ugly hack, the plugin and template interfaces
-    // are fully respected, if we remove the blame specific things the
-    // annotations still work, they just can't be toggled.
-    e.preventDefault();
-    e.stopPropagation();
-    toggleBlame();
-  }, true);
-
-  // Get the info box
-  var infobox = document.getElementById("info-box");
-
-  // Handle clicks on note-blame annotations
-  annos.addEventListener('click', function(e){
-    if(e.target.classList.contains("note-blame")){
-      // Stop what you're doing we've got a info-box to show
-      e.preventDefault();
-      e.stopPropagation();
-      var data = e.target.dataset;
-      var html = ""
-       + "<img src='" + data.hgImg + "'>"
-       + "<b>" + htmlEntities(data.hgUser) + "</b><br>"
-       + "<i>" + dxr.prettyDate(data.hgDate) + "</i><br>"
-       + e.target.getAttribute("title");
-      infobox.innerHTML = html;
-      infobox.style.display = 'block';
-      infobox.style.top     = (menu.posTop(e.target) + e.target.offsetHeight) + "px";
-      infobox.style.left    = menu.posLeft(e.target) + "px";
-    }
-  }, false);
-  
-  // Stop event to reaching window
-  infobox.addEventListener('mousedown', function(e){
-    e.stopPropagation();
-  }, false);
-
-  // Hide info when something is clicked
-  window.addEventListener('mousedown', function(e){
-    infobox.style.display = 'none';
-  }, false);
-}
-
 /** Initialize everything */
 window.addEventListener('load', function (){
   window.addEventListener('hashchange', hashchanged, false);
   initTip();
   initMenu();
-  hijackBlame();
   setTimeout(hashchanged, 0);
 }, false);
 
