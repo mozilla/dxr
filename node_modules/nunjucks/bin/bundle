@@ -1,0 +1,49 @@
+#!/bin/sh
+
+ROOT=`dirname "$0"`
+output="$1"
+
+if [ -z "$SLIM" ]; then
+    # Listed in order of dependency
+    files="object.js lib.js nodes.js runtime.js lexer.js parser.js compiler.js 
+       filters.js globals.js web-loaders.js loaders.js environment.js"
+else
+    # Listed in order of dependency
+    files="object.js lib.js runtime.js filters.js globals.js environment.js"
+fi
+
+rm -f "$output"
+
+echo "(function() {" >> "$output"
+echo "var modules = {};" >> "$output"
+
+for file in $files; do
+    name=${file%%.*}
+    echo "(function() {" >> "$output"
+    cat "src/$file" | \
+        perl -ne 's/^(.*)require\(\W*([\w-]*)\W*\)(.*)$/$1modules["$2"]$3/; print' | \
+        sed -e "s/module.exports/modules['$name']/" \
+        >> "$output"
+    echo "})();" >> "$output"
+done
+
+echo "var nunjucks;" >> $output
+
+cat index.js | \
+    perl -ne 's/require\(\W*\.\/src\/([\w-]*)\W*\)/modules["$1"]/; print' | \
+    sed -e 's/module.exports/nunjucks/' \
+    >> "$output"
+
+echo "
+nunjucks.require = function(name) { return modules[name]; };
+
+if(typeof define === 'function' && define.amd) {
+    define(function() { return nunjucks; });
+}
+else {
+    window.nunjucks = nunjucks;
+}
+" >> "$output"
+
+echo "})();" >> "$output"
+
