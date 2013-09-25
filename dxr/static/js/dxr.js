@@ -21,14 +21,13 @@ $(function() {
     function buildPathLine(fullPath, tree) {
         var pathLines = '',
             pathRoot = tree + '/source/',
-            splitPath = fullPath.split('/'),
-            splitPathLength = splitPath.length,
-            paths = Iterator(splitPath),
+            paths = fullPath.split('/'),
+            splitPathLength = paths.length,
             dataPath = [];
 
-        for(let [i, path] in paths) {
+        for(var path in paths) {
             // Do not add a / on the last iteration.
-            var displayPath = (splitPathLength - 1) === i ? path : path + '/';
+            var displayPath = (splitPathLength - 1) === path ? paths[path] : paths[path] + '/';
 
             dataPath.push(path);
             pathLines += pathLineTmpl.render({
@@ -50,11 +49,11 @@ $(function() {
 
         $.getJSON(ajaxURL, function(data) {
 
-            var results = Iterator(data.results);
+            var results = data.results;
 
-            for(let [,result] in results) {
-                result.pathLine = buildPathLine(result.path, data.tree);
-                result.iconPath = icons + result.icon;
+            for(var result in results) {
+                results[result].pathLine = buildPathLine(results[result].path, data.tree);
+                results[result].iconPath = icons + results[result].icon;
             }
 
             contentContainer.empty().append(tmpl.render(data));

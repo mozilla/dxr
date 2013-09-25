@@ -60,10 +60,7 @@ select {
 option {
     font-size: 12px;
 }
-.logo a:focus {
-    background-color: transparent;
-}
-.result_snippet {
+table {
     background-color: #f6f4ec;
     margin: 0;
     padding: 0;
@@ -71,21 +68,33 @@ option {
     font-size: 12px;
     overflow: auto;
 }
-.result_snippet thead {
+table thead {
     background-color: #333;
     color: #fff;
     padding: .5em;
 }
-.result_snippet th:first-child {
-    border-right: 1px solid #fff;
-    text-align: center;
-}
-.result_snippet th {
+table th {
     padding: .5em;
     text-align: left;
 }
-.result_snippet tr {
+table tr {
     border-bottom: 1px solid #fff;
+}
+table tbody tr:hover {
+    background-color: #E4E4D7;
+}
+table td {
+    padding: .5em;
+}
+td.code {
+    padding: 0 0 0 .5em;
+}
+.logo a:focus {
+    background-color: transparent;
+}
+.result_snippet th:first-child {
+    border-right: 1px solid #fff;
+    text-align: center;
 }
 .result_snippet td:first-child {
     background-color: #e0e0e0;
@@ -99,13 +108,7 @@ option {
 }
 .result_snippet a {
     display: inline-block;
-    padding: .5em;
     width: 100%;
-}
-.result_snippet a:hover,
-.file td.code:hover {
-    background-color: #E4E4D7;
-    text-decoration: none;
 }
 .checkbox_case {
     display: inline-block;
@@ -161,6 +164,17 @@ option {
     font-size: 12px;
     text-align: right;
     margin: -1em 1em .5em 1em;
+}
+/* icons */
+.folder-icon {
+    background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
+    padding: .5em .5em .5em 1.7em;
+}
+.folder-content .icon {
+    background-color: transparent;
+    background-position: 0 4px;
+    background-repeat: no-repeat;
+    padding: .5em .5em .5em 1.7em;
 }
 .panel {
     display: none;

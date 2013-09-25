@@ -1,6 +1,6 @@
 {
   "name": "DXR",
-  "description": "TMozilla's code search",
+  "description": "Mozilla's code search",
   "author": "espressive <sneethling@mozilla.com>",
   "version": "0.1.1",
   "devDependencies": {
