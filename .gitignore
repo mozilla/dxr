@@ -5,6 +5,7 @@ tests/*/target
 tests/*/temp
 tests/*/code/code
 tests/*/dxr.config
+node_modules
 vagrantconfig_local.yaml
 .vagrant
 build

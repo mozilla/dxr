@@ -1,51 +1,41 @@
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    <link href="{{ wwwroot }}/static/layout.css" rel="stylesheet" type="text/css">
-    <link href="{{ wwwroot }}/static/code-style.css" rel="stylesheet" type="text/css">
-    <script>
-      var wwwroot = "{{ wwwroot }}";
-    </script>
-    <script src="{{ wwwroot }}/static/dxr.js"></script>
-    <script src="{{ wwwroot }}/static/menu.js"></script>
-    <script src="{{ wwwroot }}/static/search.js"></script>
-    <script>
-    // State used for fetching results
-    var state = {
-      // Current query (loaded from q in initIncrementalSearch)
-      // This, avoid ugly decoding, otherwise needed
-      query:        null,
-      // Offset for next request
-      offset:       {{state_offset or 0}},
-      // Number of results when paging
-      limit:        {{state_limit or 100}},
-      // True, if there's no more result
-      eof:          {% if state_eof -%}
-                      true
-                    {%-else-%}
-                      false
-                    {%-endif %},
-      // True, when this state is modified by user through search box
-      changed:      false
-    };
-  </script>
+    <meta charset="utf-8" />
     {% block head %}
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
+    <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
   </head>
   <body>
     {% block body %}
 
-    <div id="search-box" class="{% block search_box_class %}with-results{% endblock %}">
-      <img src="{{ wwwroot }}/static/magmoz.svg" id="big-logo">
-      <div id="search-background">
-        <a id="dxr" href="{{ wwwroot }}/"><img src="{{ wwwroot }}/static/magmoz.svg" id="small-logo"></a>
-        <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="width-limiter">
-          {% set showing_tree_menu = trees|length > 1 %}
-          <div class="hidden-with-results">
-            You can search
+    <div id="search-box" class="{% block search_box_class %}with-results{% endblock %} search-box">
+    <p class="logo">
+      <a href="{{ wwwroot }}/" title="Home">
+        <img src="{{ wwwroot }}/static/images/dxr.png" width="167" height="30" alt="Mozilla DXR logo" />
+      </a>
+    </p>
+      <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="search">
 
+        <label for="query">Find</label>
+        <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" autofocus placeholder="Enter query and press enter to start search..." />
+
+        <fieldset>
+          <label for="search_type">as</label>
+          <select name="search_type" id="search_type">
+            <option value="text" selected="selected">text</option>
+            <option value="regex">regex</option>
+            <option value="caller">caller</option>
+            <option value="callee">callee</option>
+            <option value="function">function</option>
+            <option value="function_reference">function reference</option>
+            <option value="function_declaration">function declaration</option>
+            <option value="superclass">superclass</option>
+            <option value="subclass">subclass</option>
+          </select>
+
+          {% set showing_tree_menu = trees|length > 1 %}in
             {% if showing_tree_menu %}
               <select name="tree" id="tree">
                 {% for t in trees %}
@@ -53,47 +43,24 @@
                 {% endfor %}
               </select>
             {% else %}
-              <b>{{ tree }}</b>
-              <input type="hidden" name="tree" value="{{ tree }}" id="tree">
+              <select name="tree" id="tree" disabled="disabled">
+                <option value="{{ tree }}">{{ tree }}</option>
+              </select>
             {% endif %}
-            here
-          </div>
-          <div class="shown-with-results">
-            <div id="tree-tip">
-              <div class="file-name">
-                {%- for path, name in paths_and_names -%}
-                  <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
-                {%- endfor -%}
-              </div>
-            </div>
-            <div id="tip">
-              {%- block tip -%}
-              <label for="query">Enter search query here</label>
-              {%- endblock -%}
-            </div>
-          </div>
 
-          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s" title="Search" autocomplete="off" autofocus>
-          <input type="hidden" name="redirect" value="true" id="redirect">
+            <input type="checkbox" name="case_sensitivity" id="case_sensitivity" class="checkbox_case" value="true" />
+            <label class="checkbox_label" for="case_sensitivity">Case-sensitive</label>
+        </fieldset>
 
-          <div class="hidden-with-results">
-            or browse
-            {% for t in trees -%}
-              {%- if loop.last and trees|length > 1 %}
-                or
-              {% elif not loop.first and trees|length > 1 -%}
-                ,
-              {% endif -%}
-              <a href="{{ t }}/source/">{{ t }}</a>
-            {%- endfor -%}
-            .
-          </div>
-        </form>
-      </div>
+        <input type="hidden" name="redirect" value="true" id="redirect" />
+        <input type="hidden" name="format" value="json" id="format" />
+
+        <input type="submit" value="search" class="visually-hidden" />
+      </form>
     </div>
 
     {% if panel %}
-    <div id="panel">
+    <div class="panel">
       <a id="panel-toggle">
         {%- block panel_title -%}
         Navigation
@@ -105,13 +72,23 @@
       </div>
     </div>
     {% endif %}
-    <div id="content">
+    <div id="content" class="content">
+      <div id="tree-tip" class="tree-tip shown-with-results">
+        <strong>File Path:</strong>&nbsp;
+        <div class="file-name">
+          {%- for path, name in paths_and_names -%}
+          <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
+          {%- endfor -%}
+        </div>
+      </div>
+
       {% block content %}
       {% endblock %}
     </div>
-    <div id="foot">
+
+    <div id="foot" class="footer">
       {% block foot %}
-      This page was generated by DXR 
+      This page was generated by DXR
       <span class="pretty-date" data-datetime="{{ generated_date }}">
         {{ generated_date }}
       </span>.<br>
@@ -120,11 +97,22 @@
     </div>
     {% endblock %}
     <div id="fetch-results">
-      <img src="{{ wwwroot }}/static/view-refresh.svg"
-           style="vertical-align: middle;">
+      <img src="{{ wwwroot }}/static/view-refresh.svg" />
       Fetching results
     </div>
     <div id="inline-menu"></div>
     <div id="info-box"></div>
+
+    {% set eof = True if state_eof else False %}
+
+    <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
+    <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search"></span>
+    <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-eof="{{ eof }}"></span>
+
+    <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
+    <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
+    <script src="{{ wwwroot }}/static/js/templates.js"></script>
+
+    <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
   </body>
 </html>

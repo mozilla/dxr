@@ -1,0 +1,195 @@
+/**
+ * normalize - Remove the gray background color from active links in IE 10.
+ */
+a {
+    background: transparent;
+}
+/**
+ * normalize - Improve readability when focused and also mouse hovered in all browsers.
+ */
+a:active,
+a:hover {
+    outline: 0;
+}
+/**
+ * normalize - Remove most spacing between table cells.
+ */
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* apply a natural box layout model to all elements */
+* {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+body {
+    background: #fff url(/static/images/mozilla-dinosaur-head-small.png) 50% -150% no-repeat;
+    color: #333;
+    margin: 0;
+    font: 16px/1.5 Arial, Helvetica, sans-serif;
+}
+a:link,
+a:visited {
+    color: inherit;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+a:focus {
+    background-color: #e0e0e0;
+}
+caption {
+    font-size: 12px;
+    text-align: left;
+}
+fieldset {
+    border: 0;
+}
+label {
+    font-size: 14px;
+}
+input,
+select {
+    padding: .5em;
+}
+option {
+    font-size: 12px;
+}
+table {
+    background-color: #f6f4ec;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-size: 12px;
+    overflow: auto;
+}
+table thead {
+    background-color: #333;
+    color: #fff;
+    padding: .5em;
+}
+table th {
+    padding: .5em;
+    text-align: left;
+}
+table tr {
+    border-bottom: 1px solid #fff;
+}
+table tbody tr:hover {
+    background-color: #E4E4D7;
+}
+table td {
+    padding: .5em;
+}
+td.code {
+    padding: 0 0 0 .5em;
+}
+.logo a:focus {
+    background-color: transparent;
+}
+.result_snippet th:first-child {
+    border-right: 1px solid #fff;
+    text-align: center;
+}
+.result_snippet td:first-child {
+    background-color: #e0e0e0;
+    border-right: 1px solid #fff;
+    border-bottom: 1px solid #edefef;
+    width: 4%;
+    text-align: center;
+}
+.result_snippet td:first-child a:hover {
+    background-color: #e0e0e0;
+}
+.result_snippet a {
+    display: inline-block;
+    width: 100%;
+}
+.checkbox_case {
+    display: inline-block;
+    margin: .5em;
+}
+.file tr {
+    line-height: 1.2;
+}
+.file th {
+    line-height: 1.5;
+}
+.file pre {
+    white-space: pre-wrap;
+}
+.top {
+    margin-right: .5em;
+    font-size: 11px;
+    text-align: right;
+}
+.search-box {
+    background: #f6f4ec;
+    color: #333;
+    padding: .1rem 1rem 1rem 1rem;
+    border-bottom: 10px solid #333;
+}
+.search-box form {
+    padding: 0 .3em;
+}
+.query {
+    width: 95%;
+}
+.case {
+    margin-left: 5%;
+}
+.content {
+    padding: 1em;
+}
+.message {
+    position: absolute;
+    top: 40%;
+    left: 30%;
+}
+.path {
+    background-repeat: no-repeat;
+    background-position: 0 3px;
+    margin: 1.2em 0 .5em 0;
+    padding-left: 25px;
+}
+.tree-tip {
+    margin: 1.2em 0 .5em 0;
+}
+.footer {
+    font-size: 12px;
+    text-align: right;
+    margin: -1em 1em .5em 1em;
+}
+/* icons */
+.folder-icon {
+    background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
+    padding: .5em .5em .5em 1.7em;
+}
+.folder-content .icon {
+    background-color: transparent;
+    background-position: 0 4px;
+    background-repeat: no-repeat;
+    padding: .5em .5em .5em 1.7em;
+}
+.panel {
+    display: none;
+}
+#fetch-results {
+    display: none;
+}
+/*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
+.visually-hidden {
+    position: absolute;
+    clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+    clip: rect(1px, 1px, 1px, 1px);
+    padding:0;
+    border:0;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+}

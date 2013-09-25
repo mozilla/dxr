@@ -4,9 +4,6 @@
 
 {% block head %}
   <link rel="shortcut icon" href="{{ wwwroot }}/static/icons/{{ icon }}.png"/>
-  <script src="{{ wwwroot }}/static/menu.js"></script>
-  <script src="{{ wwwroot }}/static/file.js"></script>
-  <script src="{{ wwwroot }}/static/panel.js"></script>
 {% endblock %}
 
 {% set panel = True %}
@@ -38,18 +35,26 @@
   </div>
   {%- endfor -%}
 </div>
-<div class="line-numbers">
+
+<table class="result_snippet file">
+  <thead class="visually-hidden">
+      <th scope="col">Line</th>
+      <th scope="col">Code</th>
+  </thead>
+  <tbody>
   {% for number, line, annotations in lines %}
-  <pre><a href="#l{{ number }}"
-          class="ln" id="line-{{ number }}"
-          name="l{{ number }}">{{ number }}</a></pre>
-  {%- endfor %}
-</div>
-<div class="file-lines">
+    <tr>
+        <td>
+          <a href="#l{{ number }}" id="l{{ number }}">{{ number }}</a>
+        </td>
+        <td class="code">
 <pre>
-{%- for number, line, annotations in lines %}
 <code aria-labelledby="line-{{ number }}">{{ line }}</code>
-{%- endfor -%}
 </pre>
-</div>
+        </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+ <p class="top"><a href="#search-box">Back to Top</a></p>
 {% endblock %}
