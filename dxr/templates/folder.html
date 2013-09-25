@@ -21,10 +21,7 @@
     </tr>
     {% for icon, name, modified, relative_url in folders %}
     <tr>
-      <td><a href="{{ wwwroot }}/{{ relative_url }}"
-             style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png')"
-             class="icon">
-             {{ name }}/</a></td>
+      <td><a href="{{ wwwroot }}/{{ relative_url }}" class="folder-icon">{{ name }}/</a></td>
       <td>{{ modified.strftime("%Y-%b-%d %H:%m") }}</td>
       <td>-</td>
     </tr>
