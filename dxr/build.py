@@ -544,9 +544,8 @@ def build_lines(tree, conn, path, text, htmlifiers):
     if not text.endswith("\n"):
         line_map.append(len(text))
 
-    # So, we have a minor issue with writing out the main body. Some of our
-    # information is (line, col) information and others is file offset. Also,
-    # we don't necessarily have the information in sorted order.
+    # So, we have a minor issue with writing out the main body.
+    # We don't necessarily have the information in sorted order.
 
     regions = chain(*(htmlifier.regions()     for htmlifier in htmlifiers))
     refs    = chain(*(htmlifier.refs()        for htmlifier in htmlifiers))
@@ -556,31 +555,12 @@ def build_lines(tree, conn, path, text, htmlifiers):
     # so we can view it as a stack we just pop annotations off as we generate lines
     notes   = sorted(notes, reverse = True)
 
-    # start and end, may be either a number (extent) or a tuple of (line, col)
-    # we shall normalize this, and sort according to extent
-    # This is the fastest way to apply everything...
-    def normalize(region):
-        start, end, data = region
-        if end < start:
-            # Regions like this happens when you implement your own operator, ie. &=
-            # apparently the cxx-lang plugin doesn't provide and end for these
-            # operators. Why don't know, also I don't know if it can supply this...
-            # It's a ref regions...
-            # TODO Make a NaziHtmlifierConsumer to complain about stuff like this
-            return (start, start + 1, data)
-        if isinstance(start, tuple):
-            line1, col1 = start
-            line2, col2 = end
-            start = line_map[line1 - 1] + col1 - 1
-            end   = line_map[line2 - 1] + col2 - 1
-            return start, end, data
-        return region
     # Add sanitizer to remove regions that have None as offsets
     # They are just stupid and shouldn't be there in the first place!
     sane    = lambda (start, end, data): start is not None and end is not None
-    regions = (normalize(region) for region in regions if sane(region))
-    refs    = (normalize(region) for region in refs    if sane(region))
-    # That's it we've normalized this mess, so let's just sort it too
+    regions = (region for region in regions if sane(region))
+    refs    = (region for region in refs    if sane(region))
+    # That's it we've sanitized this mess, so let's just sort it too
     order   = lambda (start, end, data): (- start, end, data)
     regions = sorted(regions, key = order)
     refs    = sorted(refs,    key = order)

@@ -147,14 +147,11 @@ class ClangHtmlifier(object):
 
         # Extents for macros defined here
         sql = """
-            SELECT file_line, file_col, name
+            SELECT extent_start, extent_end, name
                 FROM macros
               WHERE file_id = ?
         """
-        for line, col, name in self.conn.execute(sql, args):
-            # TODO Refactor macro table and remove the (line, col) scheme!
-            start = (line, col)
-            end   = (line, col + len(name))
+        for start, end, name in self.conn.execute(sql, args):
             yield start, end, self.macro_menu(name)
 
         # Add references to types
