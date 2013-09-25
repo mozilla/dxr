@@ -5,29 +5,31 @@ from pygments.token import Token
 import os, sys
 import fnmatch
 
-keyword_tokens = [Token.Keyword,
-                  Token.Keyword.Constant,
-                  Token.Keyword.Declaration,
-                  Token.Keyword.Namespace,
-                  Token.Keyword.Pseudo,
-                  Token.Keyword.Reserved,
-                  Token.Keyword.Type]
-string_tokens =  [Token.String,
-                  Token.String.Backtick,
-                  Token.String.Char,
-                  Token.String.Doc,
-                  Token.String.Double,
-                  Token.String.Escape,
-                  Token.String.Heredoc,
-                  Token.String.Interpol,
-                  Token.String.Other,
-                  Token.String.Regex,
-                  Token.String.Single,
-                  Token.String.Symbol]
-comment_tokens = [Token.Comment,
-                  Token.Comment.Multiline,
-                  Token.Comment.Single,
-                  Token.Comment.Special]
+token_classes = {
+    Token.Keyword: 'k',
+    Token.Keyword.Constant: 'k',
+    Token.Keyword.Declaration: 'k',
+    Token.Keyword.Namespace: 'k',
+    Token.Keyword.Pseudo: 'k',
+    Token.Keyword.Reserved: 'k',
+    Token.Keyword.Type: 'k',
+    Token.String: 'str',
+    Token.String.Backtick: 'str',
+    Token.String.Char: 'str',
+    Token.String.Doc: 'str',
+    Token.String.Double: 'str',
+    Token.String.Escape: 'str',
+    Token.String.Heredoc: 'str',
+    Token.String.Interpol: 'str',
+    Token.String.Other: 'str',
+    Token.String.Regex: 'str',
+    Token.String.Single: 'str',
+    Token.String.Symbol: 'str',
+    Token.Comment: 'c',
+    Token.Comment.Multiline: 'c',
+    Token.Comment.Single: 'c',
+    Token.Comment.Special: 'c',
+    Token.Comment.Preproc: 'p'}
 
 class Pygmentizer(object):
     """ Pygmentizer add syntax regions for file """
@@ -38,12 +40,9 @@ class Pygmentizer(object):
         return []
     def regions(self):
         for index, token, text in self.lexer.get_tokens_unprocessed(self.text):
-            cls = None
-            if token in keyword_tokens:        cls = 'k'
-            if token in string_tokens:         cls = 'str'
-            if token in comment_tokens:        cls = 'c'
-            if token is Token.Comment.Preproc: cls = 'p'
-            if cls:   yield index, index + len(text), cls
+            cls = token_classes.get(token)
+            if cls:
+                yield index, index + len(text), cls
     def annotations(self):
         return []
     def links(self):
