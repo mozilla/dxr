@@ -1,25 +1,5 @@
 (function(){
 
-// TODO Migrate this to use jinja.js, so we can place a template file in static/
-//      and use that template on the server using an include statement and on
-//      client side.
-var resultTemplate = ""
- + "<div class=\"result\">"
- + "<div class=\"path\""
- + " style=\"background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')\""
- + " >{{pathLine}}</div>"
- + "{{formattedLines}}"
- + "</div>";
-
-var linesTemplate = ""
- + "<a class=\"snippet\" "
- + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
- + "  <div class=\"line-numbers\">"
- + "    <pre><span class=\"ln\">{{line_number}}</span></pre>"
- + "  </div>"
- + "  <div class=\"file-lines\"><pre><code>{{line}}</code></pre></div>"
- + "</a>";
-
 /** Format a template and return it */
 function formatTemplate(template, vars){
   for(var k in vars){
@@ -101,7 +81,7 @@ function initIncrementalSearch(){
   // Fetch results, if any, on scroll to bottom of page
   window.addEventListener('scroll', function(e){
     if(atPageBottom() && !state.eof) fetchResults(true);
-  }, false); 
+  }, false);
 
   // Update advanced search fields on change in q
   q.addEventListener('input', function(e){
@@ -175,7 +155,7 @@ function fetchResults(displayFetcher){
 
   // Stop if we're at end, nothing more to do
   if(state.eof && !state.changed) return;
-  
+
   // Only request results if no pending request is in progress
   if(request && !state.changed) return;
 
@@ -223,7 +203,8 @@ function fetchResults(displayFetcher){
         fetcher.style.display    = 'block';
         fetcher.style.visibility = 'hidden';
       }
-      content.innerHTML += formatResults(data);
+      /* content.innerHTML += formatResults(data); */
+      content.innerHTML += data;
       // Set error as tip
       if(data["error"])
         dxr.setErrorTip(data["error"]);
@@ -291,13 +272,13 @@ function initMenu(){
   // Attach event handler on results, so we don't have to worry about what
   // happens when we update the contents of results.
   document.getElementById("content").addEventListener('click', function (e){
-    // Ensure that we're in a 
-    if(!e.target.parentNode 
+    // Ensure that we're in a
+    if(!e.target.parentNode
        || !e.target.parentNode.classList.contains('path')) return;
 
     // Okay, get the path
     var path = e.target.dataset.path;
-  
+
     // Don't show menu if file name part was clicked
     // as we didn't stop default user will jump to this page
     if(!path) return;
