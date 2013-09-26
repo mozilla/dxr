@@ -90,6 +90,7 @@ schema = dxr.schema.Schema({
     # References to namespaces
     "namespace_refs": [
         ("refid", "INTEGER", True),      # ID of the namespace being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -111,6 +112,7 @@ schema = dxr.schema.Schema({
     # References to namespace aliases
     "namespace_alias_refs": [
         ("refid", "INTEGER", True),      # ID of the namespace alias being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -121,6 +123,7 @@ schema = dxr.schema.Schema({
     # References to functions
     "function_refs": [
         ("refid", "INTEGER", True),      # ID of the function being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -131,6 +134,7 @@ schema = dxr.schema.Schema({
     # References to macros
     "macro_refs": [
         ("refid", "INTEGER", True),      # ID of the macro being referenced
+        ("name", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -141,6 +145,7 @@ schema = dxr.schema.Schema({
     # References to types
     "type_refs": [
         ("refid", "INTEGER", True),      # ID of the type being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -151,6 +156,7 @@ schema = dxr.schema.Schema({
     # References to typedefs
     "typedef_refs": [
         ("refid", "INTEGER", True),      # ID of the typedef being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -161,6 +167,7 @@ schema = dxr.schema.Schema({
     # References to variables
     "variable_refs": [
         ("refid", "INTEGER", True),      # ID of the variable being referenced
+        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -179,6 +186,7 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for functions
     "function_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
+        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
@@ -190,6 +198,7 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for types
     "type_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
+        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
@@ -201,6 +210,7 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for variables
     "variable_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
+        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
@@ -345,15 +355,15 @@ def process_decldef(args, conn):
         return None
 
     # Store declaration map basics on memory
-    name, defloc, declloc = args['name'], args['defloc'], args['declloc']
+    qualname, defloc, declloc = args['qualname'], args['defloc'], args['declloc']
     defid, defline, defcol = splitLoc(conn, args['defloc'])
     declid, declline, declcol = splitLoc (conn, args['declloc'])
     if defid is None or declid is None:
         return None
 
     # FIXME: should kind be included in this mapping?
-    decl_master[(name, declid, declline, declcol)] = (defid, defline, defcol)
-    decl_master[(name, defid, defline, defcol)] = (defid, defline, defcol)
+    decl_master[(qualname, declid, declline, declcol)] = (defid, defline, defcol)
+    decl_master[(qualname, defid, defline, defcol)] = (defid, defline, defcol)
 
     if not fixupEntryPath(args, 'declloc', conn):
         return None
@@ -703,6 +713,7 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
+                 AND def.qualname  = type_decldef.qualname
         )"""
     conn.execute(sql)
     sql = """
@@ -712,6 +723,7 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
+                 AND def.qualname  = function_decldef.qualname
         )"""
     conn.execute(sql)
     sql = """
@@ -721,6 +733,7 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
+                 AND def.qualname  = variable_decldef.qualname
         )"""
     conn.execute(sql)
 
@@ -734,6 +747,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
+                   AND decl.qualname  = type_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -743,6 +757,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
+                   AND decl.qualname  = function_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -752,6 +767,7 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
+                   AND decl.qualname  = variable_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
 
@@ -763,6 +779,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.name       = macro_refs.name
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -772,6 +789,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = type_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -781,6 +799,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = typedef_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -790,6 +809,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = function_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -799,6 +819,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = variable_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -808,6 +829,7 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = namespace_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -817,5 +839,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
+                   AND def.qualname   = namespace_alias_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)

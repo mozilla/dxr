@@ -243,10 +243,22 @@ public:
     *out << value.substr(start) << "\"";
   }
 
+  SourceLocation getFileLocation(SourceLocation loc) {
+    while (loc.isValid() && loc.isMacroID())
+    {
+      if (!sm.isMacroArgExpansion(loc))
+        return SourceLocation();
+      loc = sm.getImmediateSpellingLoc(loc);
+    }
+    return loc;
+  }
+
   void printExtent(SourceLocation begin, SourceLocation end) {
     if (!end.isValid())
       end = begin;
-    if (begin.isMacroID() || end.isMacroID())
+    begin = getFileLocation(begin);
+    end   = getFileLocation(end);
+    if (!begin.isValid() || !end.isValid())
       return;
     *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
       sm.getDecomposedSpellingLoc(
@@ -289,7 +301,7 @@ public:
       return;
 
     beginRecord("decldef", decl->getLocation());
-    recordValue("name", getQualifiedName(*decl));
+    recordValue("qualname", getQualifiedName(*def));
     recordValue("declloc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
@@ -616,12 +628,6 @@ public:
   // Expressions!
   void printReference(const char *kind, NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
-      return;
-    std::string filename = sm.getBufferName(refLoc, NULL);
-    if (filename.empty())
-      // Basically, this means we're in a macro expansion and we have serious
-      // preprocessing stuff going on (i.e., ## and possibly #). Just bail for
-      // now.
       return;
     beginRecord("ref", refLoc);
     recordValue("qualname", getQualifiedName(*d));
