@@ -14,11 +14,11 @@ class StringTests(SingleFileTestCase):
 
     def test_negated_word(self):
         """Make sure a negated word with underscores supresses results."""
-        eq_(self.search_results('void -main_idea'), [])
+        self.found_nothing('void -main_idea')
 
     def test_negated_phrase(self):
         """Make sure a negated phrase search doesn't crash."""
-        eq_(self.search_results('void -"int"'), [])
+        self.found_nothing('void -"int"')
 
 
 class RepeatedResultTests(SingleFileTestCase):
