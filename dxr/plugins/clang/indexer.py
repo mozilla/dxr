@@ -713,7 +713,6 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
-                 AND def.qualname  = type_decldef.qualname
         )"""
     conn.execute(sql)
     sql = """
@@ -723,7 +722,6 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
-                 AND def.qualname  = function_decldef.qualname
         )"""
     conn.execute(sql)
     sql = """
@@ -733,7 +731,6 @@ def update_defids(conn):
                WHERE def.file_id   = definition_file_id
                  AND def.file_line = definition_file_line
                  AND def.file_col  = definition_file_col
-                 AND def.qualname  = variable_decldef.qualname
         )"""
     conn.execute(sql)
 
@@ -747,7 +744,6 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-                   AND decl.qualname  = type_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -757,7 +753,6 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-                   AND decl.qualname  = function_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -767,7 +762,6 @@ def update_refs(conn):
                  WHERE decl.file_id   = referenced_file_id
                    AND decl.file_line = referenced_file_line
                    AND decl.file_col  = referenced_file_col
-                   AND decl.qualname  = variable_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
 
@@ -779,7 +773,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.name       = macro_refs.name
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -789,7 +782,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = type_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -799,7 +791,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = typedef_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -809,7 +800,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = function_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -819,7 +809,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = variable_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -829,7 +818,6 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = namespace_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
     sql = """
@@ -839,6 +827,5 @@ def update_refs(conn):
                  WHERE def.file_id    = referenced_file_id
                    AND def.file_line  = referenced_file_line
                    AND def.file_col   = referenced_file_col
-                   AND def.qualname   = namespace_alias_refs.qualname
         ) WHERE refid IS NULL"""
     conn.execute(sql)
