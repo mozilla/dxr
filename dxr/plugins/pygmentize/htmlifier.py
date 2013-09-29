@@ -1,7 +1,9 @@
 import dxr.plugins
 import pygments
 import pygments.lexers
-from pygments.token import Token
+import pygments.lexer
+import re
+from pygments.token import Token, Comment
 import os, sys
 import fnmatch
 
@@ -28,6 +30,31 @@ comment_tokens = [Token.Comment,
                   Token.Comment.Multiline,
                   Token.Comment.Single,
                   Token.Comment.Special]
+
+# Extend the Pygments Javascript lexer to handle preprocessor directives.
+class JavascriptPreprocLexer(pygments.lexers.JavascriptLexer):
+    """
+    For Javascript with Mozilla build preprocessor directives.
+    See https://developer.mozilla.org/en-US/docs/Build/Text_Preprocessor .
+    """
+
+    name = 'JavaScriptPreproc'
+    aliases = []
+    filenames = []
+    mimetypes = []
+
+    flags = re.DOTALL
+    tokens = {
+        'commentsandwhitespace': [
+            # python-style comment
+            (r'#\s.*?\n', Comment.Single),
+            # preprocessor directives
+            (r'#(includesubst|include|expand|define|undef|ifdef|ifndef|elifdef|'
+             r'elifndef|if|elif|else|endif|filter|unfilter|literal|error)',
+             Comment.Preproc),
+            pygments.lexer.inherit
+        ]
+    }
 
 class Pygmentizer(object):
     """ Pygmentizer add syntax regions for file """
@@ -63,21 +90,14 @@ def htmlify(path, text):
     options   = {'encoding': 'utf-8'}
     filename  = os.path.basename(path)
     lexer = None
-    try:
-        if fnmatch.fnmatchcase(filename, "*.js"):
-            lexer = pygments.lexers.JavascriptPreprocLexer(**options)
-    except AttributeError:
-        # JavascriptPreprocLexer not defined in current version of pygments
-        pass
-    if not lexer:
+    # Use a custom lexer for js/jsm files to highlight prepocessor directives
+    if fnmatch.fnmatchcase(filename, "*.js") or fnmatch.fnmatchcase(filename, "*.jsm"):
+        lexer = JavascriptPreprocLexer(**options)
+    else:
         try:
             lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
         except pygments.util.ClassNotFound:
-            # Small hack for js highlighting of jsm files
-            if fnmatch.fnmatchcase(filename, "*.jsm"):
-                lexer = pygments.lexers.JavascriptPreprocLexer(**options)
-            else:
-                return None
+            return None
     return Pygmentizer(text, lexer)
 
 __all__ = dxr.plugins.htmlifier_exports()
