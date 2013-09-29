@@ -645,11 +645,17 @@ def build_lines(tree, conn, path, text, htmlifiers):
                 next = min(next, refs_stack[-1][1])
 
             # Output the source text from last offset to next
+            src_str = None
             if next < line_map[line_number]:
-                line += cgi.escape(src(offset, next))
+                src_str = src(offset, next)
             else:
                 # Throw away newline if at end of line
-                line += cgi.escape(src(offset, next - 1))
+                src_str = src(offset, next - 1)
+            # Check for Windows line endings
+            if len(src_str) > 0 and src_str[-1] == '\r':
+                line += cgi.escape(src_str[:-1])
+            else:
+                line += cgi.escape(src_str)
             offset = next
 
             # Close regions, modify stack and open them again
