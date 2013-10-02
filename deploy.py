@@ -53,6 +53,9 @@ def main():
     parser.add_option('-b', '--base', dest='base_path',
                       help='Path to the dir containing the builds, instances, '
                            'and deployment links')
+    parser.add_option('-c', '--branch', dest='branch',
+                      help='Deploy the revision from this branch which last '
+                           'passed Jenkins.')
     parser.add_option('-p', '--python', dest='python_path',
                       help='Path to the Python executable on which to base the'
                            ' virtualenvs')
@@ -61,7 +64,8 @@ def main():
                            'Use HTTPS if possible to ward off spoofing.')
     parser.add_option('-r', '--rev', dest='manual_rev',
                       help='A hash of the revision to deploy. Defaults to the '
-                           'last successful Jenkins build on master.')
+                           'last successful Jenkins build on the branch '
+                           'specified by -c (or master, by default).')
 
     options, args = parser.parse_args()
     if len(args) == 1:
@@ -84,6 +88,7 @@ class Deployment(object):
                  base_path='/data',
                  python_path='/usr/bin/python2.7',
                  repo='https://github.com/mozilla/dxr.git',
+                 branch='master',
                  manual_rev=None):
         """Construct.
 
@@ -95,13 +100,16 @@ class Deployment(object):
             virtualenvs
         :arg repo: URL of the git repo from which to download DXR. Use HTTPS if
             possible to ward off spoofing.
+        :arg branch: The most recent passing Jenkins build from this branch
+            will be deployed by default.
         :arg manual_rev: A hash of the revision to deploy. Defaults to the last
-            successful Jenkins build on master.
+            successful Jenkins build on ``branch``.
         """
         self.kind = kind
         self.base_path = base_path
         self.python_path = python_path
         self.repo = repo
+        self.branch = branch
         self.manual_rev = manual_rev
 
     def rev_to_deploy(self):
@@ -127,7 +135,7 @@ class Deployment(object):
                                 'lastSuccessfulBuild/git/api/json',
                                 verify=True)
         return (response.json()['buildsByBranchName']
-                               ['origin/master']
+                               ['origin/%s' % self.branch]
                                ['revision']
                                ['SHA1'])
 
