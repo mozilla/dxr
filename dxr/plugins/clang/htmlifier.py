@@ -49,26 +49,27 @@ class ClangHtmlifier(object):
 
         # Extents for variables defined here
         sql = """
-            SELECT extent_start, extent_end, qualname
+            SELECT extent_start, extent_end, qualname, value
                 FROM variables
               WHERE file_id = ?
         """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.variable_menu(qualname), qualname)
+        for start, end, qualname, value in self.conn.execute(sql, args):
+            yield start, end, (self.variable_menu(qualname, value), qualname)
 
         # Extents for variables declared here
         sql = """
             SELECT decldef.extent_start,
                           decldef.extent_end,
                           variables.qualname,
+                          variables.value,
                           (SELECT path FROM files WHERE files.id = variables.file_id),
                           variables.file_line
                 FROM variable_decldef AS decldef, variables
               WHERE decldef.defid = variables.id
                   AND decldef.file_id = ?
         """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.variable_menu(qualname)
+        for start, end, qualname, value, path, line in self.conn.execute(sql, args):
+            menu = self.variable_menu(qualname, value)
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -127,12 +128,12 @@ class ClangHtmlifier(object):
 
         # Extents for macros defined here
         sql = """
-            SELECT extent_start, extent_end, name
+            SELECT extent_start, extent_end, name, text
                 FROM macros
               WHERE file_id = ?
         """
-        for start, end, name in self.conn.execute(sql, args):
-            yield start, end, (self.macro_menu(name), name)
+        for start, end, name, value in self.conn.execute(sql, args):
+            yield start, end, (self.macro_menu(name, value), name)
 
         # Add references to types
         sql = """
@@ -181,13 +182,14 @@ class ClangHtmlifier(object):
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           variables.qualname,
+                          variables.value,
                           (SELECT path FROM files WHERE files.id = variables.file_id),
                           variables.file_line
                 FROM variables, variable_refs AS refs
               WHERE variables.id = refs.refid AND refs.file_id = ?
         """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.variable_menu(qualname)
+        for start, end, qualname, value, path, line in self.conn.execute(sql, args):
+            menu = self.variable_menu(qualname, value)
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -222,13 +224,14 @@ class ClangHtmlifier(object):
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           macros.name,
+                          macros.text,
                           (SELECT path FROM files WHERE files.id = macros.file_id),
                           macros.file_line
                 FROM macros, macro_refs AS refs
               WHERE macros.id = refs.refid AND refs.file_id = ?
         """
-        for start, end, name, path, line in self.conn.execute(sql, args):
-            menu = self.macro_menu(name)
+        for start, end, name, value, path, line in self.conn.execute(sql, args):
+            menu = self.macro_menu(name, value)
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, name)
 
@@ -317,9 +320,17 @@ class ClangHtmlifier(object):
         return menu
 
 
-    def variable_menu(self, qualname):
+    def variable_menu(self, qualname, value):
         """ Build menu for a variable """
         menu = []
+        if value:
+            trunc_value = value[:32] + "..." if len(value) > 32 else value
+            menu.append({
+                'text':   "Value = " + trunc_value,
+                'title':  "Value of this variable if known to be constant",
+                'href':   '#',
+                'icon':   'macro'
+            })
         menu.append({
             'text':   "Find declarations",
             'title':  "Find declarations of this variable",
@@ -366,10 +377,17 @@ class ClangHtmlifier(object):
         return menu
 
 
-    def macro_menu(self, name):
+    def macro_menu(self, name, value):
         menu = []
         # Things we can do with macros
-        self.tree.config.wwwroot
+        if value:
+            trunc_value = value[:32] + "..." if len(value) > 32 else value
+            menu.append({
+                'text':   "Value = " + trunc_value,
+                'title':  "Value of this macro",
+                'href':   '#',
+                'icon':   'macro'
+            })
         menu.append({
             'text':   "Find references",
             'title':  "Find references to macros with this name",
