@@ -496,7 +496,10 @@ public:
   std::string getValueForValueDecl(ValueDecl *d)
   {
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
-      if (vd->getType().isConstQualified() && vd->hasInit()) {
+      const Expr *init = vd->getAnyInitializer();
+      if (!isa<ParmVarDecl>(vd) &&
+          init && !init->isValueDependent() &&
+          vd->getType().isConstQualified()) {
         if (APValue *apv = vd->evaluateValue()) {
           std::string ret = apv->getAsString(d->getASTContext(), d->getType());
           // workaround for constant strings being shown as &"foo" or &"foo"[0]
