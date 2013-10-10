@@ -3,6 +3,8 @@ Query Syntax
 
 Entering plain text searches the code and pathnames. Each word is taken as a separate substring to match, and the substrings are and-ed together on a per-line basis.
 
+To exclude lines matching a word, precede the word with "-".
+
 Filters
 =======
 
@@ -57,6 +59,10 @@ Again, query terms are and-ed together and matched against individual lines of t
 
     path:*.h big angry re:hamster|hippo
 
+You can negate a filter by preceding it with "-"::
+
+    -path:*.cpp -path:*.c fn:foo
+
 Obsolete
 --------
 
@@ -78,6 +84,7 @@ To do phrase matching or include spaces in a term, use single or double quotes. 
     'That "wolf" is a hamster.'
     'Don\'t call my wolf a "hamster".'
     re:"big old|great big"
+    -"not this phrase"
 
 You can use a literal quote without enclosing it in other quotes, as long as it isn't a leading one::
 
