@@ -46,10 +46,10 @@ def main():
         # Assume dxr.config in the cwd:
         options.config_file = 'dxr.config'
 
-    build_instance(options.config_file,
-                   nb_jobs=options.jobs,
-                   tree=options.tree,
-                   verbose=options.verbose)
+    return build_instance(options.config_file,
+                          nb_jobs=options.jobs,
+                          tree=options.tree,
+                          verbose=options.verbose)
 
 
 if __name__ == '__main__':
