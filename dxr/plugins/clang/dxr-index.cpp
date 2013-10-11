@@ -498,7 +498,7 @@ public:
     if (const VarDecl *vd = dyn_cast<VarDecl>(d)) {
       const Expr *init = vd->getAnyInitializer(vd);
       if (!isa<ParmVarDecl>(vd) &&
-          init && !init->isValueDependent() &&
+          init && !init->getType().isNull() && !init->isValueDependent() &&
           vd->getType().isConstQualified()) {
         if (const APValue *apv = vd->evaluateValue()) {
           std::string ret = apv->getAsString(vd->getASTContext(), vd->getType());
