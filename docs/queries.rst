@@ -26,7 +26,7 @@ Other, more specific search filters are also available:
     A reference to any kind of identifier
 ``caller:`` or ``callers:``
     Functions that call a given function
-``callee:`` or ``callees:``
+``called-by:``
     Functions called by a given function
 ``type:``
     The definition or declaration of a given type
