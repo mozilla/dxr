@@ -4,7 +4,7 @@
 from optparse import OptionParser
 import os.path
 from os.path import isdir
-from sys import stderr
+from sys import exit, stderr
 
 from dxr.build import build_instance
 
