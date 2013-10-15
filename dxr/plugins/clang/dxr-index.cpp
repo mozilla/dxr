@@ -965,9 +965,15 @@ public:
     if (argsStart > 0)
       recordValue("args", std::string(contents + argsStart,
         argsEnd - argsStart), true);
-    if (defnStart < length)
-      recordValue("text", std::string(contents + defnStart,
-        length - defnStart), true);
+    if (defnStart < length) {
+      std::string text =  std::string(contents + defnStart,
+        length - defnStart);
+      // FIXME: handle non-ASCII characters better
+      for (size_t i = 0; i < text.size(); ++i)
+        if (text[i] < ' ' || text[i] >= 0x7F)
+          text[i] = '?';
+      recordValue("text", text, true);
+    }
     printExtent(nameStart, nameStart);
     *out << std::endl;
   }
