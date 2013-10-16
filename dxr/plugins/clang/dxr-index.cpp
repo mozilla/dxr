@@ -29,6 +29,8 @@ using namespace clang;
 
 namespace {
 
+const std::string GENERATED("--GENERATED--/");
+
 // Curse whomever didn't do this.
 std::string &operator+=(std::string &str, unsigned int i) {
   static char buf[15] = { '\0' };
@@ -116,7 +118,7 @@ struct FileInfo {
       // We use the escape character to indicate the objdir nature.
       // Note that output also has the `/' already placed
       interesting = true;
-      realname.replace(0, output.length(), "--GENERATED--/");
+      realname.replace(0, output.length(), GENERATED);
     }
   }
   std::string realname;
@@ -145,6 +147,16 @@ public:
   virtual void Ifdef(SourceLocation loc, const Token &tok);
   virtual void Ifndef(SourceLocation loc, const Token &tok);
 #endif
+virtual void InclusionDirective(  // same in 3.2 and 3.3
+    SourceLocation hashLoc,
+    const Token &includeTok,
+    StringRef fileName,
+    bool isAngled,
+    CharSourceRange filenameRange,
+    const FileEntry *file,
+    StringRef searchPath,
+    StringRef relativePath,
+    const Module *imported);
 };
 
 class IndexConsumer : public ASTConsumer,
@@ -946,6 +958,48 @@ public:
   virtual void Ifndef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
+
+  virtual void InclusionDirective(
+      SourceLocation hashLoc,
+      const Token &includeTok,
+      StringRef fileName,
+      bool isAngled,
+      CharSourceRange filenameRange,
+      const FileEntry *file,
+      StringRef searchPath,
+      StringRef relativePath,
+      const Module *imported) {
+    PresumedLoc presumedHashLoc;
+    FileInfo *target, *source;
+    SourceLocation targetBegin, targetEnd;
+
+    if (!interestingLocation(hashLoc) ||
+        filenameRange.isInvalid() ||
+        (presumedHashLoc = sm.getPresumedLoc(hashLoc)).isInvalid() ||
+
+        // Don't record inclusions of files that are outside the source tree,
+        // like stdlibs. file is NULL if an #include can't be resolved, like if
+        // you include a nonexistent file.
+        (file && !(target = getFileInfo(file->getName()))->interesting) ||
+
+        // TODO: Come up with some kind of reasonable extent for macro-based
+        // includes, like #include FOO_MACRO.
+        (targetBegin = filenameRange.getBegin()).isMacroID() ||
+        (targetEnd = filenameRange.getEnd()).isMacroID() ||
+
+        // TODO: Support generated files once we run the trigram indexer over
+        // them. For now, we skip them.
+        !(source = getFileInfo(presumedHashLoc.getFilename()))->realname.compare(0, GENERATED.size(), GENERATED) ||
+        !(target->realname.compare(0, GENERATED.size(), GENERATED)))
+      return;
+
+    beginRecord("include", hashLoc);
+    recordValue("source_path", source->realname);
+    recordValue("target_path", target->realname);
+    printExtent(targetBegin, targetEnd);
+    *out << std::endl;
+  }
+
 };
 
 #if CLANG_AT_LEAST(3, 3)
@@ -987,6 +1041,18 @@ public:
     real->Ifndef(loc, tok, NULL);
   }
 #endif
+void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
+    SourceLocation hashLoc,
+    const Token &includeTok,
+    StringRef fileName,
+    bool isAngled,
+    CharSourceRange filenameRange,
+    const FileEntry *file,
+    StringRef searchPath,
+    StringRef relativePath,
+    const Module *imported) {
+  real->InclusionDirective(hashLoc, includeTok, fileName, isAngled, filenameRange, file, searchPath, relativePath, imported);
+}
 
 class DXRIndexAction : public PluginASTAction {
 protected:

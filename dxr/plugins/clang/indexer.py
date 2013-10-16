@@ -220,6 +220,20 @@ schema = dxr.schema.Schema({
         ("_location", True),
         ("_key", "id"),
     ],
+    # #include and #import directives
+    # If we can't resolve the target to a file in the tree, we just omit the
+    # row.
+    "includes": [
+        ("id", "INTEGER", False),  # surrogate key
+        ("file_id", "INTEGER", False),  # file where the #include directive is
+        ("extent_start", "INTEGER", False),
+        ("extent_end", "INTEGER", False),
+        ("target_id", "INTEGER", False),  # file pointed to by the #include
+        ("_key", "id"),  # so it autoincrements
+        ("_fkey", "file_id", "files", "id"),
+        ("_fkey", "target_id", "files", "id"),
+        ("_index", "file_id"),
+    ],
     # The following two tables are combined to form the callgraph implementation.
     # In essence, the callgraph can be viewed as a kind of hypergraph, where the
     # edges go from functions to sets of functions and variables. For use in the
@@ -282,7 +296,7 @@ def fixupEntryPath(args, file_key, conn, prefix=None):
     args[prefix + 'file_col'] = loc[2]
     return loc[0] is not None
 
-def fixupExtent(args, extents_key):
+def fixupExtent(args, extents_key='extent'):
     if extents_key not in args:
         return
 
@@ -471,18 +485,26 @@ def process_namespace_alias(args, conn):
     fixupExtent(args, 'extent')
     return schema.get_insert_sql('namespace_aliases', args)
 
+def process_include(args, conn):
+    """Turn an "include" line from a CSV into a row in the "includes" table."""
+    fixupExtent(args)
+    return ('INSERT INTO includes (file_id, extent_start, extent_end, target_id) '
+            'VALUES ((SELECT id FROM files WHERE path=?), ?, ?, '
+                    '(SELECT id FROM files WHERE path=?))',
+            (args['source_path'], args['extent_start'], args['extent_end'], args['target_path']))
+
 def load_indexer_output(fname):
     f = open(fname, "rb")
     try:
         parsed_iter = csv.reader(f)
         for line in parsed_iter:
-            # Our first column is the type that we're reading, the others are just
-            # an args array to be passed in
+            # Our first column is the type that we're reading; the others are
+            # just an args array to be passed in.
             argobj = {}
             for i in range(1, len(line), 2):
                 argobj[line[i]] = line[i + 1]
             globals()['process_' + line[0]](argobj)
-    except:
+    except Exception:
         print fname, line
         raise
     finally:
@@ -512,7 +534,7 @@ def dump_indexer_output(conn, fname):
             elif isinstance(stmt, tuple):
                 try:
                     conn.execute(stmt[0], stmt[1])
-                except:
+                except Exception:
                     print line
                     print stmt
                     raise

@@ -1,7 +1,6 @@
 import dxr.plugins
 import os, sys
 import fnmatch
-import clang.tokenizers as tokenizers
 import urllib, re
 
 from dxr.utils import search_url
@@ -233,46 +232,16 @@ class ClangHtmlifier(object):
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Hack to add links for #includes
-        # TODO This should be handled in the clang extension we don't know the
-        # include paths here, and we cannot resolve includes correctly.
-        pattern = re.compile('\#[\s]*include[\s]*[<"](\S+)[">]')
-        tokenizer = tokenizers.CppTokenizer(self.text)
-        for token in tokenizer.getTokens():
-            if token.token_type == tokenizer.PREPROCESSOR and 'include' in token.name:
-                match = pattern.match(token.name)
-                if match is None:
-                    continue
-                inc_name = match.group(1)
-                sql = "SELECT path FROM files WHERE path LIKE ?"
-                rows = self.conn.execute(sql, (inc_name,)).fetchall()
-
-                if rows is None or len(rows) == 0:
-                    basename = os.path.basename(inc_name)
-                    rows = self.conn.execute(sql, ("%%/%s" % (basename),)).fetchall()
-
-                if rows is not None and len(rows) == 1:
-                    path  = rows[0][0]
-                    start = token.start + match.start(1)
-                    end   = token.start + match.end(1)
-                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
-                    menu  = [{
-                        'text':   "Jump to file",
-                        'title':  "Jump to what is likely included there",
-                        'href':   url,
-                        'icon':   'jump'
-                    },]
-                    yield start, end, menu
-            else:
-                continue
-
-        # Test hack for declaration/definition jumps
-        #sql = """
-        #  SELECT extent_start, extent_end, defid
-        #    FROM decldef
-        #   WHERE file_id = ?
-        #"""
-        #
+        # Link all the #includes in this file to the files they reference.
+        for start, end, path in self.conn.execute(
+                'SELECT extent_start, extent_end, path FROM includes '
+                'INNER JOIN files ON files.id=includes.target_id '
+                'WHERE includes.file_id = ?', args):
+            yield start, end, [{'text': 'Jump to file',
+                                'title': 'Jump to what is included here.',
+                                'href': self.tree.config.wwwroot + '/' +
+                                        self.tree.name + '/source/' + path,
+                                'icon': 'jump'}]
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
@@ -516,15 +485,9 @@ def load(tree, conn):
     _tree = tree
     _conn = conn
 
-#tokenizers = None
+
 _patterns = ('*.c', '*.cc', '*.cpp', '*.cxx', '*.h', '*.hpp')
 def htmlify(path, text):
-    #if not tokenizers:
-    #  # HACK around the fact that we can't load modules from plugin folders
-    #  # we'll probably need to fix this later,
-    #  #tpath = os.path.join(tree.config.plugin_folder, "cxx-clang", "tokenizers.py")
-    #  #imp.load_source("tokenizers", tpath)
-
     fname = os.path.basename(path)
     if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
         # Get file_id, skip if not in database
