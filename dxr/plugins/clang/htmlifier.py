@@ -8,7 +8,6 @@ from dxr.utils import search_url
 
 
 class ClangHtmlifier(object):
-    """ Pygmentizer add syntax regions for file """
     def __init__(self, tree, conn, path, text, file_id):
         self.tree    = tree
         self.conn    = conn
@@ -485,7 +484,6 @@ class ClangHtmlifier(object):
         if links:
             yield (100, "Macros", links)
 
-
     def member_functions(self, tid):
         """ Fetch member functions given a type id """
         sql = """
@@ -498,7 +496,6 @@ class ClangHtmlifier(object):
             if len(name) == 0: continue
             yield 'method', name, "#l%s" % line
 
-
     def member_variables(self, tid):
         """ Fetch member variables given a type id """
         sql = """
@@ -510,6 +507,7 @@ class ClangHtmlifier(object):
             # Skip nameless things
             if len(name) == 0: continue
             yield 'field', name, "#l%s" % line
+
 
 _tree = None
 _conn = None

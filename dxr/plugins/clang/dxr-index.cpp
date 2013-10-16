@@ -148,8 +148,8 @@ public:
 };
 
 class IndexConsumer : public ASTConsumer,
-    public RecursiveASTVisitor<IndexConsumer>,
-    public DiagnosticConsumer {
+                      public RecursiveASTVisitor<IndexConsumer>,
+                      public DiagnosticConsumer {
 private:
   CompilerInstance &ci;
   SourceManager &sm;
@@ -193,7 +193,7 @@ public:
     return new IndexConsumer(ci);
 
   }
-  
+
   // Helpers for processing declarations
   // Should we ignore this location?
   bool interestingLocation(SourceLocation loc) {
@@ -876,7 +876,7 @@ public:
     const char *contents = sm.getCharacterData(nameStart);
     unsigned int nameLen = MacroNameTok.getIdentifierInfo()->getLength();
     unsigned int argsStart = 0, argsEnd = 0, defnStart;
-    
+
     // Grab the macro arguments if it has some
     if (nameLen < length && contents[nameLen] == '(') {
       argsStart = nameLen;
@@ -949,43 +949,43 @@ public:
 };
 
 #if CLANG_AT_LEAST(3, 3)
-void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
-  real->MacroDefined(tok, md->getMacroInfo());
-}
-void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma) {
-  real->MacroExpands(tok, md->getMacroInfo(), range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
-  real->MacroUndefined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
-  real->Defined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
-  real->Ifdef(loc, tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
-  real->Ifndef(loc, tok, md->getMacroInfo());
-}
+  void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
+    real->MacroDefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md->getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
+    real->MacroUndefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
+    real->Ifdef(loc, tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
+    real->Ifndef(loc, tok, md->getMacroInfo());
+  }
 #else
-void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
-  real->MacroDefined(tok, MI);
-}
-void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
-  real->MacroExpands(tok, MI, Range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroInfo *MI) {
-  real->MacroUndefined(tok, MI);
-}
-void PreprocThunk::Defined(const Token &tok) {
-  real->Defined(tok, NULL);
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
-  real->Ifdef(loc, tok, NULL);
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
-  real->Ifndef(loc, tok, NULL);
-}
+  void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
+    real->MacroDefined(tok, MI);
+  }
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+    real->MacroExpands(tok, MI, Range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroInfo *MI) {
+    real->MacroUndefined(tok, MI);
+  }
+  void PreprocThunk::Defined(const Token &tok) {
+    real->Defined(tok, NULL);
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
+    real->Ifdef(loc, tok, NULL);
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
+    real->Ifndef(loc, tok, NULL);
+  }
 #endif
 
 class DXRIndexAction : public PluginASTAction {
@@ -1018,7 +1018,7 @@ protected:
       output = env;
     else
       output = srcdir;
-    char *abs_output = realpath (output.c_str(), NULL);
+    char *abs_output = realpath(output.c_str(), NULL);
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,

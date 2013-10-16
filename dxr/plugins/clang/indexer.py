@@ -524,8 +524,8 @@ def dump_indexer_output(conn, fname):
             if limit > 10000:
                 limit = 0
                 conn.commit()
-    except IndexError, e:
-        raise e
+    except IndexError:
+        raise
     finally:
         f.close()
 
