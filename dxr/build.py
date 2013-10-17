@@ -424,6 +424,7 @@ def run_html_workers(tree, conn):
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
                    (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
+        print 'Enqueued jobs.'
         for num_done, future in enumerate(as_completed(futures), 1):
             print '%s of %s HTML workers done.' % (num_done, len(futures))
             result = future.result()
