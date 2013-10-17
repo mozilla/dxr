@@ -36,7 +36,7 @@ from contextlib import contextmanager
 from optparse import OptionParser
 import os
 from os import chdir, O_CREAT, O_EXCL, remove, getcwd
-from os.path import join
+from os.path import join, exists
 from pipes import quote
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
@@ -163,6 +163,15 @@ class Deployment(object):
             run('git clone {repo}', repo=self.repo)
             with cd('dxr'):
                 run('git checkout -q {rev}', rev=rev)
+
+                # If there's no instance of a suitable version, bail out:
+                with open('format') as format_file:
+                    format = format_file.read().rstrip()
+                target_path = '{base_path}/instances/{format}/target'.format(
+                    base_path=self.base_path, format=format)
+                if not exists(target_path):
+                    raise ShouldNotDeploy('A version-{format} instance is not ready yet.'.format(format=format))
+
                 run('git submodule update -q --init --recursive')
                 # Make sure a malicious server didn't slip us a mickey. TODO:
                 # Does this recurse into submodules?
@@ -181,11 +190,8 @@ class Deployment(object):
             run('virtualenv --relocatable {venv}',
                 venv=join(new_build_path, VENV_NAME))
 
-            # Link to the built, version-0 DXR instance. TODO: Figure out which
-            # instance to use based on the format version embedded in DXR. If
-            # there isn't an instance that new yet, raise ShouldNotDeploy.
-            run('ln -s {points_to} target',
-                points_to=join(self.base_path, 'instances/0/target'))
+            # Link to the built DXR instance:
+            run('ln -s {points_to} target', points_to=target_path)
 
             run('chmod 755 .')  # mkdtemp uses a very conservative mask.
         return new_build_path
