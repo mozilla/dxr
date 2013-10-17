@@ -166,9 +166,7 @@ class Deployment(object):
                 run('git submodule update -q --init --recursive')
                 # Make sure a malicious server didn't slip us a mickey. TODO:
                 # Does this recurse into submodules?
-                # TODO: reinstate once we have a new enough git on the server
-                # to support --no-dangling.
-                # run('git fsck --no-dangling')
+                run('git fsck --no-dangling')
 
                 # Install stuff:
                 venv_bin_path = join(new_build_path, VENV_NAME, 'bin')
