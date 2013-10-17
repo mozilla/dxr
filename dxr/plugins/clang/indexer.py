@@ -488,7 +488,11 @@ def process_namespace_alias(args, conn):
 def process_include(args, conn):
     """Turn an "include" line from a CSV into a row in the "includes" table."""
     fixupExtent(args)
-    return ('INSERT INTO includes (file_id, extent_start, extent_end, target_id) '
+    # If the ignore_patterns in the config file keep an #included file from
+    # making it into the files table, just pretend that include doesn't exist.
+    # Thus, IGNORE.
+    return ('INSERT OR IGNORE INTO includes '
+            '(file_id, extent_start, extent_end, target_id) '
             'VALUES ((SELECT id FROM files WHERE path=?), ?, ?, '
                     '(SELECT id FROM files WHERE path=?))',
             (args['source_path'], args['extent_start'], args['extent_end'], args['target_path']))
