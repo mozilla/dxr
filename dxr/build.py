@@ -11,6 +11,8 @@ from pkg_resources import require
 import shutil
 import subprocess
 import sys
+from sys import exc_info
+from traceback import format_exc
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
 
@@ -394,7 +396,7 @@ def finalize_database(conn):
             isOkay = True
         else:
             if isOkay is not False:
-                print >> sys.stderr, "Database, integerity-check failed"
+                print >> sys.stderr, "Database integerity check failed"
             isOkay = False
             print >> sys.stderr, "  | %s" % row[0]
     if not isOkay:
@@ -422,63 +424,70 @@ def run_html_workers(tree, conn):
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
                    (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
+        print 'Enqueued jobs.'
         for num_done, future in enumerate(as_completed(futures), 1):
             print '%s of %s HTML workers done.' % (num_done, len(futures))
-            try:
-                start, end = future.result()  # raises exc if failed
-            except Exception:
-                print 'Worker working on files %s-%s failed.' % (start, end)
+            result = future.result()
+            if result:
+                formatted_tb, type, value, id, path = result
+                print 'A worker failed while htmlifying %s, id=%s:' % (path, id)
+                print formatted_tb
                 # Abort everything if anything fails:
-                raise  # exits with non-zero
+                raise type, value  # exits with non-zero
 
 
 def _build_html_for_file_ids(tree, start, end):
-    """Write HTML files for file IDs from ``start`` to ``end``. Return
-    ``(start, end)``.
+    """Write HTML files for file IDs from ``start`` to ``end``. Return None if
+    all goes well, a tuple of (stringified exception, exc type, exc value, file
+    ID, file path) if something goes wrong while htmlifying a file.
 
     This is the top-level function of an HTML worker process. Log progress to a
     file named "build-html-<start>-<end>.log".
 
     """
-    # We might as well have this write its log directly rather than returning
-    # them to the master process, since it's already writing the built HTML
-    # directly, since that probably yields better parallelism.
+    try:
+        # We might as well have this write its log directly rather than returning
+        # them to the master process, since it's already writing the built HTML
+        # directly, since that probably yields better parallelism.
 
-    conn = connect_database(tree)
-    # TODO: Replace this ad hoc logging with the logging module (or something
-    # more humane) so we can get some automatic timestamps. If we get
-    # timestamps spit out in the parent process, we don't need any of the
-    # timing or counting code here.
-    with open_log(tree, 'build-html-%s-%s.log' % (start, end)) as log:
-        # Load htmlifier plugins:
-        plugins = load_htmlifiers(tree)
-        for plugin in plugins:
-            plugin.load(tree, conn)
+        path = '(no file yet)'
+        conn = connect_database(tree)
+        # TODO: Replace this ad hoc logging with the logging module (or something
+        # more humane) so we can get some automatic timestamps. If we get
+        # timestamps spit out in the parent process, we don't need any of the
+        # timing or counting code here.
+        with open_log(tree, 'build-html-%s-%s.log' % (start, end)) as log:
+            # Load htmlifier plugins:
+            plugins = load_htmlifiers(tree)
+            for plugin in plugins:
+                plugin.load(tree, conn)
 
-        start_time = datetime.now()
+            start_time = datetime.now()
 
-        # Fetch and htmlify each document:
-        for num_files, (path, icon, text) in enumerate(
-                conn.execute("""
-                             SELECT path, icon, trg_index.text
-                             FROM trg_index, files
-                             WHERE trg_index.id = files.id
-                             AND trg_index.id >= ?
-                             AND trg_index.id <= ?
-                             """,
-                             [start, end]),
-                1):
-            dst_path = os.path.join(tree.target_folder, path + '.html')
-            log.write('Starting %s.\n' % path)
-            htmlify(tree, conn, icon, path, text, dst_path, plugins)
+            # Fetch and htmlify each document:
+            for num_files, (id, path, icon, text) in enumerate(
+                    conn.execute("""
+                                 SELECT files.id, path, icon, trg_index.text
+                                 FROM trg_index, files
+                                 WHERE trg_index.id = files.id
+                                 AND trg_index.id >= ?
+                                 AND trg_index.id <= ?
+                                 """,
+                                 [start, end]),
+                    1):
+                dst_path = os.path.join(tree.target_folder, path + '.html')
+                log.write('Starting %s.\n' % path)
+                htmlify(tree, conn, icon, path, text, dst_path, plugins)
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+            conn.close()
 
-        # Write time information:
-        time = datetime.now() - start_time
-        log.write('Finished %s files in %s.\n' % (num_files, time))
-    return start, end
+            # Write time information:
+            time = datetime.now() - start_time
+            log.write('Finished %s files in %s.\n' % (num_files, time))
+    except Exception as exc:
+        type, value, traceback = exc_info()
+        return format_exc(), type, value, id, path
 
 
 def htmlify(tree, conn, icon, path, text, dst_path, plugins):

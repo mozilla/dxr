@@ -38,7 +38,9 @@ class SchemaTable(object):
           _key: the result tuple is a tuple for the primary key of the table.
 
         Special values for type strings are as follows:
-          _location: A file:loc[:col] value for the column.
+          _location: A file:loc[:col] value for the column. A boolean element
+              in the tuple declares whether a compound index of (file ID, line,
+              column) should be added.
 
         Since the order of columns matter in SQL and python dicts are unordered,
         we will accept a list or tuple of tuples as an alternative specifier:

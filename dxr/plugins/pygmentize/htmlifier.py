@@ -8,31 +8,30 @@ from pygments.token import Token
 import dxr.plugins
 
 
-token_classes = {
-    Token.Keyword: 'k',
-    Token.Keyword.Constant: 'k',
-    Token.Keyword.Declaration: 'k',
-    Token.Keyword.Namespace: 'k',
-    Token.Keyword.Pseudo: 'k',
-    Token.Keyword.Reserved: 'k',
-    Token.Keyword.Type: 'k',
-    Token.String: 'str',
-    Token.String.Backtick: 'str',
-    Token.String.Char: 'str',
-    Token.String.Doc: 'str',
-    Token.String.Double: 'str',
-    Token.String.Escape: 'str',
-    Token.String.Heredoc: 'str',
-    Token.String.Interpol: 'str',
-    Token.String.Other: 'str',
-    Token.String.Regex: 'str',
-    Token.String.Single: 'str',
-    Token.String.Symbol: 'str',
-    Token.Comment: 'c',
-    Token.Comment.Multiline: 'c',
-    Token.Comment.Single: 'c',
-    Token.Comment.Special: 'c',
-    Token.Comment.Preproc: 'p'}
+token_classes = {Token.Comment.Preproc: 'p'}
+token_classes.update((t, 'k') for t in [Token.Keyword,
+                                        Token.Keyword.Constant,
+                                        Token.Keyword.Declaration,
+                                        Token.Keyword.Namespace,
+                                        Token.Keyword.Pseudo,
+                                        Token.Keyword.Reserved,
+                                        Token.Keyword.Type])
+token_classes.update((t, 'str') for t in [Token.String,
+                                          Token.String.Backtick,
+                                          Token.String.Char,
+                                          Token.String.Doc,
+                                          Token.String.Double,
+                                          Token.String.Escape,
+                                          Token.String.Heredoc,
+                                          Token.String.Interpol,
+                                          Token.String.Other,
+                                          Token.String.Regex,
+                                          Token.String.Single,
+                                          Token.String.Symbol])
+token_classes.update((t, 'c') for t in [Token.Comment,
+                                        Token.Comment.Multiline,
+                                        Token.Comment.Single,
+                                        Token.Comment.Special])
 
 
 class Pygmentizer(object):
@@ -63,11 +62,6 @@ def load(tree, conn):
 
 
 def htmlify(path, text):
-    # TODO Enable C++ highlighting using pygments, pending fix for infinite
-    # looping that we don't like, see:
-    # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
-    if any((path.endswith(e) for e in ('.c', '.cc', '.cpp', '.cxx', '.h', '.hpp'))):
-        return None
     # Options and filename
     options = {'encoding': 'utf-8'}
     filename = basename(path)
