@@ -980,7 +980,9 @@ public:
         // Don't record inclusions of files that are outside the source tree,
         // like stdlibs. file is NULL if an #include can't be resolved, like if
         // you include a nonexistent file.
-        (file && !(target = getFileInfo(file->getName()))->interesting) ||
+        !file ||
+
+        !(target = getFileInfo(file->getName()))->interesting ||
 
         // TODO: Come up with some kind of reasonable extent for macro-based
         // includes, like #include FOO_MACRO.
