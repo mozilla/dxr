@@ -526,16 +526,16 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
 def build_lines(tree, conn, path, text, htmlifiers):
     """ Build lines for template """
     # Empty files, have no lines
-    if len(text) == 0:
+    if not text:
         return []
 
     # Get a decoder
-    decoder = getdecoder("utf-8")
+    decoder = getdecoder('utf-8')
     # Let's defined a simple way to fetch and decode a slice of source
-    def src(start, end = None):
+    def src(start, end=None):
         if isinstance(start, tuple):
             start, end = start[:2]
-        return decoder(text[start:end], errors = 'replace')[0]
+        return decoder(text[start:end], errors='replace')[0]
     # We shall decode on-the-fly because we need ascii offsets to do the rendering
     # of regions correctly. But before we stuff anything into the template engine
     # we must ensure that it's correct utf-8 encoded string
@@ -545,70 +545,70 @@ def build_lines(tree, conn, path, text, htmlifiers):
 
     # Build a line map over the source (without exploding it all over the place!)
     line_map = [0]
-    offset = text.find("\n", 0) + 1
+    offset = text.find('\n', 0) + 1
     while offset > 0:
         line_map.append(offset)
-        offset = text.find("\n", offset) + 1
+        offset = text.find('\n', offset) + 1
     # If we don't have a line ending at the end improvise one
-    if not text.endswith("\n"):
+    if not text.endswith('\n'):
         line_map.append(len(text))
 
     # So, we have a minor issue with writing out the main body.
     # We don't necessarily have the information in sorted order.
 
-    regions = chain(*(htmlifier.regions()     for htmlifier in htmlifiers))
-    refs    = chain(*(htmlifier.refs()        for htmlifier in htmlifiers))
-    notes   = chain(*(htmlifier.annotations() for htmlifier in htmlifiers))
+    regions = chain(*(htmlifier.regions() for htmlifier in htmlifiers))
+    refs = chain(*(htmlifier.refs() for htmlifier in htmlifiers))
+    notes = chain(*(htmlifier.annotations() for htmlifier in htmlifiers))
 
     # Quickly sort the line annotations in reverse order
     # so we can view it as a stack we just pop annotations off as we generate lines
-    notes   = sorted(notes, reverse = True)
+    notes = sorted(notes, reverse=True)
 
     # Add sanitizer to remove regions that have None as offsets
     # They are just stupid and shouldn't be there in the first place!
-    sane    = lambda (start, end, data): start is not None and end is not None
+    sane = lambda (start, end, data): start is not None and end is not None
     regions = (region for region in regions if sane(region))
-    refs    = (region for region in refs    if sane(region))
+    refs = (region for region in refs if sane(region))
     # That's it we've sanitized this mess, so let's just sort it too
-    order   = lambda (start, end, data): (- start, end, data)
-    regions = sorted(regions, key = order)
-    refs    = sorted(refs,    key = order)
+    order = lambda (start, end, data): (-start, end, data)
+    regions = sorted(regions, key=order)
+    refs = sorted(refs, key=order)
     # Notice that we negate start, larges start first and ties resolved with
     # smallest end. This way be can pop values of the regions in the order
     # they occur...
 
     # Now we create two stacks to keep track of open regions
     regions_stack = []
-    refs_stack    = []
+    refs_stack = []
 
     # Open/close refs, quite simple
     def open_ref(ref):
         start, end, menu = ref
         # JSON dump the menu and escape it for quotes, etc
         menu = cgi.escape(json.dumps(menu), True)
-        return "<a data-menu=\"%s\">" % menu
+        return '<a data-menu="%s">' % menu
     def close_ref(ref):
-        return "</a>"
+        return '</a>'
 
     # Functions for opening the stack of syntax regions
     # this essential amounts to a span with a set of classes
     def open_regions():
-        if len(regions_stack) > 0:
+        if regions_stack:
             classes = (data for start, end, data in regions_stack)
-            return "<span class=\"%s\">" % " ".join(classes)
-        return ""
+            return '<span class="%s">' % ' '.join(classes)
+        return ''
     def close_regions():
-        if len(regions_stack) > 0:
-            return "</span>"
-        return ""
+        if regions_stack:
+            return '</span>'
+        return ''
 
-    lines          = []
-    offset         = 0
-    line_number    = 0
+    lines = []
+    offset = 0
+    line_number = 0
     while offset < len(text):
         # Start a new line
         line_number += 1
-        line = ""
+        line = ''
         # Open all refs on the stack
         for ref in refs_stack:
             line += open_ref(ref)
@@ -674,10 +674,10 @@ def build_lines(tree, conn, path, text, htmlifiers):
                 # overlapping regions, this isn't good, so we discard this ref
                 if len(refs_stack) > 0 and refs_stack[-1][1] < ref[1]:
                     stack_src = text[refs_stack[-1][0]:refs_stack[-1][1]]
-                    print >> sys.stderr, "Error: Ref region overlap"
+                    print >> sys.stderr, 'Error: Ref region overlap'
                     print >> sys.stderr, "   > '%s' %r" % (text[ref[0]:ref[1]], ref)
                     print >> sys.stderr, "   > '%s' %r" % (stack_src, refs_stack[-1])
-                    print >> sys.stderr, "   > IN %s" % path
+                    print >> sys.stderr, '   > IN %s' % path
                     continue  # Okay so skip it
                 # Open ref, if not at end of line
                 if next < line_map[line_number]:
