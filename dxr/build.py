@@ -628,9 +628,9 @@ def build_lines(tree, conn, path, text, htmlifiers):
                 next = min(next, refs[-1][0])
             # Next offset can be the end of something we've opened
             # notice, stack structure and sorting ensure that we only need test top
-            if len(regions_stack) > 0:
+            if regions_stack:
                 next = min(next, regions_stack[-1][1])
-            if len(refs_stack) > 0:
+            if refs_stack:
                 next = min(next, refs_stack[-1][1])
 
             # Output the source text from last offset to next
@@ -645,9 +645,9 @@ def build_lines(tree, conn, path, text, htmlifiers):
             # this makes sense even if there's not change to the stack
             # as we can't have syntax tags crossing refs tags
             line += close_regions()
-            while len(regions_stack) > 0 and regions_stack[-1][1] <= next:
+            while regions_stack and regions_stack[-1][1] <= next:
                 regions_stack.pop()
-            while len(regions) > 0 and regions[-1][0] <= next:
+            while regions and regions[-1][0] <= next:
                 region = regions.pop()
                 # Search for the right place in the stack to insert this
                 # The stack is ordered s.t. we have longest end at the bottom
@@ -661,18 +661,18 @@ def build_lines(tree, conn, path, text, htmlifiers):
                 line += open_regions()
 
             # Close and pop refs that end here
-            while len(refs_stack) > 0 and refs_stack[-1][1] <= next:
+            while refs_stack and refs_stack[-1][1] <= next:
                 line += close_ref(refs_stack.pop())
             # Close remaining if at end of line
             if next < line_map[line_number]:
                 for ref in reversed(refs_stack):
                     line += close_ref(ref)
             # Open and pop/push refs that start here
-            while len(refs) > 0 and refs[-1][0] <= next:
+            while refs and refs[-1][0] <= next:
                 ref = refs.pop()
                 # If the ref doesn't end before the top of the stack, we have
                 # overlapping regions, this isn't good, so we discard this ref
-                if len(refs_stack) > 0 and refs_stack[-1][1] < ref[1]:
+                if refs_stack and refs_stack[-1][1] < ref[1]:
                     stack_src = text[refs_stack[-1][0]:refs_stack[-1][1]]
                     print >> sys.stderr, 'Error: Ref region overlap'
                     print >> sys.stderr, "   > '%s' %r" % (text[ref[0]:ref[1]], ref)
@@ -686,7 +686,7 @@ def build_lines(tree, conn, path, text, htmlifiers):
 
         # Okay let's pop line annotations of the notes stack
         current_notes = []
-        while len(notes) > 0 and notes[-1][0] == line_number:
+        while notes and notes[-1][0] == line_number:
             current_notes.append(notes.pop()[1])
 
         lines.append((line_number, line, current_notes))
