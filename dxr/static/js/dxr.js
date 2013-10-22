@@ -8,7 +8,14 @@ $(function() {
         wwwroot = constants.data('root'),
         search = constants.data('search'),
         icons = wwwroot + '/static/icons/',
-        views = wwwroot + '/static/views';
+        views = wwwroot + '/static/views',
+        additionalFields = $('.adv_additional');
+
+    additionalFields.find('input[type="checkbox"]').each(function() {
+        if($(this).prop('checked')) {
+             $('#' + $(this).attr('data-field')).parents('.form_elem_container').show();
+        }
+    });
 
     if(!nunjucks.env) {
         nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(views));
@@ -39,6 +46,32 @@ $(function() {
 
         return pathLines;
     }
+
+    var showAdvanced = $('#show_advanced'),
+        advSearchContainer = $('#advanced_search'),
+        hidden = true;
+
+    showAdvanced.on('click', function(event) {
+        event.preventDefault();
+
+        if(hidden) {
+            advSearchContainer.show();
+            hidden = false;
+        } else {
+            advSearchContainer.hide();
+            hidden = true;
+        }
+    });
+
+    additionalFields.on('click', 'input[type="checkbox"]', function() {
+        var fieldID = $(this).attr('data-field');
+
+        if($(this).prop('checked')) {
+            $('#' + fieldID).parents('.form_elem_container').show();
+        } else {
+            $('#' + fieldID).parents('.form_elem_container').hide();
+        }
+    });
 
     searchForm.on('submit', function(event) {
         event.preventDefault();

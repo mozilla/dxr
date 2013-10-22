@@ -11,11 +11,6 @@
     {% block body %}
 
     <div id="search-box" class="{% block search_box_class %}with-results{% endblock %} search-box">
-    <p class="logo">
-      <a href="{{ wwwroot }}/" title="Home">
-        <img src="{{ wwwroot }}/static/images/dxr.png" width="167" height="30" alt="Mozilla DXR logo" />
-      </a>
-    </p>
       <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="search">
 
         <label for="query">Find</label>
@@ -52,11 +47,190 @@
             <label class="checkbox_label" for="case_sensitivity">Case-sensitive</label>
         </fieldset>
 
+        <fieldset id="advanced_search" class="advanced_search">
+          <legend >Advanced Search</legend>
+
+          <section class="form_group">
+            <div class="form_elem_container">
+              <label for="path" class="visually-hidden">path:</label>
+              <input type="text" name="path" id="path" placeholder="path: Pathname with shell-style globbing" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="re" class="visually-hidden">re:</label>
+              <input type="text" name="re" id="re" placeholder="re: regex or regexp" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="id" class="visually-hidden">id:</label>
+              <input type="text" name="id" id="id" placeholder="id: identifier of any kind" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="ref" class="visually-hidden">ref:</label>
+              <input type="text" name="ref" id="ref" placeholder="ref: reference to any kind of identifier" />
+            </div>
+          </section>
+
+          <section class="form_group">
+            <div class="form_elem_container">
+              <label for="caller" class="visually-hidden">caller:</label>
+              <input type="text" name="caller" id="caller" placeholder="caller: caller functions" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="sub" class="visually-hidden">sub:</label>
+              <input type="text" name="sub" id="sub" placeholder="sub: subclass of a class" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="super" class="visually-hidden">super:</label>
+              <input type="text" name="super" id="super" placeholder="super: superclass of a class" />
+            </div>
+          </section>
+
+          <section class="form_group adv_additional">
+            <p>Select additional fields to search by (check/uncheck to how and hide fields):</p>
+            <div class="checkbox_group">
+              <label for="fn_toggle">
+                <input type="checkbox" name="fn_toggle" id="fn_toggle" data-field="fn" /> fn
+              </label>
+
+              <label for="fnref_toggle">
+                <input type="checkbox" name="fnref_toggle" id="fnref_toggle" data-field="fn-ref" /> fn-ref
+              </label>
+
+              <label for="member_toggle">
+                <input type="checkbox" name="member_toggle" id="member_toggle" data-field="member" /> member
+              </label>
+
+              <label for="callerby_toggle">
+                <input type="checkbox" name="callerby_toggle" id="callerby_toggle" data-field="caller-by" /> caller-by
+              </label>
+
+              <label for="type_toggle">
+                <input type="checkbox" name="type_toggle" id="type_toggle" data-field="type" /> type
+              </label>
+            </div>
+
+            <div class="checkbox_group">
+              <label for="typeref_toggle">
+                <input type="checkbox" name="typeref_toggle" id="typeref_toggle" data-field="type-ref" /> type-ref
+              </label>
+
+              <label for="var_toggle">
+                <input type="checkbox" name="var_toggle" id="var_toggle" data-field="var" /> var
+              </label>
+
+              <label for="varref_toggle">
+                <input type="checkbox" name="varref_toggle" id="varref_toggle" data-field="var-ref" /> var-ref
+              </label>
+
+              <label for="macro_toggle">
+                <input type="checkbox" name="macro_toggle" id="macro_toggle" data-field="macro" /> macro
+              </label>
+
+              <label for="macroref_toggle">
+                <input type="checkbox" name="macroref_toggle" id="macroref_toggle" data-field="macro-ref" /> macro-ref
+              </label>
+            </div>
+
+            <div class="checkbox_group">
+              <label for="warning_toggle">
+                <input type="checkbox" name="warning_toggle" id="warning_toggle" data-field="warning" /> warning
+              </label>
+
+              <label for="warningopt_toggle">
+                <input type="checkbox" name="warningopt_toggle" id="warningopt_toggle" data-field="warning-opt" /> warning-opt
+              </label>
+
+              <label for="namespace_toggle">
+                <input type="checkbox" name="namespace_toggle" id="namespace_toggle" data-field="namespace" /> namespace
+              </label>
+
+              <label for="namespaceref_toggle">
+                <input type="checkbox" name="namespaceref_toggle" id="namespaceref_toggle" data-field="namespace-ref" /> namespace-ref
+              </label>
+            </div>
+
+            <div class="form_elem_container">
+              <label for="fn">fn:</label>
+              <input type="text" name="fn" id="fn" placeholder="fun:, func: or function:" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="fn-ref">fn-ref:</label>
+              <input type="text" name="fn-ref" id="fn-ref" placeholder="Uses of a given function" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="member">member:</label>
+              <input type="text" name="member" id="member" placeholder="Find member functions" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="caller-by">caller-by:</label>
+              <input type="text" name="caller-by" id="caller-by" placeholder="Functions called by a given function" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="type">type:</label>
+              <input type="text" name="type" id="type" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="type-ref">type-ref:</label>
+              <input type="text" name="type-ref" id="type-ref" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="var">var:</label>
+              <input type="text" name="var" id="var" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="var-ref">var-ref:</label>
+              <input type="text" name="var-ref" id="var-ref" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="namespace">namespace:</label>
+              <input type="text" name="namespace" id="namespace" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="namespace-ref">namespace-ref:</label>
+              <input type="text" name="namespace-ref" id="namespace-ref" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="macro">macro:</label>
+              <input type="text" name="macro" id="macro" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="macro-ref">macro-ref:</label>
+              <input type="text" name="macro-ref" id="macro-ref" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="warning">warning:</label>
+              <input type="text" name="warning" id="warning" />
+            </div>
+
+            <div class="form_elem_container">
+              <label for="warning-opt">warning-opt:</label>
+              <input type="text" name="warning-opt" id="warning-opt" />
+            </div>
+          </section>
+        </fieldset>
+
         <input type="hidden" name="redirect" value="true" id="redirect" />
         <input type="hidden" name="format" value="json" id="format" />
 
         <input type="submit" value="search" class="visually-hidden" />
       </form>
+      <p class="show_advanced_toggle"><a href="#show_advanced" id="show_advanced">Advanced Search</a></p>
     </div>
 
     {% if panel %}

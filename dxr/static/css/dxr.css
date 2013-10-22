@@ -32,6 +32,9 @@ body {
     margin: 0;
     font: 16px/1.5 Arial, Helvetica, sans-serif;
 }
+h4 {
+    margin: 0 0 .5rem 0;
+}
 a:link,
 a:visited {
     color: inherit;
@@ -59,6 +62,16 @@ select {
 }
 option {
     font-size: 12px;
+}
+/* Kudos to David Walsh */
+input[placeholder],
+::-moz-placeholder, /* firefox 19+ */
+input:-moz-placeholder {
+    text-overflow: ellipsis;
+}
+input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
 }
 table {
     background-color: #f6f4ec;
@@ -131,13 +144,68 @@ td.code {
 .search-box {
     background: #f6f4ec;
     color: #333;
-    padding: .1rem 1rem 1rem 1rem;
+    padding: 1rem .5rem 0 .5rem;
     border-bottom: 10px solid #333;
 }
 .search-box form {
     padding: 0 .3em;
 }
 .query {
+    width: 95%;
+}
+.show_advanced_toggle {
+    text-align: center;
+}
+.form_group {
+    display: inline-block;
+    background-color: #f0ede3;
+    margin-right: .3rem;
+    padding: .7rem .3rem 0 .7rem;
+    border: 1px solid #e0e0e0;
+    width: 23%;
+    min-height: 200px;
+    vertical-align: top;
+    transition: height 1s;
+}
+.checkbox_group {
+    margin-bottom: .7rem;
+}
+.advanced_search {
+    display: none;
+}
+.visually-hidden .advanced_search,
+.visually-hidden .form_group {
+    height: 1px;
+}
+.adv_additional {
+    width: 51%;
+    overflow: auto;
+}
+.adv_additional .form_elem_container {
+    display: none;
+}
+.adv_additional label {
+    display: inline-block;
+    background-color: #e0e0e0;
+    padding: 0.1rem 0.2rem 0.1rem 0;
+    border: 1px dashed #999;
+    width: 19%;
+}
+.adv_additional p {
+    margin: 0 0 .5rem 0;
+    font-size: .8rem;
+}
+.form_elem_container {
+    margin: 0 0 .7rem 0;
+}
+.form_elem_container label {
+    display: block;
+    background-color: #e0e0e0;
+    padding: .1rem .5rem;
+    border: 0;
+    width: 20%;
+}
+.form_elem_container input {
     width: 95%;
 }
 .case {
