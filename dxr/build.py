@@ -544,12 +544,12 @@ def build_lines(tree, conn, path, text, htmlifiers):
     # (Unless we want to make plugins deal with this mess)
 
     # Build a line map over the source (without exploding it all over the place!)
-    line_map = [0]
+    line_map = [0]  # line_map[n] is the offset of the first char of line n+1.
     offset = text.find('\n', 0) + 1
     while offset > 0:
         line_map.append(offset)
         offset = text.find('\n', offset) + 1
-    # If we don't have a line ending at the end improvise one
+    # If we don't have a line ending at the end improvise one  # why? Why do we need a blank line number pointing to a nonexistent offset?
     if not text.endswith('\n'):
         line_map.append(len(text))
 
