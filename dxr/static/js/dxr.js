@@ -8,14 +8,7 @@ $(function() {
         wwwroot = constants.data('root'),
         search = constants.data('search'),
         icons = wwwroot + '/static/icons/',
-        views = wwwroot + '/static/views',
-        additionalFields = $('.adv_additional');
-
-    additionalFields.find('input[type="checkbox"]').each(function() {
-        if($(this).prop('checked')) {
-             $('#' + $(this).attr('data-field')).parents('.form_elem_container').show();
-        }
-    });
+        views = wwwroot + '/static/views';
 
     if(!nunjucks.env) {
         nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(views));
@@ -47,29 +40,24 @@ $(function() {
         return pathLines;
     }
 
-    var showAdvanced = $('#show_advanced'),
-        advSearchContainer = $('#advanced_search'),
-        hidden = true;
+    // Advanced search page additional fields toggle hander
+    var showMoreLink = $('#show_more'),
+        moreFieldsContainer = $('#additional_fields_container'),
+        arrowIcon = $('.arrow_icon');
 
-    showAdvanced.on('click', function(event) {
+    showMoreLink.on('click', function(event) {
         event.preventDefault();
 
-        if(hidden) {
-            advSearchContainer.show();
-            hidden = false;
+        if(arrowIcon.hasClass('expanded')) {
+            moreFieldsContainer.attr('aria-expanded', 'false');
+            showMoreLink.text('show more');
+            arrowIcon.removeClass('expanded');
+            moreFieldsContainer.hide();
         } else {
-            advSearchContainer.hide();
-            hidden = true;
-        }
-    });
-
-    additionalFields.on('click', 'input[type="checkbox"]', function() {
-        var fieldID = $(this).attr('data-field');
-
-        if($(this).prop('checked')) {
-            $('#' + fieldID).parents('.form_elem_container').show();
-        } else {
-            $('#' + fieldID).parents('.form_elem_container').hide();
+            moreFieldsContainer.attr('aria-expanded', 'true');
+            showMoreLink.text('show less');
+            arrowIcon.addClass('expanded');
+            moreFieldsContainer.show();
         }
     });
 
