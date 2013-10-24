@@ -4,14 +4,35 @@
 
 {% block body_class %}class="advanced"{% endblock %}
 
+{% block search_type_id %}id="adv_search"{% endblock %}
+
+{% block legend %}<legend class="advanced_search_heading">Advanced Search</legend>{% endblock %}
+
 {% block header_nav_link %}
   <p class="header_nav_link"><a href="{{ wwwroot }}/">&#187; Basic Search</a></p>
 {% endblock %}
 
+{% block text_search %}
+<fieldset>
+  <div class="form_elem_container">
+    <label for="all_words">All these words</label>
+    <input type="text" name="all_words" id="all_words" />
+  </div>
+
+  <div class="form_elem_container">
+    <label for="exact_pharse">This exact phrase</label>
+    <input type="text" name="exact_pharse" id="exact_pharse" />
+  </div>
+
+  <div class="form_elem_container">
+    <label for="exclude_words">None of these words</label>
+    <input type="text" name="exclude_words" id="exclude_words" />
+  </div>
+</fieldset>
+{% endblock %}
+
 {% block advanced_search %}
 <fieldset id="advanced_search" class="advanced_search">
-  <legend >Advanced Search</legend>
-
   <section class="form_group wide">
     <div class="form_elem_container">
       <label for="path">path:</label>
@@ -21,6 +42,11 @@
     <div class="form_elem_container">
       <label for="re">re:</label>
       <input type="text" name="re" id="re" placeholder="re: regex or regexp" />
+    </div>
+
+    <div class="form_elem_container">
+      <label for="fn">fn:</label>
+      <input type="text" name="fn" id="fn" placeholder="fun:, func: or function:" />
     </div>
 
     <div class="form_elem_container">
@@ -39,17 +65,17 @@
       <label for="super">super:</label>
       <input type="text" name="super" id="super" placeholder="super: superclass of a class" />
     </div>
+
+    <div class="form_elem_container">
+      <label for="type">type:</label>
+      <input type="text" name="type" id="type" />
+    </div>
   </section>
-  <p class="show_more"><span class="arrow_icon"></span><a href="#show_more" id="show_more">show more</a></p>
 </fieldset>
 
 <fieldset id="additional_fields_container" class="additional_fields_container" aria-expanded="false">
-  <section class="form_group">
-    <div class="form_elem_container">
-      <label for="fn">fn:</label>
-      <input type="text" name="fn" id="fn" placeholder="fun:, func: or function:" />
-    </div>
-
+  <legend>Narrow Your Search Even Further</legend>
+  <section class="form_group wide">
     <div class="form_elem_container">
       <label for="fn-ref">fn-ref:</label>
       <input type="text" name="fn-ref" id="fn-ref" placeholder="Uses of a given function" />
@@ -66,13 +92,6 @@
     </div>
 
     <div class="form_elem_container">
-      <label for="type">type:</label>
-      <input type="text" name="type" id="type" />
-    </div>
-  </section>
-
-  <section class="form_group">
-    <div class="form_elem_container">
       <label for="type-ref">type-ref:</label>
       <input type="text" name="type-ref" id="type-ref" />
     </div>
@@ -86,7 +105,9 @@
       <label for="var-ref">var-ref:</label>
       <input type="text" name="var-ref" id="var-ref" />
     </div>
+  </section>
 
+  <section class="form_group wide">
     <div class="form_elem_container">
       <label for="namespace">namespace:</label>
       <input type="text" name="namespace" id="namespace" />
@@ -96,9 +117,7 @@
       <label for="namespace-ref">namespace-ref:</label>
       <input type="text" name="namespace-ref" id="namespace-ref" />
     </div>
-  </section>
 
-  <section class="form_group">
     <div class="form_elem_container">
       <label for="macro">macro:</label>
       <input type="text" name="macro" id="macro" />
@@ -120,6 +139,13 @@
     </div>
   </section>
 </fieldset>
+{% endblock %}
+
+{% block return_format %}
+  <input type="hidden" name="format" value="http" id="format" />
+{% endblock %}
+
+{% block content %}
 {% endblock %}
 
 {% block footer %}

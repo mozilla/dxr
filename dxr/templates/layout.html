@@ -11,13 +11,16 @@
     {% block body %}
 
     <div id="search-box" class="{% block search_box_class %}with-results{% endblock %} search-box">
-      <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="search">
+      <form method="get" action="{{ wwwroot }}/{{ tree }}/search" {% block search_type_id %}id="basic_search"{% endblock %} >
+        {% block header_nav_link %}
+            <p class="header_nav_link"><a href="{{ wwwroot }}/advanced">&#187; Advanced Search</a></p>
+        {% endblock %}
         <fieldset class="text_search">
+          {% block legend %}{% endblock %}
+
+          {% block text_search %}
           <label for="query">Find</label>
           <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" autofocus placeholder="Enter query and press enter to start search..." />
-
-          {% block header_nav_link %}
-            <p class="header_nav_link"><a href="{{ wwwroot }}/advanced">&#187; Advanced Search</a></p>
           {% endblock %}
 
           <section class="simple_form_group">
@@ -43,7 +46,9 @@
         {% endblock %}
 
         <input type="hidden" name="redirect" value="true" id="redirect" />
+        {% block return_format %}
         <input type="hidden" name="format" value="json" id="format" />
+        {% endblock %}
 
         <input type="submit" value="search" class="visually-hidden" />
       </form>
