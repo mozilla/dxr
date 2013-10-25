@@ -40,6 +40,27 @@ $(function() {
         return pathLines;
     }
 
+    // Advanced search page additional fields toggle hander
+    var showMoreLink = $('#show_more'),
+        moreFieldsContainer = $('#additional_fields_container'),
+        arrowIcon = $('.arrow_icon');
+
+    showMoreLink.on('click', function(event) {
+        event.preventDefault();
+
+        if(arrowIcon.hasClass('expanded')) {
+            moreFieldsContainer.attr('aria-expanded', 'false');
+            showMoreLink.text('show more');
+            arrowIcon.removeClass('expanded');
+            moreFieldsContainer.hide();
+        } else {
+            moreFieldsContainer.attr('aria-expanded', 'true');
+            showMoreLink.text('show less');
+            arrowIcon.addClass('expanded');
+            moreFieldsContainer.show();
+        }
+    });
+
     searchForm.on('submit', function(event) {
         event.preventDefault();
 

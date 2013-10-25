@@ -32,6 +32,9 @@ body {
     margin: 0;
     font: 16px/1.5 Arial, Helvetica, sans-serif;
 }
+h4 {
+    margin: 0 0 .5rem 0;
+}
 a:link,
 a:visited {
     color: inherit;
@@ -39,9 +42,6 @@ a:visited {
 }
 a:hover {
     text-decoration: underline;
-}
-a:focus {
-    background-color: #e0e0e0;
 }
 caption {
     font-size: 12px;
@@ -59,6 +59,16 @@ select {
 }
 option {
     font-size: 12px;
+}
+/* Kudos to David Walsh */
+input[placeholder],
+::-moz-placeholder, /* firefox 19+ */
+input:-moz-placeholder {
+    text-overflow: ellipsis;
+}
+input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
 }
 table {
     background-color: #f6f4ec;
@@ -129,16 +139,88 @@ td.code {
     text-align: right;
 }
 .search-box {
-    background: #f6f4ec;
+    background-color: #f6f4ec;
     color: #333;
-    padding: .1rem 1rem 1rem 1rem;
     border-bottom: 10px solid #333;
 }
-.search-box form {
-    padding: 0 .3em;
+.text_search {
+    padding: .8rem;
 }
 .query {
     width: 95%;
+}
+.header_nav_link {
+    position: absolute;
+    right: 0;
+    margin: 0 4% 0 0;
+    padding: 0.4rem 0 0;
+    font-size: .8rem;
+    text-align: right;
+}
+.simple_form_group {
+    display: inline-block;
+    margin-right: .3rem;
+    padding: .7rem .3rem 0 .7rem;
+}
+.form_group {
+    display: inline-block;
+    background-color: #f0ede3;
+    margin-right: .3rem;
+    padding: .7rem 0 .3rem .7rem;
+    border: 1px solid #e0e0e0;
+    width: 32.1%;
+    min-height: 185px;
+    vertical-align: top;
+    transition: height 1s;
+}
+.wide {
+    width: 48.5%;
+}
+/* advanced search page */
+.advanced {
+    background-color: #f6f4ec;
+    background-image: none;
+}
+.advanced .search-box {
+    border-bottom: 0;
+}
+.advanced .simple_form_group {
+    padding: 0;
+}
+.advanced_search_heading {
+    margin: 0.5rem 0 0 0;
+    font-size: 1.5rem;
+}
+.arrow_icon {
+    display: inline-block;
+    background: transparent url(/static/images/arrow_collapsed.png) 0 0 no-repeat;
+    width: 25px;
+    height: 25px;
+    vertical-align: top;
+    transform: rotate3d(0, 0, 1, 180deg);
+}
+.expanded {
+    transform: rotate3d(0, 0, 1, 270deg);
+}
+.adv_additional label {
+    display: inline-block;
+    background-color: #e0e0e0;
+    padding: 0.1rem 0.2rem 0.1rem 0;
+    border: 1px dashed #999;
+    width: 19%;
+}
+.form_elem_container {
+    margin: 0 0 .7rem 0;
+}
+.form_elem_container label {
+    display: inline-block;
+    background-color: #e0e0e0;
+    padding: .3rem .5rem;
+    border: 0;
+    width: 25%;
+}
+.form_elem_container input {
+    width: 70%;
 }
 .case {
     margin-left: 5%;
