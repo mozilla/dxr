@@ -29,20 +29,20 @@
 {% block content %}
 <div id="annotations">
   {% for number, line, annotations in lines %}
-  <div class="annotation-set" id="aset-{{ number }}">
-  {%- for annotation in annotations -%}
-  <div {% for key, value in annotation.items() %}
-        {{ key }}="{{ value }}"
-     {% endfor %} ></div>
-   {%- endfor -%}
-  </div>
+    <div class="annotation-set" id="aset-{{ number }}">
+      {%- for annotation in annotations -%}
+        <div {% for key, value in annotation.items() %}
+              {{ key }}="{{ value }}"
+             {% endfor %} ></div>
+      {%- endfor -%}
+    </div>
   {%- endfor -%}
 </div>
 <div class="line-numbers">
   {% for number, line, annotations in lines %}
-  <pre><a href="#l{{ number }}"
-          class="ln" id="line-{{ number }}"
-          name="l{{ number }}">{{ number }}</a></pre>
+    <pre><a href="#l{{ number }}"
+            class="ln" id="line-{{ number }}"
+            name="l{{ number }}">{{ number }}</a></pre>
   {%- endfor %}
 </div>
 <div class="file-lines">
