@@ -599,7 +599,50 @@ def balanced_tags(tags):
     """Come up with a balanced series of tags which express the semantics of
     the given sorted interleaved ones.
 
-    Return an iterable of (point, is_start, Region/Reg/Line).
+    Return an iterable of (point, is_start, Region/Reg/Line) without any
+    (pointless) zero-width tag spans. The output isn't necessarily optimal, but
+    it's fast and not embarrassingly wasteful of space.
+
+    """
+    return without_empty_tags(balanced_tags_with_empties(tags))
+
+
+def without_empty_tags(tags):
+    """Filter zero-width tagged spans out of a sorted, balanced tag stream."""
+    buffer = []  # tags
+    depth = 0
+
+    for tag in tags:
+        point, is_start, payload = tag
+
+        if is_start:
+            buffer.append(tag)
+            depth += 1
+        else:
+            top_point, _, top_payload = buffer[-1]
+            if top_payload is payload and top_point == point:
+                # It's a closer, and it matches the last thing in buffer and, it
+                # and that open tag form a zero-width span. Cancel the last thing
+                # in buffer.
+                buffer.pop()
+            else:
+                # It's an end tag that actually encloses some stuff.
+                buffer.append(tag)
+            depth -= 1
+
+            # If we have a balanced set of non-zero-width tags, emit them:
+            if not depth:
+                for b in buffer:
+                    yield b
+                del buffer[:]
+
+
+def balanced_tags_with_empties(tags):
+    """Come up with a balanced series of tags which express the semantics of
+    the given sorted interleaved ones.
+
+    Return an iterable of (point, is_start, Region/Reg/Line), possible
+    including some zero-width tag spans.
 
     """
     opens = []  # payloads of tags which are currently open
@@ -732,7 +775,7 @@ def build_lines(text, htmlifiers):
     # other.
     tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
     tags.extend(line_boundaries(text))
-    tags.sort(key=nesting_order)  # TODO: sort Lines before other start tags and after other end tags of equal offset.  # Something nice (and necessary?) here is that coincident ends sort before starts.
+    tags.sort()  # TODO: sort Lines before other start tags and after other end tags of equal offset.  # Something nice (and necessary?) here is that coincident ends sort before starts.
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
     # We could even stick a filter step after balanced_tags() to remove any empty (zero-length) intervals.

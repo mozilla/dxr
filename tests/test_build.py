@@ -67,6 +67,26 @@ def spaced_tags(tags):
     return '\n'.join(segments)
 
 
+def tags_from_text(text):
+    """Return unsorted tags based on an ASCII art representation."""
+    for line in text.splitlines():
+        start = line.find('_')
+        label, prespace, underscores = line[0], line[2:start], line[start:]
+        ref = Region(label)
+        yield len(prespace), True, ref
+        yield len(prespace) + len(underscores) - 1, False, ref
+
+
+def test_tags_from_text():
+    # str() so the Region objs compare equal
+    eq_(str(list(tags_from_text('a ______________\n'
+                                'b ______\n'
+                                'c     _____'))),
+        '[(0, True, Region("a")), (13, False, Region("a")), '
+        '(0, True, Region("b")), (5, False, Region("b")), '
+        '(4, True, Region("c")), (8, False, Region("c"))]')
+
+
 class BalancedTagTests(TestCase):
     def test_horrors(self):
         """Try a fairly horrific scenario::
@@ -88,67 +108,57 @@ class BalancedTagTests(TestCase):
                 (11, False, e), (11, False, d)]
 
         eq_(spaced_tags(balanced_tags(tags)),
-"""<a>
-  <b>
-     <c>
-      </c>
-      </b>
-      <c>
-       </c>
-       </a>
-       <c>
-        <d>
-         </d>
-         </c>
-         <d>
-          <e>
-           </e>
-           </d>""")
+            '<a>\n'
+            '  <b>\n'
+            '     <c>\n'
+            '      </c>\n'
+            '      </b>\n'
+            '      <c>\n'
+            '       </c>\n'
+            '       </a>\n'
+            '       <c>\n'
+            '        <d>\n'
+            '         </d>\n'
+            '         </c>\n'
+            '         <d>\n'
+            '          <e>\n'
+            '           </e>\n'
+            '           </d>')
 
     def test_coincident(self):
-        """See if we emit pointless empty tags when tempted to."""
-        a, b, c = Region('a'), Region('b'), Region('c')
-        tags = [(0, True, a), (0, True, b), (0, True, c),
-                (4, False, a), (4, False, b), (4, False, c)]
-        print spaced_tags(balanced_tags(tags))
+        """We shouldn't emit pointless empty tags when tempted to."""
+        tags = sorted(tags_from_text('a _____\n'
+                                     'b _____\n'
+                                     'c _____\n'))
         eq_(spaced_tags(balanced_tags(tags)),
-"""<a>
-<b>
-<c>
-    </c>
-    </b>
-    </a>""")
+            '<a>\n'
+            '<b>\n'
+            '<c>\n'
+            '    </c>\n'
+            '    </b>\n'
+            '    </a>')
 
-"""See what __
-            __
-            __ does. See if it spits out a lot of empty tag pairs. We could always write a custom sorter that flips the sort order when is_start is False and puts the obj ID of the payload into the sort mix."""
-
-"""And ______________
- b           ___________
- c           ___________
- d           ___________
-          ______. Make sure the identical ones open and close balancedly."""
-
-"""And _______________
-          ____________
-        ______________
-                   ___."""
-
-"""
-<a>
-  <b>
-     <c>
-       </c>
-       </b>
-       <c>
-        </c>
-        </a>  # Why doesn't this close until now? Because the printing is misleading: </8> means the last char ends at the same offset as <7>'s begins. Go back to treating the endpoint index semantically the same as the start point. Giving them different meanings makes the algo messy.
-        <c>
-        <d>
-          </d>
-          </c>
-          <d>
-          <e>
-            </e>
-            </d>
-"""
+    def test_coincident_ends(self):
+        """We shouldn't emit empty tags even when coincidently-ending tags
+        don't start together."""
+        # These Regions aren't in startpoint order. That makes tags_from_test()
+        # instantiate them in a funny order, which makes them sort in the wrong
+        # order, which is realistic.
+        tags = sorted(tags_from_text('d      _______\n'
+                                     'c    _________\n'
+                                     'b  ___________\n'
+                                     'a ____________\n'
+                                     'e     ___________\n'))
+        eq_(spaced_tags(balanced_tags(tags)),
+            '<a>\n'
+            ' <b>\n'
+            '   <c>\n'
+            '    <e>\n'
+            '     <d>\n'
+            '           </d>\n'
+            '           </e>\n'
+            '           </c>\n'
+            '           </b>\n'
+            '           </a>\n'
+            '           <e>\n'
+            '              </e>')
