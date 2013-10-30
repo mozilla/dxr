@@ -9,7 +9,7 @@ from nose.tools import eq_
 
 from dxr.build import (line_boundaries, remove_overlapping_refs, Region, Line,
                        Ref, balanced_tags, build_lines, tag_boundaries,
-                       html_lines)
+                       html_lines, nesting_order)
 
 
 def test_line_boundaries():
@@ -130,7 +130,7 @@ class BalancedTagTests(TestCase):
         """We shouldn't emit pointless empty tags when tempted to."""
         tags = sorted(tags_from_text('a _____\n'
                                      'b _____\n'
-                                     'c _____\n'))
+                                     'c _____\n'), key=nesting_order)
         eq_(spaced_tags(balanced_tags(tags)),
             '<a>\n'
             '<b>\n'
@@ -149,7 +149,7 @@ class BalancedTagTests(TestCase):
                                      'c    _________\n'
                                      'b  ___________\n'
                                      'a ____________\n'
-                                     'e     ___________\n'))
+                                     'e     ___________\n'), key=nesting_order)
         eq_(spaced_tags(balanced_tags(tags)),
             '<a>\n'
             ' <b>\n'
@@ -203,3 +203,10 @@ class IntegrationTests(TestCase):
         eq_(''.join(build_lines('hello',
                                 [Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])])),
             '<span class="a">hel</span><span class="b">lo</span>')
+
+    def test_split_anchor_avoidance(self):
+        """Don't split anchor tags when we can avoid it."""
+        eq_(''.join(build_lines('this that',
+                                [Htmlifier(regions=[(0, 4, 'k')],
+                                           refs=[(0, 9, {})])])),
+            '<a data-menu="{}"><span class="k">this</span> that</a>')

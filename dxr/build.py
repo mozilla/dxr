@@ -541,6 +541,7 @@ class Line(object):
     of every line (and reopen any afterward that span lines).
 
     """
+    sort_order = 0  # Sort Lines outermost.
 
 class TagWriter(object):
     """A thing that hangs onto a tag's payload (like the class of a span) and
@@ -556,6 +557,8 @@ class TagWriter(object):
 
 class Region(TagWriter):
     """Thing to open and close <span> tags"""
+    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
+                    # them.
 
     def opener(self):
         return u'<span class="%s">' % cgi.escape(self.payload, True)
@@ -566,6 +569,7 @@ class Region(TagWriter):
 
 class Ref(TagWriter):
     """Thing to open and close <a> tags"""
+    sort_order = 1
 
     def opener(self):
         return u'<a data-menu="%s">' % cgi.escape(json.dumps(self.payload), True)
@@ -764,6 +768,41 @@ def remove_overlapping_refs(tags):
     del tags[i + 1:]
 
 
+def nesting_order((point, is_start, payload)):
+    """Return a sorting key that places coincident Line boundaries outermost,
+    then Ref boundaries, and finally Region boundaries.
+
+    The Line bit saves some empty-tag elimination. The Ref bit saves splitting
+    an <a> tag (and the attendant weird UI) for the following case::
+
+        Ref    ____________  # The Ref should go on the outside.
+        Region _____
+
+    Other scenarios::
+
+        Reg _______________        # Would be nice if Reg ended before Ref
+        Ref      ________________  # started. We'll see about this later.
+
+        Reg _____________________  # Works either way
+        Ref _______
+
+        Reg _____________________
+        Ref               _______  # This should be fine.
+
+        Reg         _____________  # This should be fine as well.
+        Ref ____________
+
+        Reg _____
+        Ref _____  # This is fine either way.
+
+    Also, endpoints sort before coincident start points to save work for the
+    tag balancer.
+
+    """
+    return point, is_start, (payload.sort_order if is_start else
+                             -payload.sort_order)
+
+
 def build_lines(text, htmlifiers):
     """Yield lines of Markup, with decorations from the htmlifier plugins
     applied.
@@ -783,6 +822,6 @@ def build_lines(text, htmlifiers):
     # other.
     tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
     tags.extend(line_boundaries(text))
-    tags.sort()  # TODO: sort Lines before other start tags and after other end tags of equal offset.  # Coincident ends sort before starts.
+    tags.sort(key=nesting_order)
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
