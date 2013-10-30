@@ -689,17 +689,15 @@ def tag_boundaries(htmlifiers):
     the ending offset points to the last.
 
     """
-    # TODO: Refactor.
-    regions = chain.from_iterable(htmlifier.regions() for htmlifier in htmlifiers)
-    refs = chain.from_iterable(htmlifier.refs() for htmlifier in htmlifiers)
-    for var, cls in [(regions, Region), (refs, Ref)]:
-        for start, end, data in var:
-            tag = cls(data)
-            assert start is not None
-            assert end is not None
-            assert end > 0  # If this doesn't hold, the plugin is asking for a length-of-negative-one slice in its parlance.
-            yield start, True, tag
-            yield end - 1, False, tag
+    for h in htmlifiers:
+        for intervals, cls in [(h.regions(), Region), (h.refs(), Ref)]:
+            for start, end, data in intervals:
+                tag = cls(data)
+                assert start is not None
+                assert end is not None
+                assert end > 0  # If this doesn't hold, the plugin is asking for a length-of-negative-one slice in its parlance.
+                yield start, True, tag
+                yield end - 1, False, tag
 
 
 def line_boundaries(text):
