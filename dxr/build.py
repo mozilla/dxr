@@ -558,20 +558,20 @@ class Region(TagWriter):
     """Thing to open and close <span> tags"""
 
     def opener(self):
-        return '<span class="%s">' % cgi.escape(self.payload, True)
+        return u'<span class="%s">' % cgi.escape(self.payload, True)
 
     def closer(self):
-        return '</span>'
+        return u'</span>'
 
 
 class Ref(TagWriter):
     """Thing to open and close <a> tags"""
 
     def opener(self):
-        return '<a data-menu="%s">' % cgi.escape(json.dumps(self.payload), True)
+        return u'<a data-menu="%s">' % cgi.escape(json.dumps(self.payload), True)
 
     def closer(self):
-        return '</a>'
+        return u'</a>'
 
 
 def html_lines(tags, slicer):
