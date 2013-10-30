@@ -577,16 +577,26 @@ class Ref(TagWriter):
 def html_lines(tags, slicer):
     """Render tags to HTML, and interleave them with the text they decorate.
 
+    All input tags must be enclosed in Lines.
+
     :arg tags: An iterable of ordered, non-overlapping tag boundaries
     :arg slicer: A callable taking the args (start, end), returning a Unicode
-        slice of the source code we're decorating
+        slice of the source code we're decorating. ``start`` and ``end`` are
+        Python-style slice args.
 
     """
     up_to = 0
     segments = []
     for point, is_start, payload in tags:
-        segments.append(cgi.escape(slicer(up_to, point).strip(u'\r\n')))
-        up_to = point
+        # Translate back from interval boundary indices to Python slice
+        # indexing. For the balancing and other computation, the start and
+        # endpoints of intervals were semantically equivalent. However, here,
+        # the distinction matters, so we mix the is-start-ness back into the
+        # index.
+        slice_end = point + (0 if is_start else 1)
+
+        segments.append(cgi.escape(slicer(up_to, slice_end).strip(u'\r\n')))
+        up_to = slice_end
         if isinstance(payload, Line):
             if not is_start:
                 yield ''.join(segments)
@@ -641,7 +651,7 @@ def balanced_tags_with_empties(tags):
     """Come up with a balanced series of tags which express the semantics of
     the given sorted interleaved ones.
 
-    Return an iterable of (point, is_start, Region/Reg/Line), possible
+    Return an iterable of (point, is_start, Region/Reg/Line), possibly
     including some zero-width tag spans.
 
     """
@@ -680,8 +690,8 @@ def tag_boundaries(htmlifiers):
 
     """
     # TODO: Refactor.
-    regions = chain(*(htmlifier.regions() for htmlifier in htmlifiers))
-    refs = chain(*(htmlifier.refs() for htmlifier in htmlifiers))
+    regions = chain.from_iterable(htmlifier.regions() for htmlifier in htmlifiers)
+    refs = chain.from_iterable(htmlifier.refs() for htmlifier in htmlifiers)
     for var, cls in [(regions, Region), (refs, Ref)]:
         for start, end, data in var:
             tag = cls(data)
@@ -775,7 +785,6 @@ def build_lines(text, htmlifiers):
     # other.
     tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
     tags.extend(line_boundaries(text))
-    tags.sort()  # TODO: sort Lines before other start tags and after other end tags of equal offset.  # Something nice (and necessary?) here is that coincident ends sort before starts.
+    tags.sort()  # TODO: sort Lines before other start tags and after other end tags of equal offset.  # Coincident ends sort before starts.
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
-    # We could even stick a filter step after balanced_tags() to remove any empty (zero-length) intervals.

@@ -7,19 +7,20 @@ from warnings import catch_warnings
 
 from nose.tools import eq_
 
-from dxr.build import (line_boundaries, remove_overlapping_refs, Region,
-                       Ref, balanced_tags)
+from dxr.build import (line_boundaries, remove_overlapping_refs, Region, Line,
+                       Ref, balanced_tags, build_lines, tag_boundaries,
+                       html_lines)
 
 
-class DecorationTests(TestCase):
-    def test_line_boundaries(self):
-        """Make sure we find the correct line boundaries with all sorts of line
-        endings, even in files that don't end with a newline."""
-        eq_(list((point, is_start) for point, is_start, _ in line_boundaries('abc\ndef\r\nghi\rjkl')),
-            [(0, True), (3, False),
-             (4, True), (8, False),
-             (9, True), (12, False),
-             (13, True), (15, False)])
+def test_line_boundaries():
+    """Make sure we find the correct line boundaries with all sorts of line
+    endings, even in files that don't end with a newline."""
+    eq_(list((point, is_start) for point, is_start, _ in
+             line_boundaries('abc\ndef\r\nghi\rjkl')),
+        [(0, True), (3, False),
+         (4, True), (8, False),
+         (9, True), (12, False),
+         (13, True), (15, False)])
 
 
 class RemoveOverlappingTests(TestCase):
@@ -162,3 +163,43 @@ class BalancedTagTests(TestCase):
             '           </a>\n'
             '           <e>\n'
             '              </e>')
+
+
+class Htmlifier(object):
+    def __init__(self, regions=None, refs=None):
+        self._regions = regions or []
+        self._refs = refs or []
+
+    def regions(self):
+        return self._regions
+
+    def refs(self):
+        return self._refs
+
+
+def test_tag_boundaries():
+    eq_(str(list(tag_boundaries([Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])]))),
+        '[(0, True, Region("a")), (2, False, Region("a")), '
+        '(3, True, Region("b")), (4, False, Region("b"))]')
+
+
+def test_simple_html_lines():
+    """See if the offsets are right in simple HTML stitching."""
+    a = Region('a')
+    b = Region('b')
+    line = Line()
+    eq_(''.join(html_lines([(0, True, line),
+                            (0, True, a), (2, False, a),
+                            (3, True, b), (4, False, b),
+                            (4, False, line)],
+                           'hello'.__getslice__)),
+        '<span class="a">hel</span><span class="b">lo</span>')
+
+
+class IntegrationTests(TestCase):
+    def test_simple(self):
+        """Sanity-check build_lines, which ties the whole shootin' match
+        together."""
+        eq_(''.join(build_lines('hello',
+                                [Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])])),
+            '<span class="a">hel</span><span class="b">lo</span>')
