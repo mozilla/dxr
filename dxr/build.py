@@ -2,12 +2,13 @@ from codecs import getdecoder
 import cgi
 from datetime import datetime
 from fnmatch import fnmatchcase
-from itertools import chain, compress, izip
+from heapq import merge
+from itertools import chain, compress, groupby, izip_longest
 import json
+from operator import itemgetter
 import os
 from os import stat
 from os.path import dirname
-from pkg_resources import require
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from traceback import format_exc
 from warnings import warn
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from jinja2 import Markup
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
@@ -522,14 +524,21 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'config': tree.config.template_parameters,
         'generated_date': tree.config.generated_date,
 
-        # Set file template   variables
+        # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),
         'icon': icon,
         'path': path,
         'name': os.path.basename(path),
-        'lines': build_lines(text, htmlifiers),
+
+        # Someday, it would be great to stream this and not concretize the
+        # whole thing in RAM. The template will have to quit looping through
+        # the whole thing 3 times.
+        'lines': list(lines_and_annotations(build_lines(text, htmlifiers),
+                                            htmlifiers)),
+
         'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
+
     # Fill-in variables and dump to file with utf-8 encoding
     tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
 
@@ -601,7 +610,7 @@ def html_lines(tags, slicer):
         up_to = point
         if line_ends_at is not None and (is_start or point > line_ends_at):
             if segments:
-                yield ''.join(segments)
+                yield Markup(u''.join(segments))
                 segments = []
             line_ends_at = None
         if isinstance(payload, Line):
@@ -626,7 +635,7 @@ def html_lines(tags, slicer):
         else:
             segments.append(payload.opener() if is_start else payload.closer())
     if segments:  # probably always true for non-empty tag streams
-        yield ''.join(segments)
+        yield Markup(u''.join(segments))
 
 
 def balanced_tags(tags):
@@ -721,7 +730,6 @@ def tag_boundaries(htmlifiers):
                 tag = cls(data)
                 assert start is not None
                 assert end is not None
-                assert end > 0  # If this doesn't hold, the plugin is asking for a length-of-negative-one slice in its parlance.
                 yield start, True, tag
                 yield end, False, tag
 
@@ -848,3 +856,31 @@ def build_lines(text, htmlifiers):
                                   # that in html_lines().
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
+
+
+def lines_and_annotations(lines, htmlifiers):
+    """Collect all the annotations for each line into a list, and yield a tuple
+    of (line of HTML, annotations list) for each line.
+
+    :arg lines: An iterable of Markup objects, each representing a line of
+        HTMLified source code
+
+    """
+    def non_sparse_annotations(annotations):
+        """De-sparsify the annotations iterable so we can just zip it together
+        with the HTML lines.
+
+        Return an iterable of annotations iterables, one for each line.
+
+        """
+        next_unannotated_line = 1
+        for line, annotations in groupby(annotations, itemgetter(0)):
+            for next_unannotated_line in xrange(next_unannotated_line,
+                                                line - 1):
+                yield []
+            yield [data for line_num, data in annotations]
+            next_unannotated_line = line
+    return izip_longest(lines,
+                        non_sparse_annotations(merge(*[h.annotations() for h in
+                                                       htmlifiers])),
+                        fillvalue=[])

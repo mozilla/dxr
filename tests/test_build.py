@@ -9,7 +9,8 @@ from nose.tools import eq_
 
 from dxr.build import (line_boundaries, remove_overlapping_refs, Region, Line,
                        Ref, balanced_tags, build_lines, tag_boundaries,
-                       html_lines, nesting_order, balanced_tags_with_empties)
+                       html_lines, nesting_order, balanced_tags_with_empties,
+                       lines_and_annotations)
 
 
 def test_line_boundaries():
@@ -166,15 +167,19 @@ class BalancedTagTests(TestCase):
 
 
 class Htmlifier(object):
-    def __init__(self, regions=None, refs=None):
+    def __init__(self, regions=None, refs=None, annotations=None):
         self._regions = regions or []
         self._refs = refs or []
+        self._annotations = annotations or []
 
     def regions(self):
         return self._regions
 
     def refs(self):
         return self._refs
+
+    def annotations(self):
+        return self._annotations
 
 
 def test_tag_boundaries():
@@ -196,7 +201,40 @@ def test_simple_html_lines():
         '<span class="a">hel</span><span class="b">lo</span>')
 
 
+class AnnotationsTests(TestCase):
+    def _expand_group(self, group):
+        """Turn ``group_by``'s annoying iterators into something we can test
+        equality against."""
+        return [(k, list(v)) for k, v in group]
+
+    def test_sanity(self):
+        """Make sure annotations are pulled from htmlifiers and paired with HTML
+        lines sanely, handling sparsely distributed annotations and multiple
+        htmlifiers annotating a single line."""
+        h1 = Htmlifier(annotations=[(1, {'a': 'b'}), (3, {'e': 'f'}), (6, {'g': 'h'})])
+        h2 = Htmlifier(annotations=[(1, {'c': 'd'})])
+
+        results = self._expand_group(lines_and_annotations(
+                    ['one', 'two', 'three', 'four', 'five', 'six'], [h1, h2]))
+        eq_(results,
+            [('one', [{'a': 'b'}, {'c': 'd'}]),
+             ('two', []),
+             ('three', [{'e': 'f'}]),
+             ('four', []),
+             ('five', []),
+             ('six', [{'g': 'h'}])])
+
+    def test_none(self):
+        """If there are no annotations, or if the annotations run short of the
+        lines, don't stop emitting lines."""
+        eq_(self._expand_group(lines_and_annotations(['one', 'two'], [Htmlifier(annotations=[])])),
+            [('one', []),
+             ('two', [])])
+
+
 class IntegrationTests(TestCase):
+    """Tests for several layers at once, though not necessarily all of them"""
+
     def test_simple(self):
         """Sanity-check build_lines, which ties the whole shootin' match
         together."""
