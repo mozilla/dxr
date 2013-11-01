@@ -9,7 +9,7 @@ from nose.tools import eq_
 
 from dxr.build import (line_boundaries, remove_overlapping_refs, Region, Line,
                        Ref, balanced_tags, build_lines, tag_boundaries,
-                       html_lines, nesting_order)
+                       html_lines, nesting_order, balanced_tags_with_empties)
 
 
 def test_line_boundaries():
@@ -17,10 +17,10 @@ def test_line_boundaries():
     endings, even in files that don't end with a newline."""
     eq_(list((point, is_start) for point, is_start, _ in
              line_boundaries('abc\ndef\r\nghi\rjkl')),
-        [(0, True), (3, False),
-         (4, True), (8, False),
-         (9, True), (12, False),
-         (13, True), (15, False)])
+        [(0, True), (4, False),
+         (4, True), (9, False),
+         (9, True), (13, False),
+         (13, True), (16, False)])
 
 
 class RemoveOverlappingTests(TestCase):
@@ -179,8 +179,8 @@ class Htmlifier(object):
 
 def test_tag_boundaries():
     eq_(str(list(tag_boundaries([Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])]))),
-        '[(0, True, Region("a")), (2, False, Region("a")), '
-        '(3, True, Region("b")), (4, False, Region("b"))]')
+        '[(0, True, Region("a")), (3, False, Region("a")), '
+        '(3, True, Region("b")), (5, False, Region("b"))]')
 
 
 def test_simple_html_lines():
@@ -189,9 +189,9 @@ def test_simple_html_lines():
     b = Region('b')
     line = Line()
     eq_(''.join(html_lines([(0, True, line),
-                            (0, True, a), (2, False, a),
-                            (3, True, b), (4, False, b),
-                            (4, False, line)],
+                            (0, True, a), (3, False, a),
+                            (3, True, b), (5, False, b),
+                            (5, False, line)],
                            'hello'.__getslice__)),
         '<span class="a">hel</span><span class="b">lo</span>')
 
@@ -202,11 +202,30 @@ class IntegrationTests(TestCase):
         together."""
         eq_(''.join(build_lines('hello',
                                 [Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])])),
-            '<span class="a">hel</span><span class="b">lo</span>')
+            u'<span class="a">hel</span><span class="b">lo</span>')
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
         eq_(''.join(build_lines('this that',
                                 [Htmlifier(regions=[(0, 4, 'k')],
                                            refs=[(0, 9, {})])])),
-            '<a data-menu="{}"><span class="k">this</span> that</a>')
+            u'<a data-menu="{}"><span class="k">this</span> that</a>')
+
+    def test_split_anchor_across_lines(self):
+        """Support unavoidable splits of an anchor across lines."""
+        eq_(list(build_lines('this\nthat',
+                             [Htmlifier(refs=[(0, 9, {})])])),
+            [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
+
+    def test_horrors(self):
+        """Untangle a circus of interleaved tags, tags that start where others
+        end, and other untold wretchedness."""
+        # This is a little brittle. All we really want to test is that each
+        # span of text is within the right spans. We don't care what order the
+        # span tags are in.
+        eq_(list(build_lines('this&that',
+                             [Htmlifier(regions=[(0, 9, 'a'), (1, 8, 'b'),
+                                                 (4, 7, 'c'), (3, 4, 'd'),
+                                                 (3, 5, 'e'), (0, 4, 'm'),
+                                                 (5, 9, 'n')])])),
+            [u'<span class="a"><span class="m">t<span class="b">hi<span class="d"><span class="e">s</span></span></span></span><span class="b"><span class="e"><span class="c">&amp;</span></span><span class="c"><span class="n">th</span></span><span class="n">a</span></span><span class="n">t</span></span>'])

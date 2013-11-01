@@ -527,7 +527,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'icon': icon,
         'path': path,
         'name': os.path.basename(path),
-        'lines': build_lines(tree, conn, path, text, htmlifiers),
+        'lines': build_lines(text, htmlifiers),
         'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
     # Fill-in variables and dump to file with utf-8 encoding
@@ -542,6 +542,9 @@ class Line(object):
 
     """
     sort_order = 0  # Sort Lines outermost.
+    def __repr__(self):
+        return 'Line()'
+
 
 class TagWriter(object):
     """A thing that hangs onto a tag's payload (like the class of a span) and
@@ -581,9 +584,9 @@ class Ref(TagWriter):
 def html_lines(tags, slicer):
     """Render tags to HTML, and interleave them with the text they decorate.
 
-    All input tags must be enclosed in Lines.
-
-    :arg tags: An iterable of ordered, non-overlapping tag boundaries
+    :arg tags: An iterable of ordered, non-overlapping, non-empty tag
+        boundaries with Line endpoints at (but not necessarily outermost at)
+        the index of the end of each line.
     :arg slicer: A callable taking the args (start, end), returning a Unicode
         slice of the source code we're decorating. ``start`` and ``end`` are
         Python-style slice args.
@@ -591,22 +594,39 @@ def html_lines(tags, slicer):
     """
     up_to = 0
     segments = []
-    for point, is_start, payload in tags:
-        # Translate back from interval boundary indices to Python slice
-        # indexing. For the balancing and other computation, the start and
-        # endpoints of intervals were semantically equivalent. However, here,
-        # the distinction matters, so we mix the is-start-ness back into the
-        # index.
-        slice_end = point + (0 if is_start else 1)
+    line_ends_at = None
 
-        segments.append(cgi.escape(slicer(up_to, slice_end).strip(u'\r\n')))
-        up_to = slice_end
-        if isinstance(payload, Line):
-            if not is_start:
+    for point, is_start, payload in tags:
+        segments.append(cgi.escape(slicer(up_to, point).strip(u'\r\n')))
+        up_to = point
+        if line_ends_at is not None and (is_start or point > line_ends_at):
+            if segments:
                 yield ''.join(segments)
                 segments = []
+            line_ends_at = None
+        if isinstance(payload, Line):
+            if not is_start:
+                # The Line start and endpoints in the tag stream, while at the
+                # correct offsets, are often out of order, no longer being the
+                # outermost tags on a line. (They heroically sacrifice their
+                # accuracy while performing their duty of making line-spanning
+                # tags close before each line's end.) So we note an endpoint
+                # when it goes by but wait to actually emit the line until we
+                # encounter the first opener at the same offset. It so happens
+                # that, at any given offset, all closers come in the stream
+                # before any openers (aside from empty tag pairs, which are
+                # filtered out previously). (After all, if this were not true,
+                # the tags would, by definition, be unbalanced, and we know it
+                # to be balanced.) This is why the first opener at an offset is
+                # a good indication of the end of a line. Or, if there are no
+                # openers at the offset, we end the line when we reach a new
+                # offset. Doing this reasoning here avoids an additional sort
+                # of the tag stream after balancing.
+                line_ends_at = point
         else:
             segments.append(payload.opener() if is_start else payload.closer())
+    if segments:  # probably always true for non-empty tag streams
+        yield ''.join(segments)
 
 
 def balanced_tags(tags):
@@ -622,7 +642,11 @@ def balanced_tags(tags):
 
 
 def without_empty_tags(tags):
-    """Filter zero-width tagged spans out of a sorted, balanced tag stream."""
+    """Filter zero-width tagged spans out of a sorted, balanced tag stream.
+
+    Maintain tag order.
+
+    """
     buffer = []  # tags
     depth = 0
 
@@ -661,6 +685,7 @@ def balanced_tags_with_empties(tags):
     """
     opens = []  # payloads of tags which are currently open
     closes = []  # payloads of tags which we've had to temporarily close so we could close an overlapping tag
+
     for point, is_start, payload in tags:
         if is_start:
             yield point, is_start, payload
@@ -670,14 +695,13 @@ def balanced_tags_with_empties(tags):
             # we're trying to close and here:
             while opens[-1] is not payload:  # while the corresponding opener isn't at the top of the stack
                 intermediate_payload = opens.pop()
-                yield point, is_start, intermediate_payload
+                yield point, False, intermediate_payload
                 closes.append(intermediate_payload)
 
             # Close the current tag:
-            yield point, is_start, payload
+            yield point, False, payload
             opens.pop()
 
-            # And reopen the things we had to temporarily shunt out of the way:
             while closes:
                 intermediate_payload = closes.pop()
                 yield point, True, intermediate_payload
@@ -687,10 +711,8 @@ def balanced_tags_with_empties(tags):
 def tag_boundaries(htmlifiers):
     """Return a sequence of (offset, is_start, Region/Ref/Line) tuples.
 
-    Convert from the slice-like boundaries used by the plugins (where the
-    ending offset is the index of the char after the interval) to symmetric
-    ones, where the starting offset points to the first char of the span and
-    the ending offset points to the last.
+    Like in Python slice notation, the offset of a tag refers to the index of
+    the source code char it comes before.
 
     """
     for h in htmlifiers:
@@ -701,7 +723,7 @@ def tag_boundaries(htmlifiers):
                 assert end is not None
                 assert end > 0  # If this doesn't hold, the plugin is asking for a length-of-negative-one slice in its parlance.
                 yield start, True, tag
-                yield end - 1, False, tag
+                yield end, False, tag
 
 
 def line_boundaries(text):
@@ -709,8 +731,8 @@ def line_boundaries(text):
 
     :arg text: A UTF-8-encoded string
 
-    Start points are right after a newline. Endpoints are coincident with the
-    last char of the line, counting any trailing linebreak as part of the line.
+    Endpoints and start points are coincident: right after a (universal)
+    newline.
 
     """
     marker = Line()
@@ -718,7 +740,7 @@ def line_boundaries(text):
     for line in text.splitlines(True):
         yield up_to, True, marker
         up_to += len(line)
-        yield up_to - 1, False, marker
+        yield up_to, False, marker
 
 
 def non_overlapping_refs(tags):
@@ -817,11 +839,12 @@ def build_lines(text, htmlifiers):
 
     # For now, we make the same assumption the old build_lines() implementation
     # did, just so we can ship: plugins return byte offsets, not Unicode char
-    # offsets. However, I think only the clang plugin return byte offsets. I
+    # offsets. However, I think only the clang plugin returns byte offsets. I
     # bet Pygments returns char ones. We should homogenize one way or the
     # other.
     tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
     tags.extend(line_boundaries(text))
-    tags.sort(key=nesting_order)
+    tags.sort(key=nesting_order)  # Balanced_tags undoes this, but we tolerate
+                                  # that in html_lines().
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
