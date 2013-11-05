@@ -183,6 +183,7 @@ class Htmlifier(object):
 
 
 def test_tag_boundaries():
+    """Sanity-check ``tag_boundaries()``."""
     eq_(str(list(tag_boundaries([Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])]))),
         '[(0, True, Region("a")), (3, False, Region("a")), '
         '(3, True, Region("b")), (5, False, Region("b"))]')
@@ -267,3 +268,13 @@ class IntegrationTests(TestCase):
                                                  (3, 5, 'e'), (0, 4, 'm'),
                                                  (5, 9, 'n')])])),
             [u'<span class="a"><span class="m">t<span class="b">hi<span class="d"><span class="e">s</span></span></span></span><span class="b"><span class="e"><span class="c">&amp;</span></span><span class="c"><span class="n">th</span></span><span class="n">a</span></span><span class="n">t</span></span>'])
+
+    def test_empty_tag_boundaries(self):
+        """Zero-length tags should be filtered out by ``tag_boundaries()``.
+
+        If they are not, the start of a tag can sort after the end, crashing
+        the tag balancer.
+
+        """
+        list(build_lines('hello!',
+                         [Htmlifier(regions=[(3, 3, 'a'), (3, 5, 'b')])]))

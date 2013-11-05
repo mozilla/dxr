@@ -732,8 +732,13 @@ def tag_boundaries(htmlifiers):
                 tag = cls(data)
                 assert start is not None
                 assert end is not None
-                yield start, True, tag
-                yield end, False, tag
+                # Filter out zero-length spans which don't do any good and
+                # which can cause starts to sort after ends, crashing the tag
+                # balancer. Incidentally filter out spans where start tags come
+                # after end tags, though that should never happen.
+                if start < end:
+                    yield start, True, tag
+                    yield end, False, tag
 
 
 def line_boundaries(text):
