@@ -794,10 +794,12 @@ def remove_overlapping_refs(tags):
         The tags do not need to be properly balanced.
 
     """
-    # Don't use any more memory:
+    # Reuse the list so we don't use any more memory.
+    i = None
     for i, tag in enumerate(compress(tags, non_overlapping_refs(tags))):
         tags[i] = tag
-    del tags[i + 1:]
+    if i is not None:
+        del tags[i + 1:]
 
 
 def nesting_order((point, is_start, payload)):
