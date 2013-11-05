@@ -730,13 +730,15 @@ def tag_boundaries(htmlifiers):
         for intervals, cls in [(h.regions(), Region), (h.refs(), Ref)]:
             for start, end, data in intervals:
                 tag = cls(data)
-                assert start is not None
-                assert end is not None
                 # Filter out zero-length spans which don't do any good and
                 # which can cause starts to sort after ends, crashing the tag
                 # balancer. Incidentally filter out spans where start tags come
                 # after end tags, though that should never happen.
-                if start < end:
+                #
+                # Also filter out None starts and ends. I don't know where they
+                # come from. That shouldn't happen and should be fixed in the
+                # plugins.
+                if start is not None and end is not None and start < end:
                     yield start, True, tag
                     yield end, False, tag
 
