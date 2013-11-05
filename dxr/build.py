@@ -389,7 +389,7 @@ def finalize_database(conn):
     """Finalize the database."""
     print "Finalize database:"
 
-    print " - Build database statistics for query optimization"
+    print " - Building database statistics for query optimization"
     conn.execute("ANALYZE");
 
     print " - Running integrity check"
@@ -434,10 +434,12 @@ def run_html_workers(tree, conn):
 
     max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
 
+    print ' - Initializing worker pool'
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
+        print ' - Enqueuing jobs'
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
                    (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
-        print 'Enqueued jobs.'
+        print ' - Waiting for workers to complete'
         for num_done, future in enumerate(as_completed(futures), 1):
             print '%s of %s HTML workers done.' % (num_done, len(futures))
             result = future.result()
