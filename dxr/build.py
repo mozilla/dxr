@@ -460,12 +460,13 @@ def _build_html_for_file_ids(tree, start, end):
     file named "build-html-<start>-<end>.log".
 
     """
+    path = '(no file yet)'
+    id = -1
     try:
         # We might as well have this write its log directly rather than returning
         # them to the master process, since it's already writing the built HTML
         # directly, since that probably yields better parallelism.
 
-        path = '(no file yet)'
         conn = connect_database(tree)
         # TODO: Replace this ad hoc logging with the logging module (or something
         # more humane) so we can get some automatic timestamps. If we get
