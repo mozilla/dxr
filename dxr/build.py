@@ -557,6 +557,8 @@ class Line(object):
     def __repr__(self):
         return 'Line()'
 
+LINE = Line()
+
 
 class TagWriter(object):
     """A thing that hangs onto a tag's payload (like the class of a span) and
@@ -597,8 +599,8 @@ def html_lines(tags, slicer):
     """Render tags to HTML, and interleave them with the text they decorate.
 
     :arg tags: An iterable of ordered, non-overlapping, non-empty tag
-        boundaries with Line endpoints at (but not necessarily outermost at)
-        the index of the end of each line.
+        boundaries with Line endpoints at (and outermost at) the index of the
+        end of each line.
     :arg slicer: A callable taking the args (start, end), returning a Unicode
         slice of the source code we're decorating. ``start`` and ``end`` are
         Python-style slice args.
@@ -606,39 +608,17 @@ def html_lines(tags, slicer):
     """
     up_to = 0
     segments = []
-    line_ends_at = None
 
     for point, is_start, payload in tags:
         segments.append(cgi.escape(slicer(up_to, point).strip(u'\r\n')))
         up_to = point
-        if line_ends_at is not None and (is_start or point > line_ends_at):
-            if segments:
+        if payload is LINE:
+            if not is_start and segments:
                 yield Markup(u''.join(segments))
                 segments = []
-            line_ends_at = None
-        if isinstance(payload, Line):
-            if not is_start:
-                # The Line start and endpoints in the tag stream, while at the
-                # correct offsets, are often out of order, no longer being the
-                # outermost tags on a line. (They heroically sacrifice their
-                # accuracy while performing their duty of making line-spanning
-                # tags close before each line's end.) So we note an endpoint
-                # when it goes by but wait to actually emit the line until we
-                # encounter the first opener at the same offset. It so happens
-                # that, at any given offset, all closers come in the stream
-                # before any openers (aside from empty tag pairs, which are
-                # filtered out previously). (After all, if this were not true,
-                # the tags would, by definition, be unbalanced, and we know it
-                # to be balanced.) This is why the first opener at an offset is
-                # a good indication of the end of a line. Or, if there are no
-                # openers at the offset, we end the line when we reach a new
-                # offset. Doing this reasoning here avoids an additional sort
-                # of the tag stream after balancing.
-                line_ends_at = point
+
         else:
             segments.append(payload.opener() if is_start else payload.closer())
-    if segments:  # probably always true for non-empty tag streams
-        yield Markup(u''.join(segments))
 
 
 def balanced_tags(tags):
@@ -656,7 +636,7 @@ def balanced_tags(tags):
 def without_empty_tags(tags):
     """Filter zero-width tagged spans out of a sorted, balanced tag stream.
 
-    Maintain tag order.
+    Maintain tag order. Line break tags are considered self-closing.
 
     """
     buffer = []  # tags
@@ -692,32 +672,71 @@ def balanced_tags_with_empties(tags):
     the given sorted interleaved ones.
 
     Return an iterable of (point, is_start, Region/Reg/Line), possibly
-    including some zero-width tag spans.
+    including some zero-width tag spans. Each line is enclosed within Line tags.
+
+    :arg tags: An iterable of (offset, is_start, payload) tuples, with one
+        closer for each opener but possibly interleaved. There is one tag for
+        each line break, with a payload of LINE and an is_start of False. Tags
+        are ordered closers first, then line breaks, then openers.
 
     """
+    def close(to=None):
+        """Return an iterable of closers for open tags up to (but not
+        including) the one with the payload ``to``."""
+        # Loop until empty (if we're not going "to" anything in particular) or
+        # until the corresponding opener is at the top of the stack. We check
+        # that "to is None" just to surface any stack-tracking bugs that would
+        # otherwise cause opens to empty too soon.
+        while opens if to is None else opens[-1] is not to:
+            intermediate_payload = opens.pop()
+            yield point, False, intermediate_payload
+            closes.append(intermediate_payload)
+
+    def reopen():
+        """Yield open tags for all temporarily closed ones."""
+        while closes:
+            intermediate_payload = closes.pop()
+            yield point, True, intermediate_payload
+            opens.append(intermediate_payload)
+
     opens = []  # payloads of tags which are currently open
     closes = []  # payloads of tags which we've had to temporarily close so we could close an overlapping tag
+    point = 0
 
+    yield 0, True, LINE
     for point, is_start, payload in tags:
         if is_start:
             yield point, is_start, payload
             opens.append(payload)
+        elif payload is LINE:
+            # Close all open tags before a line break (since each line is
+            # wrapped in its own <code> tag pair), and reopen them afterward.
+            for t in close():  # I really miss "yield from".
+                yield t
+
+            # Since preserving self-closing linebreaks would throw off
+            # without_empty_tags(), we convert to explicit closers here. We
+            # surround each line with them because empty balanced ones would
+            # get filtered out.
+            yield point, False, LINE
+            yield point, True, LINE
+
+            for t in reopen():
+                yield t
         else:
-            # Close whatever's been opened between the start tag of the thing
-            # we're trying to close and here:
-            while opens[-1] is not payload:  # while the corresponding opener isn't at the top of the stack
-                intermediate_payload = opens.pop()
-                yield point, False, intermediate_payload
-                closes.append(intermediate_payload)
+            # Temporarily close whatever's been opened between the start tag of
+            # the thing we're trying to close and here:
+            for t in close(to=payload):
+                yield t
 
             # Close the current tag:
             yield point, False, payload
             opens.pop()
 
-            while closes:
-                intermediate_payload = closes.pop()
-                yield point, True, intermediate_payload
-                opens.append(intermediate_payload)
+            # Reopen the temporarily closed ones:
+            for t in reopen():
+                yield t
+    yield point, False, LINE
 
 
 def tag_boundaries(htmlifiers):
@@ -745,7 +764,7 @@ def tag_boundaries(htmlifiers):
 
 
 def line_boundaries(text):
-    """Return the byte offsets of the starts and ends of lines in a string.
+    """Return a tag for the end of each line in a string.
 
     :arg text: A UTF-8-encoded string
 
@@ -753,12 +772,10 @@ def line_boundaries(text):
     newline.
 
     """
-    marker = Line()
     up_to = 0
     for line in text.splitlines(True):
-        yield up_to, True, marker
         up_to += len(line)
-        yield up_to, False, marker
+        yield up_to, False, LINE
 
 
 def non_overlapping_refs(tags):
@@ -766,7 +783,7 @@ def non_overlapping_refs(tags):
     a True for the rest.
 
     Assumes the incoming tags, while not necessarily well balanced, have the
-    start tag come first and the end tag come second.
+    start tag come before the end tag, if both are present. (Lines are weird.)
 
     """
     blacklist = set()

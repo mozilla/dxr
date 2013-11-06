@@ -7,7 +7,7 @@ from warnings import catch_warnings
 
 from nose.tools import eq_
 
-from dxr.build import (line_boundaries, remove_overlapping_refs, Region, Line,
+from dxr.build import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, build_lines, tag_boundaries,
                        html_lines, nesting_order, balanced_tags_with_empties,
                        lines_and_annotations)
@@ -18,10 +18,10 @@ def test_line_boundaries():
     endings, even in files that don't end with a newline."""
     eq_(list((point, is_start) for point, is_start, _ in
              line_boundaries('abc\ndef\r\nghi\rjkl')),
-        [(0, True), (4, False),
-         (4, True), (9, False),
-         (9, True), (13, False),
-         (13, True), (16, False)])
+        [(4, False),
+         (9, False),
+         (13, False),
+         (16, False)])
 
 
 class RemoveOverlappingTests(TestCase):
@@ -65,7 +65,9 @@ def spaced_tags(tags):
     representations."""
     segments = []
     for point, is_start, payload in tags:
-        segments.append(' ' * point + ('<%s%s>' % ('' if is_start else '/', payload.payload)))
+        segments.append(' ' * point + ('<%s%s>' % ('' if is_start else '/',
+                                                   'L' if payload is LINE else
+                                                        payload.payload)))
     return '\n'.join(segments)
 
 
@@ -110,6 +112,7 @@ class BalancedTagTests(TestCase):
                 (11, False, e), (11, False, d)]
 
         eq_(spaced_tags(balanced_tags(tags)),
+            '<L>\n'
             '<a>\n'
             '  <b>\n'
             '     <c>\n'
@@ -125,7 +128,8 @@ class BalancedTagTests(TestCase):
             '         <d>\n'
             '          <e>\n'
             '           </e>\n'
-            '           </d>')
+            '           </d>\n'
+            '           </L>')
 
     def test_coincident(self):
         """We shouldn't emit pointless empty tags when tempted to."""
@@ -133,12 +137,14 @@ class BalancedTagTests(TestCase):
                                      'b _____\n'
                                      'c _____\n'), key=nesting_order)
         eq_(spaced_tags(balanced_tags(tags)),
+            '<L>\n'
             '<a>\n'
             '<b>\n'
             '<c>\n'
             '    </c>\n'
             '    </b>\n'
-            '    </a>')
+            '    </a>\n'
+            '    </L>')
 
     def test_coincident_ends(self):
         """We shouldn't emit empty tags even when coincidently-ending tags
@@ -152,6 +158,7 @@ class BalancedTagTests(TestCase):
                                      'a ____________\n'
                                      'e     ___________\n'), key=nesting_order)
         eq_(spaced_tags(balanced_tags(tags)),
+            '<L>\n'
             '<a>\n'
             ' <b>\n'
             '   <c>\n'
@@ -163,7 +170,45 @@ class BalancedTagTests(TestCase):
             '           </b>\n'
             '           </a>\n'
             '           <e>\n'
-            '              </e>')
+            '              </e>\n'
+            '              </L>')
+
+    def test_multiline_comment(self):
+        """Multi-line spans should close at the end of one line and reopen at
+        the beginning of the next."""
+        c = Region('c')
+        c2 = Region('c')
+        l = LINE
+        tags = [(0, True, c),
+                (79, False, c),
+                (80, False, l),
+
+                (80, True, c2),
+                (151, False, l),
+
+                (222, False, l),
+
+                (284, False, c2),
+                (285, False, l),
+
+                (286, False, l)]
+        text = u"""/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+"""
+        eq_(list(html_lines(balanced_tags(tags), text.__getslice__)),
+            ['<span class="c">/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */</span>',
+             '<span class="c">/* This Source Code Form is subject to the terms of the Mozilla Public</span>',
+             '<span class="c"> * License, v. 2.0. If a copy of the MPL was not distributed with this</span>',
+             '<span class="c"> * file, You can obtain one at http://mozilla.org/MPL/2.0/. */</span>',
+             ''])
+
+
+    def test_empty(self):
+        """Some files are empty. Make sure they work."""
+        eq_(list(balanced_tags([])), [])
 
 
 class Htmlifier(object):
@@ -193,7 +238,7 @@ def test_simple_html_lines():
     """See if the offsets are right in simple HTML stitching."""
     a = Region('a')
     b = Region('b')
-    line = Line()
+    line = LINE
     eq_(''.join(html_lines([(0, True, line),
                             (0, True, a), (3, False, a),
                             (3, True, b), (5, False, b),
