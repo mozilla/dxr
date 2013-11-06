@@ -28,27 +28,27 @@
 
 {% block content %}
 <div id="annotations">
-  {% for number, line, annotations in lines %}
-  <div class="annotation-set" id="aset-{{ number }}">
-  {%- for annotation in annotations -%}
-  <div {% for key, value in annotation.items() %}
-        {{ key }}="{{ value }}"
-     {% endfor %} ></div>
-   {%- endfor -%}
-  </div>
+  {% for line, annotations in lines %}
+    <div class="annotation-set" id="aset-{{ loop.index }}">
+      {%- for annotation in annotations -%}
+        <div {% for key, value in annotation.items() %}
+              {{ key }}="{{ value }}"
+             {% endfor %} ></div>
+      {%- endfor -%}
+    </div>
   {%- endfor -%}
 </div>
 <div class="line-numbers">
-  {% for number, line, annotations in lines %}
-  <pre><a href="#l{{ number }}"
-          class="ln" id="line-{{ number }}"
-          name="l{{ number }}">{{ number }}</a></pre>
+  {% for line, annotations in lines %}
+    <pre><a href="#l{{ loop.index }}"
+            class="ln" id="line-{{ loop.index }}"
+            name="l{{ loop.index }}">{{ loop.index }}</a></pre>
   {%- endfor %}
 </div>
 <div class="file-lines">
 <pre>
-{%- for number, line, annotations in lines %}
-<code aria-labelledby="line-{{ number }}">{{ line }}</code>
+{%- for line, annotations in lines %}
+<code aria-labelledby="line-{{ loop.index }}">{{ line }}</code>
 {%- endfor -%}
 </pre>
 </div>

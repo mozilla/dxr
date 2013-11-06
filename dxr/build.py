@@ -2,19 +2,22 @@ from codecs import getdecoder
 import cgi
 from datetime import datetime
 from fnmatch import fnmatchcase
-from itertools import chain, izip
+from heapq import merge
+from itertools import chain, compress, groupby, izip_longest
 import json
+from operator import itemgetter
 import os
 from os import stat
 from os.path import dirname
-from pkg_resources import require
 import shutil
 import subprocess
 import sys
 from sys import exc_info
 from traceback import format_exc
+from warnings import warn
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from jinja2 import Markup
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
@@ -386,7 +389,7 @@ def finalize_database(conn):
     """Finalize the database."""
     print "Finalize database:"
 
-    print " - Build database statistics for query optimization"
+    print " - Building database statistics for query optimization"
     conn.execute("ANALYZE");
 
     print " - Running integrity check"
@@ -405,6 +408,16 @@ def finalize_database(conn):
     conn.commit()
 
 
+def build_sections(tree, conn, path, text, htmlifiers):
+    """ Build navigation sections for template """
+    # Chain links from different htmlifiers
+    links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
+    # Sort by importance (resolve tries by section name)
+    links = sorted(links, key = lambda section: (section[0], section[1]))
+    # Return list of section and items (without importance)
+    return [(section, list(items)) for importance, section, items in links]
+
+
 def _sliced_range_bounds(a, b, slice_size):
     """Divide ``range(a, b)`` into slices of size ``slice_size``, and
     return the min and max values of each slice."""
@@ -421,10 +434,12 @@ def run_html_workers(tree, conn):
 
     max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
 
+    print ' - Initializing worker pool'
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
+        print ' - Enqueuing jobs'
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
                    (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
-        print 'Enqueued jobs.'
+        print ' - Waiting for workers to complete'
         for num_done, future in enumerate(as_completed(futures), 1):
             print '%s of %s HTML workers done.' % (num_done, len(futures))
             result = future.result()
@@ -445,12 +460,13 @@ def _build_html_for_file_ids(tree, start, end):
     file named "build-html-<start>-<end>.log".
 
     """
+    path = '(no file yet)'
+    id = -1
     try:
         # We might as well have this write its log directly rather than returning
         # them to the master process, since it's already writing the built HTML
         # directly, since that probably yields better parallelism.
 
-        path = '(no file yet)'
         conn = connect_database(tree)
         # TODO: Replace this ad hoc logging with the logging module (or something
         # more humane) so we can get some automatic timestamps. If we get
@@ -511,194 +527,389 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'config': tree.config.template_parameters,
         'generated_date': tree.config.generated_date,
 
-        # Set file template   variables
+        # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),
         'icon': icon,
         'path': path,
         'name': os.path.basename(path),
-        'lines': build_lines(tree, conn, path, text, htmlifiers),
+
+        # Someday, it would be great to stream this and not concretize the
+        # whole thing in RAM. The template will have to quit looping through
+        # the whole thing 3 times.
+        'lines': list(lines_and_annotations(build_lines(text, htmlifiers),
+                                            htmlifiers)),
+
         'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
+
     # Fill-in variables and dump to file with utf-8 encoding
     tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
 
 
-def build_lines(tree, conn, path, text, htmlifiers):
-    """ Build lines for template """
-    # Empty files, have no lines
-    if len(text) == 0:
-        return []
+class Line(object):
+    """Representation of a line's beginning and ending as the contents of a tag
 
-    # Get a decoder
-    decoder = getdecoder("utf-8")
-    # Let's defined a simple way to fetch and decode a slice of source
-    def src(start, end = None):
-        if isinstance(start, tuple):
-            start, end = start[:2]
-        return decoder(text[start:end], errors = 'replace')[0]
-    # We shall decode on-the-fly because we need ascii offsets to do the rendering
-    # of regions correctly. But before we stuff anything into the template engine
-    # we must ensure that it's correct utf-8 encoded string
-    # Yes, we just have to hope that plugin designer don't give us a region that
-    # splits a unicode character in two. But what else can we do?
-    # (Unless we want to make plugins deal with this mess)
+    Exists to motivate the balancing machinery to close all the tags at the end
+    of every line (and reopen any afterward that span lines).
 
-    # Build a line map over the source (without exploding it all over the place!)
-    line_map = [0]
-    offset = text.find("\n", 0) + 1
-    while offset > 0:
-        line_map.append(offset)
-        offset = text.find("\n", offset) + 1
-    # If we don't have a line ending at the end improvise one
-    if not text.endswith("\n"):
-        line_map.append(len(text))
+    """
+    sort_order = 0  # Sort Lines outermost.
+    def __repr__(self):
+        return 'Line()'
 
-    # So, we have a minor issue with writing out the main body.
-    # We don't necessarily have the information in sorted order.
+LINE = Line()
 
-    regions = chain(*(htmlifier.regions()     for htmlifier in htmlifiers))
-    refs    = chain(*(htmlifier.refs()        for htmlifier in htmlifiers))
-    notes   = chain(*(htmlifier.annotations() for htmlifier in htmlifiers))
 
-    # Quickly sort the line annotations in reverse order
-    # so we can view it as a stack we just pop annotations off as we generate lines
-    notes   = sorted(notes, reverse = True)
+class TagWriter(object):
+    """A thing that hangs onto a tag's payload (like the class of a span) and
+    knows how to write its opening and closing tags"""
 
-    # Add sanitizer to remove regions that have None as offsets
-    # They are just stupid and shouldn't be there in the first place!
-    sane    = lambda (start, end, data): start is not None and end is not None
-    regions = (region for region in regions if sane(region))
-    refs    = (region for region in refs    if sane(region))
-    # That's it we've sanitized this mess, so let's just sort it too
-    order   = lambda (start, end, data): (- start, end, data)
-    regions = sorted(regions, key = order)
-    refs    = sorted(refs,    key = order)
-    # Notice that we negate start, larges start first and ties resolved with
-    # smallest end. This way be can pop values of the regions in the order
-    # they occur...
+    def __init__(self, payload):
+        self.payload = payload
 
-    # Now we create two stacks to keep track of open regions
-    regions_stack = []
-    refs_stack    = []
+    # __repr__ comes in handy for debugging.
+    def __repr__(self):
+        return '%s("%s")' % (self.__class__.__name__, self.payload)
 
-    # Open/close refs, quite simple
-    def open_ref(ref):
-        start, end, menu = ref
-        # JSON dump the menu and escape it for quotes, etc
-        menu = cgi.escape(json.dumps(menu), True)
-        return "<a data-menu=\"%s\">" % menu
-    def close_ref(ref):
-        return "</a>"
 
-    # Functions for opening the stack of syntax regions
-    # this essential amounts to a span with a set of classes
-    def open_regions():
-        if len(regions_stack) > 0:
-            classes = (data for start, end, data in regions_stack)
-            return "<span class=\"%s\">" % " ".join(classes)
-        return ""
-    def close_regions():
-        if len(regions_stack) > 0:
-            return "</span>"
-        return ""
+class Region(TagWriter):
+    """Thing to open and close <span> tags"""
+    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
+                    # them.
 
-    lines          = []
-    offset         = 0
-    line_number    = 0
-    while offset < len(text):
-        # Start a new line
-        line_number += 1
-        line = ""
-        # Open all refs on the stack
-        for ref in refs_stack:
-            line += open_ref(ref)
-        # We open regions after refs, because they can be opened and closed
-        # without any effect, ie. inserting <b></b> has no effect...
-        line += open_regions()
+    def opener(self):
+        return u'<span class="%s">' % cgi.escape(self.payload, True)
 
-        # Append to line while we're still one it
-        while offset < line_map[line_number]:
-            # Find next offset as smallest candidate offset
-            # Notice that we never go longer than to end of line
-            next = line_map[line_number]
-            # Next offset can be the next start of something
-            if len(regions) > 0:
-                next = min(next, regions[-1][0])
-            if len(refs) > 0:
-                next = min(next, refs[-1][0])
-            # Next offset can be the end of something we've opened
-            # notice, stack structure and sorting ensure that we only need test top
-            if len(regions_stack) > 0:
-                next = min(next, regions_stack[-1][1])
-            if len(refs_stack) > 0:
-                next = min(next, refs_stack[-1][1])
+    def closer(self):
+        return u'</span>'
 
-            # Output the source text from last offset to next
-            if next < line_map[line_number]:
-                line += cgi.escape(src(offset, next))
+
+class Ref(TagWriter):
+    """Thing to open and close <a> tags"""
+    sort_order = 1
+
+    def opener(self):
+        return u'<a data-menu="%s">' % cgi.escape(json.dumps(self.payload), True)
+
+    def closer(self):
+        return u'</a>'
+
+
+def html_lines(tags, slicer):
+    """Render tags to HTML, and interleave them with the text they decorate.
+
+    :arg tags: An iterable of ordered, non-overlapping, non-empty tag
+        boundaries with Line endpoints at (and outermost at) the index of the
+        end of each line.
+    :arg slicer: A callable taking the args (start, end), returning a Unicode
+        slice of the source code we're decorating. ``start`` and ``end`` are
+        Python-style slice args.
+
+    """
+    up_to = 0
+    segments = []
+
+    for point, is_start, payload in tags:
+        segments.append(cgi.escape(slicer(up_to, point).strip(u'\r\n')))
+        up_to = point
+        if payload is LINE:
+            if not is_start and segments:
+                yield Markup(u''.join(segments))
+                segments = []
+
+        else:
+            segments.append(payload.opener() if is_start else payload.closer())
+
+
+def balanced_tags(tags):
+    """Come up with a balanced series of tags which express the semantics of
+    the given sorted interleaved ones.
+
+    Return an iterable of (point, is_start, Region/Reg/Line) without any
+    (pointless) zero-width tag spans. The output isn't necessarily optimal, but
+    it's fast and not embarrassingly wasteful of space.
+
+    """
+    return without_empty_tags(balanced_tags_with_empties(tags))
+
+
+def without_empty_tags(tags):
+    """Filter zero-width tagged spans out of a sorted, balanced tag stream.
+
+    Maintain tag order. Line break tags are considered self-closing.
+
+    """
+    buffer = []  # tags
+    depth = 0
+
+    for tag in tags:
+        point, is_start, payload = tag
+
+        if is_start:
+            buffer.append(tag)
+            depth += 1
+        else:
+            top_point, _, top_payload = buffer[-1]
+            if top_payload is payload and top_point == point:
+                # It's a closer, and it matches the last thing in buffer and, it
+                # and that open tag form a zero-width span. Cancel the last thing
+                # in buffer.
+                buffer.pop()
             else:
-                # Throw away newline if at end of line
-                line += cgi.escape(src(offset, next - 1))
-            offset = next
+                # It's an end tag that actually encloses some stuff.
+                buffer.append(tag)
+            depth -= 1
 
-            # Close regions, modify stack and open them again
-            # this makes sense even if there's not change to the stack
-            # as we can't have syntax tags crossing refs tags
-            line += close_regions()
-            while len(regions_stack) > 0 and regions_stack[-1][1] <= next:
-                regions_stack.pop()
-            while len(regions) > 0 and regions[-1][0] <= next:
-                region = regions.pop()
-                # Search for the right place in the stack to insert this
-                # The stack is ordered s.t. we have longest end at the bottom
-                # (with respect to pop())
-                for i in xrange(0, len(regions_stack) + 1):
-                    if len(regions_stack) == i or regions_stack[i][1] < region[1]:
-                        break
-                regions_stack.insert(i, region)
-            # Open regions, if not at end of line
-            if next < line_map[line_number]:
-                line += open_regions()
-
-            # Close and pop refs that end here
-            while len(refs_stack) > 0 and refs_stack[-1][1] <= next:
-                line += close_ref(refs_stack.pop())
-            # Close remaining if at end of line
-            if next < line_map[line_number]:
-                for ref in reversed(refs_stack):
-                    line += close_ref(ref)
-            # Open and pop/push refs that start here
-            while len(refs) > 0 and refs[-1][0] <= next:
-                ref = refs.pop()
-                # If the ref doesn't end before the top of the stack, we have
-                # overlapping regions, this isn't good, so we discard this ref
-                if len(refs_stack) > 0 and refs_stack[-1][1] < ref[1]:
-                    stack_src = text[refs_stack[-1][0]:refs_stack[-1][1]]
-                    print >> sys.stderr, "Error: Ref region overlap"
-                    print >> sys.stderr, "   > '%s' %r" % (text[ref[0]:ref[1]], ref)
-                    print >> sys.stderr, "   > '%s' %r" % (stack_src, refs_stack[-1])
-                    print >> sys.stderr, "   > IN %s" % path
-                    continue  # Okay so skip it
-                # Open ref, if not at end of line
-                if next < line_map[line_number]:
-                    line += open_ref(ref)
-                refs_stack.append(ref)
-
-        # Okay let's pop line annotations of the notes stack
-        current_notes = []
-        while len(notes) > 0 and notes[-1][0] == line_number:
-            current_notes.append(notes.pop()[1])
-
-        lines.append((line_number, line, current_notes))
-    # Return all lines of the file, as we're done
-    return lines
+            # If we have a balanced set of non-zero-width tags, emit them:
+            if not depth:
+                for b in buffer:
+                    yield b
+                del buffer[:]
 
 
-def build_sections(tree, conn, path, text, htmlifiers):
-    """ Build navigation sections for template """
-    # Chain links from different htmlifiers
-    links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
-    # Sort by importance (resolve tries by section name)
-    links = sorted(links, key = lambda section: (section[0], section[1]))
-    # Return list of section and items (without importance)
-    return [(section, list(items)) for importance, section, items in links]
+def balanced_tags_with_empties(tags):
+    """Come up with a balanced series of tags which express the semantics of
+    the given sorted interleaved ones.
+
+    Return an iterable of (point, is_start, Region/Reg/Line), possibly
+    including some zero-width tag spans. Each line is enclosed within Line tags.
+
+    :arg tags: An iterable of (offset, is_start, payload) tuples, with one
+        closer for each opener but possibly interleaved. There is one tag for
+        each line break, with a payload of LINE and an is_start of False. Tags
+        are ordered closers first, then line breaks, then openers.
+
+    """
+    def close(to=None):
+        """Return an iterable of closers for open tags up to (but not
+        including) the one with the payload ``to``."""
+        # Loop until empty (if we're not going "to" anything in particular) or
+        # until the corresponding opener is at the top of the stack. We check
+        # that "to is None" just to surface any stack-tracking bugs that would
+        # otherwise cause opens to empty too soon.
+        while opens if to is None else opens[-1] is not to:
+            intermediate_payload = opens.pop()
+            yield point, False, intermediate_payload
+            closes.append(intermediate_payload)
+
+    def reopen():
+        """Yield open tags for all temporarily closed ones."""
+        while closes:
+            intermediate_payload = closes.pop()
+            yield point, True, intermediate_payload
+            opens.append(intermediate_payload)
+
+    opens = []  # payloads of tags which are currently open
+    closes = []  # payloads of tags which we've had to temporarily close so we could close an overlapping tag
+    point = 0
+
+    yield 0, True, LINE
+    for point, is_start, payload in tags:
+        if is_start:
+            yield point, is_start, payload
+            opens.append(payload)
+        elif payload is LINE:
+            # Close all open tags before a line break (since each line is
+            # wrapped in its own <code> tag pair), and reopen them afterward.
+            for t in close():  # I really miss "yield from".
+                yield t
+
+            # Since preserving self-closing linebreaks would throw off
+            # without_empty_tags(), we convert to explicit closers here. We
+            # surround each line with them because empty balanced ones would
+            # get filtered out.
+            yield point, False, LINE
+            yield point, True, LINE
+
+            for t in reopen():
+                yield t
+        else:
+            # Temporarily close whatever's been opened between the start tag of
+            # the thing we're trying to close and here:
+            for t in close(to=payload):
+                yield t
+
+            # Close the current tag:
+            yield point, False, payload
+            opens.pop()
+
+            # Reopen the temporarily closed ones:
+            for t in reopen():
+                yield t
+    yield point, False, LINE
+
+
+def tag_boundaries(htmlifiers):
+    """Return a sequence of (offset, is_start, Region/Ref/Line) tuples.
+
+    Like in Python slice notation, the offset of a tag refers to the index of
+    the source code char it comes before.
+
+    """
+    for h in htmlifiers:
+        for intervals, cls in [(h.regions(), Region), (h.refs(), Ref)]:
+            for start, end, data in intervals:
+                tag = cls(data)
+                # Filter out zero-length spans which don't do any good and
+                # which can cause starts to sort after ends, crashing the tag
+                # balancer. Incidentally filter out spans where start tags come
+                # after end tags, though that should never happen.
+                #
+                # Also filter out None starts and ends. I don't know where they
+                # come from. That shouldn't happen and should be fixed in the
+                # plugins.
+                if start is not None and end is not None and start < end:
+                    yield start, True, tag
+                    yield end, False, tag
+
+
+def line_boundaries(text):
+    """Return a tag for the end of each line in a string.
+
+    :arg text: A UTF-8-encoded string
+
+    Endpoints and start points are coincident: right after a (universal)
+    newline.
+
+    """
+    up_to = 0
+    for line in text.splitlines(True):
+        up_to += len(line)
+        yield up_to, False, LINE
+
+
+def non_overlapping_refs(tags):
+    """Yield a False for each Ref in ``tags`` that overlaps another one,
+    a True for the rest.
+
+    Assumes the incoming tags, while not necessarily well balanced, have the
+    start tag come before the end tag, if both are present. (Lines are weird.)
+
+    """
+    blacklist = set()
+    open_ref = None
+    for point, is_start, payload in tags:
+        if isinstance(payload, Ref):
+            if payload in blacklist:  # It's the evil close tag of a misnested tag.
+                blacklist.remove(payload)
+                yield False
+            elif open_ref is None:  # and is_start: (should always be true if input is sane)
+                assert is_start
+                open_ref = payload
+                yield True
+            elif open_ref is payload:  # it's the closer
+                open_ref = None
+                yield True
+            else:  # It's an evil open tag of a misnested tag.
+                warn('htmlifier plugins requested overlapping <a> tags. Fix the plugins.')
+                blacklist.add(payload)
+                yield False
+        else:
+            yield True
+
+
+def remove_overlapping_refs(tags):
+    """For any series of <a> tags that overlap each other, filter out all but
+    the first.
+
+    There's no decent way to represent that sort of thing in the UI, so we
+    don't support it.
+
+    :arg tags: A list of (point, is_start, payload) tuples, sorted by point.
+        The tags do not need to be properly balanced.
+
+    """
+    # Reuse the list so we don't use any more memory.
+    i = None
+    for i, tag in enumerate(compress(tags, non_overlapping_refs(tags))):
+        tags[i] = tag
+    if i is not None:
+        del tags[i + 1:]
+
+
+def nesting_order((point, is_start, payload)):
+    """Return a sorting key that places coincident Line boundaries outermost,
+    then Ref boundaries, and finally Region boundaries.
+
+    The Line bit saves some empty-tag elimination. The Ref bit saves splitting
+    an <a> tag (and the attendant weird UI) for the following case::
+
+        Ref    ____________  # The Ref should go on the outside.
+        Region _____
+
+    Other scenarios::
+
+        Reg _______________        # Would be nice if Reg ended before Ref
+        Ref      ________________  # started. We'll see about this later.
+
+        Reg _____________________  # Works either way
+        Ref _______
+
+        Reg _____________________
+        Ref               _______  # This should be fine.
+
+        Reg         _____________  # This should be fine as well.
+        Ref ____________
+
+        Reg _____
+        Ref _____  # This is fine either way.
+
+    Also, endpoints sort before coincident start points to save work for the
+    tag balancer.
+
+    """
+    return point, is_start, (payload.sort_order if is_start else
+                             -payload.sort_order)
+
+
+def build_lines(text, htmlifiers):
+    """Yield lines of Markup, with decorations from the htmlifier plugins
+    applied.
+
+    :arg text: UTF-8-encoded string. (In practice, this is not true if the
+        input file wasn't UTF-8. We should make it true.)
+
+    """
+    decoder = getdecoder('utf-8')
+    def decoded_slice(start, end):
+        return decoder(text[start:end], errors='replace')[0]
+
+    # For now, we make the same assumption the old build_lines() implementation
+    # did, just so we can ship: plugins return byte offsets, not Unicode char
+    # offsets. However, I think only the clang plugin returns byte offsets. I
+    # bet Pygments returns char ones. We should homogenize one way or the
+    # other.
+    tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
+    tags.extend(line_boundaries(text))
+    tags.sort(key=nesting_order)  # Balanced_tags undoes this, but we tolerate
+                                  # that in html_lines().
+    remove_overlapping_refs(tags)
+    return html_lines(balanced_tags(tags), decoded_slice)
+
+
+def lines_and_annotations(lines, htmlifiers):
+    """Collect all the annotations for each line into a list, and yield a tuple
+    of (line of HTML, annotations list) for each line.
+
+    :arg lines: An iterable of Markup objects, each representing a line of
+        HTMLified source code
+
+    """
+    def non_sparse_annotations(annotations):
+        """De-sparsify the annotations iterable so we can just zip it together
+        with the HTML lines.
+
+        Return an iterable of annotations iterables, one for each line.
+
+        """
+        next_unannotated_line = 1
+        for line, annotations in groupby(annotations, itemgetter(0)):
+            for next_unannotated_line in xrange(next_unannotated_line,
+                                                line - 1):
+                yield []
+            yield [data for line_num, data in annotations]
+            next_unannotated_line = line
+    return izip_longest(lines,
+                        non_sparse_annotations(merge(*[h.annotations() for h in
+                                                       htmlifiers])),
+                        fillvalue=[])
