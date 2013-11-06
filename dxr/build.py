@@ -677,7 +677,7 @@ def balanced_tags_with_empties(tags):
     :arg tags: An iterable of (offset, is_start, payload) tuples, with one
         closer for each opener but possibly interleaved. There is one tag for
         each line break, with a payload of LINE and an is_start of False. Tags
-        are ordered closers first, then line breaks, then openers.
+        are ordered with closers first, then line breaks, then openers.
 
     """
     def close(to=None):
@@ -779,7 +779,7 @@ def line_boundaries(text):
 
 
 def non_overlapping_refs(tags):
-    """Yield a False for each Ref in ``tags`` that overlaps another one,
+    """Yield a False for each Ref in ``tags`` that overlaps a subsequent one,
     a True for the rest.
 
     Assumes the incoming tags, while not necessarily well balanced, have the
