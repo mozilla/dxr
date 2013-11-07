@@ -3,7 +3,7 @@ import cgi
 from datetime import datetime
 from fnmatch import fnmatchcase
 from heapq import merge
-from itertools import chain, compress, groupby, izip_longest
+from itertools import chain, groupby, izip_longest
 import json
 from operator import itemgetter
 import os
@@ -24,6 +24,13 @@ from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
 from dxr.utils import load_template_env, connect_database, open_log
+
+try:
+    from itertools import compress
+except ImportError:
+    from itertools import izip
+    def compress(data, selectors):
+        return (d for d, s in izip(data, selectors) if s)
 
 
 def linked_pathname(path, tree_name):
