@@ -39,12 +39,7 @@ Vagrant::Config.run do |config|
         config.vm.boot_mode = :gui
     end
 
-    # Don't mount shared folder over NFS on Jenkins; NFS doesn't work there yet.
-    if is_jenkins or CONF['nfs'] == false or RUBY_PLATFORM =~ /mswin(32|64)/
-        config.vm.share_folder("v-root", MOUNT_POINT, ".")
-    else
-        config.vm.share_folder("v-root", MOUNT_POINT, ".", :nfs => true)
-    end
+    config.vm.share_folder("v-root", MOUNT_POINT, ".")
 
     config.vm.provision :puppet do |puppet|
         puppet.manifests_path = "puppet/manifests"

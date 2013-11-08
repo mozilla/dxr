@@ -4,7 +4,7 @@
 from optparse import OptionParser
 import os.path
 from os.path import isdir
-from sys import stderr
+from sys import exit, stderr
 
 from dxr.build import build_instance
 
@@ -46,10 +46,10 @@ def main():
         # Assume dxr.config in the cwd:
         options.config_file = 'dxr.config'
 
-    build_instance(options.config_file,
-                   nb_jobs=options.jobs,
-                   tree=options.tree,
-                   verbose=options.verbose)
+    return build_instance(options.config_file,
+                          nb_jobs=options.jobs,
+                          tree=options.tree,
+                          verbose=options.verbose)
 
 
 if __name__ == '__main__':

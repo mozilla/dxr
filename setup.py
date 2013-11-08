@@ -23,13 +23,12 @@ setup(
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',
                       'Jinja2>=2.6',
-                      'Pygments>=1.4'],
+                      'Pygments>=1.6'],
     tests_require=['nose'],
     test_suite='nose.collector',
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
-    zip_safe=False,  # So we can find dxr-worker.py as a file to run it as a
-                     # subprocess
+    zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',
         'Natural Language :: English',

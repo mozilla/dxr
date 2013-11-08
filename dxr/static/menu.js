@@ -28,6 +28,7 @@ menu.populate = function(links){
     var icon = wwwroot + "/static/icons/" + link.icon + ".png";
     content += "<a href=\"" + htmlEntities(link.href) + "\"";
     content += " title=\"" + htmlEntities(link.title) + "\"";
+    content += " onclick=\"menu.hide(); return true;\"";
     content += " style=\"background-image: url('" + icon + "')\">";
     content += htmlEntities(link.text) + "</a>";
   }

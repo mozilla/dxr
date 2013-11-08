@@ -1,14 +1,12 @@
 import dxr.plugins
 import os, sys
 import fnmatch
-import clang.tokenizers as tokenizers
 import urllib, re
 
 from dxr.utils import search_url
 
 
 class ClangHtmlifier(object):
-    """ Pygmentizer add syntax regions for file """
     def __init__(self, tree, conn, path, text, file_id):
         self.tree    = tree
         self.conn    = conn
@@ -17,25 +15,7 @@ class ClangHtmlifier(object):
         self.file_id = file_id
 
     def regions(self):
-        # TODO Don't do syntax highlighting here, we have pygments for this
-        # but for the moment being pygments is disabled for cpp files as it
-        # has an infinite loop, as reported here:
-        # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
-        tokenizer = tokenizers.CppTokenizer(self.text)
-        for token in tokenizer.getTokens():
-            if token.token_type == tokenizer.KEYWORD:
-                # "operator" is going to be part of something bigger like
-                # "operator++" or "operator new" so we don't want to create
-                # a region here that only covers part of that
-                if token.name != "operator":
-                    yield (token.start, token.end, 'k')
-            elif token.token_type == tokenizer.STRING:
-                yield (token.start, token.end, 'str')
-            elif token.token_type == tokenizer.COMMENT:
-                yield (token.start, token.end, 'c')
-            elif token.token_type == tokenizer.PREPROCESSOR:
-                yield (token.start, token.end, 'p')
-
+        return []
 
     def refs(self):
         """ Generate reference menus """
@@ -147,14 +127,11 @@ class ClangHtmlifier(object):
 
         # Extents for macros defined here
         sql = """
-            SELECT file_line, file_col, name
+            SELECT extent_start, extent_end, name
                 FROM macros
               WHERE file_id = ?
         """
-        for line, col, name in self.conn.execute(sql, args):
-            # TODO Refactor macro table and remove the (line, col) scheme!
-            start = (line, col)
-            end   = (line, col + len(name))
+        for start, end, name in self.conn.execute(sql, args):
             yield start, end, self.macro_menu(name)
 
         # Add references to types
@@ -255,46 +232,16 @@ class ClangHtmlifier(object):
             self.add_jump_definition(menu, path, line)
             yield start, end, menu
 
-        # Hack to add links for #includes
-        # TODO This should be handled in the clang extension we don't know the
-        # include paths here, and we cannot resolve includes correctly.
-        pattern = re.compile('\#[\s]*include[\s]*[<"](\S+)[">]')
-        tokenizer = tokenizers.CppTokenizer(self.text)
-        for token in tokenizer.getTokens():
-            if token.token_type == tokenizer.PREPROCESSOR and 'include' in token.name:
-                match = pattern.match(token.name)
-                if match is None:
-                    continue
-                inc_name = match.group(1)
-                sql = "SELECT path FROM files WHERE path LIKE ?"
-                rows = self.conn.execute(sql, (inc_name,)).fetchall()
-
-                if rows is None or len(rows) == 0:
-                    basename = os.path.basename(inc_name)
-                    rows = self.conn.execute(sql, ("%%/%s" % (basename),)).fetchall()
-
-                if rows is not None and len(rows) == 1:
-                    path  = rows[0][0]
-                    start = token.start + match.start(1)
-                    end   = token.start + match.end(1)
-                    url   = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
-                    menu  = [{
-                        'text':   "Jump to file",
-                        'title':  "Jump to what is likely included there",
-                        'href':   url,
-                        'icon':   'jump'
-                    },]
-                    yield start, end, menu
-            else:
-                continue
-
-        # Test hack for declaration/definition jumps
-        #sql = """
-        #  SELECT extent_start, extent_end, defid
-        #    FROM decldef
-        #   WHERE file_id = ?
-        #"""
-        #
+        # Link all the #includes in this file to the files they reference.
+        for start, end, path in self.conn.execute(
+                'SELECT extent_start, extent_end, path FROM includes '
+                'INNER JOIN files ON files.id=includes.target_id '
+                'WHERE includes.file_id = ?', args):
+            yield start, end, [{'text': 'Jump to file',
+                                'title': 'Jump to what is included here.',
+                                'href': self.tree.config.wwwroot + '/' +
+                                        self.tree.name + '/source/' + path,
+                                'icon': 'jump'}]
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
@@ -465,7 +412,7 @@ class ClangHtmlifier(object):
 
     def annotations(self):
         icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
-        sql = "SELECT msg, opt, file_line FROM warnings WHERE file_id = ?"
+        sql = "SELECT msg, opt, file_line FROM warnings WHERE file_id = ? ORDER BY file_line"
         for msg, opt, line in self.conn.execute(sql, (self.file_id,)):
             if opt:
                 msg = msg + " [" + opt + "]"
@@ -506,7 +453,6 @@ class ClangHtmlifier(object):
         if links:
             yield (100, "Macros", links)
 
-
     def member_functions(self, tid):
         """ Fetch member functions given a type id """
         sql = """
@@ -518,7 +464,6 @@ class ClangHtmlifier(object):
             # Skip nameless things
             if len(name) == 0: continue
             yield 'method', name, "#l%s" % line
-
 
     def member_variables(self, tid):
         """ Fetch member variables given a type id """
@@ -532,6 +477,7 @@ class ClangHtmlifier(object):
             if len(name) == 0: continue
             yield 'field', name, "#l%s" % line
 
+
 _tree = None
 _conn = None
 def load(tree, conn):
@@ -539,15 +485,9 @@ def load(tree, conn):
     _tree = tree
     _conn = conn
 
-#tokenizers = None
+
 _patterns = ('*.c', '*.cc', '*.cpp', '*.cxx', '*.h', '*.hpp')
 def htmlify(path, text):
-    #if not tokenizers:
-    #  # HACK around the fact that we can't load modules from plugin folders
-    #  # we'll probably need to fix this later,
-    #  #tpath = os.path.join(tree.config.plugin_folder, "cxx-clang", "tokenizers.py")
-    #  #imp.load_source("tokenizers", tpath)
-
     fname = os.path.basename(path)
     if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
         # Get file_id, skip if not in database

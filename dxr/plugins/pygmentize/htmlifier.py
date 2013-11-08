@@ -1,30 +1,58 @@
-import dxr.plugins
+from os.path import basename
+from fnmatch import fnmatchcase
+
 import pygments
 import pygments.lexers
 from pygments.token import Token
-import os, sys
-import fnmatch
+
+import dxr.plugins
+
+
+token_classes = {Token.Comment.Preproc: 'p'}
+token_classes.update((t, 'k') for t in [Token.Keyword,
+                                        Token.Keyword.Constant,
+                                        Token.Keyword.Declaration,
+                                        Token.Keyword.Namespace,
+                                        Token.Keyword.Pseudo,
+                                        Token.Keyword.Reserved,
+                                        Token.Keyword.Type])
+token_classes.update((t, 'str') for t in [Token.String,
+                                          Token.String.Backtick,
+                                          Token.String.Char,
+                                          Token.String.Doc,
+                                          Token.String.Double,
+                                          Token.String.Escape,
+                                          Token.String.Heredoc,
+                                          Token.String.Interpol,
+                                          Token.String.Other,
+                                          Token.String.Regex,
+                                          Token.String.Single,
+                                          Token.String.Symbol])
+token_classes.update((t, 'c') for t in [Token.Comment,
+                                        Token.Comment.Multiline,
+                                        Token.Comment.Single,
+                                        Token.Comment.Special])
+
 
 class Pygmentizer(object):
-    """ Pygmentizer add syntax regions for file """
+    """Pygmentizer to apply CSS classes to syntax-highlit regions"""
+
     def __init__(self, text, lexer):
-        self.text   = text
-        self.lexer  = lexer
+        self.text = text
+        self.lexer = lexer
+
     def refs(self):
         return []
+
     def regions(self):
         for index, token, text in self.lexer.get_tokens_unprocessed(self.text):
-            cls = None
-            if token is Token.Keyword:          cls = 'k'
-            if token is Token.Name:             cls = None
-            if token is Token.Literal:          cls = None
-            if token is Token.String:           cls = 'str'
-            if token is Token.Operator:         cls = None
-            if token is Token.Punctuation:      cls = None
-            if token is Token.Comment:          cls = 'c'
-            if cls:   yield index, index + len(text), cls
+            cls = token_classes.get(token)
+            if cls:
+                yield index, index + len(text), cls
+
     def annotations(self):
         return []
+
     def links(self):
         return []
 
@@ -32,23 +60,20 @@ class Pygmentizer(object):
 def load(tree, conn):
     pass
 
+
 def htmlify(path, text):
-    # TODO Enable C++ highlighting using pygments, pending fix for infinite
-    # looping that we don't like, see:
-    # https://bitbucket.org/birkenfeld/pygments-main/issue/795/
-    if any((path.endswith(e) for e in ('.c', '.cc', '.cpp', '.cxx', '.h', '.hpp'))):
-        return None
     # Options and filename
-    options   = {'encoding': 'utf-8'}
-    filename  = os.path.basename(path)
+    options = {'encoding': 'utf-8'}
+    filename = basename(path)
     try:
         lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
     except pygments.util.ClassNotFound:
         # Small hack for js highlighting of jsm files
-        if fnmatch.fnmatchcase(filename, "*.jsm"):
+        if fnmatchcase(filename, "*.jsm"):
             lexer = pygments.lexers.JavascriptLexer(**options)
         else:
             return None
     return Pygmentizer(text, lexer)
+
 
 __all__ = dxr.plugins.htmlifier_exports()

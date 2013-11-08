@@ -29,6 +29,8 @@ using namespace clang;
 
 namespace {
 
+const std::string GENERATED("--GENERATED--/");
+
 // Curse whomever didn't do this.
 std::string &operator+=(std::string &str, unsigned int i) {
   static char buf[15] = { '\0' };
@@ -116,7 +118,7 @@ struct FileInfo {
       // We use the escape character to indicate the objdir nature.
       // Note that output also has the `/' already placed
       interesting = true;
-      realname.replace(0, output.length(), "--GENERATED--/");
+      realname.replace(0, output.length(), GENERATED);
     }
   }
   std::string realname;
@@ -145,11 +147,21 @@ public:
   virtual void Ifdef(SourceLocation loc, const Token &tok);
   virtual void Ifndef(SourceLocation loc, const Token &tok);
 #endif
+virtual void InclusionDirective(  // same in 3.2 and 3.3
+    SourceLocation hashLoc,
+    const Token &includeTok,
+    StringRef fileName,
+    bool isAngled,
+    CharSourceRange filenameRange,
+    const FileEntry *file,
+    StringRef searchPath,
+    StringRef relativePath,
+    const Module *imported);
 };
 
 class IndexConsumer : public ASTConsumer,
-    public RecursiveASTVisitor<IndexConsumer>,
-    public DiagnosticConsumer {
+                      public RecursiveASTVisitor<IndexConsumer>,
+                      public DiagnosticConsumer {
 private:
   CompilerInstance &ci;
   SourceManager &sm;
@@ -193,7 +205,7 @@ public:
     return new IndexConsumer(ci);
 
   }
-  
+
   // Helpers for processing declarations
   // Should we ignore this location?
   bool interestingLocation(SourceLocation loc) {
@@ -526,6 +538,22 @@ public:
     return true;
   }
 
+  bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *d) {
+    if (!interestingLocation(d->getLocation()))
+      return true;
+
+    // This is not really a typedef but it is close enough and probably not
+    // worth inventing a new record for.
+    beginRecord("typedef", d->getLocation());
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
+    recordValue("loc", locationToString(d->getLocation()));
+    printScope(d);
+    printExtent(d->getLocation(), d->getLocation());
+    *out << std::endl;
+    return true;
+  }
+
   // Like "namespace foo;"
   bool VisitNamespaceDecl(NamespaceDecl *d)
   {
@@ -749,6 +777,25 @@ public:
     return true;
   }
 
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    TemplateDecl *td = l.getTypePtr()->getTemplateName().getAsTemplateDecl();
+    if (ClassTemplateDecl *d = dyn_cast<ClassTemplateDecl>(td))
+      printReference("type", d, l.getTemplateNameLoc(), l.getTemplateNameLoc());
+
+    return true;
+  }
+
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    printReference("typedef", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    return true;
+  }
+
   SourceLocation removeTrailingColonColon(SourceLocation begin, SourceLocation end)
   {
     if (!end.isValid())
@@ -841,7 +888,7 @@ public:
     const char *contents = sm.getCharacterData(nameStart);
     unsigned int nameLen = MacroNameTok.getIdentifierInfo()->getLength();
     unsigned int argsStart = 0, argsEnd = 0, defnStart;
-    
+
     // Grab the macro arguments if it has some
     if (nameLen < length && contents[nameLen] == '(') {
       argsStart = nameLen;
@@ -911,47 +958,103 @@ public:
   virtual void Ifndef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
+
+  virtual void InclusionDirective(
+      SourceLocation hashLoc,
+      const Token &includeTok,
+      StringRef fileName,
+      bool isAngled,
+      CharSourceRange filenameRange,
+      const FileEntry *file,
+      StringRef searchPath,
+      StringRef relativePath,
+      const Module *imported) {
+    PresumedLoc presumedHashLoc;
+    FileInfo *target, *source;
+    SourceLocation targetBegin, targetEnd;
+
+    if (!interestingLocation(hashLoc) ||
+        filenameRange.isInvalid() ||
+        (presumedHashLoc = sm.getPresumedLoc(hashLoc)).isInvalid() ||
+
+        // Don't record inclusions of files that are outside the source tree,
+        // like stdlibs. file is NULL if an #include can't be resolved, like if
+        // you include a nonexistent file.
+        !file ||
+
+        !(target = getFileInfo(file->getName()))->interesting ||
+
+        // TODO: Come up with some kind of reasonable extent for macro-based
+        // includes, like #include FOO_MACRO.
+        (targetBegin = filenameRange.getBegin()).isMacroID() ||
+        (targetEnd = filenameRange.getEnd()).isMacroID() ||
+
+        // TODO: Support generated files once we run the trigram indexer over
+        // them. For now, we skip them.
+        !(source = getFileInfo(presumedHashLoc.getFilename()))->realname.compare(0, GENERATED.size(), GENERATED) ||
+        !(target->realname.compare(0, GENERATED.size(), GENERATED)))
+      return;
+
+    beginRecord("include", hashLoc);
+    recordValue("source_path", source->realname);
+    recordValue("target_path", target->realname);
+    printExtent(targetBegin, targetEnd);
+    *out << std::endl;
+  }
+
 };
 
 #if CLANG_AT_LEAST(3, 3)
-void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
-  real->MacroDefined(tok, md->getMacroInfo());
-}
-void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma) {
-  real->MacroExpands(tok, md->getMacroInfo(), range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
-  real->MacroUndefined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
-  real->Defined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
-  real->Ifdef(loc, tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
-  real->Ifndef(loc, tok, md->getMacroInfo());
-}
+  void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
+    real->MacroDefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md->getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
+    real->MacroUndefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
+    real->Ifdef(loc, tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
+    real->Ifndef(loc, tok, md->getMacroInfo());
+  }
 #else
-void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
-  real->MacroDefined(tok, MI);
-}
-void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
-  real->MacroExpands(tok, MI, Range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroInfo *MI) {
-  real->MacroUndefined(tok, MI);
-}
-void PreprocThunk::Defined(const Token &tok) {
-  real->Defined(tok, NULL);
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
-  real->Ifdef(loc, tok, NULL);
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
-  real->Ifndef(loc, tok, NULL);
-}
+  void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
+    real->MacroDefined(tok, MI);
+  }
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+    real->MacroExpands(tok, MI, Range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroInfo *MI) {
+    real->MacroUndefined(tok, MI);
+  }
+  void PreprocThunk::Defined(const Token &tok) {
+    real->Defined(tok, NULL);
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
+    real->Ifdef(loc, tok, NULL);
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
+    real->Ifndef(loc, tok, NULL);
+  }
 #endif
+void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
+    SourceLocation hashLoc,
+    const Token &includeTok,
+    StringRef fileName,
+    bool isAngled,
+    CharSourceRange filenameRange,
+    const FileEntry *file,
+    StringRef searchPath,
+    StringRef relativePath,
+    const Module *imported) {
+  real->InclusionDirective(hashLoc, includeTok, fileName, isAngled, filenameRange, file, searchPath, relativePath, imported);
+}
 
 class DXRIndexAction : public PluginASTAction {
 protected:
@@ -983,7 +1086,7 @@ protected:
       output = env;
     else
       output = srcdir;
-    char *abs_output = realpath (output.c_str(), NULL);
+    char *abs_output = realpath(output.c_str(), NULL);
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,

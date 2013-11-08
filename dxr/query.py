@@ -75,7 +75,7 @@ class Query(object):
                     if _single_term.match(token["keyword"][1:]):
                         self.notwords.append(token["keyword"][1:])
                     else:
-                        self.phrases.append(token["keyword"][1:])
+                        self.notphrases.append(token["keyword"][1:])
                 else:
                     if _single_term.match(token["keyword"]):
                         self.keywords.append(token["keyword"])
