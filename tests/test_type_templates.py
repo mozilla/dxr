@@ -17,7 +17,7 @@ class TypeTests(SingleFileTestCase):
         self.found_line_eq('type:Foo',
                            'class <b>Foo</b>')
         self.found_line_eq('type-ref:Foo',
-                           '<b>Foo</b>&lt;int&gt;();', 8)
+                           '<b>Foo</b>&lt;int&gt;();')
 
 class BaseClassTests(SingleFileTestCase):
     source = r"""
@@ -33,7 +33,7 @@ class BaseClassTests(SingleFileTestCase):
 
     def test_base_class(self):
         self.found_line_eq('type-ref:Foo',
-                           'class Bar : public <b>Foo</b>&lt;T&gt;', 7)
+                           'class Bar : public <b>Foo</b>&lt;T&gt;')
 
 class TemplateParameterTests(SingleFileTestCase):
     source = r"""
@@ -52,10 +52,10 @@ class TemplateParameterTests(SingleFileTestCase):
         self.found_line_eq('+type:Foo::T',
                            'template &lt;typename <b>T</b>&gt;', 2)
         self.found_line_eq('+type-ref:Foo::T',
-                           'Foo(const <b>T</b> &amp;);', 5)
+                           'Foo(const <b>T</b> &amp;);')
 
     def test_function_template_parameter(self):
         self.found_line_eq('+type:"bar(const T &)::T"',
                            'template &lt;typename <b>T</b>&gt;', 7)
         self.found_line_eq('+type-ref:"bar(const T &)::T"',
-                           'void bar(const <b>T</b> &amp;)', 8)
+                           'void bar(const <b>T</b> &amp;)')

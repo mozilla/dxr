@@ -85,8 +85,7 @@ class IndirectCallTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_callers(self):
-        self.found_lines_eq('+callers:Base::foo()', [
-            ('void <b>c1</b>(Base &amp;b)', 16)])
+        self.found_line_eq('+callers:Base::foo()', 'void <b>c1</b>(Base &amp;b)')
         self.found_lines_eq('+callers:Derived::foo()', [
             ('void <b>c1</b>(Base &amp;b)', 16),
             ('void <b>c2</b>(Derived &amp;d)', 21)])
@@ -95,5 +94,4 @@ class IndirectCallTests(SingleFileTestCase):
         self.found_lines_eq('called-by:c1', [
             ('virtual void <b>foo</b>() {}', 6),
             ('virtual void <b>foo</b>() {}', 13)])
-        self.found_lines_eq('called-by:c2', [
-            ('virtual void <b>foo</b>() {}', 13)])
+        self.found_line_eq('called-by:c2', 'virtual void <b>foo</b>() {}', 13)
