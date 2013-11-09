@@ -239,11 +239,6 @@ td.code {
 .content {
     padding: 1em;
 }
-.message {
-    position: absolute;
-    top: 40%;
-    left: 30%;
-}
 .path {
     background-repeat: no-repeat;
     background-position: 0 3px;
