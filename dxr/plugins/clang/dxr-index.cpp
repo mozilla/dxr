@@ -777,6 +777,14 @@ public:
     return true;
   }
 
+  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc l) {
+    if (!interestingLocation(l.getBeginLoc()))
+      return true;
+
+    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    return true;
+  }
+
   bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc l) {
     if (!interestingLocation(l.getBeginLoc()))
       return true;
