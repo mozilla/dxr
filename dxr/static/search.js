@@ -13,7 +13,7 @@ var resultTemplate = ""
 
 var linesTemplate = ""
  + "<a class=\"snippet\" "
- + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
+ + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#{{line_number}}\">"
  + "  <div class=\"line-numbers\">"
  + "    <pre><span class=\"ln\">{{line_number}}</span></pre>"
  + "  </div>"
