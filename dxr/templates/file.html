@@ -24,37 +24,48 @@
 {% endblock %}
 
 {% block content %}
-<div id="annotations">
-  {% for line, annotations in lines %}
-    <div class="annotation-set" id="aset-{{ loop.index }}">
-      {%- for annotation in annotations -%}
-        <div {% for key, value in annotation.items() %}
-              {{ key }}="{{ value }}"
-             {% endfor %} ></div>
+<div id="content" class="content" data-no-results="No results returned for current query.">
+  <div id="tree-tip" class="tree-tip shown-with-results">
+    <strong>File Path:</strong>&nbsp;
+    <div class="file-name">
+      {%- for path, name in paths_and_names -%}
+      <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
       {%- endfor -%}
     </div>
-  {%- endfor -%}
-</div>
+  </div>
 
-<table class="result_snippet file">
-  <thead class="visually-hidden">
-      <th scope="col">Line</th>
-      <th scope="col">Code</th>
-  </thead>
-  <tbody>
-  {% for line, annotations in lines %}
-    <tr>
-        <td>
-          <a href="#l{{ loop.index }}" id="l{{ loop.index }}">{{ loop.index }}</a>
-        </td>
-        <td class="code">
+  <div id="annotations">
+    {% for line, annotations in lines %}
+      <div class="annotation-set" id="aset-{{ loop.index }}">
+        {%- for annotation in annotations -%}
+          <div {% for key, value in annotation.items() %}
+                {{ key }}="{{ value }}"
+               {% endfor %} ></div>
+        {%- endfor -%}
+      </div>
+    {%- endfor -%}
+  </div>
+
+  <table class="result_snippet file">
+    <thead class="visually-hidden">
+        <th scope="col">Line</th>
+        <th scope="col">Code</th>
+    </thead>
+    <tbody>
+    {% for line, annotations in lines %}
+      <tr>
+          <td>
+            <a href="#l{{ loop.index }}" id="l{{ loop.index }}">{{ loop.index }}</a>
+          </td>
+          <td class="code">
 <pre>
 <code aria-labelledby="l{{ loop.index }}">{{ line }}</code>
 </pre>
-        </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
- <p class="top"><a href="#search-box">Back to Top</a></p>
+          </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+   <p class="top"><a href="#search-box">Back to Top</a></p>
+ </div>
 {% endblock %}

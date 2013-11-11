@@ -71,7 +71,7 @@ $(function() {
      */
     function buildPathLine(fullPath, tree) {
         var pathLines = '',
-            pathRoot = tree + '/source/',
+            pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
             splitPathLength = paths.length,
             dataPath = [];
@@ -80,7 +80,7 @@ $(function() {
             // Do not add a / on the last iteration.
             var displayPath = (splitPathLength - 1) === path ? paths[path] : paths[path] + '/';
 
-            dataPath.push(path);
+            dataPath.push(paths[path]);
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
