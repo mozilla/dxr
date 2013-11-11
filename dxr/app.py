@@ -83,7 +83,7 @@ def search(tree):
                     path, line = result
                     # TODO: Does this escape qtext properly?
                     return redirect(
-                        '%s/%s/source/%s?from=%s#l%i' %
+                        '%s/%s/source/%s?from=%s#%i' %
                         (config['WWW_ROOT'], tree, path, qtext, line))
 
             # Return multiple results:

@@ -259,7 +259,7 @@ class ClangHtmlifier(object):
         """ Add a jump to definition to the menu """
         # Definition url
         url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
-        url += "#l%s" % line
+        url += "#%s" % line
         menu.insert(0, { 
             'text':   "Jump to definition",
             'title':  "Jump to the definition in '%s'" % os.path.basename(path),
@@ -440,7 +440,7 @@ class ClangHtmlifier(object):
                 kind = 'type'
 
             # Add the outer type as the first link
-            links.insert(0, (kind, name, "#l%s" % line))
+            links.insert(0, (kind, name, "#%s" % line))
 
             # Now return the type
             yield (30, name, links)
@@ -449,7 +449,7 @@ class ClangHtmlifier(object):
         links = []
         sql = "SELECT name, file_line FROM macros WHERE file_id = ?"
         for name, line in self.conn.execute(sql, (self.file_id,)):
-            links.append(('macro', name, "#l%s" % line))
+            links.append(('macro', name, "#%s" % line))
         if links:
             yield (100, "Macros", links)
 
@@ -463,7 +463,7 @@ class ClangHtmlifier(object):
         for name, line in self.conn.execute(sql, (self.file_id, tid)):
             # Skip nameless things
             if len(name) == 0: continue
-            yield 'method', name, "#l%s" % line
+            yield 'method', name, "#%s" % line
 
     def member_variables(self, tid):
         """ Fetch member variables given a type id """
@@ -475,7 +475,7 @@ class ClangHtmlifier(object):
         for name, line in self.conn.execute(sql, (self.file_id, tid)):
             # Skip nameless things
             if len(name) == 0: continue
-            yield 'field', name, "#l%s" % line
+            yield 'field', name, "#%s" % line
 
 
 _tree = None
