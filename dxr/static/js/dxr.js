@@ -206,8 +206,10 @@ $(function() {
         stopQueryInputPoller();
     });
 
-    searchForm.on('submit', function(event) {
+    searchForm.on('submit', function() {
+        // Set redirect to true for direct results.
         $('#redirect').val('true');
+        // Ensure JSON is not returned.
         $('#format').val('html');
     });
 });
