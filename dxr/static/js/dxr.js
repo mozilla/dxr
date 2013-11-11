@@ -142,13 +142,14 @@ $(function() {
         var previousQuery = query ? query : previousQuery;
 
         $.getJSON(buildAjaxURL(searchForm.serialize()), function(data) {
-            var results = data.results;
 
             // If no data is returned, inform the user.
             if(!data.results.length) {
                 contentContainer.empty();
                 setUserMessage('info', contentContainer.data('no-results'), contentContainer);
             } else {
+                var results = data.results;
+
                 for(var result in results) {
                     results[result].pathLine = buildPathLine(results[result].path, data.tree);
                     results[result].iconPath = icons + results[result].icon;
@@ -203,5 +204,10 @@ $(function() {
     // Stop search as you type as soon as the field looses focus.
     queryField.on('blur', function() {
         stopQueryInputPoller();
+    });
+
+    searchForm.on('submit', function(event) {
+        $('#redirect').val('true');
+        $('#format').val('html');
     });
 });
