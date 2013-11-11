@@ -40,9 +40,9 @@
 </div>
 <div class="line-numbers">
   {% for number, line, annotations in lines %}
-  <pre><a href="#l{{ number }}"
+  <pre><a href="#{{ number }}"
           class="ln" id="line-{{ number }}"
-          name="l{{ number }}">{{ number }}</a></pre>
+          name="{{ number }}">{{ number }}</a></pre>
   {%- endfor %}
 </div>
 <div class="file-lines">
