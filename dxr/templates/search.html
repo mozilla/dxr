@@ -96,6 +96,7 @@
 
 {# When updating results remember to update it in search.js too! #}
 {% block content %}
+<div id="content" class="content" data-no-results="No results returned for current query.">
   {% for icon, path, lines in results %}
     <div class="result">
       <div class="path" style="background-image: url({{ wwwroot }}/static/icons/{{ icon }}.png);">
@@ -128,6 +129,7 @@
     </div>
   </div>
   {% endfor %}
+</div>
 {% endblock %}
 
 {% block footer %}

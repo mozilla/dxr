@@ -115,6 +115,9 @@ td.code {
     border-right: 1px solid #fff;
     text-align: center;
 }
+table.result_snippet tr {
+    border: 0;
+}
 .result_snippet td:first-child {
     background-color: #e0e0e0;
     border-right: 1px solid #fff;
@@ -238,11 +241,6 @@ td.code {
 }
 .content {
     padding: 1em;
-}
-.message {
-    position: absolute;
-    top: 40%;
-    left: 30%;
 }
 .path {
     background-repeat: no-repeat;

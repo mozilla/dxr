@@ -11,7 +11,7 @@
     {% block body %}
 
     <div id="search-box" class="{% block search_box_class %}with-results{% endblock %} search-box">
-      <form method="get" action="{{ wwwroot }}/{{ tree }}/search" {% block search_type_id %}id="basic_search"{% endblock %} >
+      <form method="get" action="{{ wwwroot }}/{{ tree }}/search" {% block search_type_id %}id="basic_search"{% endblock %} data-error="An error occured during the processing of your query. Please reload the page and try again.">
         <fieldset class="text_search">
           {% block legend %}{% endblock %}
 
@@ -46,7 +46,7 @@
         {% block advanced_search %}
         {% endblock %}
 
-          <input type="hidden" name="redirect" value="true" id="redirect" />
+          <input type="hidden" name="redirect" value="false" id="redirect" />
         {% block return_format %}
           <input type="hidden" name="format" value="json" id="format" />
         {% endblock %}
@@ -72,16 +72,7 @@
     {% endif %}
 
     {% block content %}
-    <div id="content" class="content">
-      <div id="tree-tip" class="tree-tip shown-with-results">
-        <strong>File Path:</strong>&nbsp;
-        <div class="file-name">
-          {%- for path, name in paths_and_names -%}
-          <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
-          {%- endfor -%}
-        </div>
-      </div>
-    </div>
+    <div id="content" class="content" data-no-results="No results returned for current query."></div>
     {% endblock %}
 
     {% block footer %}
