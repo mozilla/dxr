@@ -1,3 +1,4 @@
+import marshal
 import os
 import subprocess
 import urlparse
@@ -178,7 +179,69 @@ class Git(VCS):
         raise Exception("I don't know what's going on")
 
 
-every_vcs = [Mercurial, Git]
+class Perforce(VCS):
+    def __init__(self, root):
+        super(Perforce, self).__init__(root)
+        have = self._p4run(['have'])
+        self.have = dict((x['path'][len(root) + 1:], x) for x in have)
+        try:
+            self.upstream = tree.plugin_omniglot_p4web
+        except AttributeError:
+            self.upstream = "http://p4web/"
+
+    @staticmethod
+    def claim_vcs_source(path, dirs):
+        if 'P4CONFIG' not in os.environ:
+            return None
+        if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
+            return Perforce(path)
+        return None
+
+    def _p4run(self, args):
+        ret = []
+        env = os.environ
+        env["PWD"] = self.root
+        proc = subprocess.Popen(['p4', '-G'] + args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            cwd=self.root,
+            env=env)
+        while True:
+            try:
+                x = marshal.load(proc.stdout)
+            except EOFError:
+                break
+            ret.append(x)
+        return ret
+
+    def is_tracked(self, path):
+        return path in self.have
+
+    def get_rev(self, path):
+        info = self.have[path]
+        return '#' + info['haveRev']
+
+    def generate_log(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=22#' + info['haveRev']
+
+    def generate_blame(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=193'
+
+    def generate_diff(self, path):
+        info = self.have[path]
+        haveRev = info['haveRev']
+        prevRev = str(int(haveRev) - 1)
+        return (self.upstream + info['depotFile'] + '?ac=19&rev1=' + prevRev +
+                '&rev2=' + haveRev)
+
+    def generate_raw(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=98&rev1=' + info['haveRev']
+
+
+every_vcs = [Mercurial, Git, Perforce]
 
 
 # Load global variables
