@@ -80,13 +80,8 @@ menu.hide = function(){
   // Un-highlight links
   if (highlighted_class) {
     var refs = document.getElementsByClassName(highlighted_class);
-    console.log("removing from " + highlighted_class + " " + refs.length + " elements");
-    for (var i = 0; i < refs.length; ++i) {
-      console.log(refs[i]);
-      console.log(refs[i].className);
+    for (var i = 0; i < refs.length; ++i)
       (refs[i].classList).remove('highlight');
-      console.log(refs[i].className);
-    }
     highlighted_class = '';
   }
 };
