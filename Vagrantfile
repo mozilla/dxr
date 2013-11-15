@@ -33,13 +33,13 @@ Vagrant::Config.run do |config|
     end
 
     # Enable symlinks, which trilite uses during build:
-    config.vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
+    config.vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
 
     if CONF['boot_mode'] == 'gui'
         config.vm.boot_mode = :gui
     end
 
-    config.vm.share_folder("v-root", MOUNT_POINT, ".")
+    config.vm.share_folder("vagrant-root", MOUNT_POINT, ".")
 
     config.vm.provision :puppet do |puppet|
         puppet.manifests_path = "puppet/manifests"
