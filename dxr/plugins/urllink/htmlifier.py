@@ -40,7 +40,7 @@ class UrlHtmlifier(object):
                     'title':  "Visit %s" % url,
                     'href':   url,
                     'icon':   'external_link'
-                }], '')
+                }], '', None)
     
     def regions(self):
         return []

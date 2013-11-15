@@ -48,7 +48,7 @@ class BugLinkHtmlifier(object):
                 'title': "Find this bug number at %s" % name,
                 'href': url % bug,
                 'icon': 'buglink'
-            }], '')
+            }], '', None)
 
     def regions(self):
         return []

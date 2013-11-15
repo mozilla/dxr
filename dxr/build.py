@@ -610,12 +610,15 @@ class Ref(TagWriter):
     sort_order = 1
 
     def opener(self):
-        menu, qualname = self.payload
+        menu, qualname, value = self.payload
         menu = cgi.escape(json.dumps(menu), True)
         css_class = ''
         if qualname:
             css_class = ' class=\"tok' + str(hash(qualname)) +'\"'
-        return u'<a data-menu="%s"%s>' % (menu, css_class)
+        title = ''
+        if value:
+            title = ' title="' + cgi.escape(value, True) + '"'
+        return u'<a data-menu="%s"%s%s>' % (menu, css_class, title)
 
     def closer(self):
         return u'</a>'
