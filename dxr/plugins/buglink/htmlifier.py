@@ -32,12 +32,12 @@ class BugLinkHtmlifier(object):
     def refs(self):
         for m in bugFinder.finditer(self.text):
             bug = m.group(1)
-            yield m.start(0), m.end(0), [{
+            yield m.start(0), m.end(0), ([{
                 'text':     "Lookup #%s" % bug,
                 'title':    "Find this bug number at %s" % name,
                 'href':     bugzilla % bug,
                 'icon':     'buglink'
-            }]
+            }], '')
 
     def regions(self):
         return []

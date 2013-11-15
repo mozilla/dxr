@@ -4,6 +4,8 @@ var menu = {};
 
 /** Menu id */
 var _menuId = 'inline-menu';
+/** Remember which elements are currently highlighted. '' if no elements are highlighted */
+var highlighted_class = '';
 
 /** Escape HTML Entitites */
 function htmlEntities(str) {
@@ -16,6 +18,15 @@ menu.launch = function(el){
   x = menu.posLeft(el);
   y = menu.posTop(el) + el.offsetHeight;
   menu.launchAt(x, y);
+
+  // Highlight all links with the same class
+  highlighted_class = el.className;
+  if (highlighted_class) {
+    var refs = document.getElementsByClassName(highlighted_class);
+    for (var i = 0; i < refs.length; ++i) {
+      refs[i].classList.add('highlight');
+    }
+  }
 };
 
 /** Populate menu
@@ -66,6 +77,13 @@ menu.posLeft = function(el){
 menu.hide = function(){
   var m = document.getElementById(_menuId);
   m.style.display = 'none';
+  // Un-highlight links
+  if (highlighted_class) {
+    var refs = document.getElementsByClassName(highlighted_class);
+    for (var i = 0; i < refs.length; ++i)
+      (refs[i].classList).remove('highlight');
+    highlighted_class = '';
+  }
 };
 
 /** Initialize module */
