@@ -303,8 +303,7 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
     """Return a line of string ``content`` with the given ``offsets`` prefixed
     by ``markup`` and suffixed by ``markdown``.
 
-    We assume that none of the offsets split a Unicode code point. This
-    assumption lets us run one big ``decode`` at the end.
+    We assume that none of the offsets split a multibyte character.
 
     """
     def chunks():
@@ -314,11 +313,10 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
         except ValueError:
             chars_before = None
         for start, end in offsets:
-            # We can do the escapes before decoding, because all escaped chars
-            # are assumed to be the same in ASCII and 'encoding':
-            yield cgi.escape(content[chars_before:start])
+            yield cgi.escape(content[chars_before:start].decode(encoding,
+                                                                'replace'))
             yield markup
-            yield cgi.escape(content[start:end])
+            yield cgi.escape(content[start:end].decode(encoding, 'replace'))
             yield markdown
             chars_before = end
         # Make sure to get the rest of the line after the last highlight:
@@ -326,9 +324,9 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
             next_newline = content.index('\n', chars_before)
         except ValueError:  # eof
             next_newline = None
-        yield cgi.escape(content[chars_before:next_newline])
-    ret = ''.join(chunks())
-    return ret.decode(encoding, 'replace')
+        yield cgi.escape(content[chars_before:next_newline].decode(encoding,
+                                                                   'replace'))
+    return ''.join(chunks())
 
 
 def _highlit_lines(content, offsets, markup, markdown, encoding):
