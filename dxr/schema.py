@@ -117,7 +117,9 @@ class SchemaTable(object):
         if self.index is not None:
             sql += 'CREATE INDEX %s_%s_index on %s (%s);\n' % (self.name, '_'.join(self.index), self.name, ','.join(self.index))
         if self.needFileKey is True:
-            sql += 'CREATE UNIQUE INDEX %s_file_index on %s (file_id, file_line, file_col);' % (self.name, self.name)
+            has_extents = 'extent_start' in [x[0] for x in self.columns]
+            sql += ('CREATE UNIQUE INDEX %s_file_index on %s (file_id, file_line, file_col%s);' %
+                    (self.name, self.name, ', extent_start, extent_end' if has_extents else ''))
         return sql
 
     def get_insert_sql(self, args):
