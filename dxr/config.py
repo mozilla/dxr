@@ -118,7 +118,8 @@ class TreeConfig(object):
             'temp_folder':      os.path.join(config.temp_folder, name),
             'log_folder':       os.path.join(config.log_folder, name),
             'ignore_patterns':  ".hg .git CVS .svn .bzr .deps .libs",
-            'build_command':    "make -j $jobs"
+            'build_command':    "make -j $jobs",
+            'source_encoding':  'utf-8',
         })
         parser.read(configfile)
         
@@ -131,6 +132,7 @@ class TreeConfig(object):
         self.source_folder    = parser.get(name, 'source_folder',     False)
         self.build_command    = parser.get(name, 'build_command',     False)
         self.ignore_patterns  = parser.get(name, 'ignore_patterns',   False)
+        self.source_encoding  = parser.get(name, 'source_encoding',   False)
 
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
