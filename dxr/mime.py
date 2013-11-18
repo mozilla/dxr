@@ -7,7 +7,7 @@ from os.path import splitext
 
 def icon(path):
     root, ext = splitext(path)
-    return "mimetypes/" + ext_map.get(ext, "unknown")
+    return "mimetypes/" + ext_map.get(ext[1:], "unknown")
 
 
 def is_text(path, data):
