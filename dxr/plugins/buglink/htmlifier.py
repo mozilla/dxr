@@ -18,24 +18,21 @@ def load(tree, conn):
     if hasattr(tree, 'plugin_buglink_name'):
         name = tree.plugin_buglink_name
     else:
-        print >> sys.stderr, "buglink plugin needs plugin_buglink_name configuration key"
+        print >> sys.stderr, 'buglink plugin needs plugin_buglink_name configuration key'
         sys.exit(1)
 
     # Get link
-    if hasattr(tree, 'plugin_buglink_bugzilla'):
-        url = tree.plugin_buglink_bugzilla
-    elif hasattr(tree, 'plugin_buglink_url'):
-        url = tree.plugin_buglink_url
-    else:
-        print >> sys.stderr, "buglink plugin needs plugin_buglink_bugzilla or plugin_buglink_url configuration key"
+    # The plugin_buglink_bugzilla option behaves identically but is deprecated.
+    url = getattr(tree, 'plugin_buglink_url',
+                        getattr(tree, 'plugin_buglink_bugzilla', None))
+    if url is None:
+        print >> sys.stderr, 'buglink plugin needs plugin_buglink_url configuration key'
         sys.exit(1)
 
     # Get bug finder regex
-    if hasattr(tree, 'plugin_buglink_regex'):
-        bug_finder = re.compile(tree.plugin_buglink_regex)
-    else:
-        # default bug finder regex for backwards compatability
-        bug_finder = re.compile("(?i)bug\s+#?([0-9]+)")  # also used in hg plugin
+    bug_finder = re.compile(getattr(tree,
+                                    'plugin_buglink_regex',
+                                    r'(?i)bug\s+#?([0-9]+)'))
 
 
 class BugLinkHtmlifier(object):
