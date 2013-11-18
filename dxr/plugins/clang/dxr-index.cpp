@@ -630,7 +630,6 @@ public:
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
     beginRecord("ref", refLoc);
-    recordValue("qualname", getQualifiedName(*d));
     recordValue("declloc", locationToString(d->getLocation()));
     recordValue("loc", locationToString(refLoc));
     if (kind)

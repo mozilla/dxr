@@ -90,7 +90,6 @@ schema = dxr.schema.Schema({
     # References to namespaces
     "namespace_refs": [
         ("refid", "INTEGER", True),      # ID of the namespace being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -112,7 +111,6 @@ schema = dxr.schema.Schema({
     # References to namespace aliases
     "namespace_alias_refs": [
         ("refid", "INTEGER", True),      # ID of the namespace alias being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -123,7 +121,6 @@ schema = dxr.schema.Schema({
     # References to functions
     "function_refs": [
         ("refid", "INTEGER", True),      # ID of the function being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -134,7 +131,6 @@ schema = dxr.schema.Schema({
     # References to macros
     "macro_refs": [
         ("refid", "INTEGER", True),      # ID of the macro being referenced
-        ("name", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -145,7 +141,6 @@ schema = dxr.schema.Schema({
     # References to types
     "type_refs": [
         ("refid", "INTEGER", True),      # ID of the type being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -156,7 +151,6 @@ schema = dxr.schema.Schema({
     # References to typedefs
     "typedef_refs": [
         ("refid", "INTEGER", True),      # ID of the typedef being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -167,7 +161,6 @@ schema = dxr.schema.Schema({
     # References to variables
     "variable_refs": [
         ("refid", "INTEGER", True),      # ID of the variable being referenced
-        ("qualname", "VARCHAR(256)", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -186,7 +179,6 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for functions
     "function_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
-        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
@@ -198,7 +190,6 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for types
     "type_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
-        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
@@ -210,7 +201,6 @@ schema = dxr.schema.Schema({
     # Declaration/definition mapping for variables
     "variable_decldef": [
         ("defid", "INTEGER", True),    # ID of the definition instance
-        ("qualname", "VARCHAR(256)", False),
         ("_location", True),
         ("_location", True, 'definition'),
         # Extents of the declaration
