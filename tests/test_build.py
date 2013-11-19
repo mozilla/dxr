@@ -292,13 +292,13 @@ class IntegrationTests(TestCase):
         """Don't split anchor tags when we can avoid it."""
         eq_(''.join(build_lines('this that',
                                 [Htmlifier(regions=[(0, 4, 'k')],
-                                           refs=[(0, 9, {})])])),
+                                           refs=[(0, 9, ({}, ''))])])),
             u'<a data-menu="{}"><span class="k">this</span> that</a>')
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
         eq_(list(build_lines('this\nthat',
-                             [Htmlifier(refs=[(0, 9, {})])])),
+                             [Htmlifier(refs=[(0, 9, ({}, ''))])])),
             [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
 
     def test_horrors(self):

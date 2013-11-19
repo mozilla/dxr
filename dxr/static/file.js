@@ -104,12 +104,12 @@ function initMenu(){
   }, false);
 }
 
-var pattern = /^#l[0-9]+$/;
+var pattern = /^#[0-9]+$/;
 /** Find line by anchor */
 function findLine(){
   var result;
   if((result = pattern.exec(window.location.hash)) != null){
-    return parseInt(result[0].substr(2));
+    return parseInt(result[0].substr(1));
   }
   return -1;
 }

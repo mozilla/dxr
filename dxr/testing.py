@@ -187,6 +187,14 @@ foot_text =
         else:
             print 'Not deleting instance in %s.' % cls._config_dir_path
 
+    def _source_for_query(self, s):
+        return (s.replace('<b>', '')
+                 .replace('</b>', '')
+                 .replace('&lt;', '<')
+                 .replace('&gt;', '>')
+                 .replace('&quot;', '"')
+                 .replace('&amp;', '&'))
+
     def found_line_eq(self, query, content, line=None):
         """A specialization of ``found_line_eq`` that computes the line number
         if not given
@@ -198,7 +206,7 @@ foot_text =
         """
         if not line:
             line = self.source.count( '\n', 0, self.source.index(
-                content.replace('<b>', '').replace('</b>', ''))) + 1
+                self._source_for_query(content))) + 1
         super(SingleFileTestCase, self).found_line_eq(query, content, line)
 
 

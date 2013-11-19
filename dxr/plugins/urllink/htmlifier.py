@@ -35,12 +35,12 @@ class UrlHtmlifier(object):
             except UnicodeDecodeError:
                 pass
             else:
-                yield start, end, [{
+                yield start, end, ([{
                     'text':   "Follow link",
                     'title':  "Visit %s" % url,
                     'href':   url,
                     'icon':   'external_link'
-                }]
+                }], '')
     
     def regions(self):
         return []

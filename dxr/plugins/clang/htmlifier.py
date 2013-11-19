@@ -29,7 +29,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, self.function_menu(qualname)
+            yield start, end, (self.function_menu(qualname), qualname)
 
         # Extents for functions declared here
         sql = """
@@ -45,7 +45,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.function_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Extents for variables defined here
         sql = """
@@ -54,7 +54,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, self.variable_menu(qualname)
+            yield start, end, (self.variable_menu(qualname), qualname)
 
         # Extents for variables declared here
         sql = """
@@ -70,7 +70,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Extents for types defined here
         sql = """
@@ -79,7 +79,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname, kind in self.conn.execute(sql, args):
-            yield start, end, self.type_menu(qualname, kind)
+            yield start, end, (self.type_menu(qualname, kind), qualname)
 
         # Extents for types declared here
         sql = """
@@ -96,7 +96,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
             menu = self.type_menu(qualname, kind)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Extents for typedefs defined here
         sql = """
@@ -105,7 +105,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, self.typedef_menu(qualname)
+            yield start, end, (self.typedef_menu(qualname), qualname)
 
         # Extents for namespaces defined here
         sql = """
@@ -114,7 +114,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, self.namespace_menu(qualname)
+            yield start, end, (self.namespace_menu(qualname), qualname)
 
         # Extents for namespace aliases defined here
         sql = """
@@ -123,7 +123,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, self.namespace_alias_menu(qualname)
+            yield start, end, (self.namespace_alias_menu(qualname), qualname)
 
         # Extents for macros defined here
         sql = """
@@ -132,7 +132,7 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, name in self.conn.execute(sql, args):
-            yield start, end, self.macro_menu(name)
+            yield start, end, (self.macro_menu(name), name)
 
         # Add references to types
         sql = """
@@ -147,7 +147,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
             menu = self.type_menu(qualname, kind)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to typedefs
         sql = """
@@ -161,7 +161,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.typedef_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to functions
         sql = """
@@ -175,7 +175,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.function_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to variables
         sql = """
@@ -189,7 +189,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to namespaces
         sql = """
@@ -202,7 +202,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.namespace_menu(qualname)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to namespace aliases
         sql = """
@@ -216,7 +216,7 @@ class ClangHtmlifier(object):
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.namespace_alias_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, qualname)
 
         # Add references to macros
         sql = """
@@ -230,18 +230,18 @@ class ClangHtmlifier(object):
         for start, end, name, path, line in self.conn.execute(sql, args):
             menu = self.macro_menu(name)
             self.add_jump_definition(menu, path, line)
-            yield start, end, menu
+            yield start, end, (menu, name)
 
         # Link all the #includes in this file to the files they reference.
         for start, end, path in self.conn.execute(
                 'SELECT extent_start, extent_end, path FROM includes '
                 'INNER JOIN files ON files.id=includes.target_id '
                 'WHERE includes.file_id = ?', args):
-            yield start, end, [{'text': 'Jump to file',
-                                'title': 'Jump to what is included here.',
-                                'href': self.tree.config.wwwroot + '/' +
-                                        self.tree.name + '/source/' + path,
-                                'icon': 'jump'}]
+            yield start, end, ([{'text': 'Jump to file',
+                                 'title': 'Jump to what is included here.',
+                                 'href': self.tree.config.wwwroot + '/' +
+                                         self.tree.name + '/source/' + path,
+                                 'icon': 'jump'}], '')
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
@@ -259,7 +259,7 @@ class ClangHtmlifier(object):
         """ Add a jump to definition to the menu """
         # Definition url
         url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
-        url += "#l%s" % line
+        url += "#%s" % line
         menu.insert(0, { 
             'text':   "Jump to definition",
             'title':  "Jump to the definition in '%s'" % os.path.basename(path),
@@ -440,7 +440,7 @@ class ClangHtmlifier(object):
                 kind = 'type'
 
             # Add the outer type as the first link
-            links.insert(0, (kind, name, "#l%s" % line))
+            links.insert(0, (kind, name, "#%s" % line))
 
             # Now return the type
             yield (30, name, links)
@@ -449,7 +449,7 @@ class ClangHtmlifier(object):
         links = []
         sql = "SELECT name, file_line FROM macros WHERE file_id = ?"
         for name, line in self.conn.execute(sql, (self.file_id,)):
-            links.append(('macro', name, "#l%s" % line))
+            links.append(('macro', name, "#%s" % line))
         if links:
             yield (100, "Macros", links)
 
@@ -463,7 +463,7 @@ class ClangHtmlifier(object):
         for name, line in self.conn.execute(sql, (self.file_id, tid)):
             # Skip nameless things
             if len(name) == 0: continue
-            yield 'method', name, "#l%s" % line
+            yield 'method', name, "#%s" % line
 
     def member_variables(self, tid):
         """ Fetch member variables given a type id """
@@ -475,7 +475,7 @@ class ClangHtmlifier(object):
         for name, line in self.conn.execute(sql, (self.file_id, tid)):
             # Skip nameless things
             if len(name) == 0: continue
-            yield 'field', name, "#l%s" % line
+            yield 'field', name, "#%s" % line
 
 
 _tree = None

@@ -1,8 +1,7 @@
 from os.path import basename
-from fnmatch import fnmatchcase
 
 import pygments
-import pygments.lexers
+from pygments.lexers import get_lexer_for_filename, JavascriptLexer
 from pygments.token import Token
 
 import dxr.plugins
@@ -66,11 +65,16 @@ def htmlify(path, text):
     options = {'encoding': 'utf-8'}
     filename = basename(path)
     try:
-        lexer = pygments.lexers.get_lexer_for_filename(filename, **options)
+        # Lex .h files as C++ so occurrences of "class" and such get colored;
+        # Pygments expects .H, .hxx, etc. This is okay even for uses of
+        # keywords that would be invalid in C++, like 'int class = 3;'.
+        lexer = get_lexer_for_filename('dummy.cpp' if filename.endswith('.h')
+                                                   else filename,
+                                       **options)
     except pygments.util.ClassNotFound:
         # Small hack for js highlighting of jsm files
-        if fnmatchcase(filename, "*.jsm"):
-            lexer = pygments.lexers.JavascriptLexer(**options)
+        if filename.endswith('.jsm'):
+            lexer = JavascriptLexer(**options)
         else:
             return None
     return Pygmentizer(text, lexer)
