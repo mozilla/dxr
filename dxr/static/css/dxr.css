@@ -75,7 +75,7 @@ input[type="checkbox"] {
 }
 input[type="submit"] {
     float: right;
-    margin: 0 14.5% 0 0;
+    margin: 0 17% 0 0;
     width: 6rem;
     height: 2rem;
     font-size: .8rem
@@ -170,7 +170,7 @@ table.result_snippet tr {
 .basic_search {
     position: absolute;
     top: 80%;
-    right: 10.5%;
+    right: 25.2%;
     padding: .2rem 0 0;
 }
 .simple_form_group {
@@ -186,7 +186,7 @@ table.result_snippet tr {
     transition: height 1s;
 }
 .wide {
-    width: 46%;
+    width: 44.4%;
 }
 /* advanced search page */
 .advanced {
@@ -197,8 +197,8 @@ table.result_snippet tr {
     border-bottom: 0;
 }
 .advanced form {
-    margin: 0 10%;
-    width: 90%;
+    margin: 0;
+    width: 100%;
 }
 .advanced .simple_form_group {
     padding: 0;
@@ -228,11 +228,22 @@ table.result_snippet tr {
     display: inline-block;
     padding: .3rem .5rem;
     border: 0;
-    width: 16%;
+    width: 17%;
     text-align: right;
 }
 .form_elem_container input {
     width: 70%;
+}
+/* AS top level input fields */
+.text_search label {
+    width: 11%;
+}
+.text_search input {
+    width: 60%;
+}
+.text_search input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
 }
 .case {
     margin-left: 5%;
@@ -281,4 +292,21 @@ table.result_snippet tr {
     height: 1px;
     width: 1px;
     overflow: hidden;
+}
+@media only screen and (min-width: 760px) and (max-width: 1000px) {
+    input[type="submit"] {
+        margin-right: 13.5%;
+    }
+    .text_search label {
+        width: 20%;
+    }
+    .form_group label {
+        width: 31%;
+    }
+    .form_group input {
+        width: 65%;
+    }
+    .basic_search {
+        right: 18.5%;
+    }
 }
