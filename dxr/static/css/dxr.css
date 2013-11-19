@@ -51,6 +51,7 @@ label {
     font-size: 14px;
 }
 fieldset {
+    position: relative;
     margin: 0;
     padding: .5rem .8rem;
     border: 0;
@@ -74,7 +75,7 @@ input[type="checkbox"] {
 }
 input[type="submit"] {
     float: right;
-    margin: 0 2.8rem 0 0;
+    margin: 0 14.5% 0 0;
     width: 6rem;
     height: 2rem;
     font-size: .8rem
@@ -167,7 +168,9 @@ table.result_snippet tr {
     text-align: right;
 }
 .basic_search {
-    right: 1.5rem;
+    position: absolute;
+    top: 80%;
+    right: 10.5%;
     padding: .2rem 0 0;
 }
 .simple_form_group {
@@ -177,17 +180,13 @@ table.result_snippet tr {
 }
 .form_group {
     display: inline-block;
-    background-color: #f0ede3;
-    margin-right: .3rem;
-    padding: .7rem 0 .3rem .7rem;
-    border: 1px solid #e0e0e0;
     width: 32.1%;
     min-height: 185px;
     vertical-align: top;
     transition: height 1s;
 }
 .wide {
-    width: 48.5%;
+    width: 46%;
 }
 /* advanced search page */
 .advanced {
@@ -197,12 +196,19 @@ table.result_snippet tr {
 .advanced .search-box {
     border-bottom: 0;
 }
+.advanced form {
+    margin: 0 10%;
+    width: 90%;
+}
 .advanced .simple_form_group {
     padding: 0;
 }
 .advanced_search_heading {
     margin: 0.5rem 0 0 0;
     font-size: 1.5rem;
+}
+.additional_fields_container legend {
+    margin-bottom: 1%;
 }
 .arrow_icon {
     display: inline-block;
@@ -215,22 +221,14 @@ table.result_snippet tr {
 .expanded {
     transform: rotate3d(0, 0, 1, 270deg);
 }
-.adv_additional label {
-    display: inline-block;
-    background-color: #e0e0e0;
-    padding: 0.1rem 0.2rem 0.1rem 0;
-    border: 1px dashed #999;
-    width: 19%;
-}
 .form_elem_container {
     margin: 0 0 .7rem 0;
 }
 .form_elem_container label {
     display: inline-block;
-    background-color: #e0e0e0;
     padding: .3rem .5rem;
     border: 0;
-    width: 25%;
+    width: 16%;
     text-align: right;
 }
 .form_elem_container input {
