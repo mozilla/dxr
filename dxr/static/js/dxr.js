@@ -76,11 +76,18 @@ $(function() {
             splitPathLength = paths.length,
             dataPath = [];
 
-        for(var path in paths) {
-            // Do not add a / on the last iteration.
-            var displayPath = (splitPathLength - 1) === path ? paths[path] : paths[path] + '/';
+        for(var path_index in paths) {
+            var isFirstOrLast = false;
 
-            dataPath.push(paths[path]);
+            if((splitPathLength - 1) === path_index || splitPathLength === 1) {
+                isFirstOrLast = true;
+            }
+
+            // Do not add a forward slash if there is only one item in the Array
+            //or, if this is the last iteration.
+            var displayPath = isFirstOrLast ? paths[path_index] : paths[path_index] + '/';
+
+            dataPath.push(paths[path_index]);
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
