@@ -1,5 +1,25 @@
 (function(){
 
+// TODO Migrate this to use jinja.js, so we can place a template file in static/
+//      and use that template on the server using an include statement and on
+//      client side.
+var resultTemplate = ""
+ + "<div class=\"result\">"
+ + "<div class=\"path\""
+ + " style=\"background-image: url('{{wwwroot}}/static/icons/{{icon}}.png')\""
+ + " >{{pathLine}}</div>"
+ + "{{formattedLines}}"
+ + "</div>";
+
+var linesTemplate = ""
+ + "<a class=\"snippet\" "
+ + "   href=\"{{wwwroot}}/{{tree}}/source/{{path}}#l{{line_number}}\">"
+ + "  <div class=\"line-numbers\">"
+ + "    <pre><span class=\"ln\">{{line_number}}</span></pre>"
+ + "  </div>"
+ + "  <div class=\"file-lines\"><pre><code>{{line}}</code></pre></div>"
+ + "</a>";
+
 /** Format a template and return it */
 function formatTemplate(template, vars){
   for(var k in vars){
@@ -203,8 +223,7 @@ function fetchResults(displayFetcher){
         fetcher.style.display    = 'block';
         fetcher.style.visibility = 'hidden';
       }
-      /* content.innerHTML += formatResults(data); */
-      content.innerHTML += data;
+      content.innerHTML += formatResults(data);
       // Set error as tip
       if(data["error"])
         dxr.setErrorTip(data["error"]);

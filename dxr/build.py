@@ -596,7 +596,12 @@ class Ref(TagWriter):
     sort_order = 1
 
     def opener(self):
-        return u'<a data-menu="%s">' % cgi.escape(json.dumps(self.payload), True)
+        menu, qualname = self.payload
+        menu = cgi.escape(json.dumps(menu), True)
+        css_class = ''
+        if qualname:
+            css_class = ' class=\"tok' + str(hash(qualname)) +'\"'
+        return u'<a data-menu="%s"%s>' % (menu, css_class)
 
     def closer(self):
         return u'</a>'
@@ -748,6 +753,10 @@ def balanced_tags_with_empties(tags):
 
 def tag_boundaries(htmlifiers):
     """Return a sequence of (offset, is_start, Region/Ref/Line) tuples.
+
+    Basically, split the atomic tags that come out of plugins into separate
+    start and end points, which can then be thrown together in a bag and sorted
+    as the first step in the tag-balancing process.
 
     Like in Python slice notation, the offset of a tag refers to the index of
     the source code char it comes before.

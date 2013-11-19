@@ -112,7 +112,7 @@
         {%- endfor -%}
       </div>
       {% for number, line in lines %}
-        <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#l{{ number }}">
+        <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
           <div class="line-numbers">
           <pre><span class="ln">{{ number }}</span></pre>
           </div>
