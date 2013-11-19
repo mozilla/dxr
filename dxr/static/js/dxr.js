@@ -76,18 +76,18 @@ $(function() {
             splitPathLength = paths.length,
             dataPath = [];
 
-        for(var path in paths) {
+        for(var path_index in paths) {
             var isFirstOrLast = false;
 
-            if((splitPathLength - 1) === path || splitPathLength === 1) {
+            if((splitPathLength - 1) === path_index || splitPathLength === 1) {
                 isFirstOrLast = true;
             }
 
             // Do not add a forward slash if there is only one item in the Array
             //or, if this is the last iteration.
-            var displayPath = isFirstOrLast ? paths[path] : paths[path] + '/';
+            var displayPath = isFirstOrLast ? paths[path_index] : paths[path_index] + '/';
 
-            dataPath.push(paths[path]);
+            dataPath.push(paths[path_index]);
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
