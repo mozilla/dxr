@@ -227,6 +227,7 @@ table.result_snippet tr {
     padding: .3rem .5rem;
     border: 0;
     width: 17%;
+    min-width: 125px;
     text-align: right;
 }
 .form_elem_container input {
