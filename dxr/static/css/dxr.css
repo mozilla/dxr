@@ -156,11 +156,9 @@ table.result_snippet tr {
     color: #333;
     border-bottom: 10px solid #333;
 }
-.query {
-    width: 95%;
-}
 .header_nav_link {
     position: absolute;
+    top: 0;
     right: 0;
     margin: 0 4% 0 0;
     padding: 0.4rem 0 0;
@@ -174,7 +172,7 @@ table.result_snippet tr {
     padding: .2rem 0 0;
 }
 .simple_form_group {
-    display: inline-block;
+    display: block;
     margin-right: .3rem;
     padding: .7rem .3rem 0 .7rem;
 }
@@ -241,6 +239,10 @@ table.result_snippet tr {
 .text_search input {
     width: 60%;
 }
+.text_search .query {
+    margin-top: 1.4rem;
+    width: 95%;
+}
 .text_search input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
@@ -295,18 +297,71 @@ table.result_snippet tr {
 }
 @media only screen and (min-width: 760px) and (max-width: 1000px) {
     input[type="submit"] {
-        margin-right: 13.5%;
+        margin-right: 16.3%;
     }
     .text_search label {
         width: 20%;
     }
+    .text_search input {
+        width: 64%;
+    }
     .form_group label {
-        width: 31%;
+        display: block;
+        padding: 0 0 .2rem 0;
+        width: auto;
+        text-align: left;
     }
     .form_group input {
-        width: 65%;
+        width: 90%;
     }
     .basic_search {
-        right: 18.5%;
+        right: 13%;
+    }
+}
+@media only screen and (min-width: 320px) and (max-width: 640px) {
+    input[type="submit"] {
+        margin-right: 14%;
+    }
+    label,
+    .form_elem_container label,
+    .text_search label {
+        display: block;
+        padding: 0 0 .2rem 0;
+        width: auto;
+        text-align: left;
+    }
+    .text_search input {
+        width: 90%;
+    }
+    .query_label {
+        /*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
+        position: absolute;
+        clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+        clip: rect(1px, 1px, 1px, 1px);
+        padding:0;
+        border:0;
+        height: 1px;
+        width: 1px;
+        overflow: hidden;
+    }
+    .text_search .query {
+        width: 100%;
+    }
+    .form_group input {
+        width: 98%;
+    }
+    .simple_form_group {
+        padding-left: 0;
+    }
+    .simple_form_group label {
+        display: inline-block;
+    }
+    .advanced_search_heading {
+        margin-bottom: 6%;
+    }
+    .basic_search {
+        top: 11%;
+        left: 13px;
+        text-align: left;
     }
 }
