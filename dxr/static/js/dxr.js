@@ -36,7 +36,7 @@ $(function() {
                 return;
         }
         // If we are already showing a user message in the target, do not append again.
-        if(!$('.message', target).length) {
+        if (!$('.message', target).length) {
             target.append(messageContainer);
         }
     }
@@ -49,12 +49,12 @@ $(function() {
         var userMessage = $('.message', target);
 
         // If the user message container is found, remove it completely.
-        if(userMessage.length) {
+        if (userMessage.length) {
             userMessage.remove();
         }
     }
 
-    if(!nunjucks.env) {
+    if (!nunjucks.env) {
         nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(views));
     }
 
@@ -76,18 +76,18 @@ $(function() {
             splitPathLength = paths.length,
             dataPath = [];
 
-        for(var path_index in paths) {
+        for (var pathIndex in paths) {
             var isFirstOrLast = false;
 
-            if((splitPathLength - 1) === path_index || splitPathLength === 1) {
+            if ((splitPathLength - 1) === pathIndex || splitPathLength === 1) {
                 isFirstOrLast = true;
             }
 
             // Do not add a forward slash if there is only one item in the Array
             //or, if this is the last iteration.
-            var displayPath = isFirstOrLast ? paths[path_index] : paths[path_index] + '/';
+            var displayPath = isFirstOrLast ? paths[pathIndex] : paths[pathIndex] + '/';
 
-            dataPath.push(paths[path_index]);
+            dataPath.push(paths[pathIndex]);
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
@@ -135,7 +135,7 @@ $(function() {
      */
     function stopQueryInputPoller() {
         // If a timer exists, clear it before continuing.
-        if(waitr) {
+        if (waitr) {
             clearTimeout(waitr);
         }
     }
@@ -151,13 +151,13 @@ $(function() {
         $.getJSON(buildAjaxURL(searchForm.serialize()), function(data) {
 
             // If no data is returned, inform the user.
-            if(!data.results.length) {
+            if (!data.results.length) {
                 contentContainer.empty();
                 setUserMessage('info', contentContainer.data('no-results'), contentContainer);
             } else {
                 var results = data.results;
 
-                for(var result in results) {
+                for (var result in results) {
                     results[result].pathLine = buildPathLine(results[result].path, data.tree);
                     results[result].iconPath = icons + results[result].icon;
                 }
@@ -179,7 +179,7 @@ $(function() {
         }).fail(function(jqxhr, textStatus, error) {
             var errorMessage = searchForm.data('error');
 
-            if(error) {
+            if (error) {
                 errorMessage += ' Error: ' + error;
             }
             stopQueryInputPoller();
@@ -193,7 +193,7 @@ $(function() {
     queryField.on('focus', function() {
         var query = $.trim(queryField.val());
 
-        if(query !== previousQuery && query.length > 2) {
+        if (query !== previousQuery && query.length > 2) {
             doQuery(query);
             // Because the search field might lose focus and regain
             // focus without the query text changing, we need to keep
