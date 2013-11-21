@@ -226,7 +226,7 @@ table.result_snippet tr {
     display: inline-block;
     padding: .3rem .5rem;
     border: 0;
-    width: 17%;
+    /*width: 17%; */
     min-width: 125px;
     text-align: right;
 }
@@ -319,7 +319,7 @@ table.result_snippet tr {
         right: 13%;
     }
 }
-@media only screen and (min-width: 320px) and (max-width: 640px) {
+@media only screen and (min-width: 320px) and (max-width: 740px) {
     input[type="submit"] {
         margin-right: 14%;
     }
