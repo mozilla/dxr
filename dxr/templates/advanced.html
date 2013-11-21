@@ -6,11 +6,11 @@
 
 {% block search_type_id %}id="adv_search"{% endblock %}
 
-{% block legend %}<legend class="advanced_search_heading">Advanced Search</legend>{% endblock %}
-
 {% block header_nav_link %}
   <p class="header_nav_link basic_search"><a href="{{ wwwroot }}/">&#187; Basic Search</a></p>
 {% endblock %}
+
+{% block legend %}<legend class="advanced_search_heading">Advanced Search</legend>{% endblock %}
 
 {% block text_search %}
 <div class="form_elem_container">
@@ -71,7 +71,7 @@
   </section>
 </fieldset>
 
-<fieldset id="additional_fields_container" class="additional_fields_container" aria-expanded="false">
+<fieldset id="additional_fields_container" class="additional_fields_container">
   <legend>Narrow Your Search Even Further</legend>
   <section class="form_group wide">
     <div class="form_elem_container">
