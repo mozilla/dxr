@@ -27,6 +27,43 @@ class ReferenceTests(SingleFileTestCase):
             'function:getHello', 'const char* <b>getHello</b>() {')
 
 
+class TemplateClassMemberReferenceTests(SingleFileTestCase):
+    """Tests for finding out where member functions of a template class are referenced or declared"""
+
+    source = r"""
+        template <typename T>
+        class Foo
+        {
+        public:
+            void bar();
+        };
+
+        template <typename T>
+        void Foo<T>::bar()
+        {
+        }
+
+        void baz()
+        {
+            Foo<int>().bar();
+        }
+        """ + MINIMAL_MAIN
+
+    def test_function_decl(self):
+        """Try searching for function declaration."""
+        self.found_line_eq('+function-decl:Foo::bar()', 'void <b>bar</b>();')
+
+    def test_function(self):
+        """Try searching for function definition."""
+        self.found_lines_eq('+function:Foo::bar()',
+                            [('void Foo&lt;T&gt;::<b>bar</b>()', 10)])
+
+    def test_function_ref(self):
+        """Try searching for function references."""
+        self.found_lines_eq('+function-ref:Foo::bar()',
+                            [('Foo&lt;int&gt;().<b>bar</b>();', 16)])
+
+
 class ConstTests(SingleFileTestCase):
     source = """
         class ConstOverload

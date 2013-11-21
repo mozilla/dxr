@@ -359,15 +359,15 @@ def process_decldef(args, conn):
         return None
 
     # Store declaration map basics on memory
-    name, defloc, declloc = args['name'], args['defloc'], args['declloc']
+    qualname, defloc, declloc = args['qualname'], args['defloc'], args['declloc']
     defid, defline, defcol = splitLoc(conn, args['defloc'])
     declid, declline, declcol = splitLoc (conn, args['declloc'])
     if defid is None or declid is None:
         return None
 
     # FIXME: should kind be included in this mapping?
-    decl_master[(name, declid, declline, declcol)] = (defid, defline, defcol)
-    decl_master[(name, defid, defline, defcol)] = (defid, defline, defcol)
+    decl_master[(qualname, declid, declline, declcol)] = (defid, defline, defcol)
+    decl_master[(qualname, defid, defline, defcol)] = (defid, defline, defcol)
 
     if not fixupEntryPath(args, 'declloc', conn):
         return None
