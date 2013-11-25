@@ -164,6 +164,13 @@ table.result_snippet tr {
     padding: 0.4rem 0 0;
     font-size: .8rem;
     text-align: right;
+    list-style: none;
+}
+.header_nav_link li {
+    display: inline;
+}
+.header_nav_link a {
+    margin-left: 1rem;
 }
 .basic_search {
     position: absolute;
