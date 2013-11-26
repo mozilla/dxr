@@ -918,7 +918,7 @@ def lines_and_annotations(lines, htmlifiers):
         Return an iterable of annotations iterables, one for each line.
 
         """
-        next_unannotated_line = 1
+        next_unannotated_line = 0
         for line, annotations in groupby(annotations, itemgetter(0)):
             for next_unannotated_line in xrange(next_unannotated_line,
                                                 line - 1):

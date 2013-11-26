@@ -270,6 +270,19 @@ class AnnotationsTests(TestCase):
              ('five', []),
              ('six', [{'g': 'h'}])])
 
+    def test_jump_ahead(self):
+        """Make sure annotations show up on the correct line even when there is
+        no annotation for the first line."""
+        h1 = Htmlifier(annotations=[(3, {'e': 'f'})])
+
+        results = self._expand_group(lines_and_annotations(
+                    ['one', 'two', 'three', 'four'], [h1]))
+        eq_(results,
+            [('one', []),
+             ('two', []),
+             ('three', [{'e': 'f'}]),
+             ('four', [])])
+
     def test_none(self):
         """If there are no annotations, or if the annotations run short of the
         lines, don't stop emitting lines."""
