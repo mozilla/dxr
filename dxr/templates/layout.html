@@ -14,37 +14,14 @@
     <div id="search-box" class="{% block search_box_class %}with-results{% endblock %} search-box">
       <form method="get" action="{{ wwwroot }}/{{ tree }}/search" {% block search_type_id %}id="basic_search"{% endblock %} data-error="An error occured during the processing of your query. Please reload the page and try again.">
         <fieldset class="text_search">
-
-          {% block header_nav_link %}
-            <ul class="header_nav_link">
-              <li><a href="{{ wwwroot }}/advanced">&#187; Advanced Search</a></li>
-            </ul>
-          {% endblock %}
-
           {% block legend %}{% endblock %}
 
           {% block text_search %}
-          <label for="query" class="query_label">Find</label>
-          <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Enter query to start search..." />
-          {% endblock %}
-
-          <section class="simple_form_group">
-            {% set showing_tree_menu = trees|length > 1 %} in
-              {% if showing_tree_menu %}
-                <select name="tree" id="tree">
-                  {% for t in trees %}
-                    <option{% if ((t == tree) if tree else loop.first)  %} selected="selected"{% endif %}>{{ t }}</option>
-                  {% endfor %}
-                </select>
-              {% else %}
-                <select name="tree" id="tree" disabled="disabled">
-                  <option value="{{ tree }}">{{ tree }}</option>
-                </select>
-              {% endif %}
-
+            <label for="query" class="query_label visually-hidden">Find</label>
+            <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Enter query to start search..." />
             <input type="checkbox" name="case_sensitivity" id="case_sensitivity" class="checkbox_case" value="true" />
             <label class="checkbox_label" for="case_sensitivity">Case-sensitive</label>
-          </section>
+          {% endblock %}
         </fieldset>
 
         {% block advanced_search %}

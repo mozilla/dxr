@@ -27,7 +27,7 @@ table {
 }
 
 body {
-    background: #fff url(/static/images/mozilla-dinosaur-head-small.png) 50% -150% no-repeat;
+    background-color: #fff;
     color: #333;
     margin: 0;
     font: 16px/1.5 Arial, Helvetica, sans-serif;
@@ -53,7 +53,7 @@ label {
 fieldset {
     position: relative;
     margin: 0;
-    padding: .5rem .8rem;
+    padding: 0;
     border: 0;
 }
 input,
@@ -154,6 +154,7 @@ table.result_snippet tr {
 .search-box {
     background-color: #f6f4ec;
     color: #333;
+    padding: .8rem;
     border-bottom: 10px solid #333;
 }
 .header_nav_link {
@@ -248,8 +249,7 @@ table.result_snippet tr {
     width: 60%;
 }
 .text_search .query {
-    margin-top: 1.4rem;
-    width: 95%;
+    width: 90%;
 }
 .text_search input[type="checkbox"] {
     width: 1rem;
@@ -267,8 +267,18 @@ table.result_snippet tr {
     margin: 1.2em 0 .5em 0;
     padding-left: 25px;
 }
-.tree-tip {
-    margin: 1.2em 0 .5em 0;
+.path-separator {
+    padding-right: .3rem;
+}
+.file-name {
+    display: inline-block;
+    margin: .5em 0 .5em 0;
+    padding: 0;
+    font-size: .9rem;
+    list-style: none;
+}
+.file-name li {
+    display: inline;
 }
 .footer {
     font-size: 12px;
@@ -279,6 +289,9 @@ table.result_snippet tr {
 .folder-icon {
     background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
     padding: .5em .5em .5em 1.7em;
+}
+.folder-content {
+    clear: both;
 }
 .folder-content .icon {
     background-color: transparent;
@@ -291,6 +304,10 @@ table.result_snippet tr {
 }
 #fetch-results {
     display: none;
+}
+.tree-selector {
+    position: relative;
+    float: right;
 }
 /*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
 .visually-hidden {

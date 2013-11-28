@@ -28,14 +28,32 @@
 
 {% block content %}
 <div id="content" class="content" data-no-results="No results returned for current query.">
-  <div id="tree-tip" class="tree-tip shown-with-results">
-    <strong>File Path:</strong>&nbsp;
-    <div class="file-name">
-      {%- for path, name in paths_and_names -%}
-      <span class="slash">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
-      {%- endfor -%}
-    </div>
-  </div>
+  <ul class="file-name">
+    {%- for path, name in paths_and_names -%}
+      {% if not loop.first or loop.last %}
+        <li><span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a></li>
+      {% else %}
+        <li><a href="{{ wwwroot }}{{ path }}">{{ name }}</a></li>
+      {% endif %}
+    {%- endfor -%}
+  </ul>
+
+  {% set showing_tree_menu = trees|length > 1 %}
+  {% if showing_tree_menu %}
+    <section id="tree-selector" class="tree-selector">
+      <select name="tree" id="tree">
+        {% for t in trees %}
+          <option{% if ((t == tree) if tree else loop.first)  %} selected="selected"{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </section>
+  {% else %}
+    <section id="tree-selector" class="tree-selector">
+      <select name="tree" id="tree" disabled="disabled">
+        <option value="{{ tree }}">{{ tree }}</option>
+      </select>
+    </section>
+  {% endif %}
 
   <div id="annotations">
     {% for line, annotations in lines %}
