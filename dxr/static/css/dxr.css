@@ -249,7 +249,7 @@ table.result_snippet tr {
     width: 60%;
 }
 .text_search .query {
-    width: 90%;
+    width: 88%;
 }
 .text_search input[type="checkbox"] {
     width: 1rem;
@@ -320,6 +320,11 @@ table.result_snippet tr {
     width: 1px;
     overflow: hidden;
 }
+@media only screen and (min-width: 1000px) and (max-width: 1280px) {
+    .text_search .query {
+        width: 80%;
+    }
+}
 @media only screen and (min-width: 760px) and (max-width: 1000px) {
     input[type="submit"] {
         margin-right: 16.3%;
@@ -330,8 +335,10 @@ table.result_snippet tr {
     .text_search input {
         width: 64%;
     }
+    .text_search .query {
+        width: 80%;
+    }
     .form_group label {
-        display: block;
         padding: 0 0 .2rem 0;
         width: auto;
         text-align: left;
@@ -350,7 +357,6 @@ table.result_snippet tr {
     label,
     .form_elem_container label,
     .text_search label {
-        display: block;
         padding: 0 0 .2rem 0;
         width: auto;
         text-align: left;
