@@ -163,7 +163,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         conn.commit()
 
         # Build html
-        run_html_workers(tree, conn)
+        run_html_workers(tree, conn, config)
 
         # Close connection
         conn.commit()
@@ -435,13 +435,19 @@ def _sliced_range_bounds(a, b, slice_size):
         this_min = this_max + 1
 
 
-def run_html_workers(tree, conn):
+def run_html_workers(tree, conn, config):
     """Farm out the building of HTML to a pool of processes."""
     print "Building HTML for the '%s' tree." % tree.name
 
     max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
 
+    if config.disable_workers:
+        print " - Worker pool disabled (due to 'disable_workers')"
+        _build_html_for_file_ids(tree, 0, max_file_id)
+        return
+
     print ' - Initializing worker pool'
+
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
         print ' - Enqueuing jobs'
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
