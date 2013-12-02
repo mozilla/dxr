@@ -40,7 +40,7 @@ _Configuration keys for the `DXR` section of the configuration file._
                         You might want to overwrite this to get the same date
                         on all files! (defaults to time of execution)
  - 'skip_stages'        Build/indexing stages to skip (default ''). Can be zero
-                        or more of 'index', 'build', 'html'
+                        or more of 'index', 'html' (space separated)
  - 'disable_workers'    If non-empty, do not use a worker pool for htmlification
                         (default '')
 

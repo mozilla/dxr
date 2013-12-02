@@ -29,7 +29,8 @@ class Config(object):
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  ""
+            'disable_workers':  "",
+            'skip_stages': ""
         })
         parser.read(configfile)
 
@@ -47,6 +48,7 @@ class Config(object):
         self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
+        self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
@@ -80,6 +82,9 @@ class Config(object):
             self.disabled_plugins = os.listdir(self.plugin_folder)
         else:
             self.disabled_plugins = self.disabled_plugins.split()
+
+        # Convert skipped stages to a list
+        self.skip_stages = self.skip_stages.split()
 
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
