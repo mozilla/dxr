@@ -17,6 +17,27 @@ class MemberVariableTests(SingleFileTestCase):
              ('int <b>member_variable</b>;', 4)])
 
 
+class MemberVariableCtorTests(SingleFileTestCase):
+    source = """
+        struct Bar {};
+        struct Foo {
+            Foo() : baz(0) {}
+            Bar bar;
+            int baz;
+        };
+        """ + MINIMAL_MAIN
+
+    def test_implicit_init(self):
+        """Test searching for references to a member of a class that is
+        implicitly initialized"""
+        self.found_nothing('+var-ref:Foo::bar')
+
+    def test_explicit_init(self):
+        """Test searching for references to a member of a class that is
+        explicitly initialized"""
+        self.found_line_eq('+var-ref:Foo::baz', 'Foo() : <b>baz</b>(0) {}')
+
+
 class MemberFunctionTests(SingleFileTestCase):
     source = """
         class MemberFunction {

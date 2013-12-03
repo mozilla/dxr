@@ -462,9 +462,9 @@ public:
     for (CXXConstructorDecl::init_const_iterator it = d->init_begin(), e = d->init_end(); it != e; ++it)
     {
       const CXXCtorInitializer *ci = *it;
-      if (!ci->getMember())
+      if (!ci->getMember() || !ci->isWritten())
         continue;
-      printReference("variable", ci->getMember(), ci->getSourceLocation(), ci->getSourceLocation());
+      printReference("variable", ci->getMember(), ci->getMemberLocation(), ci->getMemberLocation());
     }
 
     return true;
