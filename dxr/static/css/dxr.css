@@ -280,6 +280,17 @@ table.result_snippet tr {
 .file-name li {
     display: inline;
 }
+.file-name a:link,
+.file-name a:visited {
+    color: #0095dd;
+}
+.file-name a:hover {
+    color: #00539f;
+}
+.file-name a:focus {
+    color: #00539f;
+    text-decoration: none;
+}
 .footer {
     font-size: 12px;
     text-align: right;
