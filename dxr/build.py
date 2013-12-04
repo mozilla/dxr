@@ -170,8 +170,14 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         if 'html' in config.skip_stages:
             print " - Skipping htmlifying (due to 'html' in 'skip_stages')"
         else:
-            # Build html
-            run_html_workers(tree, conn, config)
+            print "Building HTML for the '%s' tree." % tree.name
+
+            max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
+            if config.disable_workers:
+                print " - Worker pool disabled (due to 'disable_workers')"
+                _build_html_for_file_ids(tree, 0, max_file_id)
+            else:
+                run_html_workers(tree, config, max_file_id)
 
         # Close connection
         conn.commit()
@@ -443,16 +449,8 @@ def _sliced_range_bounds(a, b, slice_size):
         this_min = this_max + 1
 
 
-def run_html_workers(tree, conn, config):
+def run_html_workers(tree, config, max_file_id):
     """Farm out the building of HTML to a pool of processes."""
-    print "Building HTML for the '%s' tree." % tree.name
-
-    max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
-
-    if config.disable_workers:
-        print " - Worker pool disabled (due to 'disable_workers')"
-        _build_html_for_file_ids(tree, 0, max_file_id)
-        return
 
     print ' - Initializing worker pool'
 
