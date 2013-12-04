@@ -4,10 +4,14 @@
 $(function() {
     'use strict';
 
-    var constants = $('#data'),
-        wwwroot = constants.data('root'),
-        icons = wwwroot + '/static/icons/',
-        views = wwwroot + '/static/views';
+    var constants = $('#data');
+
+    var dxr = {};
+
+    dxr.wwwroot = constants.data('root');
+    dxr.icons = dxr.wwwroot + '/static/icons/';
+    dxr.views = dxr.wwwroot + '/static/views';
+    dxr.tree = constants.data('tree');
 
     /**
      * Presents the user with a notification message
@@ -55,7 +59,7 @@ $(function() {
     }
 
     if (!nunjucks.env) {
-        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(views));
+        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
     }
 
     var env = nunjucks.env,
@@ -159,7 +163,7 @@ $(function() {
 
                 for (var result in results) {
                     results[result].pathLine = buildPathLine(results[result].path, data.tree);
-                    results[result].iconPath = icons + results[result].icon;
+                    results[result].iconPath = dxr.icons + results[result].icon;
                 }
 
                 contentContainer.empty().append(tmpl.render(data));
@@ -219,4 +223,7 @@ $(function() {
         // Ensure JSON is not returned.
         $('#format').val('html');
     });
+
+    // Expose the DXR Object to the global object.
+    window.dxr = dxr;
 });

@@ -79,14 +79,18 @@
 
     {% set eof = True if state_eof else False %}
 
-    <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
-    <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search"></span>
-    <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-eof="{{ eof }}"></span>
+    {% block embedded_data %}
+      <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
+      <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search" data-tree="{{ tree }}"></span>
+      <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-eof="{{ eof }}"></span>
+    {% endblock %}
 
-    <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
-    <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
-    <script src="{{ wwwroot }}/static/js/templates.js"></script>
+    {% block site_js %}
+      <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
+      <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
+      <script src="{{ wwwroot }}/static/js/templates.js"></script>
 
-    <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
+      <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
+    {% endblock %}
   </body>
 </html>
