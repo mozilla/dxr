@@ -17,6 +17,34 @@ class MemberVariableTests(SingleFileTestCase):
              ('int <b>member_variable</b>;', 4)])
 
 
+class MemberVariableCtorTests(SingleFileTestCase):
+    """Members that do not have an explicit initializer on the constructor
+    should not show the constructor as having a reference to that member.
+    There's no convenient place in the source to use for the extents for such
+    a reference.  Previously we were defaulting to using the location of the
+    name of the constructor which would conflict with using that for the
+    link for the constructor as well as any other implicitly initialized
+    members."""
+    source = """
+        struct Bar {};
+        struct Foo {
+            Foo() : baz(0) {}
+            Bar bar;
+            int baz;
+        };
+        """ + MINIMAL_MAIN
+
+    def test_implicit_init(self):
+        """Test searching for references to a member of a class that is
+        implicitly initialized"""
+        self.found_nothing('+var-ref:Foo::bar')
+
+    def test_explicit_init(self):
+        """Test searching for references to a member of a class that is
+        explicitly initialized"""
+        self.found_line_eq('+var-ref:Foo::baz', 'Foo() : <b>baz</b>(0) {}')
+
+
 class MemberFunctionTests(SingleFileTestCase):
     source = """
         class MemberFunction {
