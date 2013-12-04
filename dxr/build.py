@@ -79,6 +79,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         overrides['nb_jobs'] = str(nb_jobs)
     config = Config(config_path, **overrides)
 
+    skip_indexing = 'index' in config.skip_stages
+
     # Find trees to make, fail if requested tree isn't available
     if tree:
         trees = [t for t in config.trees if t.name == tree]
@@ -92,8 +94,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     # Create config.target_folder (if not exists)
     print "Generating target folder"
     ensure_folder(config.target_folder, False)
-    ensure_folder(config.temp_folder, True)
-    ensure_folder(config.log_folder, True)
+    ensure_folder(config.temp_folder, not skip_indexing)
+    ensure_folder(config.log_folder, not skip_indexing)
 
     jinja_env = load_template_env(config.temp_folder, config.template_folder)
 
@@ -131,39 +133,51 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         start_time = datetime.now()
 
         # Create folders (delete if exists)
-        ensure_folder(tree.target_folder, True) # <config.target_folder>/<tree.name>
-        ensure_folder(tree.object_folder,       # Object folder (user defined!)
-            tree.source_folder != tree.object_folder) # Only clean if not the srcdir
-        ensure_folder(tree.temp_folder,   True) # <config.temp_folder>/<tree.name>
-                                                # (or user defined)
-        ensure_folder(tree.log_folder,    True) # <config.log_folder>/<tree.name>
-                                                # (or user defined)
+        ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
+        ensure_folder(tree.object_folder,                    # Object folder (user defined!)
+            tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
+        ensure_folder(tree.temp_folder,   not skip_indexing) # <config.temp_folder>/<tree.name>
+                                                             # (or user defined)
+        ensure_folder(tree.log_folder,    not skip_indexing) # <config.log_folder>/<tree.name>
+                                                             # (or user defined)
         # Temporary folders for plugins
-        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), True)
+        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
         for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), True)
+            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
 
         # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
         conn = connect_database(tree)
 
-        # Create database tables
-        create_tables(tree, conn)
+        if skip_indexing:
+            print " - Skipping indexing (due to 'index' in 'skip_stages')"
+        else:
+            # Create database tables
+            create_tables(tree, conn)
 
-        # Index all source files (for full text search)
-        # Also build all folder listing while we're at it
-        index_files(tree, conn)
+            # Index all source files (for full text search)
+            # Also build all folder listing while we're at it
+            index_files(tree, conn)
 
-        # Build tree
-        build_tree(tree, conn, verbose)
+            # Build tree
+            build_tree(tree, conn, verbose)
 
-        # Optimize and run integrity check on database
-        finalize_database(conn)
+            # Optimize and run integrity check on database
+            finalize_database(conn)
 
-        # Commit database
-        conn.commit()
+            # Commit database
+            conn.commit()
 
-        # Build html
-        run_html_workers(tree, conn)
+        if 'html' in config.skip_stages:
+            print " - Skipping htmlifying (due to 'html' in 'skip_stages')"
+        else:
+            print "Building HTML for the '%s' tree." % tree.name
+
+            max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
+            if config.disable_workers:
+                print " - Worker pool disabled (due to 'disable_workers')"
+                _build_html_for_file_ids(tree, 0, max_file_id)
+            else:
+                run_html_workers(tree, config, max_file_id)
 
         # Close connection
         conn.commit()
@@ -435,13 +449,11 @@ def _sliced_range_bounds(a, b, slice_size):
         this_min = this_max + 1
 
 
-def run_html_workers(tree, conn):
+def run_html_workers(tree, config, max_file_id):
     """Farm out the building of HTML to a pool of processes."""
-    print "Building HTML for the '%s' tree." % tree.name
-
-    max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
 
     print ' - Initializing worker pool'
+
     with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
         print ' - Enqueuing jobs'
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
