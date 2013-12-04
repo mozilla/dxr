@@ -18,6 +18,13 @@ class MemberVariableTests(SingleFileTestCase):
 
 
 class MemberVariableCtorTests(SingleFileTestCase):
+    """Members that do not have an explicit initializer on the constructor
+    should not show the constructor as having a reference to that member.
+    There's no convenient place in the source to use for the extents for such
+    a reference.  Previously we were defaulting to using the location of the
+    name of the constructor which would conflict with using that for the
+    link for the constructor as well as any other implicitly initialized
+    members."""
     source = """
         struct Bar {};
         struct Foo {
