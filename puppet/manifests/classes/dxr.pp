@@ -8,7 +8,8 @@ class dxr ($project_path){
     }
 
     exec { "install-builddeps":
-        command => "/usr/bin/sudo /usr/bin/apt-get -y build-dep firefox";
+        command => "/usr/bin/sudo /usr/bin/apt-get -y build-dep firefox",
+        timeout => 600,
     }
 
     exec { "install_llvm":
