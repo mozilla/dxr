@@ -268,17 +268,14 @@ table.result_snippet tr {
     padding-left: 25px;
 }
 .path-separator {
-    padding-right: .3rem;
+    margin: 0 .4rem;
 }
 .file-name {
     display: inline-block;
-    margin: .5em 0 .5em 0;
+    margin: 0;
     padding: 0;
     font-size: .9rem;
-    list-style: none;
-}
-.file-name li {
-    display: inline;
+    text-align: left;
 }
 .file-name a:link,
 .file-name a:visited {
