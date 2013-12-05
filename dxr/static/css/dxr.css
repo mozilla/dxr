@@ -137,7 +137,6 @@ table.result_snippet tr {
     background-color: #e0e0e0;
 }
 .result_snippet a {
-    display: inline-block;
     width: 100%;
 }
 .checkbox_case {
@@ -152,6 +151,9 @@ table.result_snippet tr {
 }
 .file pre {
     white-space: pre-wrap;
+}
+mark {
+    padding: .5rem;
 }
 /* Context Menu */
 .context-menu {
@@ -180,22 +182,6 @@ table.result_snippet tr {
 .context-menu li:last-child a:hover {
     border-bottom-right-radius: 6px;
     border-bottom-left-radius: 6px;
-}
-a.close-menu {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    display: inline-block;
-    background-color: #e0e0e0;
-    border: 1px solid #333;
-    width: 21px;
-    height: 20px;
-    line-height: .2;
-    border-radius: 10px;
-    box-shadow: 1px 1px 2px #999;
-}
-.context-menu li:first-child .close-menu:hover {
-    border-radius: 10px;
 }
 .top {
     margin-right: .5em;

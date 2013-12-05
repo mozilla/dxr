@@ -2,19 +2,26 @@ $(function() {
     // Get the file content container
     var fileContainer = $('#file');
 
-    // Listen and handle clicks to close the context menu. There will only
-    // ever be one, so this is safe.
-    fileContainer.on('click', '#close-ctx-menu', function(event) {
-        event.preventDefault();
-        $(this).parents('.context-menu').remove();
-        // Move focus back to the code row
-        $(this).parent('code').focus();
-    });
+    /**
+     * Highlight, or remove highlighting from, all symbols with the same class
+     * as the current node.
+     *
+     * @param Object [optional] currentNode The current symbol node.
+     */
+    function toggleSymbolHighlights(currentNode) {
+        // First remove all highlighting
+        fileContainer.find('mark a').unwrap();
+
+        // Only add highlights if the currentNode is not undefined or null and,
+        // is an anchor link as synbols will always be links.
+        if (currentNode && currentNode[0].tagName === 'A') {
+            fileContainer.find('.' + currentNode.attr('class')).wrap('<mark />');
+        }
+    }
 
     // Listen and handle click events, but only if on
     // a code element.
     fileContainer.on('click', 'code', function(event) {
-        event.preventDefault();
         var selection = window.getSelection();
 
         // First remove any context menu that might already exist
@@ -64,25 +71,42 @@ $(function() {
             // Build the Object needed for the context-menu template.
             var contextMenu = {};
             contextMenu.searchLink = {
-                text: 'Search for documents with the substring <strong>' + word + '</strong>',
+                text: 'Search for the substring <strong>' + word + '</strong>',
                 href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word)
             }
 
-            var currentNodeTagName = $(node).parent()[0].tagName;
+            var currentNode = $(node).parent();
+            var currentNodeTagName = currentNode[0].tagName;
             // Only check for the menu data attribute if the current nodes parent is and anchor link.
             if (currentNodeTagName === 'A') {
-                contextMenu.menuItems = $(node).parent().data('menu');
+                toggleSymbolHighlights(currentNode);
+                contextMenu.menuItems = currentNode.data('menu');
             }
 
             fileContainer.append(tmpl.render(contextMenu));
+            var currentContextMenu =  $('#context-menu');
 
-            // Immediatly after appending the context menu, position it.
-            $('#context-menu').css({
+            // Immediately after appending the context menu, position it.
+            currentContextMenu.css({
                 top: top,
                 left: left
             });
+
             // Move focus to the context menu
-            $('#context-menu').focus();
+            currentContextMenu[0].focus();
+
+            currentContextMenu.on('mousedown', function(event) {
+                // Prevent clicks on the menu to propagate
+                // to the window, so that the menu is not
+                // removed and links will be followed.
+                event.stopPropagation();
+            })
+
+            // Remove the menu when a user clicks outside it.
+            window.addEventListener('mousedown', function() {
+                toggleSymbolHighlights();
+                currentContextMenu.remove();
+            }, false);
         }
     });
 });
