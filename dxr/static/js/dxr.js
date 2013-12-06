@@ -239,4 +239,23 @@ $(function() {
         // Ensure JSON is not returned.
         $('#format').val('html');
     });
+
+    /**
+     * Converts string to new Date and returns a formatted date in the
+     * format d-m-y h:m
+     * @param String dateString A date in string form.
+     *
+     */
+    function formatDate(dateString) {
+        var fullDateTime = new Date(dateString);
+        var date = fullDateTime.getDate() + '-' + (fullDateTime.getMonth() + 1) + '-' + fullDateTime.getFullYear();
+        var time = fullDateTime.getHours() + ':' + fullDateTime.getMinutes();
+
+        return date + ' ' + time;
+    }
+
+    var prettyDate = $('.pretty-date');
+    prettyDate.each(function() {
+        $(this).text(formatDate($(this).data('datetime')));
+    });
 });
