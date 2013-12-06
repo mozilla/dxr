@@ -239,4 +239,34 @@ $(function() {
         // Ensure JSON is not returned.
         $('#format').val('html');
     });
+
+    /**
+     * Adds aleading 0 to numbers less than 10 and greater that 0
+     *
+     * @param int number The number to test against
+     *
+     * return Either the original number or the number prefixed with 0
+     */
+    function addLeadingZero(number) {
+        return (number < 9) || (number > 0) ? "0" + number : number;
+    }
+
+    /**
+     * Converts string to new Date and returns a formatted date in the
+     * format YYYY-MM-DD h:m
+     * @param String dateString A date in string form.
+     *
+     */
+    function formatDate(dateString) {
+        var fullDateTime = new Date(dateString);
+        var date = fullDateTime.getFullYear() + '-' + (fullDateTime.getMonth() + 1) + '-' + addLeadingZero(fullDateTime.getDate());
+        var time = fullDateTime.getHours() + ':' + addLeadingZero(fullDateTime.getMinutes());
+
+        return date + ' ' + time;
+    }
+
+    var prettyDate = $('.pretty-date');
+    prettyDate.each(function() {
+        $(this).text(formatDate($(this).data('datetime')));
+    });
 });

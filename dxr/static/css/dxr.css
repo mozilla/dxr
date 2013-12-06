@@ -289,9 +289,9 @@ table.result_snippet tr {
     text-decoration: none;
 }
 .footer {
-    font-size: 12px;
-    text-align: right;
-    margin: -1em 1em .5em 1em;
+    color: #999;
+    font-size: .7rem;
+    margin: 0 0 0 1.2rem;
 }
 /* icons */
 .folder-icon {
