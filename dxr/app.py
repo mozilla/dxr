@@ -74,7 +74,11 @@ def search(tree):
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')
-            q = Query(conn, qtext, should_explain='explain' in querystring)
+            is_case_sensitive = querystring.get('case', '1') == '1'
+            q = Query(conn,
+                      qtext,
+                      should_explain='explain' in querystring,
+                      is_case_sensitive=is_case_sensitive)
 
             # Try for a direct result:
             if querystring.get('redirect') == 'true':
@@ -83,8 +87,12 @@ def search(tree):
                     path, line = result
                     # TODO: Does this escape qtext properly?
                     return redirect(
-                        '%s/%s/source/%s?from=%s#%i' %
-                        (config['WWW_ROOT'], tree, path, qtext, line))
+                        '%s/%s/source/%s?from=%s%s#%i' %
+                        (config['WWW_ROOT'],
+                         tree,
+                         path,
+                         qtext,
+                         '&case=1' if is_case_sensitive else '', line))
 
             # Return multiple results:
             template = 'search.html'
@@ -112,6 +120,7 @@ def search(tree):
                 arguments['offset'] = offset
                 arguments['limit'] = limit
                 arguments['time'] = time() - start
+                arguments['case'] = '1' if is_case_sensitive else '0'
         else:
             error = 'Failed to establish database connection.'
     else:

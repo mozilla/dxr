@@ -60,10 +60,12 @@ class TestCase(unittest.TestCase):
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
 
-    def found_files_eq(self, query, filenames):
+    def found_files_eq(self, query, filenames, is_case_sensitive=True):
         """Assert that executing the search ``query`` finds the paths
         ``filenames``."""
-        paths = set(result['path'] for result in self.search_results(query))
+        paths = set(result['path'] for result in
+                    self.search_results(query,
+                                        is_case_sensitive=is_case_sensitive))
         eq_(paths, set(filenames))
 
     def found_line_eq(self, query, content, line):
@@ -94,7 +96,7 @@ class TestCase(unittest.TestCase):
         results = self.search_results(query)
         eq_(results, [])
 
-    def search_results(self, query):
+    def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
 
         Example::
@@ -114,7 +116,8 @@ class TestCase(unittest.TestCase):
 
         """
         response = self.client().get(
-            '/code/search?format=json&q=%s&redirect=false' % quote(query))
+            '/code/search?format=json&q=%s&redirect=false&case=%s' %
+            (quote(query), '1' if is_case_sensitive else '0'))
         return json.loads(response.data)['results']
 
 
