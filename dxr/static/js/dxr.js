@@ -241,15 +241,26 @@ $(function() {
     });
 
     /**
+     * Adds aleading 0 to numbers less than 10 and greater that 0
+     *
+     * @param int number The number to test against
+     *
+     * return Either the original number or the number prefixed with 0
+     */
+    function addLeadingZero(number) {
+        return (number < 9) || (number > 0) ? "0" + number : number;
+    }
+
+    /**
      * Converts string to new Date and returns a formatted date in the
-     * format d-m-y h:m
+     * format YYYY-MM-DD h:m
      * @param String dateString A date in string form.
      *
      */
     function formatDate(dateString) {
         var fullDateTime = new Date(dateString);
-        var date = fullDateTime.getDate() + '-' + (fullDateTime.getMonth() + 1) + '-' + fullDateTime.getFullYear();
-        var time = fullDateTime.getHours() + ':' + fullDateTime.getMinutes();
+        var date = fullDateTime.getFullYear() + '-' + (fullDateTime.getMonth() + 1) + '-' + addLeadingZero(fullDateTime.getDate());
+        var time = fullDateTime.getHours() + ':' + addLeadingZero(fullDateTime.getMinutes());
 
         return date + ' ' + time;
     }
