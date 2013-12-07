@@ -7,6 +7,7 @@ from os.path import isdir
 from sys import exit, stderr
 
 from dxr.build import build_instance
+from dxr.config import Config, config_defaults
 
 
 def main():
@@ -31,6 +32,14 @@ def main():
                       action='store_true', default=False,
                       help='Display the build logs during the build instead of'
                            ' only on error.')
+
+    # Add options for overriding the config file
+    for opt in config_defaults.keys():
+        if opt != 'nb_jobs':
+            parser.add_option('', '--' + opt.replace('_', '-'), dest=opt,
+                              help='Override the value of ' + opt + ' given in'
+                              ' the config file')
+
     options, args = parser.parse_args()
     if len(args) > 1:
         parser.print_usage()
@@ -46,8 +55,21 @@ def main():
         # Assume dxr.config in the cwd:
         options.config_file = 'dxr.config'
 
-    return build_instance(options.config_file,
-                          nb_jobs=options.jobs,
+    # Load configuration file
+    # (this will abort on inconsistencies)
+    overrides = {}
+    if options.jobs:
+        # TODO: Remove this brain-dead cast when we get the types right in the
+        # Config object:
+        overrides['nb_jobs'] = str(options.jobs)
+
+    for opt in config_defaults.keys():
+        if opt != 'nb_jobs' and getattr(options, opt):
+            overrides[opt] = getattr(options, opt)
+
+    config = Config(options.config_file, **overrides)
+
+    return build_instance(config,
                           tree=options.tree,
                           verbose=options.verbose)
 

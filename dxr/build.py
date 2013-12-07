@@ -60,24 +60,14 @@ def linked_pathname(path, tree_name):
     return components
 
 
-def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
+def build_instance(config, tree=None, verbose=False):
     """Build a DXR instance.
 
-    :arg config_path: The path to a config file
-    :arg nb_jobs: The number of parallel jobs to pass into ``make``. Defaults
-        to whatever the config file says.
+    :arg config: A Config object to configure the build.
     :arg tree: A single tree to build. Defaults to all the trees in the config
         file.
 
     """
-    # Load configuration file
-    # (this will abort on inconsistencies)
-    overrides = {}
-    if nb_jobs:
-        # TODO: Remove this brain-dead cast when we get the types right in the
-        # Config object:
-        overrides['nb_jobs'] = str(nb_jobs)
-    config = Config(config_path, **overrides)
 
     skip_indexing = 'index' in config.skip_stages
 

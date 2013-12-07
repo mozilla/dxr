@@ -13,42 +13,34 @@ import dxr
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
 
+config_defaults = {
+    'dxrroot':          os.path.dirname(dxr.__file__),
+    'plugin_folder':    "%(dxrroot)s/plugins",
+    'nb_jobs':          "1",
+    'temp_folder':      "/tmp/dxr-temp",
+    'target_folder':    "",
+    'log_folder':       "%(temp_folder)s/logs",
+    'template_folder':  "%(dxrroot)s/templates",
+    'wwwroot':          "/",
+    'enabled_plugins':  "*",
+    'disabled_plugins': " ",
+    'directory_index':  ".dxr-directory-index.html",
+    'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
+    'disable_workers':  "",
+    'skip_stages': ""
+}
+
 class Config(object):
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
-        parser = ConfigParser.ConfigParser({
-            'dxrroot':          os.path.dirname(dxr.__file__),
-            'plugin_folder':    "%(dxrroot)s/plugins",
-            'nb_jobs':          "1",
-            'temp_folder':      "/tmp/dxr-temp",
-            'log_folder':       "%(temp_folder)s/logs",
-            'template':         "%(dxrroot)s/templates",
-            'wwwroot':          "/",
-            'enabled_plugins':  "*",
-            'disabled_plugins': " ",
-            'directory_index':  ".dxr-directory-index.html",
-            'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  "",
-            'skip_stages': ""
-        })
+        parser = ConfigParser.ConfigParser(config_defaults)
         parser.read(configfile)
 
         # Set config values
-        self.dxrroot          = parser.get('DXR', 'dxrroot',          False, override)
-        self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
-        self.nb_jobs          = parser.get('DXR', 'nb_jobs',          False, override)
-        self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
-        self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
-        self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.template_folder  = parser.get('DXR', 'template',         False, override)
-        self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
-        self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
-        self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
-        self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
-        self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
-        self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
-        self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
+        for opt in config_defaults.keys():
+            setattr(self, opt, parser.get('DXR', opt, False, override))
+
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
