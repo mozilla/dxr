@@ -41,6 +41,9 @@ _pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
 # token, in which we'll wrap it anyway :)
 _single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
 
+# Pattern for matching a file and line number filename:n
+_line_number = re.compile("^.*:[0-9]+$")
+
 class Query(object):
     """Query object, constructor will parse any search query"""
 
@@ -136,7 +139,7 @@ class Query(object):
             SELECT files.path, files.icon, trg_index.text, files.id,
             extents(trg_index.contents)
                 FROM trg_index, files
-              WHERE %s LIMIT ? OFFSET ?
+              WHERE %s ORDER BY files.path LIMIT ? OFFSET ?
         """
         conditions = " files.id = trg_index.id "
         arguments = []
@@ -221,10 +224,26 @@ class Query(object):
             return None
         cur = self.conn.cursor()
 
+        line_number = -1
+        if _line_number.match(term):
+            parts = term.split(":")
+            if len(parts) == 2:
+                term = parts[0]
+                line_number = int(parts[1])
+
         # See if we can find only one file match
-        cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
+        cur.execute("""
+            SELECT path FROM files WHERE
+                path LIKE :term
+                OR path LIKE :termPre 
+            LIMIT 2
+        """, {"term": term,
+              "termPre": "%/" + term})
+
         rows = cur.fetchall()
         if rows and len(rows) == 1:
+            if line_number >= 0:
+                return (rows[0]['path'], line_number)
             return (rows[0]['path'], 1)
 
         # Case sensitive type matching
@@ -256,8 +275,11 @@ class Query(object):
                 SELECT
                       (SELECT path FROM files WHERE files.id = types.file_id) as path,
                       types.file_line
-                    FROM types WHERE types.qualname LIKE ? LIMIT 2
-            """, (term,))
+                    FROM types WHERE types.qualname LIKE :term
+                        OR types.qualname LIKE :termPre
+                    LIMIT 2
+            """, {"term": term,
+                  "termPre": '%::' + term,})
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])
@@ -267,8 +289,15 @@ class Query(object):
             SELECT
                   (SELECT path FROM files WHERE files.id = functions.file_id) as path,
                   functions.file_line
-                FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-            """, (term + '%',))  # Trailing % to eat "(int x)" etc.
+                FROM functions WHERE functions.qualname LIKE :term
+                    OR functions.qualname LIKE :termPre
+                    OR functions.qualname LIKE :termPost
+                    OR functions.qualname LIKE :termPrePost
+                LIMIT 2
+            """, {"term": term,   # Deal with partially qualified names and parameters - "(int x)", etc.
+                  "termPre": '%::' + term,
+                  "termPost": term + '(%',
+                  "termPrePost": '%::' + term + '(%',})
             rows = cur.fetchall()
             if rows and len(rows) == 1:
                 return (rows[0]['path'], rows[0]['file_line'])

@@ -16,10 +16,16 @@ class MemberFunctionTests(SingleFileTestCase):
                                               // ().
 
             class InnerClass {
+                class InnerInnerClass {
+                };
+
+                void inner_member_function();
             };
         };
 
         void MemberFunction::member_function(int a) {
+        }
+        void MemberFunction::InnerClass::inner_member_function() {
         }
         """ + MINIMAL_MAIN
 
@@ -31,9 +37,24 @@ class MemberFunctionTests(SingleFileTestCase):
     def test_qualified_function_name_prefix(self):
         """A unique, case-insensitive prefix match on fully qualified function
         name should take you directly to the result."""
-        self.direct_result_eq('MemberFunction::member_FUNCTION', 12)
+        self.direct_result_eq('MemberFunction::member_FUNCTION', 16)
 
     def test_qualified_type_name(self):
         """A unique, case-insensitive prefix match on fully qualified type name
         should take you directly to the result."""
         self.direct_result_eq('MemberFunction::InnerCLASS', 8)
+
+    def test_part_qualified_function_name_prefix(self):
+        """A unique, case-insensitive prefix match on partially qualified function
+        name should take you directly to the result."""
+        self.direct_result_eq('InnerClass::inner_member_FUNction', 18)
+
+    def test_part_qualified_type_name(self):
+        """A unique, case-insensitive prefix match on partially qualified type name
+        should take you directly to the result."""
+        self.direct_result_eq('InnerClass::InnerInnerCLASS', 9)
+
+    def test_line_number(self):
+        """A file name and line number should take you directly to that
+           file and line number."""
+        self.direct_result_eq('main.cpp:6', 6)
