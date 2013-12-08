@@ -29,7 +29,9 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.function_menu(qualname), qualname)
+            menu = self.function_menu(qualname)
+            self.add_decl_menu(menu, qualname, 'function', 'function-decl')
+            yield start, end, (menu, qualname)
 
         # Extents for functions declared here
         sql = """
@@ -54,7 +56,9 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.variable_menu(qualname), qualname)
+            menu = self.variable_menu(qualname)
+            self.add_decl_menu(menu, qualname, 'variable', 'var-decl')
+            yield start, end, (menu, qualname)
 
         # Extents for variables declared here
         sql = """
@@ -79,7 +83,9 @@ class ClangHtmlifier(object):
               WHERE file_id = ?
         """
         for start, end, qualname, kind in self.conn.execute(sql, args):
-            yield start, end, (self.type_menu(qualname, kind), qualname)
+            menu = self.type_menu(qualname, kind)
+            self.add_decl_menu(menu, qualname, 'type', 'type-decl')
+            yield start, end, (menu, qualname)
 
         # Extents for types declared here
         sql = """
@@ -146,6 +152,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
             menu = self.type_menu(qualname, kind)
+            self.add_decl_menu(menu, qualname, 'type', 'type-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -174,6 +181,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.function_menu(qualname)
+            self.add_decl_menu(menu, qualname, 'function', 'function-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -188,6 +196,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
+            self.add_decl_menu(menu, qualname, 'variable', 'var-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -267,16 +276,46 @@ class ClangHtmlifier(object):
             'icon':   'jump'
         })
 
+    # Check how many declarations there are. If there is just one, add a
+    # jump link; if there are many, add a search link.
+    # menu is the menu we are (possibly) adding to.
+    # table_name is the name of the tables to search, e.g., 'function' for
+    #   the functions/function_decl tables.
+    # search_term is the term to use in the url for searches for declarations
+    #   used in the menu.
+    def add_decl_menu(self, menu, qualname, table_name, search_term):
+        sql_body = "FROM " + table_name + "_decldef AS decldef, " + table_name + """s AS def
+                    WHERE decldef.defid = def.id AND def.qualname = ?
+        """
+        c_decls = self.conn.execute("SELECT COUNT(*) " + sql_body,
+                                    (qualname,)).fetchone()[0]
+        if c_decls == 1:
+            sql_select = """
+                SELECT (SELECT path FROM files WHERE files.id = decldef.file_id),
+                       decldef.file_line
+            """
+            decls = self.conn.execute(sql_select + sql_body, (qualname,))
+            path, line = decls.fetchone()
+            url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
+            url += "#%d" % line
+            menu.insert(0, { 
+                'text':   "Jump to declaration",
+                'title':  "Jump to the declaration in '%s'" % os.path.basename(path),
+                'href':   url,
+                'icon':   'jump'
+            })
+        elif c_decls > 0:
+            menu.insert(0, {
+                'text':   "Find declarations (%d)" % c_decls,
+                'title':  "Find declarations",
+                'href':   self.search("+%s:%s" % (search_term, self.quote(qualname))),
+                'icon':   'reference'  # FIXME?
+            })
+
     def type_menu(self, qualname, kind):
         """ Build menu for type """
         menu = []
         # Things we can do with qualname
-        menu.append({
-            'text':   "Find declarations",
-            'title':  "Find declarations of this class",
-            'href':   self.search("+type-decl:%s" % self.quote(qualname)),
-            'icon':   'reference'  # FIXME?
-        })
         if kind == 'class' or kind == 'struct':
             menu.append({
                 'text':   "Find sub classes",
@@ -320,12 +359,6 @@ class ClangHtmlifier(object):
     def variable_menu(self, qualname):
         """ Build menu for a variable """
         menu = []
-        menu.append({
-            'text':   "Find declarations",
-            'title':  "Find declarations of this variable",
-            'href':   self.search("+var-decl:%s" % self.quote(qualname)),
-            'icon':   'reference' # FIXME?
-        })
         menu.append({
             'text':   "Find references",
             'title':  "Find reference to this variable",
@@ -383,12 +416,6 @@ class ClangHtmlifier(object):
         """ Build menu for a function """
         menu = []
         # Things we can do with qualified name
-        menu.append({
-            'text':   "Find declarations",
-            'title':  "Find declarations of this function",
-            'href':   self.search("+function-decl:%s" % self.quote(qualname)),
-            'icon':   'reference'  # FIXME?
-        })
         menu.append({
             'text':   "Find callers",
             'title':  "Find functions that call this function",
