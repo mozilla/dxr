@@ -4,6 +4,15 @@
 $(function() {
     'use strict';
 
+    var constants = $('#data');
+
+    var dxr = {};
+
+    dxr.wwwroot = constants.data('root');
+    dxr.icons = dxr.wwwroot + '/static/icons/';
+    dxr.views = dxr.wwwroot + '/static/views';
+    dxr.tree = constants.data('tree');
+
     /**
      * Disable and enable event on scroll begin and scroll end.
      * @see http://www.thecssninja.com/javascript/pointer-events-60fps
@@ -23,11 +32,6 @@ $(function() {
             root.style.pointerEvents = '';
         }, 500);
     }, false);
-
-    var constants = $('#data'),
-        wwwroot = constants.data('root'),
-        icons = wwwroot + '/static/icons/',
-        views = wwwroot + '/static/views';
 
     /**
      * Presents the user with a notification message
@@ -75,7 +79,7 @@ $(function() {
     }
 
     if (!nunjucks.env) {
-        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(views));
+        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
     }
 
     var env = nunjucks.env,
@@ -179,7 +183,7 @@ $(function() {
 
                 for (var result in results) {
                     results[result].pathLine = buildPathLine(results[result].path, data.tree);
-                    results[result].iconPath = icons + results[result].icon;
+                    results[result].iconPath = dxr.icons + results[result].icon;
                 }
 
                 contentContainer.empty().append(tmpl.render(data));
@@ -269,4 +273,7 @@ $(function() {
     prettyDate.each(function() {
         $(this).text(formatDate($(this).data('datetime')));
     });
+
+    // Expose the DXR Object to the global object.
+    window.dxr = dxr;
 });

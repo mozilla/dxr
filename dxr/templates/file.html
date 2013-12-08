@@ -4,9 +4,6 @@
 
 {% block head %}
   <link rel="shortcut icon" href="{{ wwwroot }}/static/icons/{{ icon }}.png"/>
-  <script src="{{ wwwroot }}/static/menu.js"></script>
-  <script src="{{ wwwroot }}/static/file.js"></script>
-  <script src="{{ wwwroot }}/static/panel.js"></script>
 {% endblock %}
 
 {% set panel = True %}
@@ -63,7 +60,7 @@
     {%- endfor -%}
   </div>
 
-  <table class="result_snippet file">
+  <table id="file" class="result_snippet file">
     <thead class="visually-hidden">
         <th scope="col">Line</th>
         <th scope="col">Code</th>
@@ -85,4 +82,11 @@
   </table>
    <p class="top"><a href="#search-box">Back to Top</a></p>
  </div>
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/utils.js"></script>
+  <script src="{{ wwwroot }}/static/js/context_menu.js"></script>
+  <script src="{{ wwwroot }}/static/panel.js"></script>
 {% endblock %}

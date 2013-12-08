@@ -109,6 +109,13 @@ table td {
 td.code {
     padding: 0 0 0 .5em;
 }
+code a {
+    cursor: pointer;
+}
+mark {
+    position: relative;
+    padding: .5rem;
+}
 .logo a:focus {
     background-color: transparent;
 }
@@ -130,7 +137,6 @@ table.result_snippet tr {
     background-color: #e0e0e0;
 }
 .result_snippet a {
-    display: inline-block;
     width: 100%;
 }
 .checkbox_case {
@@ -145,6 +151,37 @@ table.result_snippet tr {
 }
 .file pre {
     white-space: pre-wrap;
+}
+mark {
+    padding: .5rem;
+}
+/* Context Menu */
+.context-menu {
+    position: absolute;
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #333;
+    border-radius: 6px;
+    border-top-left-radius: 0;
+    list-style: none;
+    font-size: .8rem;
+    width: auto;
+}
+.context-menu a {
+    display: block;
+    padding: .4rem;
+    text-decoration: none;
+}
+.context-menu a:hover {
+    background-color: #e0e0e0;
+}
+.context-menu li:first-child a:hover {
+    border-top-right-radius: 6px;
+}
+.context-menu li:last-child a:hover {
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
 }
 .top {
     margin-right: .5em;
@@ -306,6 +343,22 @@ table.result_snippet tr {
     background-position: 0 4px;
     background-repeat: no-repeat;
     padding: .5em .5em .5em 1.7em;
+}
+a.reference {
+    background: transparent url(/static/icons/reference.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.method {
+    background: transparent url(/static/icons/method.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.field {
+    background: transparent url(/static/icons/field.png) 2px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.search {
+    background: transparent url(/static/icons/search.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
 }
 .panel {
     display: none;

@@ -1,0 +1,8 @@
+<ul id="context-menu" class="context-menu" tabindex="0">
+    <li>
+        <a href="{{ searchLink.href }}" class="search">{{ searchLink.text }}</a>
+    </li>
+    {% for item in menuItems %}
+        <li><a href="{{ item.href }}" class="{{ item.icon }}">{{ item.text }}</a></li>
+    {% endfor %}
+</ul>
