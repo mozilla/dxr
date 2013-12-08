@@ -46,6 +46,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.function_menu(qualname)
+            self.add_other_decl_menu(menu, qualname, 'function', 'function-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -73,6 +74,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
+            self.add_other_decl_menu(menu, qualname, 'variable', 'var-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -101,6 +103,7 @@ class ClangHtmlifier(object):
         """
         for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
             menu = self.type_menu(qualname, kind)
+            self.add_other_decl_menu(menu, qualname, 'type', 'type-decl')
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname)
 
@@ -284,12 +287,31 @@ class ClangHtmlifier(object):
     # search_term is the term to use in the url for searches for declarations
     #   used in the menu.
     def add_decl_menu(self, menu, qualname, table_name, search_term):
+        self.add_decl_menu_impl(menu, qualname, table_name, search_term, 0)
+
+    # As add_decl_menu, but the assumption is that the menu is for a declaration
+    # so there is no point adding a jump entry since we would only jump to
+    # ourselves. Therefore we get either a 'search for declarations' or nothing.
+    def add_other_decl_menu(self, menu, qualname, table_name, search_term):
+        self.add_decl_menu_impl(menu, qualname, table_name, search_term, 1)
+
+    # min_for_jump is the minimum number of declarations required to add a jump
+    # entry to the menu. (Note that for any number >= 1, we always add a search
+    # entry).
+    def add_decl_menu_impl(self, menu, qualname, table_name, search_term, min_for_jump):
         sql_body = "FROM " + table_name + "_decldef AS decldef, " + table_name + """s AS def
                     WHERE decldef.defid = def.id AND def.qualname = ?
         """
         c_decls = self.conn.execute("SELECT COUNT(*) " + sql_body,
                                     (qualname,)).fetchone()[0]
-        if c_decls == 1:
+        if c_decls > 1:
+            menu.insert(0, {
+                'text':   "Find declarations (%d)" % c_decls,
+                'title':  "Find declarations",
+                'href':   self.search("+%s:%s" % (search_term, self.quote(qualname))),
+                'icon':   'reference'  # FIXME?
+            })
+        elif c_decls > min_for_jump:
             sql_select = """
                 SELECT (SELECT path FROM files WHERE files.id = decldef.file_id),
                        decldef.file_line
@@ -303,13 +325,6 @@ class ClangHtmlifier(object):
                 'title':  "Jump to the declaration in '%s'" % os.path.basename(path),
                 'href':   url,
                 'icon':   'jump'
-            })
-        elif c_decls > 0:
-            menu.insert(0, {
-                'text':   "Find declarations (%d)" % c_decls,
-                'title':  "Find declarations",
-                'href':   self.search("+%s:%s" % (search_term, self.quote(qualname))),
-                'icon':   'reference'  # FIXME?
             })
 
     def type_menu(self, qualname, kind):
