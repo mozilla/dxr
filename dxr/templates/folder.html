@@ -6,15 +6,11 @@
 
 {% block content %}
 <div id="content" class="content" data-no-results="No results returned for current query.">
-  <ul class="file-name">
+  <div class="file-name">
     {%- for path, name in paths_and_names -%}
-      {% if not loop.first or loop.last and loop.length != 1 %}
-        <li><span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a></li>
-      {% else %}
-        <li><a href="{{ wwwroot }}{{ path }}">{{ name }}</a></li>
-      {% endif %}
+      {% if not loop.first or loop.last and loop.length != 1 %}<span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>{% else %}<a href="{{ wwwroot }}{{ path }}">{{ name }}</a>{% endif %}
     {%- endfor -%}
-  </ul>
+  </div>
 
   {% set showing_tree_menu = trees|length > 1 %}
   {% if showing_tree_menu %}

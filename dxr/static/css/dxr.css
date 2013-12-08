@@ -305,22 +305,30 @@ mark {
     padding-left: 25px;
 }
 .path-separator {
-    padding-right: .3rem;
+    margin: 0 .4rem;
 }
 .file-name {
     display: inline-block;
-    margin: .5em 0 .5em 0;
+    margin: 0;
     padding: 0;
     font-size: .9rem;
-    list-style: none;
+    text-align: left;
 }
-.file-name li {
-    display: inline;
+.file-name a:link,
+.file-name a:visited {
+    color: #0095dd;
+}
+.file-name a:hover {
+    color: #00539f;
+}
+.file-name a:focus {
+    color: #00539f;
+    text-decoration: none;
 }
 .footer {
-    font-size: 12px;
-    text-align: right;
-    margin: -1em 1em .5em 1em;
+    color: #999;
+    font-size: .7rem;
+    margin: 0 0 0 1.2rem;
 }
 /* icons */
 .folder-icon {
