@@ -360,6 +360,103 @@ a.search {
     background: transparent url(/static/icons/search.png) 4px 8px no-repeat;
     padding-left: 1.5rem;
 }
+/* MimeType Icons */
+.build {
+    background: transparent url(/static/icons/mimetypes/build.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+a.c {
+    background: transparent url(/static/icons/mimetypes/c.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.conf {
+    background: transparent url(/static/icons/mimetypes/conf.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.cpp {
+    background: transparent url(/static/icons/mimetypes/cpp.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.cs {
+    background: transparent url(/static/icons/mimetypes/cs.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.diff {
+    background: transparent url(/static/icons/mimetypes/diff.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.h {
+    background: transparent url(/static/icons/mimetypes/h.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.html {
+    background: transparent url(/static/icons/mimetypes/html.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.iso {
+    background: transparent url(/static/icons/mimetypes/iso.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.java {
+    background: transparent url(/static/icons/mimetypes/java.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.js {
+    background: transparent url(/static/icons/mimetypes/js.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.mm {
+    background: transparent url(/static/icons/mimetypes/mm.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.page_white_code_red {
+    background: transparent url(/static/icons/mimetypes/page_white_code_red.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.php {
+    background: transparent url(/static/icons/mimetypes/php.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.py {
+    background: transparent url(/static/icons/mimetypes/py.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.rb {
+    background: transparent url(/static/icons/mimetypes/rb.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.sh {
+    background: transparent url(/static/icons/mimetypes/sh.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.svg {
+    background: transparent url(/static/icons/mimetypes/svg.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.tex {
+    background: transparent url(/static/icons/mimetypes/tex.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.txt {
+    background: transparent url(/static/icons/mimetypes/txt.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.ui {
+    background: transparent url(/static/icons/mimetypes/ui.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.unknown {
+    background: transparent url(/static/icons/mimetypes/unknown.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.vs {
+    background: transparent url(/static/icons/mimetypes/vs.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.xml {
+    background: transparent url(/static/icons/mimetypes/xml.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
 .panel {
     display: none;
 }
