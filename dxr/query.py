@@ -477,9 +477,10 @@ class TriLiteSearchFilter(SearchFilter):
                 + len(query.params['-regexp'])) > 0:
             conds = []
             args  = []
+            prefix = '%ssubstr:' % ('' if query.is_case_sensitive else 'i')
             for term in query.notwords + query.notphrases:
                 conds.append("trg_index.contents MATCH ?")
-                args.append("substr:" + term)
+                args.append(prefix + term)
             for expr in query.params['-regexp']:
                 conds.append("trg_index.contents MATCH ?")
                 args.append("regexp:" + expr)

@@ -60,13 +60,18 @@ class TestCase(unittest.TestCase):
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
 
+    def found_files(self, query, is_case_sensitive=True):
+        """Return the set of paths of files found by a search query."""
+        return set(result['path'] for result in
+                   self.search_results(query,
+                                       is_case_sensitive=is_case_sensitive))
+
     def found_files_eq(self, query, filenames, is_case_sensitive=True):
         """Assert that executing the search ``query`` finds the paths
         ``filenames``."""
-        paths = set(result['path'] for result in
-                    self.search_results(query,
-                                        is_case_sensitive=is_case_sensitive))
-        eq_(paths, set(filenames))
+        eq_(self.found_files(query,
+                             is_case_sensitive=is_case_sensitive),
+                             set(filenames))
 
     def found_line_eq(self, query, content, line):
         """Assert that a query returns a single file and single matching line
