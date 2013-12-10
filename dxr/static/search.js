@@ -82,7 +82,25 @@ function atPageBottom(){
 /** Initialize incremental search, etc. */
 function initIncrementalSearch(){
   // Get the query as passed in the text field
-  var q = document.getElementById("query");
+  var q = document.getElementById("query"),
+      caseSensitive = document.getElementById("case");
+
+  // Reset the search state so we do a fresh search.
+  // q: The main search field
+  // caseSensitive: The case-sensitive checkbox
+  function resetState() {
+    state.query   = q.value;
+    state.isCaseSensitive = caseSensitive.checked;
+    state.offset  = 0;
+    state.eof     = false;
+    state.changed = true;
+    // Dispatch dxr-state-changed
+    window.dispatchEvent(
+      new CustomEvent( 'dxr-state-changed', {
+        detail: {}
+      }));
+  }
+
   state.query = q.value;
 
   // Since we have javascript support let's hide paging links
@@ -101,40 +119,20 @@ function initIncrementalSearch(){
   // Fetch results, if any, on scroll to bottom of page
   window.addEventListener('scroll', function(e){
     if(atPageBottom() && !state.eof) fetchResults(true);
-  }, false); 
+  }, false);
 
   // Update advanced search fields on change in q
   q.addEventListener('input', function(e){
     // Don't do anything if query didn't change
     if(state.query == q.value) return;
-    // Reset the state
-    state.query   = q.value;
-    state.offset  = 0;
-    state.eof     = false;
-    state.changed = true;
-    // Dispatch dxr-state-changed
-    window.dispatchEvent(
-      new CustomEvent( 'dxr-state-changed', {
-        detail: {}
-      })
-    );
+    resetState();
   }, false);
 
   // Set fetch results time when state is changed
   window.addEventListener('dxr-state-changed', setFetchResultsTimer);
 
-  document.getElementById("tree").addEventListener('change', function(){
-    state.query   = q.value;
-    state.offset  = 0;
-    state.eof     = false;
-    state.changed = true;
-    // Dispatch dxr-state-changed
-    window.dispatchEvent(
-      new CustomEvent( 'dxr-state-changed', {
-        detail: {}
-      })
-    );
-  }, false);
+  document.getElementById("tree").addEventListener('change', resetState, false);
+  document.getElementById("case").addEventListener('change', resetState, false);
 
   // Fetch results if a bottom of page initially
   // this is necessary, otherwise one can't scroll
@@ -252,7 +250,8 @@ function fetchResults(displayFetcher){
     limit:          state.limit,
     offset:         state.offset,
     redirect:       'false',
-    format:         'json'
+    format:         'json',
+    'case':         state.isCaseSensitive ? 'true' : 'false'
   };
 
   // Start a new request

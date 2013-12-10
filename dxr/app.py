@@ -74,7 +74,7 @@ def search(tree):
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')
-            is_case_sensitive = querystring.get('case', '1') == '1'
+            is_case_sensitive = querystring.get('case') == 'true'
             q = Query(conn,
                       qtext,
                       should_explain='explain' in querystring,
@@ -92,7 +92,7 @@ def search(tree):
                          tree,
                          path,
                          qtext,
-                         '&case=1' if is_case_sensitive else '', line))
+                         '&case=true' if is_case_sensitive else '', line))
 
             # Return multiple results:
             template = 'search.html'
@@ -111,6 +111,7 @@ def search(tree):
                     error = 'Database error: %s' % e.message
             if not error:
                 # Search template variables:
+                arguments['time'] = time() - start
                 arguments['query'] = qtext
                 arguments['search_url'] = search_url(arguments['wwwroot'],
                                                      arguments['tree'],
@@ -119,8 +120,7 @@ def search(tree):
                 arguments['results'] = results
                 arguments['offset'] = offset
                 arguments['limit'] = limit
-                arguments['time'] = time() - start
-                arguments['case'] = '1' if is_case_sensitive else '0'
+                arguments['is_case_sensitive'] = is_case_sensitive
         else:
             error = 'Failed to establish database connection.'
     else:

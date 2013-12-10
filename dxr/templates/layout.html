@@ -27,8 +27,9 @@
                     {%-else-%}
                       false
                     {%-endif %},
-      // True, when this state is modified by user through search box
-      changed:      false
+      // True, when this state is modified by user through a search control
+      changed:      false,
+      isCaseSensitive: false
     };
   </script>
     {% block head %}
@@ -75,6 +76,7 @@
           </div>
 
           <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s" title="Search" autocomplete="off" autofocus>
+          <label><input type="checkbox" name="case" id="case" value="true"{% if is_case_sensitive %} checked{% endif %}>Case-sensitive</label>
           <input type="hidden" name="redirect" value="true" id="redirect">
 
           <div class="hidden-with-results">

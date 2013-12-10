@@ -467,7 +467,7 @@ class TriLiteSearchFilter(SearchFilter):
 
     def filter(self, query):
         extents_prefix = '%ssubstr-extents:' % ('' if query.is_case_sensitive
-                                                 else 'i')
+                                                else 'i')
         for term in query.keywords + query.phrases:
             yield "trg_index.contents MATCH ?", [extents_prefix + term], True
         for expr in query.params['regexp']:

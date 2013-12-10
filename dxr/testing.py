@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
         ``filenames``."""
         eq_(self.found_files(query,
                              is_case_sensitive=is_case_sensitive),
-                             set(filenames))
+            set(filenames))
 
     def found_line_eq(self, query, content, line):
         """Assert that a query returns a single file and single matching line
@@ -96,9 +96,10 @@ class TestCase(unittest.TestCase):
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
             success_lines)
 
-    def found_nothing(self, query):
+    def found_nothing(self, query, is_case_sensitive=True):
         """Assert that a query returns no hits."""
-        results = self.search_results(query)
+        results = self.search_results(query,
+                                      is_case_sensitive=is_case_sensitive)
         eq_(results, [])
 
     def search_results(self, query, is_case_sensitive=True):
@@ -122,7 +123,7 @@ class TestCase(unittest.TestCase):
         """
         response = self.client().get(
             '/code/search?format=json&q=%s&redirect=false&case=%s' %
-            (quote(query), '1' if is_case_sensitive else '0'))
+            (quote(query), 'true' if is_case_sensitive else 'false'))
         return json.loads(response.data)['results']
 
 

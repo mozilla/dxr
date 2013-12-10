@@ -10,6 +10,17 @@ class BasicTests(DxrInstanceTestCase):
         """Assert that a plain text search works."""
         self.found_files_eq('main', ['main.c', 'makefile'])
 
+    def test_case_sensitive(self):
+        """Make sure case-sensitive searching is case-sensitive.
+
+        This tests trilite's substr-extents query type.
+
+        """
+        self.found_files_eq('really',
+                            ['README.mkd'],
+                            is_case_sensitive=True)
+        self.found_nothing('REALLY',
+                           is_case_sensitive=True)
 
     def test_case_insensitive(self):
         """Test case-insensitive free-text searching without extents.
