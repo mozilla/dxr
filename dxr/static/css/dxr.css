@@ -119,6 +119,9 @@ mark {
 .logo a:focus {
     background-color: transparent;
 }
+.top-of-tree {
+    font-size: .8rem;
+}
 .result_snippet th:first-child {
     border-right: 1px solid #fff;
     text-align: center;
@@ -137,6 +140,10 @@ table.result_snippet tr {
     background-color: #e0e0e0;
 }
 .result_snippet a {
+    width: 100%;
+}
+.result_snippet code a {
+    display: inline;
     width: 100%;
 }
 .checkbox_case {
@@ -314,13 +321,17 @@ mark {
     font-size: .9rem;
     text-align: left;
 }
+.top-of-tree a:link,
+.top-of-tree a:visited,
 .file-name a:link,
 .file-name a:visited {
     color: #0095dd;
 }
+.top-of-tree a:hover,
 .file-name a:hover {
     color: #00539f;
 }
+.top-of-tree a:focus,
 .file-name a:focus {
     color: #00539f;
     text-decoration: none;
