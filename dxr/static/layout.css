@@ -77,13 +77,21 @@
     min-height: 20px;
     outline: none;
     vertical-align: middle;
-    width: 100%;
+    width: 80%;
 }
 .with-results #query {
     background-image: url("/static/icons/page_white_find.png");
     background-position: 2px 2px;
     background-repeat: no-repeat;
     padding-left: 20px;
+}
+
+#case-label {
+    display: none;
+    white-space: nowrap;
+}
+.with-results #case-label {
+    display: inline;
 }
 
 #tree-tip {
