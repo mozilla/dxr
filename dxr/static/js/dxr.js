@@ -127,12 +127,21 @@ $(function() {
         contentContainer = $('#content');
 
     /**
-     * Returns the full Ajax URL for search
-     * @param {string} params - A serialized string of the form inputs.
+     * Returns the full Ajax URL for search and explicitly sets
+     * redirect to false and format to json to ensure we never
+     * get a HTML response or redirect from an Ajax call, even
+     * when using the back button.
+     *
+     * @param {string} query - The query string
      */
-    function buildAjaxURL(params) {
+    function buildAjaxURL(query) {
         var search = constants.data('search');
-        return search + '?' + params;
+        var params = {};
+        params.q = query;
+        params.redirect = false;
+        params.format = 'json';
+
+        return search + '?' + $.param(params);
     }
 
     var waitr = null;
@@ -172,7 +181,7 @@ $(function() {
 
         var previousQuery = query ? query : previousQuery;
 
-        $.getJSON(buildAjaxURL(searchForm.serialize()), function(data) {
+        $.getJSON(buildAjaxURL(query), function(data) {
 
             // If no data is returned, inform the user.
             if (!data.results.length) {
@@ -235,13 +244,6 @@ $(function() {
     // Stop search as you type as soon as the field looses focus.
     queryField.on('blur', function() {
         stopQueryInputPoller();
-    });
-
-    searchForm.on('submit', function() {
-        // Set redirect to true for direct results.
-        $('#redirect').val('true');
-        // Ensure JSON is not returned.
-        $('#format').val('html');
     });
 
     /**
