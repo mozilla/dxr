@@ -76,7 +76,7 @@
           </div>
 
           <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" accesskey="s" title="Search" autocomplete="off" autofocus>
-          <label><input type="checkbox" name="case" id="case" value="true"{% if is_case_sensitive %} checked{% endif %}>Case-sensitive</label>
+          <label id="case-label"><input type="checkbox" name="case" id="case" value="true"{% if is_case_sensitive %} checked{% endif %}>Case-sensitive</label>
           <input type="hidden" name="redirect" value="true" id="redirect">
 
           <div class="hidden-with-results">
