@@ -27,9 +27,9 @@
         {% block advanced_search %}
         {% endblock %}
 
-          <input type="hidden" name="redirect" value="false" id="redirect" />
+          <input type="hidden" name="redirect" value="true" id="redirect" />
         {% block return_format %}
-          <input type="hidden" name="format" value="json" id="format" />
+          <input type="hidden" name="format" value="html" id="format" />
         {% endblock %}
 
         {% block search_button %}
@@ -38,22 +38,8 @@
       </form>
     </div>
 
-    {% if panel %}
-    <div class="panel">
-      <a id="panel-toggle">
-        {%- block panel_title -%}
-        Navigation
-        {%- endblock -%}
-      </a>
-      <div id="panel-content">
-        {% block panel %}
-        {% endblock %}
-      </div>
-    </div>
-    {% endif %}
-
     {% block content %}
-    <div id="content" class="content" data-no-results="No results returned for current query."></div>
+      <div id="content" class="content" data-no-results="No results returned for current query."></div>
     {% endblock %}
 
     {% block footer %}

@@ -14,18 +14,18 @@
             <th scope="col">Line</th>
             <th scope="col">Code Snippet</th>
         </thead>
-    {% for entry in result.lines %}
         <tbody>
+        {% for entry in result.lines %}
             <tr>
                 <td>{{ entry.line_number }}</td>
                 <td>
-<a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#l{{ entry.line_number }}">
+<a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
 <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
 </a>
                 </td>
             </tr>
+        {% endfor %}
         </tbody>
-    {% endfor %}
     </table>
     <p class="top"><a href="#search-box">Back to Top</a></p>
 </div>

@@ -1,3 +1,12 @@
+@font-face {
+    font-family: 'icons';
+    src: url('/static/fonts/icons.eot?#iefix2013') format('embedded-opentype'),
+         url('/static/fonts/icons.woff?2013') format('woff'),
+         url('/static/fonts/icons.ttf?2013') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 /**
  * normalize - Remove the gray background color from active links in IE 10.
  */
@@ -371,8 +380,88 @@ a.search {
     background: transparent url(/static/icons/search.png) 4px 8px no-repeat;
     padding-left: 1.5rem;
 }
+a.class {
+    background: transparent url(/static/icons/class.png) 4px 2px no-repeat;
+    padding-left: 1.5rem;
+}
+/* Navigation panel */
 .panel {
     display: none;
+    position: absolute;
+    top: 113px;
+    right: 16px;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-right: 0;
+    min-width: 12rem;
+}
+.panel section {
+    display: none;
+}
+.panel button{
+    display: inline-block;
+    background-color: #333;
+    color: #fff;
+    margin: 0;
+    padding: .5rem .2rem .5rem .7rem;
+    border: 0;
+    width: 100%;
+    font-size: .9rem;
+    text-align: left;
+    cursor: pointer;
+}
+.navpanel-icon {
+    display: inline-block;
+    margin-right: .5rem;
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    transform: rotate(-90deg);
+    transition: all .5s;
+}
+.navpanel-icon.expanded {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    transform: rotate(0deg);
+    transition: all .5s;
+}
+.navpanel-icon:before {
+    font-family: icons;
+    content: "\e801";
+    speak: none;
+}
+.panel h4 {
+    margin: 0;
+    padding: .5rem;
+    font-size: .9rem;
+}
+.panel ul {
+    margin: 0;
+    padding: 0;
+    font-size: .9rem;
+    list-style: none;
+}
+.panel a.class {
+    background-position: 4px 8px;
+}
+.panel a.method {
+    background-position: 4px 6px;
+}
+.panel a.field {
+    background-position: 2px 10px;
+}
+.panel section a {
+    display: inline-block;
+    background-color: #fff;
+    padding: .3rem .5rem .3rem 1.5rem;
+    width: 100%;
+}
+.panel section a:hover {
+    background-color: #e0e0e0;
+    text-decoration: none;
+}
+.panel section a:focus {
+    background-color: #e0e0e0;
+    text-decoration: underline;
 }
 #fetch-results {
     display: none;
