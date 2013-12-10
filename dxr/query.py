@@ -137,7 +137,7 @@ class Query(object):
             SELECT files.path, files.icon, trg_index.text, files.id,
             extents(trg_index.contents)
                 FROM trg_index, files
-              WHERE %s LIMIT ? OFFSET ?
+              WHERE %s ORDER BY files.path LIMIT ? OFFSET ?
         """
         conditions = " files.id = trg_index.id "
         arguments = []
