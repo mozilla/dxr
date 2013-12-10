@@ -375,6 +375,7 @@ a.class {
 }
 /* Navigation panel */
 .panel {
+    display: none;
     position: absolute;
     top: 113px;
     right: 16px;

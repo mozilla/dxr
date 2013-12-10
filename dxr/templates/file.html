@@ -43,7 +43,7 @@
         {%- endblock -%}
       </button>
       {% for section, items in sections %}
-        <section aria-expanded="false" aria-hidden="true">
+        <section id="panel-content" aria-expanded="false" aria-hidden="true">
           <h4>{{ section }}</h4>
           <ul>
           {% for icon, title, href in items %}
