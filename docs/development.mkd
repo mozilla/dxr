@@ -25,7 +25,7 @@ cd tests/test_basic/
 make
 
 # run the server
-../../bin/dxr-serve.py --port 8000 target
+../../bin/dxr-serve.py --host 0.0.0.0 target
 # Server should be running on 33.33.33.77:8000.
 
 # all done? ctrl+c to interrupt the server

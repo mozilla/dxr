@@ -11,18 +11,31 @@ from dxr.app import make_app
 
 
 def main():
-    parser = OptionParser(usage='usage: %prog [options] build-folder')
+    parser = OptionParser(usage='usage: %prog [options] build-folder',
+                          add_help_option=False)
+    parser.add_option('--help', action='help')
+    parser.add_option('-h', '--host', dest='host',
+                      type='string',
+                      default='localhost',
+                      help='The host address to serve on')
+    parser.add_option('-j', '--jobs', dest='processes',
+                      type='int',
+                      default=1,
+                      help='The number of processes to use')
     parser.add_option('-p', '--port', dest='port',
                       type='int',
                       default=8000,
                       help='The port to serve on')
+    parser.add_option('-t', '--threaded', dest='threaded',
+                      action='store_true',
+                      default=False,
+                      help='Use a separate thread for each request')
     options, args = parser.parse_args()
     if len(args) == 1:
         app = make_app(abspath(args[0]))
         app.debug = True
-        # Without binding to a public interface (0.0.0.0), you can't get to the
-        # Vagrant box's test server from the host machine.
-        app.run(host='0.0.0.0', port=options.port)
+        app.run(host=options.host, port=options.port,
+                processes=options.processes, threaded=options.threaded)
     else:
         parser.print_usage()
 
