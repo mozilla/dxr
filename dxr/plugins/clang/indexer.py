@@ -427,6 +427,9 @@ def process_impl(args, conn):
 
 def process_variable(args, conn):
     args['id'] = dxr.utils.next_global_id()
+    if 'value' in args:
+        if len(args['value']) > 32:
+            args['value'] = args['value'][:29] + '...'
     if not fixupEntryPath(args, 'loc', conn):
         return None
     handleScope(args, conn)
@@ -457,6 +460,8 @@ def process_macro(args, conn):
     args['id'] = dxr.utils.next_global_id()
     if 'text' in args:
         args['text'] = args['text'].replace("\\\n", "\n").strip()
+        if len(args['text']) > 32:
+            args['text'] = args['text'][:29] + '...'
     if not fixupEntryPath(args, 'loc', conn):
         return None
     fixupExtent(args, 'extent')
