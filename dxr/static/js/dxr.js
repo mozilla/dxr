@@ -5,7 +5,6 @@ $(function() {
     'use strict';
 
     var constants = $('#data');
-
     var dxr = {};
 
     dxr.wwwroot = constants.data('root');
@@ -92,13 +91,15 @@ $(function() {
      *
      * @param {string} fullPath - The full path of the currently displayed file.
      * @param {string} tree - The tree which was searched and in which this file can be found.
+     * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildPathLine(fullPath, tree) {
+    function buildPathLine(fullPath, tree, icon) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
             splitPathLength = paths.length,
-            dataPath = [];
+            dataPath = [],
+            iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex in paths) {
             var isFirstOrLast = false;
@@ -115,6 +116,7 @@ $(function() {
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
+                'icon_class': iconClass,
                 'url': pathRoot + dataPath.join('/')
             });
         }
@@ -188,11 +190,13 @@ $(function() {
                 contentContainer.empty();
                 setUserMessage('info', contentContainer.data('no-results'), contentContainer);
             } else {
+                data['tree'] = dxr.tree;
+                data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
                 var results = data.results;
 
                 for (var result in results) {
-                    results[result].pathLine = buildPathLine(results[result].path, data.tree);
-                    results[result].iconPath = dxr.icons + results[result].icon;
+                    var icon = results[result].icon;
+                    results[result].pathLine = buildPathLine(results[result].path, data.tree, icon);
                 }
 
                 contentContainer.empty().append(tmpl.render(data));
