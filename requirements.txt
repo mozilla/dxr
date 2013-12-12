@@ -1,6 +1,7 @@
 Flask==0.9
 futures==2.1.4
 Jinja2==2.6
+parsimonious==0.5
 Pygments==1.6
 Werkzeug==0.8.3
 
