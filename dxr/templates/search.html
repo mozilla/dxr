@@ -15,8 +15,6 @@
 {% set state_eof    = results|length < limit %}
 
 {% block head %}
-  <script src="{{ wwwroot }}/static/panel.js"></script>
-  <script src="{{ wwwroot }}/static/advanced-search.js"></script>
   {% if error %}
   <script>
     window.addEventListener('load', function(){

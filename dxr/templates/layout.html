@@ -48,13 +48,6 @@
     </div>
     {% endblock %}
 
-    {% block fetch_results %}
-    <div id="fetch-results">
-      <img src="{{ wwwroot }}/static/view-refresh.svg" />
-      Fetching results
-    </div>
-    {% endblock %}
-
     <div id="inline-menu"></div>
     <div id="info-box"></div>
 
@@ -70,8 +63,7 @@
       <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
       <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
       <script src="{{ wwwroot }}/static/js/templates.js"></script>
-
-      <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
+      <script src="{{ wwwroot }}/static/js/dxr.js"></script>
     {% endblock %}
   </body>
 </html>
