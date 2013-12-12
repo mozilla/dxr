@@ -168,3 +168,9 @@ def browse(tree, path=''):
         path += '.html'
 
     return send_from_directory(tree_folder, path)
+
+@dxr_blueprint.route('/<tree>/')
+@dxr_blueprint.route('/<tree>')
+def redirect_segmented_url(tree):
+    """Redirect segmented urls to tree listing instead of giving 404"""
+    return redirect(tree + "/source/")
