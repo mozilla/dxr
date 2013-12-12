@@ -970,7 +970,7 @@ public:
         length - defnStart);
       // FIXME: handle non-ASCII characters better
       for (size_t i = 0; i < text.size(); ++i)
-        if (text[i] < ' ' || text[i] >= 0x7F)
+        if ((text[i] < ' ' || text[i] >= 0x7F) && text[i] != '\t' && text[i] != '\n')
           text[i] = '?';
       recordValue("text", text, true);
     }
