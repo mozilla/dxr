@@ -265,7 +265,8 @@ def index_files(tree, conn):
             icon = dxr.mime.icon(path)
 
             # Insert this file
-            cur.execute("INSERT INTO files (path, icon) VALUES (?, ?)", (path, icon))
+            cur.execute("INSERT INTO files (path, icon, encoding) VALUES (?, ?, ?)",
+                        (path, icon, tree.source_encoding))
             # Index this file
             sql = "INSERT INTO trg_index (id, text) VALUES (?, ?)"
             cur.execute(sql, (cur.lastrowid, data))
@@ -555,7 +556,8 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         # Someday, it would be great to stream this and not concretize the
         # whole thing in RAM. The template will have to quit looping through
         # the whole thing 3 times.
-        'lines': list(lines_and_annotations(build_lines(text, htmlifiers),
+        'lines': list(lines_and_annotations(build_lines(text, htmlifiers,
+                                                        tree.source_encoding),
                                             htmlifiers)),
 
         'sections': build_sections(tree, conn, path, text, htmlifiers)
@@ -890,7 +892,7 @@ def nesting_order((point, is_start, payload)):
                              -payload.sort_order)
 
 
-def build_lines(text, htmlifiers):
+def build_lines(text, htmlifiers, encoding='utf-8'):
     """Yield lines of Markup, with decorations from the htmlifier plugins
     applied.
 
@@ -898,7 +900,7 @@ def build_lines(text, htmlifiers):
         input file wasn't UTF-8. We should make it true.)
 
     """
-    decoder = getdecoder('utf-8')
+    decoder = getdecoder(encoding)
     def decoded_slice(start, end):
         return decoder(text[start:end], errors='replace')[0]
 
