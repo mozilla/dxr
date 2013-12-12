@@ -50,7 +50,7 @@ def search(tree):
     querystring = request.values
 
     offset = non_negative_int(querystring.get('offset'), 0)
-    limit = max(non_negative_int(querystring.get('limit'), 100), 1000)
+    limit = min(non_negative_int(querystring.get('limit'), 100), 1000)
 
     config = current_app.config
 
