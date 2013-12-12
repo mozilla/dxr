@@ -35,9 +35,9 @@ On the VM...
     make
     cd ~/dxr/tests/test_basic
     make
-    dxr-serve.py --host 0.0.0.0 target
+    dxr-serve.py --all target
 
-You need to bind to a public interface (0.0.0.0) or else you will be unable to
+You need to bind to all interfaces (--all) or else you will be unable to
 get to the Vagrant box's test server from the host machine.
 Then, on your host box, surf to http://33.33.33.77:8000/, and poke around to
 your heart's content. You may have to substitute the IP address of your Vagrant

@@ -14,6 +14,10 @@ def main():
     parser = OptionParser(usage='usage: %prog [options] build-folder',
                           add_help_option=False)
     parser.add_option('--help', action='help')
+    parser.add_option('-a', '--all', dest='host',
+                      action='store_const',
+                      const='0.0.0.0',
+                      help='Serve on all interfaces.  Equivalent to --host 0.0.0.0')
     parser.add_option('-h', '--host', dest='host',
                       type='string',
                       default='localhost',
