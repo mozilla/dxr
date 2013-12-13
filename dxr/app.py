@@ -94,7 +94,7 @@ def search(tree):
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')
-            is_case_sensitive = querystring.get('case') == 'true'
+            is_case_sensitive = querystring.get('is_case_sensitive') == 'true'
             q = Query(conn,
                       qtext,
                       should_explain='explain' in querystring,
@@ -112,7 +112,7 @@ def search(tree):
                          tree,
                          path,
                          qtext,
-                         '&case=true' if is_case_sensitive else '', line))
+                         '&is_case_sensitive=true' if is_case_sensitive else '', line))
 
             # Return multiple results:
             template = 'search.html'

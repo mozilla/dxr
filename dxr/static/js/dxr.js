@@ -135,13 +135,25 @@ $(function() {
      * when using the back button.
      *
      * @param {string} query - The query string
+     * @param {string} [optional] isCaseSensitive - String that will be either true or false.
      */
-    function buildAjaxURL(query) {
+    function buildAjaxURL(query, isCaseSensitive) {
         var search = constants.data('search');
         var params = {};
         params.q = query;
         params.redirect = false;
         params.format = 'json';
+        // Default for case sensitivity is false.
+        params.is_case_sensitive = "false";
+
+        // If a value for isCaseSensitive was passed, changed the property
+        // to reflect the new value.
+        if (typeof isCaseSensitive !== 'undefined') {
+            params.is_case_sensitive = isCaseSensitive;
+        }
+
+        console.log($.param(params));
+
 
         return search + '?' + $.param(params);
     }
