@@ -42,6 +42,14 @@ std::string &operator+=(std::string &str, unsigned int i) {
   return str += (ptr + 1);
 }
 
+inline bool str_starts_with(const std::string &s, const std::string &prefix) {
+  return s.compare(0, prefix.size(), prefix) == 0;
+}
+
+inline bool str_ends_with(const std::string &s, const std::string &suffix) {
+  return s.size() >= suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
 // BEWARE: use only as a temporary
 const char *hash(std::string &str) {
   static unsigned char rawhash[20];
@@ -485,6 +493,32 @@ public:
     return fd && fd->isThisDeclarationADefinition();
   }
 
+  std::string getValueForValueDecl(ValueDecl *d)
+  {
+    if (const VarDecl *vd = dyn_cast<VarDecl>(d)) {
+      const Expr *init = vd->getAnyInitializer(vd);
+      if (!isa<ParmVarDecl>(vd) &&
+          init && !init->getType().isNull() && !init->isValueDependent() &&
+          vd->getType().isConstQualified()) {
+        if (const APValue *apv = vd->evaluateValue()) {
+          std::string ret = apv->getAsString(vd->getASTContext(), vd->getType());
+          // workaround for constant strings being shown as &"foo" or &"foo"[0]
+          if (str_starts_with(ret, "&\""))
+          {
+            if (str_ends_with(ret, "\""))
+              return ret.substr(1);
+            if (str_ends_with(ret, "\"[0]"))
+              return ret.substr(1, ret.length() - 4);
+          }
+          return ret;
+        }
+      }
+    } else if (EnumConstantDecl *ecd = dyn_cast<EnumConstantDecl>(d)) {
+      return ecd->getInitVal().toString(10);
+    }
+    return std::string();
+  }
+
   void visitVariableDecl(ValueDecl *d) {
     if (!interestingLocation(d->getLocation()))
       return;
@@ -495,6 +529,9 @@ public:
       recordValue("qualname", getQualifiedName(*d));
       recordValue("loc", locationToString(d->getLocation()));
       recordValue("type", d->getType().getAsString(), true);
+      const std::string &value = getValueForValueDecl(d);
+      if (!value.empty())
+        recordValue("value", value, true);
       printScope(d);
       printExtent(d->getLocation(), d->getLocation());
       *out << std::endl;
@@ -928,9 +965,15 @@ public:
     if (argsStart > 0)
       recordValue("args", std::string(contents + argsStart,
         argsEnd - argsStart), true);
-    if (defnStart < length)
-      recordValue("text", std::string(contents + defnStart,
-        length - defnStart), true);
+    if (defnStart < length) {
+      std::string text =  std::string(contents + defnStart,
+        length - defnStart);
+      // FIXME: handle non-ASCII characters better
+      for (size_t i = 0; i < text.size(); ++i)
+        if ((text[i] < ' ' || text[i] >= 0x7F) && text[i] != '\t' && text[i] != '\n')
+          text[i] = '?';
+      recordValue("text", text, true);
+    }
     printExtent(nameStart, nameStart);
     *out << std::endl;
   }
