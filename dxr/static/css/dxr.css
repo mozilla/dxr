@@ -156,7 +156,6 @@ table.result_snippet tr {
     width: 100%;
 }
 .checkbox_case {
-    display: inline-block;
     margin: .5em;
 }
 .file tr {
@@ -178,11 +177,15 @@ mark {
     margin: 0;
     padding: 0;
     border: 1px solid #333;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
     border-radius: 6px;
+    -webkit-border-top-left-radius: 0;
+    -moz-border-top-left-radius: 0;
     border-top-left-radius: 0;
-    list-style: none;
-    font-size: .8rem;
     width: auto;
+    font-size: .8rem;
+    list-style: none;
 }
 .context-menu a {
     display: block;
@@ -247,28 +250,6 @@ mark {
 .wide {
     width: 44.4%;
 }
-/* advanced search page */
-.advanced {
-    background-color: #f6f4ec;
-    background-image: none;
-}
-.advanced .search-box {
-    border-bottom: 0;
-}
-.advanced form {
-    margin: 0;
-    width: 100%;
-}
-.advanced .simple_form_group {
-    padding: 0;
-}
-.advanced_search_heading {
-    margin: 0.5rem 0 0 0;
-    font-size: 1.5rem;
-}
-.additional_fields_container legend {
-    margin-bottom: 1%;
-}
 .arrow_icon {
     display: inline-block;
     background: transparent url(/static/images/arrow_collapsed.png) 0 0 no-repeat;
@@ -318,7 +299,6 @@ mark {
     background-repeat: no-repeat;
     background-position: 0 3px;
     margin: 1.2em 0 .5em 0;
-    padding-left: 25px;
 }
 .path-separator {
     margin: 0 .4rem;
@@ -329,6 +309,10 @@ mark {
     padding: 0;
     font-size: .9rem;
     text-align: left;
+}
+/* top of tree */
+.top-of-tree {
+    font-size: .8rem;
 }
 .top-of-tree a:link,
 .top-of-tree a:visited,
@@ -382,6 +366,103 @@ a.search {
 }
 a.class {
     background: transparent url(/static/icons/class.png) 4px 2px no-repeat;
+    padding-left: 1.5rem;
+}
+/* MimeType Icons */
+.build {
+    background: transparent url(/static/icons/mimetypes/build.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+a.c {
+    background: transparent url(/static/icons/mimetypes/c.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.conf {
+    background: transparent url(/static/icons/mimetypes/conf.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.cpp {
+    background: transparent url(/static/icons/mimetypes/cpp.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.cs {
+    background: transparent url(/static/icons/mimetypes/cs.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.diff {
+    background: transparent url(/static/icons/mimetypes/diff.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.h {
+    background: transparent url(/static/icons/mimetypes/h.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.html {
+    background: transparent url(/static/icons/mimetypes/html.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.iso {
+    background: transparent url(/static/icons/mimetypes/iso.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.java {
+    background: transparent url(/static/icons/mimetypes/java.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.js {
+    background: transparent url(/static/icons/mimetypes/js.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.mm {
+    background: transparent url(/static/icons/mimetypes/mm.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.page_white_code_red {
+    background: transparent url(/static/icons/mimetypes/page_white_code_red.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.php {
+    background: transparent url(/static/icons/mimetypes/php.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.py {
+    background: transparent url(/static/icons/mimetypes/py.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.rb {
+    background: transparent url(/static/icons/mimetypes/rb.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.sh {
+    background: transparent url(/static/icons/mimetypes/sh.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.svg {
+    background: transparent url(/static/icons/mimetypes/svg.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.tex {
+    background: transparent url(/static/icons/mimetypes/tex.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.txt {
+    background: transparent url(/static/icons/mimetypes/txt.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.ui {
+    background: transparent url(/static/icons/mimetypes/ui.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.unknown {
+    background: transparent url(/static/icons/mimetypes/unknown.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.vs {
+    background: transparent url(/static/icons/mimetypes/vs.png) 4px 0 no-repeat;
+    padding-left: 1.5rem;
+}
+.xml {
+    background: transparent url(/static/icons/mimetypes/xml.png) 4px 0 no-repeat;
     padding-left: 1.5rem;
 }
 /* Navigation panel */
@@ -547,9 +628,6 @@ a.class {
     }
     .simple_form_group label {
         display: inline-block;
-    }
-    .advanced_search_heading {
-        margin-bottom: 6%;
     }
     .basic_search {
         top: 11%;

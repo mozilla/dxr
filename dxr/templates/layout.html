@@ -28,9 +28,6 @@
         {% endblock %}
 
           <input type="hidden" name="redirect" value="true" id="redirect" />
-        {% block return_format %}
-          <input type="hidden" name="format" value="html" id="format" />
-        {% endblock %}
 
         {% block search_button %}
           <input type="submit" value="Search" class="visually-hidden" />
@@ -51,19 +48,12 @@
     </div>
     {% endblock %}
 
-    {% block fetch_results %}
-    <div id="fetch-results">
-      <img src="{{ wwwroot }}/static/view-refresh.svg" />
-      Fetching results
-    </div>
-    {% endblock %}
-
     <div id="inline-menu"></div>
     <div id="info-box"></div>
 
     {% set eof = True if state_eof else False %}
 
-    {% block embedded_data %}
+    {% block js_data %}
       <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
       <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search" data-tree="{{ tree }}"></span>
       <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-eof="{{ eof }}"></span>
@@ -73,8 +63,7 @@
       <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
       <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
       <script src="{{ wwwroot }}/static/js/templates.js"></script>
-
-      <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
+      <script src="{{ wwwroot }}/static/js/dxr.js"></script>
     {% endblock %}
   </body>
 </html>

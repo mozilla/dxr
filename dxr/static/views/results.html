@@ -1,11 +1,7 @@
 <p class="top-of-tree">Results from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree:</p>
 {% for result in results %}
 <div class="result">
-    <!-- This is not ideal but unavoidable as each 'file' might have a different
-         icon so, we cannot have one class to rule them all, and manipulating the
-         class attribute for each path will cause a reflow everytime, dramatically
-         slowing down rendering. Therefore, it is best to handle this with an inline style. -->
-    <div class="path" style="background-image: url('{{ result.iconPath }}.png')">
+    <div class="path">
         {{ result.pathLine }}
     </div>
     <table class="result_snippet">
