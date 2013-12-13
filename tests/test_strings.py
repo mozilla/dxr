@@ -45,5 +45,5 @@ def test_highlit_lines():
             return 0;
         }
         """
-    eq_(_highlit_lines(source, [(0, 3, []), (9, 12, [])], '<b>', '</b>'),
+    eq_(_highlit_lines(source, [(0, 3, []), (9, 12, [])], '<b>', '</b>', 'utf-8'),
         [(1, '<b>int</b> main(<b>int</b> argc, char* argv[]) {')])

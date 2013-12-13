@@ -19,15 +19,15 @@
           {% block text_search %}
             <label for="query" class="query_label visually-hidden">Find</label>
             <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Enter query to start search..." />
-            <input type="checkbox" name="case_sensitivity" id="case_sensitivity" class="checkbox_case" value="true" />
-            <label class="checkbox_label" for="case_sensitivity">Case-sensitive</label>
+            <input type="checkbox" name="case" id="case" value="true"{% if is_case_sensitive %} checked{% endif %}>
+            <label for="case">Case-sensitive</label>
           {% endblock %}
         </fieldset>
 
         {% block advanced_search %}
         {% endblock %}
 
-          <input type="hidden" name="redirect" value="true" id="redirect" />
+        <input type="hidden" name="redirect" value="true" id="redirect">
 
         {% block search_button %}
           <input type="submit" value="Search" class="visually-hidden" />
