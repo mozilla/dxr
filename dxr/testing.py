@@ -60,11 +60,18 @@ class TestCase(unittest.TestCase):
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
 
-    def found_files_eq(self, query, filenames):
+    def found_files(self, query, is_case_sensitive=True):
+        """Return the set of paths of files found by a search query."""
+        return set(result['path'] for result in
+                   self.search_results(query,
+                                       is_case_sensitive=is_case_sensitive))
+
+    def found_files_eq(self, query, filenames, is_case_sensitive=True):
         """Assert that executing the search ``query`` finds the paths
         ``filenames``."""
-        paths = set(result['path'] for result in self.search_results(query))
-        eq_(paths, set(filenames))
+        eq_(self.found_files(query,
+                             is_case_sensitive=is_case_sensitive),
+            set(filenames))
 
     def found_line_eq(self, query, content, line):
         """Assert that a query returns a single file and single matching line
@@ -89,12 +96,13 @@ class TestCase(unittest.TestCase):
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
             success_lines)
 
-    def found_nothing(self, query):
+    def found_nothing(self, query, is_case_sensitive=True):
         """Assert that a query returns no hits."""
-        results = self.search_results(query)
+        results = self.search_results(query,
+                                      is_case_sensitive=is_case_sensitive)
         eq_(results, [])
 
-    def search_results(self, query):
+    def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
 
         Example::
@@ -114,7 +122,8 @@ class TestCase(unittest.TestCase):
 
         """
         response = self.client().get(
-            '/code/search?format=json&q=%s&redirect=false' % quote(query))
+            '/code/search?format=json&q=%s&redirect=false&case=%s' %
+            (quote(query), 'true' if is_case_sensitive else 'false'))
         return json.loads(response.data)['results']
 
 
