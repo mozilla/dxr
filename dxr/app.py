@@ -70,7 +70,7 @@ def search(tree):
     querystring = request.values
 
     offset = non_negative_int(querystring.get('offset'), 0)
-    limit = non_negative_int(querystring.get('limit'), 100)
+    limit = min(non_negative_int(querystring.get('limit'), 100), 1000)
 
     config = current_app.config
 
@@ -94,7 +94,11 @@ def search(tree):
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')
-            q = Query(conn, qtext, should_explain='explain' in querystring)
+            is_case_sensitive = querystring.get('is_case_sensitive') == 'true'
+            q = Query(conn,
+                      qtext,
+                      should_explain='explain' in querystring,
+                      is_case_sensitive=is_case_sensitive)
 
             # Try for a direct result:
             if querystring.get('redirect') == 'true':
@@ -103,8 +107,12 @@ def search(tree):
                     path, line = result
                     # TODO: Does this escape qtext properly?
                     return redirect(
-                        '%s/%s/source/%s?from=%s#%i' %
-                        (config['WWW_ROOT'], tree, path, qtext, line))
+                        '%s/%s/source/%s?from=%s%s#%i' %
+                        (config['WWW_ROOT'],
+                         tree,
+                         path,
+                         qtext,
+                         '&is_case_sensitive=true' if is_case_sensitive else '', line))
 
             # Return multiple results:
             template = 'search.html'
@@ -123,6 +131,7 @@ def search(tree):
                     error = 'Database error: %s' % e.message
             if not error:
                 # Search template variables:
+                arguments['time'] = time() - start
                 arguments['query'] = qtext
                 arguments['search_url'] = search_url(arguments['wwwroot'],
                                                      arguments['tree'],
@@ -131,7 +140,7 @@ def search(tree):
                 arguments['results'] = results
                 arguments['offset'] = offset
                 arguments['limit'] = limit
-                arguments['time'] = time() - start
+                arguments['is_case_sensitive'] = is_case_sensitive
         else:
             error = 'Failed to establish database connection.'
     else:

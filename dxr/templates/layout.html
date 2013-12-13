@@ -19,18 +19,15 @@
           {% block text_search %}
             <label for="query" class="query_label visually-hidden">Find</label>
             <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Enter query to start search..." />
-            <input type="checkbox" name="case_sensitivity" id="case_sensitivity" class="checkbox_case" value="true" />
-            <label class="checkbox_label" for="case_sensitivity">Case-sensitive</label>
+            <input type="checkbox" name="is_case_sensitive" id="case" value="true"{% if is_case_sensitive %} checked{% endif %}>
+            <label for="case">Case-sensitive</label>
           {% endblock %}
         </fieldset>
 
         {% block advanced_search %}
         {% endblock %}
 
-          <input type="hidden" name="redirect" value="false" id="redirect" />
-        {% block return_format %}
-          <input type="hidden" name="format" value="json" id="format" />
-        {% endblock %}
+        <input type="hidden" name="redirect" value="true" id="redirect">
 
         {% block search_button %}
           <input type="submit" value="Search" class="visually-hidden" />
@@ -38,22 +35,8 @@
       </form>
     </div>
 
-    {% if panel %}
-    <div class="panel">
-      <a id="panel-toggle">
-        {%- block panel_title -%}
-        Navigation
-        {%- endblock -%}
-      </a>
-      <div id="panel-content">
-        {% block panel %}
-        {% endblock %}
-      </div>
-    </div>
-    {% endif %}
-
     {% block content %}
-    <div id="content" class="content" data-no-results="No results returned for current query."></div>
+      <div id="content" class="content" data-no-results="No results returned for current query."></div>
     {% endblock %}
 
     {% block footer %}
@@ -65,19 +48,12 @@
     </div>
     {% endblock %}
 
-    {% block fetch_results %}
-    <div id="fetch-results">
-      <img src="{{ wwwroot }}/static/view-refresh.svg" />
-      Fetching results
-    </div>
-    {% endblock %}
-
     <div id="inline-menu"></div>
     <div id="info-box"></div>
 
     {% set eof = True if state_eof else False %}
 
-    {% block embedded_data %}
+    {% block js_data %}
       <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
       <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search" data-tree="{{ tree }}"></span>
       <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-eof="{{ eof }}"></span>
@@ -87,8 +63,7 @@
       <script src="{{ wwwroot }}/static/js/jquery203.js"></script>
       <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
       <script src="{{ wwwroot }}/static/js/templates.js"></script>
-
-      <script type="application/javascript;version=1.8" src="{{ wwwroot }}/static/js/dxr.js"></script>
+      <script src="{{ wwwroot }}/static/js/dxr.js"></script>
     {% endblock %}
   </body>
 </html>

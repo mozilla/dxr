@@ -6,23 +6,6 @@
   <link rel="shortcut icon" href="{{ wwwroot }}/static/icons/{{ icon }}.png"/>
 {% endblock %}
 
-{% set panel = True %}
-{% set state_eof = True %}
-
-{% block panel %}
-  {% for section, items in sections %}
-  <div class="section">
-    <h1>{{ section }}</h1>
-    {% for icon, title, href in items %}
-      <a href="{{ href }}"
-        title="{{ title }}"
-        style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png');"
-        >{{ title }}</a>
-    {%- endfor %}
-    </div>
-  {% endfor %}
-{% endblock %}
-
 {% block content %}
 <div id="content" class="content" data-no-results="No results returned for current query.">
   <div class="file-name">
@@ -48,6 +31,32 @@
     </section>
   {% endif %}
 
+  {% set panel = True %}
+  {% set state_eof = True %}
+
+  {% if panel %}
+    <div class="panel">
+      <button id="panel-toggle">
+        <span class="navpanel-icon" aria-hidden="true"></span>
+        {%- block panel_title -%}
+        Navigation
+        {%- endblock -%}
+      </button>
+      {% for section, items in sections %}
+        <section id="panel-content" aria-expanded="false" aria-hidden="true">
+          <h4>{{ section }}</h4>
+          <ul>
+          {% for icon, title, href in items %}
+            <li>
+              <a href="{{ href }}"title="{{ title }}" class="{{ icon }}">{{ title }}</a>
+            </li>
+          {%- endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <div id="annotations">
     {% for line, annotations in lines %}
       <div class="annotation-set" id="aset-{{ loop.index }}">
@@ -69,17 +78,18 @@
     {% for line, annotations in lines %}
       <tr>
           <td>
-            <a href="#l{{ loop.index }}" id="l{{ loop.index }}">{{ loop.index }}</a>
+            <a href="#{{ loop.index }}" id="{{ loop.index }}">{{ loop.index }}</a>
           </td>
           <td class="code">
 <pre>
-<code aria-labelledby="l{{ loop.index }}">{{ line }}</code>
+<code aria-labelledby="{{ loop.index }}">{{ line }}</code>
 </pre>
           </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+
    <p class="top"><a href="#search-box">Back to Top</a></p>
  </div>
 {% endblock %}
@@ -88,5 +98,5 @@
   {{ super() }}
   <script src="{{ wwwroot }}/static/js/utils.js"></script>
   <script src="{{ wwwroot }}/static/js/context_menu.js"></script>
-  <script src="{{ wwwroot }}/static/panel.js"></script>
+  <script src="{{ wwwroot }}/static/js/panel.js"></script>
 {% endblock %}

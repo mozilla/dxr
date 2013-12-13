@@ -5,7 +5,6 @@ $(function() {
     'use strict';
 
     var constants = $('#data');
-
     var dxr = {};
 
     dxr.wwwroot = constants.data('root');
@@ -92,13 +91,15 @@ $(function() {
      *
      * @param {string} fullPath - The full path of the currently displayed file.
      * @param {string} tree - The tree which was searched and in which this file can be found.
+     * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildPathLine(fullPath, tree) {
+    function buildPathLine(fullPath, tree, icon) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
             splitPathLength = paths.length,
-            dataPath = [];
+            dataPath = [],
+            iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex in paths) {
             var isFirstOrLast = false;
@@ -115,6 +116,7 @@ $(function() {
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
                 'display_path': displayPath,
+                'icon_class': iconClass,
                 'url': pathRoot + dataPath.join('/')
             });
         }
@@ -127,12 +129,33 @@ $(function() {
         contentContainer = $('#content');
 
     /**
-     * Returns the full Ajax URL for search
-     * @param {string} params - A serialized string of the form inputs.
+     * Returns the full Ajax URL for search and explicitly sets
+     * redirect to false and format to json to ensure we never
+     * get a HTML response or redirect from an Ajax call, even
+     * when using the back button.
+     *
+     * @param {string} query - The query string
+     * @param {string} [optional] isCaseSensitive - String that will be either true or false.
      */
-    function buildAjaxURL(params) {
+    function buildAjaxURL(query, isCaseSensitive) {
         var search = constants.data('search');
-        return search + '?' + params;
+        var params = {};
+        params.q = query;
+        params.redirect = false;
+        params.format = 'json';
+        // Default for case sensitivity is false.
+        params.is_case_sensitive = "false";
+
+        // If a value for isCaseSensitive was passed, changed the property
+        // to reflect the new value.
+        if (typeof isCaseSensitive !== 'undefined') {
+            params.is_case_sensitive = isCaseSensitive;
+        }
+
+        console.log($.param(params));
+
+
+        return search + '?' + $.param(params);
     }
 
     var waitr = null;
@@ -172,18 +195,20 @@ $(function() {
 
         var previousQuery = query ? query : previousQuery;
 
-        $.getJSON(buildAjaxURL(searchForm.serialize()), function(data) {
+        $.getJSON(buildAjaxURL(query), function(data) {
 
             // If no data is returned, inform the user.
             if (!data.results.length) {
                 contentContainer.empty();
                 setUserMessage('info', contentContainer.data('no-results'), contentContainer);
             } else {
+                data['tree'] = dxr.tree;
+                data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
                 var results = data.results;
 
                 for (var result in results) {
-                    results[result].pathLine = buildPathLine(results[result].path, data.tree);
-                    results[result].iconPath = dxr.icons + results[result].icon;
+                    var icon = results[result].icon;
+                    results[result].pathLine = buildPathLine(results[result].path, data.tree, icon);
                 }
 
                 contentContainer.empty().append(tmpl.render(data));
@@ -235,13 +260,6 @@ $(function() {
     // Stop search as you type as soon as the field looses focus.
     queryField.on('blur', function() {
         stopQueryInputPoller();
-    });
-
-    searchForm.on('submit', function() {
-        // Set redirect to true for direct results.
-        $('#redirect').val('true');
-        // Ensure JSON is not returned.
-        $('#format').val('html');
     });
 
     /**
