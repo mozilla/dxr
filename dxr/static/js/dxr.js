@@ -126,6 +126,7 @@ $(function() {
 
     var searchForm = $('#basic_search'),
         queryField = $('#query'),
+        caseSensitiveBox = $('#case'),
         contentContainer = $('#content');
 
     /**
@@ -135,13 +136,15 @@ $(function() {
      * when using the back button.
      *
      * @param {string} query - The query string
+     * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
      */
-    function buildAjaxURL(query) {
+    function buildAjaxURL(query, isCaseSensitive) {
         var search = constants.data('search');
         var params = {};
         params.q = query;
         params.redirect = false;
         params.format = 'json';
+        params['case'] = isCaseSensitive;
 
         return search + '?' + $.param(params);
     }
@@ -159,6 +162,14 @@ $(function() {
     }
 
     /**
+     * Clears any existing query timer and queries immediately.
+     */
+    function queryNow() {
+        clearTimeout(waiter);
+        doQuery();
+    }
+
+    /**
      * Queries and populates the results templates with the returned data.
      */
     function doQuery() {
@@ -169,7 +180,7 @@ $(function() {
             return;
 
         nextRequestNumber += 1;
-        $.getJSON(buildAjaxURL(query), function(data) {
+        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked')), function(data) {
             // A newer response already arrived and is displayed. Don't overwrite it.
             if (myRequestNumber < displayedRequestNumber)
                 return;
@@ -206,8 +217,11 @@ $(function() {
         });
     }
 
-    // Do a search every time you pause typing for 300ms.
+    // Do a search every time you pause typing for 300ms:
     queryField.on('input', querySoon);
+    
+    // Update the search when the case-sensitive box is toggled, canceling any pending query:
+    caseSensitiveBox.on('change', queryNow);
 
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0

@@ -158,6 +158,9 @@ table.result_snippet tr {
 .checkbox_case {
     margin: .5em;
 }
+.checkbox_label {
+    white-space: nowrap;
+}
 .file tr {
     line-height: 1.2;
 }
@@ -288,9 +291,6 @@ mark {
 .text_search input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
-}
-.case {
-    margin-left: 5%;
 }
 .content {
     padding: 1em;
