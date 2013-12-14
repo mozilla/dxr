@@ -146,44 +146,35 @@ $(function() {
         return search + '?' + $.param(params);
     }
 
-    var waitr = null;
+    var waiter = null,
+        nextRequestNumber = 1,  // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
+        displayedRequestNumber = 0;
+
     /**
-     * The poller used to track changes in the query input field value.
-     * @param {string} previousQuery - The last query term that was sent.
+     * Clears any existing query timer and sets a new one to query in a moment.
      */
-    function startQueryInputPoller(previousQuery) {
-
-        (function poller() {
-            var currentQuery = $.trim(queryField.val());
-
-            if (previousQuery !== currentQuery && currentQuery.length > 2) {
-                doQuery(currentQuery);
-                previousQuery = currentQuery;
-            } else {
-                waitr = setTimeout(poller, 500);
-            }
-        })();
+    function querySoon() {
+        clearTimeout(waiter);
+        waiter = setTimeout(doQuery, 300);
     }
 
     /**
-     * Stops the QueryInputPoller
+     * Queries and populates the results templates with the returned data.
      */
-    function stopQueryInputPoller() {
-        // If a timer exists, clear it before continuing.
-        if (waitr) {
-            clearTimeout(waitr);
-        }
-    }
+    function doQuery() {
+        var query = $.trim(queryField.val()),
+            myRequestNumber = nextRequestNumber;
 
-    /**
-     * Executes queries and populates the results templates with the returned data.
-     * @param {string} query - The query term sent when this function was called.
-     */
-    function doQuery(query) {
+        if (query.length < 3)
+            return;
 
-        var previousQuery = query ? query : previousQuery;
-
+        nextRequestNumber += 1;
         $.getJSON(buildAjaxURL(query), function(data) {
+            // A newer response already arrived and is displayed. Don't overwrite it.
+            if (myRequestNumber < displayedRequestNumber)
+                return;
+
+            displayedRequestNumber = myRequestNumber;
 
             // If no data is returned, inform the user.
             if (!data.results.length) {
@@ -201,54 +192,22 @@ $(function() {
 
                 contentContainer.empty().append(tmpl.render(data));
             }
-        }).done(function() {
-            var query = $.trim(queryField.val());
-
-            if (previousQuery !== query && query.length > 2) {
-                stopQueryInputPoller();
-                doQuery(query);
-
-                previousQuery = query;
-            } else {
-                // The query has not changed, start the poller.
-                startQueryInputPoller(previousQuery);
-            }
-        }).fail(function(jqxhr, textStatus, error) {
+        })
+        .fail(function(jqxhr, textStatus, error) {
             var errorMessage = searchForm.data('error');
 
-            if (error) {
+            // A newer response already arrived and is displayed. Don't both complaining about this old one.
+            if (myRequestNumber < displayedRequestNumber)
+                return;
+
+            if (error)
                 errorMessage += ' Error: ' + error;
-            }
-            stopQueryInputPoller();
             setUserMessage('error', errorMessage, $('.text_search', searchForm));
         });
     }
 
-    var previousQuery = '';
-
-    // Start search as you type as soon as the field receives focus.
-    queryField.on('focus', function() {
-        var query = $.trim(queryField.val());
-
-        if (query !== previousQuery && query.length > 2) {
-            doQuery(query);
-            // Because the search field might lose focus and regain
-            // focus without the query text changing, we need to keep
-            // track of previous queries here in order to avoid unnecessary
-            // ajax calls.
-            previousQuery = query;
-        } else {
-            // The query was either empty or there was less than
-            // the mminimum three characters so, simply pass an
-            // empty string as the previous query to the poller.
-            startQueryInputPoller('');
-        }
-    });
-
-    // Stop search as you type as soon as the field looses focus.
-    queryField.on('blur', function() {
-        stopQueryInputPoller();
-    });
+    // Do a search every time you pause typing for 300ms.
+    queryField.on('input', querySoon);
 
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0
