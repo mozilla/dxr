@@ -1,8 +1,10 @@
 from os.path import basename
+import re
 
 import pygments
 from pygments.lexers import get_lexer_for_filename, JavascriptLexer
-from pygments.token import Token
+from pygments.lexer import inherit
+from pygments.token import Token, Comment
 
 import dxr.plugins
 
@@ -32,6 +34,29 @@ token_classes.update((t, 'c') for t in [Token.Comment,
                                         Token.Comment.Single,
                                         Token.Comment.Special])
 
+
+# Extend the Pygments Javascript lexer to handle preprocessor directives.
+class JavascriptPreprocLexer(JavascriptLexer):
+    """
+    For Javascript with Mozilla build preprocessor directives.
+    See https://developer.mozilla.org/en-US/docs/Build/Text_Preprocessor .
+    """
+
+    name = 'JavaScriptPreproc'
+    filenames = []
+    mimetypes = []
+
+    tokens = {
+        'commentsandwhitespace': [
+            # python-style comment
+            (r'#\s.*?\n', Comment.Single),
+            # preprocessor directives
+            (r'#(includesubst|include|expand|define|undef|ifdef|ifndef|elifdef|'
+             r'elifndef|if|elif|else|endif|filter|unfilter|literal|error)',
+             Comment.Preproc),
+            pygments.lexer.inherit
+        ]
+    }
 
 class Pygmentizer(object):
     """Pygmentizer to apply CSS classes to syntax-highlit regions"""
@@ -64,19 +89,21 @@ def htmlify(path, text):
     # Options and filename
     options = {'encoding': 'utf-8'}
     filename = basename(path)
-    try:
-        # Lex .h files as C++ so occurrences of "class" and such get colored;
-        # Pygments expects .H, .hxx, etc. This is okay even for uses of
-        # keywords that would be invalid in C++, like 'int class = 3;'.
-        lexer = get_lexer_for_filename('dummy.cpp' if filename.endswith('.h')
-                                                   else filename,
-                                       **options)
-    except pygments.util.ClassNotFound:
-        # Small hack for js highlighting of jsm files
-        if filename.endswith('.jsm'):
-            lexer = JavascriptLexer(**options)
-        else:
+
+    # Use a custom lexer for js/jsm files to highlight prepocessor directives
+    if filename.endswith('.js') or filename.endswith('.jsm'):
+        lexer = JavascriptPreprocLexer(**options)
+    else:
+        try:
+            # Lex .h files as C++ so occurrences of "class" and such get colored;
+            # Pygments expects .H, .hxx, etc. This is okay even for uses of
+            # keywords that would be invalid in C++, like 'int class = 3;'.
+            lexer = get_lexer_for_filename('dummy.cpp' if filename.endswith('.h')
+                                                       else filename,
+                                           **options)
+        except pygments.util.ClassNotFound:
             return None
+
     return Pygmentizer(text, lexer)
 
 
