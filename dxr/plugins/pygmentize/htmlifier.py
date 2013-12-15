@@ -43,11 +43,9 @@ class JavascriptPreprocLexer(JavascriptLexer):
     """
 
     name = 'JavaScriptPreproc'
-    aliases = []
     filenames = []
     mimetypes = []
 
-    flags = re.DOTALL
     tokens = {
         'commentsandwhitespace': [
             # python-style comment
