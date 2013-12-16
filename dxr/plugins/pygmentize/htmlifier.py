@@ -49,7 +49,7 @@ class JavascriptPreprocLexer(JavascriptLexer):
     tokens = {
         'commentsandwhitespace': [
             # python-style comment
-            (r'#\s.*?\n', Comment.Single),
+            (r'#\s[^\n]*\n', Comment.Single),
             # preprocessor directives
             (r'#(includesubst|include|expand|define|undef|ifdef|ifndef|elifdef|'
              r'elifndef|if|elif|else|endif|filter|unfilter|literal|error)',
