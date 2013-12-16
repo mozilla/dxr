@@ -5,8 +5,11 @@
     {% block head %}
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
-    <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
-    <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+
+    {% block site_css %}
+      <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+    {% endblock %}
   </head>
   <body {% block body_class %}{% endblock %}>
     {% block body %}
@@ -26,6 +29,7 @@
         {% block advanced_search %}
         {% endblock %}
 
+          <input type="hidden" value="{{ tree }}" id="ts-value" />
           <input type="hidden" name="redirect" value="true" id="redirect" />
 
         {% block search_button %}

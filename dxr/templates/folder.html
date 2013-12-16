@@ -2,6 +2,11 @@
 
 {% block title %}{{ name }} - DXR{% endblock %}
 
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
 {% set state_eof = True %}
 
 {% block content %}
@@ -14,19 +19,7 @@
 
   {% set showing_tree_menu = trees|length > 1 %}
   {% if showing_tree_menu %}
-    <section id="tree-selector" class="tree-selector">
-      <select name="tree" id="tree">
-        {% for t in trees %}
-          <option{% if ((t == tree) if tree else loop.first)  %} selected="selected"{% endif %}>{{ t }}</option>
-        {% endfor %}
-      </select>
-    </section>
-  {% else %}
-    <section id="tree-selector" class="tree-selector">
-      <select name="tree" id="tree" disabled="disabled">
-        <option value="{{ tree }}">{{ tree }}</option>
-      </select>
-    </section>
+    {% include "partial/tree-selector.html" %}
   {% endif %}
 
   <table class="folder-content">
@@ -61,3 +54,7 @@
 </div>
 {% endblock %}
 
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+{% endblock %}
