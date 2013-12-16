@@ -303,7 +303,8 @@ mark {
 .path-separator {
     margin: 0 .4rem;
 }
-.file-name {
+.file-name,
+.top-of-tree {
     display: inline-block;
     float: left;
     margin: 0;
@@ -312,9 +313,6 @@ mark {
     text-align: left;
 }
 /* top of tree */
-.top-of-tree {
-    font-size: .8rem;
-}
 .top-of-tree a:link,
 .top-of-tree a:visited,
 .file-name a:link,
@@ -340,7 +338,8 @@ mark {
     background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
     padding: .5em .5em .5em 1.7em;
 }
-.folder-content {
+.folder-content,
+.result {
     clear: both;
 }
 .folder-content .icon {

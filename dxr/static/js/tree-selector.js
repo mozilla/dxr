@@ -15,8 +15,6 @@ $(function() {
     }
 
     function hideOptions() {
-        // Move focus back to the trigger/button
-        selectTrigger[0].focus();
         options.parents('.select-options').hide();
     }
 
