@@ -287,6 +287,15 @@ table.folder-content {
     background-color: #ccc;
 }
 
+#inline-menu .code {
+    font-family: monospace;
+}
+
+#inline-menu hr {
+    margin-top: 1px;
+    margin-bottom: 3px;
+}
+
 #info-box {
     background-color: #eee;
     display: none;

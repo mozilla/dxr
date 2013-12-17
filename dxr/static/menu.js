@@ -29,19 +29,45 @@ menu.launch = function(el){
   }
 };
 
+menu.addToContent = function(content, link, cssClass){
+  content += "<a href=\"" + htmlEntities(link.href) + "\"";
+  content += " title=\"" + htmlEntities(link.title) + "\"";
+  content += " onclick=\"menu.hide(); return true;\"";
+  if (link.icon) {
+    var icon = wwwroot + "/static/icons/" + link.icon + ".png";
+    content += " style=\"background-image: url('" + icon + "')\"";
+  }
+  if (cssClass) {
+    content += " class=\"" + cssClass + "\"";
+  }
+  content += ">" + link.text + "</a>";
+  return content;
+}
+
 /** Populate menu
- * links is a list of JSON objects with href, title, icon, text
+ * links is a list of JSON objects with href, title, icon, text, section
+ * section is optional. If supplied, it will be put into a separate section of
+ * the menu. Currently accepted section values are: 'code'
  */
 menu.populate = function(links){
   var content = ""
+  // The 'code' section
   for(var i = 0; i < links.length; i++){
     var link = links[i];
-    var icon = wwwroot + "/static/icons/" + link.icon + ".png";
-    content += "<a href=\"" + htmlEntities(link.href) + "\"";
-    content += " title=\"" + htmlEntities(link.title) + "\"";
-    content += " onclick=\"menu.hide(); return true;\"";
-    content += " style=\"background-image: url('" + icon + "')\">";
-    content += htmlEntities(link.text) + "</a>";
+    if (link.section == "code") {
+      content = menu.addToContent(content, link, "code");
+    }
+  }
+  if (content) {
+    content += "<hr>";
+  }
+  // section for section-less items
+  for(var i = 0; i < links.length; i++){
+    var link = links[i];
+    if (!link.section) {
+      link.text = htmlEntities(link.text)
+      content = menu.addToContent(content, link, "");
+    }
   }
   var m = document.getElementById(_menuId);
   m.innerHTML = content;
