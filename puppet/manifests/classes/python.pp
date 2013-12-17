@@ -36,6 +36,12 @@ class python ($project_path) {
            require => Package["python-pip"];
     }
 
+    exec {
+        "nose":
+            command => "pip install nose",
+            require => Package["python-pip"];
+    }
+
 
     #exec { "pip-install-compiled":
     #
