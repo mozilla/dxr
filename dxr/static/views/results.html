@@ -18,7 +18,7 @@
         <ul class="ts-options" tabindex="-1">
           {% for t in trees %}
               <li>
-                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}>{{ t }}</a>
+                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
               </li>
           {% endfor %}
         </ul>
