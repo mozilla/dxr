@@ -17,10 +17,9 @@
     {%- endfor -%}
   </div>
 
-  {% set showing_tree_menu = trees|length > 1 %}
-  {% if showing_tree_menu %}
-    {% include "partial/tree-selector.html" %}
-  {% endif %}
+  {% block tree_selector %}
+    {{ super() }}
+  {% endblock %}
 
   <table class="folder-content">
     <thead>

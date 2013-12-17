@@ -1,5 +1,5 @@
 $(function() {
-    var selectTrigger = $('.ts-select-trigger');
+    var contentContainer = $('#content');
     var options = $('.ts-options');
 
     function setSelectedItem(selected) {
@@ -15,11 +15,14 @@ $(function() {
     }
 
     function hideOptions() {
-        options.parents('.select-options').hide();
+        // Because the tree selector can be injected by a JS
+        // template, we need to use the selector directly here,
+        // as the element will not exist on DOM ready.
+        $('.ts-options').parents('.select-options').hide();
     }
 
     // Show/Hide the options
-    selectTrigger.on('click', function(event) {
+    contentContainer.on('click', '.ts-select-trigger', function(event) {
         event.stopPropagation();
 
         var optionsFilter = $('.options-filter');
