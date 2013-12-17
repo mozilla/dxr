@@ -56,7 +56,7 @@
             <ul class="ts-options" tabindex="-1">
               {% for t in trees %}
                   <li>
-                    <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}>{{ t }}</a>
+                    <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: It is a mistake to think you can solve any major problems just with potatoes...</a></a>
                   </li>
               {% endfor %}
             </ul>
