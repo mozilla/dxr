@@ -98,9 +98,9 @@
     </thead>
     <tbody>
     {% for line, annotations in lines %}
-      <tr>
+      <tr id="{{ loop.index }}">
           <td>
-            <a href="#{{ loop.index }}" id="{{ loop.index }}">{{ loop.index }}</a>
+            <a href="#{{ loop.index }}">{{ loop.index }}</a>
           </td>
           <td class="code">
 <pre>
