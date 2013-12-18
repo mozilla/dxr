@@ -217,10 +217,14 @@ mark {
     text-align: right;
 }
 .search-box {
+    position: fixed;
+    top: 0;
     background-color: #f6f4ec;
     color: #333;
     padding: .8rem;
     border-bottom: 10px solid #333;
+    width: 100%;
+    z-index: 100;
 }
 .header_nav_link {
     position: absolute;
@@ -299,6 +303,7 @@ mark {
     height: 1rem;
 }
 .content {
+    margin-top: 4%;
     padding: 1em;
 }
 .path {
@@ -475,7 +480,7 @@ a.c {
 .panel {
     display: none;
     position: absolute;
-    top: 127px;
+    top: 118px;
     right: 16px;
     background-color: #fff;
     border: 1px solid #e0e0e0;
