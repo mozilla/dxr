@@ -149,7 +149,7 @@ table.result_snippet tr {
     background-color: #e0e0e0;
 }
 .result_snippet td {
-    padding: 0;
+    padding: .1rem .5rem;
 }
 .result_snippet a {
     width: 100%;
@@ -174,7 +174,6 @@ table.result_snippet tr {
     line-height: 1.5;
 }
 .file pre {
-    white-space: pre-wrap;
     margin: .3rem;
 }
 mark {
