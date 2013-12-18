@@ -151,6 +151,9 @@ table.result_snippet tr {
 .result_snippet a {
     width: 100%;
 }
+.result_snippet tr:target {
+    background-color: gold;
+}
 .result_snippet code a {
     display: inline;
     width: 100%;
@@ -469,7 +472,7 @@ a.c {
 .panel {
     display: none;
     position: absolute;
-    top: 113px;
+    top: 127px;
     right: 16px;
     background-color: #fff;
     border: 1px solid #e0e0e0;
