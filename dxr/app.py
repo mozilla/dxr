@@ -181,6 +181,13 @@ def browse(tree, path=''):
     return send_from_directory(tree_folder, _html_file_path(tree_folder, path))
 
 
+@dxr_blueprint.route('/<tree>/')
+@dxr_blueprint.route('/<tree>')
+def tree_root(tree):
+    """Redirect requests for the tree root instead of giving 404s."""
+    return redirect(tree + '/source/')
+
+
 @dxr_blueprint.route('/<tree>/parallel/')
 @dxr_blueprint.route('/<tree>/parallel/<path:path>')
 def parallel(tree, path=''):

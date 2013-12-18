@@ -354,6 +354,11 @@ def handleScope(args, conn, canonicalize=False):
     if scopeid is not None:
         args['scopeid'] = scopeid
 
+def _truncate(s, length=32):
+    if len(s) <= length:
+        return s
+    return s[:length - 3] + '...'
+
 def process_decldef(args, conn):
     if 'kind' not in args:
         return None
@@ -427,6 +432,8 @@ def process_impl(args, conn):
 
 def process_variable(args, conn):
     args['id'] = dxr.utils.next_global_id()
+    if 'value' in args:
+        args['value'] = _truncate(args['value'])
     if not fixupEntryPath(args, 'loc', conn):
         return None
     handleScope(args, conn)
@@ -457,6 +464,7 @@ def process_macro(args, conn):
     args['id'] = dxr.utils.next_global_id()
     if 'text' in args:
         args['text'] = args['text'].replace("\\\n", "\n").strip()
+        args['text'] = _truncate(args['text'])
     if not fixupEntryPath(args, 'loc', conn):
         return None
     fixupExtent(args, 'extent')
