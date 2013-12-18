@@ -1,28 +1,58 @@
 <p class="top-of-tree">Results from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree:</p>
-{% for result in results %}
-<div class="result">
-    <div class="path">
-        {{ result.pathLine }}
+
+<section id="tree-selector" class="tree-selector">
+    <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
+        <!-- arrow icon using icon font -->
+        <span aria-hidden="true" data-icon-arrow="&#xe801;" class="selector-arrow">
+            <!-- tree icon using icon font -->
+            <span aria-hidden="true" data-icon="&#xe800;"></span>
+            <span class='current-tree'>Switch Tree</span>
+        </span>
+    </button>
+    <div class="select-options ts-modal" aria-expanded="false">
+        <form name="options-filter" class="options-filter" data-active="false">
+            <label for="filter-txt" class="visually-hidden">Filter Trees</label>
+            <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
+            <input type="submit" value="Filter" class="visually-hidden" />
+        </form>
+        <ul class="ts-options" tabindex="-1">
+          {% for t in trees %}
+              <li>
+                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
+              </li>
+          {% endfor %}
+        </ul>
     </div>
-    <table class="result_snippet">
-        <caption class="visually-hidden">Query matches in {{ result.path }}</caption>
-        <thead class="visually-hidden">
-            <th scope="col">Line</th>
-            <th scope="col">Code Snippet</th>
-        </thead>
-        <tbody>
-        {% for entry in result.lines %}
-            <tr>
-                <td>{{ entry.line_number }}</td>
-                <td>
-<a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-<code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
-</a>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <p class="top"><a href="#search-box">Back to Top</a></p>
-</div>
-{% endfor %}
+</section>
+
+{% if results|length > 0 %}
+    {% for result in results %}
+    <div class="result">
+        <div class="path">
+            {{ result.pathLine }}
+        </div>
+        <table class="result_snippet">
+            <caption class="visually-hidden">Query matches in {{ result.path }}</caption>
+            <thead class="visually-hidden">
+                <th scope="col">Line</th>
+                <th scope="col">Code Snippet</th>
+            </thead>
+            <tbody>
+            {% for entry in result.lines %}
+                <tr>
+                    <td>{{ entry.line_number }}</td>
+                    <td>
+    <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+    <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
+    </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p class="top"><a href="#search-box">Back to Top</a></p>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="user-message info">{{ user_message }}</p>
+{% endif %}

@@ -25,36 +25,82 @@
   {% endif %}
 {% endblock %}
 
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
 {% block content %}
 <div id="content" class="content" data-no-results="No results returned for current query.">
   <p class="top-of-tree">Results from the <a href="{{ wwwroot }}/{{ tree }}/source/">{{ tree }}</a> tree:</p>
-  {% for icon, path, lines in results %}
-    <div class="result">
-      <div class="path">
-        {% set iconclass = icon.split('/')[1] %}
-        <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}" class="{{ iconclass }}">{{ path }}</a>
+
+  {% block tree_selector %}
+    {% set showing_tree_menu = trees|length > 1 %}
+    {% if showing_tree_menu %}
+      <section id="tree-selector" class="tree-selector">
+        <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
+            <!-- arrow icon using icon font -->
+            <span aria-hidden="true" data-icon-arrow="&#xe801;" class="selector-arrow">
+                <!-- tree icon using icon font -->
+                <span aria-hidden="true" data-icon="&#xe800;"></span>
+                <span class='current-tree'>Switch Tree</span>
+            </span>
+        </button>
+        <div class="select-options ts-modal" aria-expanded="false">
+            <form name="options-filter" class="options-filter" data-active="false">
+                <label for="filter-txt" class="visually-hidden">Filter Trees</label>
+                <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
+                <input type="submit" value="Filter" class="visually-hidden" />
+            </form>
+            {% set query_string = "q=%s&case=%s" % (query, is_case_sensitive) %}
+            <ul class="ts-options" tabindex="-1">
+              {% for t in trees %}
+                  <li>
+                    <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: It is a mistake to think you can solve any major problems just with potatoes...</a></a>
+                  </li>
+              {% endfor %}
+            </ul>
+        </div>
+      </section>
+    {% endif %}
+  {% endblock %}
+
+  {% if results|length > 0 %}
+    {% for icon, path, lines in results %}
+      <div class="result">
+        <div class="path">
+          {% set iconclass = icon.split('/')[1] %}
+          <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}" class="{{ iconclass }}">{{ path }}</a>
+        </div>
+        <table class="result_snippet">
+          <caption class="visually-hidden">Query matches in {{ path }}</caption>
+          <thead class="visually-hidden">
+              <th scope="col">Line</th>
+              <th scope="col">Code Snippet</th>
+          </thead>
+          {% for number, line in lines %}
+          <tbody>
+              <tr>
+                  <td>{{ number }}</td>
+                  <td>
+  <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+  <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
+  </a>
+                  </td>
+              </tr>
+          </tbody>
+          {% endfor %}
+      </table>
+      <p class="top"><a href="#search-box">Back to Top</a></p>
+      {% endfor %}
       </div>
-      <table class="result_snippet">
-        <caption class="visually-hidden">Query matches in {{ path }}</caption>
-        <thead class="visually-hidden">
-            <th scope="col">Line</th>
-            <th scope="col">Code Snippet</th>
-        </thead>
-        {% for number, line in lines %}
-        <tbody>
-            <tr>
-                <td>{{ number }}</td>
-                <td>
-<a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
-<code aria-labelledby="{{ number }}">{{ line|safe }}</code>
-</a>
-                </td>
-            </tr>
-        </tbody>
-        {% endfor %}
-    </table>
-    <p class="top"><a href="#search-box">Back to Top</a></p>
-    {% endfor %}
-    </div>
+  {% else %}
+    <p class="user-message info">No results returned for current query.</p>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
 {% endblock %}

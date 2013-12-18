@@ -303,17 +303,16 @@ mark {
 .path-separator {
     margin: 0 .4rem;
 }
-.file-name {
+.file-name,
+.top-of-tree {
     display: inline-block;
+    float: left;
     margin: 0;
-    padding: 0;
+    padding: .5rem 0 1rem 0;
     font-size: .9rem;
     text-align: left;
 }
 /* top of tree */
-.top-of-tree {
-    font-size: .8rem;
-}
 .top-of-tree a:link,
 .top-of-tree a:visited,
 .file-name a:link,
@@ -339,7 +338,8 @@ mark {
     background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
     padding: .5em .5em .5em 1.7em;
 }
-.folder-content {
+.folder-content,
+.result {
     clear: both;
 }
 .folder-content .icon {
@@ -544,12 +544,20 @@ a.c {
     background-color: #e0e0e0;
     text-decoration: underline;
 }
+/* user messages */
+.user-message {
+    clear: both;
+    padding: .5rem;
+    border-bottom: 3px solid darkgreen;
+}
+.user-message.info {
+    background: -webkit-linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
+    background: -moz-linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
+    background: linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
+    color: white;
+}
 #fetch-results {
     display: none;
-}
-.tree-selector {
-    position: relative;
-    float: right;
 }
 /*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
 .visually-hidden {

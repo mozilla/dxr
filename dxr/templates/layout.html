@@ -5,8 +5,11 @@
     {% block head %}
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
-    <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
-    <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+
+    {% block site_css %}
+      <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+    {% endblock %}
   </head>
   <body {% block body_class %}{% endblock %}>
     {% block body %}
@@ -26,6 +29,7 @@
         {% block advanced_search %}
         {% endblock %}
 
+          <input type="hidden" value="{{ tree }}" id="ts-value" />
           <input type="hidden" name="redirect" value="true" id="redirect" />
 
         {% block search_button %}
@@ -36,6 +40,38 @@
 
     {% block content %}
       <div id="content" class="content" data-no-results="No results returned for current query."></div>
+
+      {% block tree_selector %}
+        {% set showing_tree_menu = trees|length > 1 %}
+        {% if showing_tree_menu %}
+          <section id="tree-selector" class="tree-selector">
+            <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
+                <!-- arrow icon using icon font -->
+                <span aria-hidden="true" data-icon-arrow="&#xe801;" class="selector-arrow">
+                    <!-- tree icon using icon font -->
+                    <span aria-hidden="true" data-icon="&#xe800;"></span>
+                    <span class='current-tree'>Switch Tree</span>
+                </span>
+            </button>
+            <div class="select-options ts-modal" aria-expanded="false">
+                <form name="options-filter" class="options-filter" data-active="false">
+                    <label for="filter-txt" class="visually-hidden">Filter Trees</label>
+                    <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
+                    <input type="submit" value="Filter" class="visually-hidden" />
+                </form>
+                {% block tree_selector_options %}
+                  <ul class="ts-options" tabindex="-1">
+                  {% for t in trees %}
+                      <li>
+                        <a href="{{ wwwroot }}/{{ t }}/parallel/" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: The ships hung in the sky in much the same way that bricks don't.</a>
+                      </li>
+                  {% endfor %}
+                  </ul>
+                {% endblock %}
+            </div>
+          </section>
+        {% endif %}
+      {% endblock %}
     {% endblock %}
 
     {% block footer %}

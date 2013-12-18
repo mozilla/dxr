@@ -13,7 +13,7 @@ $(function() {
     dxr.tree = constants.data('tree');
 
     /**
-     * Disable and enable event on scroll begin and scroll end.
+     * Disable and enable pointer events on scroll begin and scroll end.
      * @see http://www.thecssninja.com/javascript/pointer-events-60fps
      */
     var root = document.documentElement;
@@ -46,13 +46,13 @@ $(function() {
 
         switch(type) {
             case 'info':
-                messageContainer.setAttribute('class', 'message info');
+                messageContainer.setAttribute('class', 'user-message info');
                 break;
             case 'warn':
-                messageContainer.setAttribute('class', 'message warn');
+                messageContainer.setAttribute('class', 'user-message warn');
                 break;
             case 'error':
-                messageContainer.setAttribute('class', 'message error');
+                messageContainer.setAttribute('class', 'user-message error');
                 break;
             default:
                 console.log('Unrecognized message type. See function documentation for supported types.');
@@ -187,13 +187,23 @@ $(function() {
 
             displayedRequestNumber = myRequestNumber;
 
+            data['wwwroot'] = dxr.wwwroot;
+            data['tree'] = dxr.tree;
+            data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
+            data['trees'] = data.trees;
+
+            var params = {
+                q: data.query,
+                case: data.is_case_sensitive
+            }
+            data['query_string'] = $.param(params);
+
             // If no data is returned, inform the user.
             if (!data.results.length) {
-                contentContainer.empty();
-                setUserMessage('info', contentContainer.data('no-results'), contentContainer);
+                data['user_message'] = contentContainer.data('no-results');
+                contentContainer.empty().append(tmpl.render(data));
             } else {
-                data['tree'] = dxr.tree;
-                data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
+
                 var results = data.results;
 
                 for (var result in results) {
@@ -219,7 +229,7 @@ $(function() {
 
     // Do a search every time you pause typing for 300ms:
     queryField.on('input', querySoon);
-    
+
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
     caseSensitiveBox.on('change', queryNow);
 
@@ -231,7 +241,7 @@ $(function() {
      * return Either the original number or the number prefixed with 0
      */
     function addLeadingZero(number) {
-        return (number < 9) || (number > 0) ? "0" + number : number;
+        return (number <= 9) || (number === 0) ? "0" + number : number;
     }
 
     /**

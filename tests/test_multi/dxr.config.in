@@ -1,0 +1,15 @@
+[DXR]
+enabled_plugins     = pygmentize clang
+temp_folder         = PWD/temp
+target_folder       = PWD/target
+nb_jobs             = 4
+
+[code]
+source_folder       = PWD/code
+object_folder       = PWD/code
+build_command       = make clean; make -j $jobs
+
+[code2]
+source_folder       = PWD/code2
+object_folder       = PWD/code2
+build_command       = make clean; make -j $jobs
