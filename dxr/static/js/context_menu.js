@@ -75,10 +75,10 @@ $(function() {
                 href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word)
             }
 
-            var currentNode = $(node).parent();
-            var currentNodeTagName = currentNode[0].tagName;
-            // Only check for the menu data attribute if the current nodes parent is and anchor link.
-            if (currentNodeTagName === 'A') {
+            var currentNode = $(node).closest('a');
+            // Only check for the data-menu attribute if the current node has an
+            // ancestor that is an anchor.
+            if (currentNode.length) {
                 toggleSymbolHighlights(currentNode);
                 contextMenu.menuItems = currentNode.data('menu');
             }
