@@ -45,23 +45,6 @@ def index():
     return redirect('%s/%s/source/' % (wwwroot, tree))
 
 
-@dxr_blueprint.route('/advanced')
-def advanced():
-    """Search by all available filters."""
-    config = current_app.config
-
-    # Arguments for the template:
-    arguments = {
-        # Common template variables
-        'wwwroot': config['WWW_ROOT'],
-        'tree': config['TREES'][0],
-        'trees': config['TREES'],
-        'config': config['TEMPLATE_PARAMETERS'],
-        'generated_date': config['GENERATED_DATE']}
-
-    return render_template('advanced.html', **arguments)
-
-
 @dxr_blueprint.route('/<tree>/search')
 def search(tree):
     """Search by regex, caller, superclass, or whatever."""
