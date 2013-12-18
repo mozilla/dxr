@@ -251,7 +251,8 @@ schema = dxr.schema.Schema({
         ("targetid", "INTEGER", False), # The target of the call
         ("funcid", "INTEGER", False),   # One of the functions in the target set
         ("_key", "targetid", "funcid"),
-        ("_fkey", "targetid", "functions", "id")
+        ("_fkey", "funcid", "functions", "id"),
+        ("_index", "funcid"),
     ]
 })
 
