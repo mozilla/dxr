@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     {% block head %}
+      <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
 
     {% block site_css %}
       <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+      <link href="{{ wwwroot }}/static/css/code-style.css" rel="stylesheet" type="text/css" media="screen" />
     {% endblock %}
   </head>
   <body {% block body_class %}{% endblock %}>

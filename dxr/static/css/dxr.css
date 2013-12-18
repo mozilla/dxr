@@ -148,6 +148,9 @@ table.result_snippet tr {
 .result_snippet td:first-child a:hover {
     background-color: #e0e0e0;
 }
+.result_snippet td {
+    padding: 0;
+}
 .result_snippet a {
     width: 100%;
 }
@@ -172,9 +175,10 @@ table.result_snippet tr {
 }
 .file pre {
     white-space: pre-wrap;
+    margin: .3rem;
 }
 mark {
-    padding: .5rem;
+    padding: .3rem;
 }
 /* Context Menu */
 .context-menu {
