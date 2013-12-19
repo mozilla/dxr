@@ -4,6 +4,34 @@ import re
 import struct
 import time
 
+from parsimonious import Grammar
+
+
+query_grammar = Grammar(u"""
+    query = _ term+
+    term = filtered_term / free_term
+    filtered_term = not? plus? filter ":" text
+
+    # No filter is a prefix of a later one. This avoids premature matches.
+    filter = ~r"path|ext|type-ref|type-decl|type|function-ref|function-decl|function|var-ref|var-decl|var|namespace-ref|namespace-alias-ref|namespace-alias|namespace|macro-ref|macro|callers|called-by|warning-opt|warning|bases|derived|member"
+
+    not = "-"
+    plus = "+"
+    free_term = not? text
+
+    # TODO: Bare, quoted, or escaped text, possibly with spaces. Not empty.
+    text = ~r"[a-zA-Z:)(?+-]+" _
+
+    _ = ~r"[ \t]*"
+    """)
+
+# tests:
+# `fred:` should be a free term, not a filtered one, since there's no text after it.
+# -+fred should come out as a free term with content "+fred" and the NOT bit set.
+# nonsense should be parsed into a series of free terms. `- -+ +- re: smoo` should be 5 free terms.
+# Unbalanced quotes should be free terms: `"this here thing` should be 3 free terms: "this, here, and thing.
+# Make sure unicode text gets read properly.
+
 
 # TODO
 #   - Special argument files-only to just search for file names
