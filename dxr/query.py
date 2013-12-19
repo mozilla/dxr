@@ -17,7 +17,7 @@ query_grammar = Grammar(u"""
 
     not = "-"
     plus = "+"
-    free_term = not? text
+    free_term = (not text) / text
 
     # TODO: Bare, quoted, or escaped text, possibly with spaces. Not empty.
     text = ~r"[a-zA-Z:)(?+-]+" _

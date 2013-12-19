@@ -14,3 +14,4 @@ class ParserTests(TestCase):
         print query_grammar.parse("re:smoo bar baz")
         print query_grammar.parse("-baz -foo")        
         print query_grammar.parse("-baz +qual +type: +type:good +-type:hey")
+        print query_grammar.parse("- -+ +- re: smoo")
