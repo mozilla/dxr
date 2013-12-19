@@ -1,5 +1,5 @@
 $(function() {
-    var contentContainer = $('#content');
+    var trigger = $('.sf-select-trigger');
     var options = $('.selector-options');
 
     /**
@@ -25,21 +25,28 @@ $(function() {
         // Because the tree selector can be injected by a JS
         // template, we need to use the selector directly here,
         // as the element will not exist on DOM ready.
-        $('.selector-options').parents('.select-options').hide();
+        $('.sf-select-options').hide();
+    }
+
+    /**
+     * Update the query field with the selected filter.
+     * @param {String} selectedFilter - The selected filter.
+     */
+    function setFilter(selectedFilter) {
+        var queryField = $('#query');
+        var value = queryField.val();
+
+        value += ' ' + selectedFilter;
+        queryField.val(value);
+        queryField[0].focus();
     }
 
     // Show/Hide the options
-    contentContainer.on('click', '.ts-select-trigger', function(event) {
+    trigger.click(function(event) {
         event.stopPropagation();
 
-        var optionsFilter = $('.options-filter');
-        var optionsContainer = $('.tree-selector').find('.select-options');
+        var optionsContainer = $('.search-filter').find('.sf-select-options');
         var expanded = optionsContainer.attr('aria-expanded');
-
-        // Show or hide the filter field if active.
-        if (optionsFilter.data('active')) {
-            optionsFilter.toggle();
-        }
 
         optionsContainer.toggle();
 
@@ -53,10 +60,10 @@ $(function() {
 
     options.on('click', 'a', function(event) {
         event.stopPropagation();
+
         setSelectedItem($(this));
-        // Set the value of the relevant hidden type element to
-        // the selected value.
-        $('#ts-value').val($(this).text());
+        setFilter($(this).data('value'));
+
         hideOptions();
     });
 
@@ -71,7 +78,7 @@ $(function() {
         var keyPressed = event.key || event.keyCode;
         // esc key pressed.
         if (keyPressed === 27 || keyPressed === 'Esc') {
-            hideOptions();
+           hideOptions();
         }
     }, false);
 });

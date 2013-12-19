@@ -53,10 +53,10 @@
                 <input type="submit" value="Filter" class="visually-hidden" />
             </form>
             {% set query_string = "q=%s&case=%s" % (query, is_case_sensitive) %}
-            <ul class="ts-options" tabindex="-1">
+            <ul class="selector-options" tabindex="-1">
               {% for t in trees %}
                   <li>
-                    <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: It is a mistake to think you can solve any major problems just with potatoes...</a></a>
+                    <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="selector-option-label">{{ t }}</span>: It is a mistake to think you can solve any major problems just with potatoes...</a></a>
                   </li>
               {% endfor %}
             </ul>
@@ -91,7 +91,6 @@
           </tbody>
           {% endfor %}
       </table>
-      <p class="top"><a href="#search-box">Back to Top</a></p>
       {% endfor %}
       </div>
   {% else %}

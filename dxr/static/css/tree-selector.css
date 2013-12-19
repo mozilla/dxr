@@ -61,6 +61,7 @@
     border: 1px solid #d4d4d4;
     border-radius: 6px;
     min-width: 120%;
+    z-index: 10;
 }
 header {
     background-color: #e0e0e0;
@@ -89,39 +90,4 @@ header {
 .options-filter input[type="text"]:focus {
     border: 1px solid #42a4e0;
     box-shadow: 0 0 0 2px rgba(73, 173, 227, 0.4);
-}
-.ts-options {
-    margin: 0;
-    padding: 0;
-    font-size: .9rem;
-    list-style: none;
-}
-.ts-options a {
-    display: block;
-    background-color: white;
-    color: #000;
-    padding: .6rem .6rem .6rem 2rem;
-    text-decoration: none;
-    white-space: nowrap;
-}
-.ts-options a:hover {
-    background-color: #005CB8;
-    color: #fff;
-}
-.ts-options li {
-    border-top: 1px solid #e0e0e0;
-}
-.ts-options li:first-child {
-    border-top: none;
-}
-.ts-options li:last-child a {
-    border-bottom-right-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-.ts-options li:first-child a {
-    border-top-right-radius: 6px;
-    border-top-left-radius: 6px;
-}
-.ts-option-label {
-    font-weight: bold;
 }

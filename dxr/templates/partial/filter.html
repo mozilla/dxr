@@ -1,0 +1,32 @@
+<section id="search-filter" class="search-filter">
+  <button type="button" class="sf-select-trigger" aria-label="Select Filter">
+      <!-- arrow icon using icon font -->
+      <span aria-hidden="true" data-filter-arrow="&#xe801;" class="sf-selector-arrow">
+          <span class='current-filter'>Filters</span>
+      </span>
+  </button>
+  <div class="sf-select-options sf-modal" aria-expanded="false">
+    <ul class="selector-options" tabindex="-1">
+        <li>
+          <a href="javascript:void(0)" data-value="path:">
+            <span class="selector-option-label">path:</span> File or directory path to seach within. * and ? act like shell wildcards
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" data-value="fn:">
+            <span class="selector-option-label">fn:</span> Function or method name
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" data-value="re:">
+            <span class="selector-option-label">re:</span> Regular Expression
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" data-value="caller:">
+            <span class="selector-option-label">caller:</span> Callers of a function
+          </a>
+        </li>
+    </ul>
+  </div>
+</section>
