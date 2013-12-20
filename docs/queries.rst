@@ -92,10 +92,17 @@ You can use a literal quote without enclosing it in other quotes, as long as it 
 
 What of backslashes in unquoted strings and preceding things other than quotes?
 
-* In a bare string, a backslash before a space means a space. Otherwise, it's a literal backslash.
 * In a quoted string, a backslash before a quote of the same type is an escaper. Otherwise, it's a literal backslash. ::
 
     "one long string"
+    "literal \backslashes"
+
+* \\ in a quoted string is a literal backslash, so you can represent \":
+
+    "\\\" is backslash-quote"
+
+* Later, we may let backslashes in unquoted strings escape spaces:
+
     one\ long\ string
 
 These rules are akin to common shell syntax and designed so you don't need to plan ahead (or backtrack) when typing a query.

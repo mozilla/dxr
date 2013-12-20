@@ -5,9 +5,10 @@ import struct
 import time
 
 from parsimonious import Grammar
+from parsimonious.nodes import NodeVisitor
 
 
-query_grammar = Grammar(u"""
+query_grammar = Grammar(ur"""
     query = _ term+
     term = filtered_term / free_term
     filtered_term = not? plus? filter ":" text
@@ -19,11 +20,29 @@ query_grammar = Grammar(u"""
     plus = "+"
     free_term = (not text) / text
 
-    # TODO: Bare, quoted, or escaped text, possibly with spaces. Not empty.
+    # TODO: Bare or quoted text, possibly with spaces. Not empty.
     text = ~r"[a-zA-Z:)(?+-]+" _
+
+    # A string starting with a [double] quote and extending to {a double quote
+    # followed by a space} or {a double quote followed by the end of line} or
+    # {simply the end of line}, ignoring (that is, including) backslash-escaped
+    # quotes. The intent is to take quoted strings like `"hi \there"woo"` and
+    # take a good guess at what you mean even while you're still typing, before
+    # you've closed the quote. The motivation for providing backslash-escaping
+    # is so you can express trailing quote-space pairs without having the
+    # scanner prematurely end.
+    double_quoted_text = ~r'"(?P<content>(?:[^"\\]*(?:\\"|\\|"[^ ])*)*)(?:"(?= )|"$|$)'
+    single_quoted_text = ~r"'(?P<content>(?:[^'\\]*(?:\\'|\\|'[^ ])*)*)(?:'(?= )|'$|$)"
 
     _ = ~r"[ \t]*"
     """)
+
+class QueryVisitor(NodeVisitor):
+    def visit_double_quoted_text(self, quoted_text, visited_children):
+        return quoted_text.match.group('content').replace(r'\"', '"')
+
+    def visit_single_quoted_text(self, quoted_text, visited_children):
+        return quoted_text.match.group('content').replace(r"\'", "'")
 
 # tests:
 # `fred:` should be a free term, not a filtered one, since there's no text after it.
