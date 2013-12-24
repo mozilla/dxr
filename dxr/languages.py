@@ -32,6 +32,7 @@ language_schema = dxr.schema.Schema({
         ("qualname", "VARCHAR(256)", False), # Fully-qualified name of the type
         ("kind", "VARCHAR(32)", True),       # Kind of type (e.g., class, union, struct, enum)
         ("language", "_language", True),     # Language of the type
+        ("value", "VARCHAR(64)", True),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -77,7 +78,7 @@ language_schema = dxr.schema.Schema({
         ("type", "VARCHAR(256)", True),     # Full type (including pointer stuff)
         ("modifiers", "VARCHAR(256)", True), # Modifiers for the declaration
         ("language", "_language", True),    # Language of the function
-        ("value", "VARCHAR(32)", True),
+        ("value", "VARCHAR(256)", True),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),

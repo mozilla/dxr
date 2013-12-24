@@ -16,6 +16,44 @@ from parsimonious.nodes import NodeVisitor
 #   - Special argument files-only to just search for file names
 #   - If no plugin returns an extents query, don't fetch content
 
+<<<<<<< HEAD
+=======
+#TODO _parameters should be extracted from filters (possible if filters are defined first)
+# List of parameters to isolate in the search query, ie. path:mypath
+_parameters = ["path", "ext",
+"type", "type-ref", "type-decl",
+"function", "function-ref", "function-decl",
+"var", "var-ref", "var-decl",
+"namespace", "namespace-ref",
+"namespace-alias", "namespace-alias-ref",
+"module", "module-ref", "module-use",
+"module-alias", "module-alias-ref",
+"impl", "fn-impls", "extern-ref",
+"macro", "macro-ref", "callers", "called-by",
+"overridden", "overrides", "warning",
+"warning-opt", "bases", "derived", "member"]
+
+_parameters += ["-" + param for param in _parameters] + ["+" + param for param
+    in _parameters] + ["-+" + param for param in _parameters] + ["+-" + param for param in _parameters]
+
+#TODO Support negation of phrases, support phrases as args to params, ie. path:"my path", or warning:"..."
+
+
+# Pattern recognizing a parameter and a argument, a phrase or a keyword
+_pat = ("(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
+        "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
+        "(?:\"(?P<phrase>[^\"]+)\")|"
+        "(?:-\"(?P<notphrase>[^\"]+)\")|"
+        "(?P<keyword>[^ \"]+)")
+# Regexp for parsing regular expression
+_pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
+
+# Pattern for recognizing if a word will be tokenized as a single term.
+# Ideally we should reuse our custom sqlite tokenizer, but that'll just
+# complicated things, anyways, if it's not a identifier, it must be a single
+# token, in which we'll wrap it anyway :)
+_single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
+>>>>>>> multiple and external crates
 
 # Pattern for matching a file and line number filename:n
 _line_number = re.compile("^.*:[0-9]+$")
@@ -90,12 +128,14 @@ class Query(object):
             for conds, args, exts in f.filter(self.terms):
                 has_extents = exts or has_extents
                 conditions += " AND " + conds
+                print "adding: " + str(args) + " from " + str(f)
                 arguments += args
 
         sql %= conditions
         arguments += [limit, offset]
 
         #TODO Actually do something with the has_extents, ie. don't fetch contents
+        print "executing sql: " + sql + " args: " + str(arguments)
 
         cursor = self.execute_sql(sql, arguments)
 
@@ -971,6 +1011,158 @@ filters = [
         languages      = ["C"]
     ),
 
+    # module filter
+    ExistsLikeFilter(
+        description   = 'Modules',
+        param         = "module",
+        filter_sql    = """SELECT 1 FROM modules
+                           WHERE %s
+                             AND modules.file_id = files.id
+                        """,
+        ext_sql       = """SELECT modules.extent_start, modules.extent_end FROM modules
+                           WHERE modules.file_id = ?
+                             AND %s
+                           ORDER BY modules.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname"
+    ),
+
+    # module-ref filter
+    ExistsLikeFilter(
+        description   = 'Module references',
+        param         = "module-ref",
+        filter_sql    = """SELECT 1 FROM modules, module_refs AS refs
+                           WHERE %s
+                             AND modules.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM module_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM modules
+                                         WHERE %s
+                                           AND modules.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname"
+    ),
+
+    # module-alias filter
+    ExistsLikeFilter(
+        description   = 'Modules aliases',
+        param         = "module-alias",
+        filter_sql    = """SELECT 1 FROM module_aliases
+                           WHERE %s
+                             AND module_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT module_aliases.extent_start, module_aliases.extent_end FROM module_aliases
+                           WHERE module_aliases.file_id = ?
+                             AND %s
+                           ORDER BY module_aliases.extent_start
+                        """,
+        like_name     = "module_aliases.name",
+        qual_name     = "module_aliases.qualname"
+    ),
+
+    # module-use filter
+    ExistsLikeFilter(
+        description   = 'Module imports',
+        param         = "module-use",
+        filter_sql    = """SELECT 1 FROM modules, module_aliases
+                           WHERE %s
+                             AND modules.id = module_aliases.refid
+                             AND module_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT module_aliases.extent_start, module_aliases.extent_end FROM module_aliases
+                           WHERE module_aliases.file_id = ?
+                             AND EXISTS (SELECT 1 FROM modules
+                                         WHERE %s
+                                           AND modules.id = module_aliases.refid)
+                           ORDER BY module_aliases.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname"
+    ),
+
+    # module-alias-ref filter
+    ExistsLikeFilter(
+        description   = 'Module alias reference',
+        param         = "module-alias-ref",
+        filter_sql    = """SELECT 1 FROM module_aliases, module_refs AS refs
+                           WHERE %s
+                             AND module_aliases.id = refs.aliasid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM module_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM module_aliases
+                                         WHERE %s
+                                           AND module_aliases.id = refs.aliasid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "module_aliases.name",
+        qual_name     = "module_aliases.qualname"
+    ),
+
+    # impl filter
+    ExistsLikeFilter(
+        description   = 'Implementations',
+        param         = "impl",
+        filter_sql    = """SELECT 1 FROM impl_defs, types
+                           WHERE %s
+                             AND types.id = impl_defs.refid
+                             AND impl_defs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT impl_defs.extent_start, impl_defs.extent_end FROM impl_defs
+                           WHERE impl_defs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND types.id = impl_defs.refid)
+                           ORDER BY impl_defs.extent_start
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+    ),
+
+    # find implementations of a trait method
+    ExistsLikeFilter(
+        description   = 'Implementations of a trait method',
+        param         = "fn-impls",
+        filter_sql    = """SELECT 1 FROM functions AS def, functions AS decl
+                           WHERE %s
+                             AND decl.id = def.declid
+                             AND def.file_id = files.id
+                        """,
+        ext_sql       = """SELECT def.extent_start, def.extent_end
+                           FROM functions AS def, functions AS decl
+                           WHERE def.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND decl.id = def.declid)
+                           ORDER BY def.extent_start
+                        """,
+        like_name     = "decl.name",
+        qual_name     = "decl.qualname"
+    ),
+
+    # external items filter
+    ExistsLikeFilter(
+        description   = 'References to external items',
+        param         = "extern-ref",
+        filter_sql    = """SELECT 1 FROM unknowns, unknown_refs AS refs
+                           WHERE %s
+                             AND unknowns.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM unknown_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM unknowns
+                                         WHERE %s
+                                           AND unknowns.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "unknowns.id",
+        qual_name     = "unknowns.id"
+    ),
+
     # macro filter
     ExistsLikeFilter(
         description   = 'Macro definition',
@@ -1085,7 +1277,6 @@ filters = [
         languages      = ["C"]
     ),
 
-    # bases filter -- reorder these things so more frequent at top.
     ExistsLikeFilter(
         description   = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'),
         param         = "bases",

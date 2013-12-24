@@ -2,6 +2,7 @@
 Configuration
 =============
 
+
 DXR learns how to index your source trees by means of an ini-formatted
 configuration file:
 
@@ -43,7 +44,7 @@ Here are the options that can live in the ``[DXR]`` section:
     confusing users.
 
 ``disabled_plugins``
-    Names of plugins to disable. Default: empty
+    Names of plugins to disable. Default: ``rust``
 
 ``disable_workers``
     If non-empty, do not use a worker pool for building the static HTML.
