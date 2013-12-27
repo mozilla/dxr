@@ -94,12 +94,9 @@ What of backslashes in unquoted strings and preceding things other than quotes?
 
 * In a quoted string, a backslash before a quote of the same type is an escaper. Otherwise, it's a literal backslash. ::
 
-    "one long string"
-    "literal \backslashes"
-
-* \\ in a quoted string is a literal backslash, so you can represent \":
-
-    "\\\" is backslash-quote"
+    "one long \"quoted\" string"
+    "literal \backslash"
+    "\\" is backslash-quote"
 
 * Later, we may let backslashes in unquoted strings escape spaces:
 
