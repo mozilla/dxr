@@ -11,12 +11,12 @@ from dxr.query import query_grammar, QueryVisitor
 class ParserTests(TestCase):
     def test_smoke(self):
         """Initial smoke tests for the query grammar"""
-        print query_grammar.parse("re:(?i)snork")
-        print query_grammar.parse("re:smoo bar baz")
-        print query_grammar.parse("-baz -foo")        
-        print query_grammar.parse("-baz +qual +type: +type:good +-type:hey")
-        print query_grammar.parse("- -+ +- re: smoo")
-        #print query_grammar.parse(u'börg')
+        query_grammar.parse("re:(?i)snork")
+        query_grammar.parse("re:smoo bar baz")
+        query_grammar.parse("-baz -foo")
+        query_grammar.parse("-baz +qual +type: +type:good +-type:hey")
+        query_grammar.parse("- -+ +- re: smoo")
+        #query_grammar.parse(u'börg')
 
 
 def test_quotes():
