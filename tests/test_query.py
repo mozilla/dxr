@@ -8,17 +8,104 @@ from nose.tools import eq_
 from dxr.query import query_grammar, QueryVisitor
 
 
-class ParserTests(TestCase):
-    def test_smoke(self):
-        """Initial smoke tests for the query grammar"""
-        query_grammar.parse("re:(?i)snork")
-        query_grammar.parse("re:smoo bar baz")
-        query_grammar.parse("-baz -foo")
-        query_grammar.parse("-baz +qual +type: +type:good +-type:hey")
-        query_grammar.parse("- -+ +- re: smoo")
-        #query_grammar.parse(u'börg')
+class VisitorTests(TestCase):
+    """Make sure ``QueryVisitor`` is putting together sane data structures."""
+
+    def visit(self, query):
+        return QueryVisitor().visit(query_grammar.parse(query))
+
+    def test_overall(self):
+        """Test the overall structure."""
+        eq_(self.visit('regexp:(?i)snork'),
+            {'regexp': [{'arg': '(?i)snork',
+                         'not': False,
+                         'case_sensitive': False,
+                         'qualified': False}]})
+
+    def test_tricksy_orphanses(self):
+        """Try to trick the parser into prematurely committing to various
+        classifications."""
+        eq_(self.visit('- -+ +- +type: +-type:hey type: smoo hi:mom +boo'),
+            {'text': [{'arg': '-',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+',
+                       'not': True,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+-',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+type:',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+-type:hey',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': 'type:',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': 'smoo',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': 'hi:mom',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+boo',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False}]})
+
+    def test_normal_things(self):
+        """Make sure normal, everyday things that should work do."""
+        eq_(self.visit('regexp:smoo -regexp:foo|bar -baz qux type:yeah'),
+            {'regexp': [{'arg': 'smoo',
+                         'not': False,
+                         'case_sensitive': False,
+                         'qualified': False},
+                        {'arg': 'foo|bar',
+                         'not': True,
+                         'case_sensitive': False,
+                         'qualified': False}],
+             'text':   [{'arg': 'baz',
+                         'not': True,
+                         'case_sensitive': False,
+                         'qualified': False},
+                        {'arg': 'qux',
+                         'not': False,
+                         'case_sensitive': False,
+                         'qualified': False}],
+             'type':   [{'arg': 'yeah',
+                         'not': False,
+                         'case_sensitive': False,
+                         'qualified': False}]})
+
+    def test_qualified(self):
+        """Make sure fully-qualified filters are recognized."""
+        eq_(self.visit('+type:Snork'),
+            {'type': [{'arg': 'Snork',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': True}]})
+
+    def test_bare_unicode(self):
+        """Make sure non-ASCII chars are recognized in bare text."""
+        eq_(self.visit(u'börg'),
+            {'text': [{'arg': u'börg',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False}]})
 
 
+# Not in VisitorTests because nose doesn't support test generators in TestCase
+# subclasses.
 def test_quotes():
     """Test the quoted-string regexes, both with double and single quotes."""
     tests = [(r'"hi there"', r'hi there'),
