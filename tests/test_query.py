@@ -152,7 +152,8 @@ def test_quotes():
              (r'"hi\" and"', r'hi" and'),  # Don't count a backslashed quote as a closing one, even if it has a space after it.
              (r'"hi \pthere\"boogy"', r'hi \pthere"boogy'),  # Preserve backslashes that don't escape a quote.
              (r'"multi word', r'multi word'),  # Get all words in a space-having input without closing quotes.
-             (r'"\\""', r'\"')]  # It is possible to express backslash-quote.
+             (r'"\\""', r'\"'),  # It is possible to express backslash-quote.
+             (ur'"sñork"', ur'sñork')]  # Unicode holds up in quoted strings.
     for rule_name, transform in [('double_quoted_text',
                                   lambda x: x),
                                  ('single_quoted_text',

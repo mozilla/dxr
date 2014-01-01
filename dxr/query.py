@@ -8,9 +8,6 @@ from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
 
 
-# tests:
-# Make sure unicode text gets read properly.
-
 # TODO: Some kind of UI feedback for bad regexes
 
 
@@ -1146,15 +1143,15 @@ query_grammar = Grammar(ur'''
              ur'''"
 
     not = "-"
-    
+
     # You can stick a plus in front of anything, and it'll parse, but it has
     # meaning only with the filters where it makes sense.
     maybe_plus = "+"?
 
     # Unquoted text until a space or EOL:
-    bare_text = ~r"[a-zA-Z:)(?+-|]+"  # TODO: fix for unicode and other chars
+    bare_text = ~r"[^ ]+"
 
-    # A string starting with a [double] quote and extending to {a double quote
+    # A string starting with a double quote and extending to {a double quote
     # followed by a space} or {a double quote followed by the end of line} or
     # {simply the end of line}, ignoring (that is, including) backslash-escaped
     # quotes. The intent is to take quoted strings like `"hi \there"woo"` and
@@ -1163,6 +1160,7 @@ query_grammar = Grammar(ur'''
     # is so you can express trailing quote-space pairs without having the
     # scanner prematurely end.
     double_quoted_text = ~r'"(?P<content>(?:[^"\\]*(?:\\"|\\|"[^ ])*)*)(?:"(?= )|"$|$)'
+    # A symmetric rule for single quotes:
     single_quoted_text = ~r"'(?P<content>(?:[^'\\]*(?:\\'|\\|'[^ ])*)*)(?:'(?= )|'$|$)"
 
     _ = ~r"[ \t]*"
