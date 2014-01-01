@@ -9,7 +9,6 @@ from parsimonious.nodes import NodeVisitor
 
 
 # tests:
-# Unbalanced quotes should be free terms: `"this here thing` should be 3 free terms: "this, here, and thing.
 # Make sure unicode text gets read properly.
 
 # TODO: Some kind of UI feedback for bad regexes

@@ -99,6 +99,40 @@ class VisitorTests(TestCase):
                        'case_sensitive': False,
                        'qualified': True}]})
 
+    def test_unclosed_quotes(self):
+        """An unclosed quoted string should be considered as if it were closed.
+
+        This makes it more likely we perform the same sorts of searches while
+        you're still typing as we will once you get to the end, yielding more
+        useful incremental results.
+
+        """
+        eq_(self.visit('"this here thing'),
+            {'text': [{'arg': 'this here thing',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False}]})
+
+    def test_literal_quotes(self):
+        """Make sure we can express literal quotes when we want to.
+
+        Also accidentally test ignoring of leading and trailing spaces.
+
+        """
+        eq_(self.visit(""" '"this' 'here"' "'thing'" """),
+            {'text': [{'arg': '"this',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': 'here"',
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': "'thing'",
+                       'not': False,
+                       'case_sensitive': False,
+                       'qualified': False}]})
+
     def test_bare_unicode(self):
         """Make sure non-ASCII chars are recognized in bare text."""
         eq_(self.visit(u'börg'),
