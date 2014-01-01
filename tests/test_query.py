@@ -25,7 +25,7 @@ class VisitorTests(TestCase):
     def test_tricksy_orphanses(self):
         """Try to trick the parser into prematurely committing to various
         classifications."""
-        eq_(self.visit('- -+ +- +type: +-type:hey type: smoo hi:mom +boo'),
+        eq_(self.visit('- -+ +- -+fred +type: +-type:hey type: smoo hi:mom +boo'),
             {'text': [{'arg': '-',
                        'not': False,
                        'case_sensitive': False,
@@ -36,6 +36,10 @@ class VisitorTests(TestCase):
                        'qualified': False},
                       {'arg': '+-',
                        'not': False,
+                       'case_sensitive': False,
+                       'qualified': False},
+                      {'arg': '+fred',
+                       'not': True,
                        'case_sensitive': False,
                        'qualified': False},
                       {'arg': '+type:',

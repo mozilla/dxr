@@ -9,9 +9,6 @@ from parsimonious.nodes import NodeVisitor
 
 
 # tests:
-# `fred:` should be a free term, not a filtered one, since there's no text after it.
-# -+fred should come out as a free term with content "+fred" and the NOT bit set.
-# nonsense should be parsed into a series of free terms. `- -+ +- re: smoo` should be 5 free terms.
 # Unbalanced quotes should be free terms: `"this here thing` should be 3 free terms: "this, here, and thing.
 # Make sure unicode text gets read properly.
 
