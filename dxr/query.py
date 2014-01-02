@@ -431,25 +431,27 @@ class TriLiteSearchFilter(SearchFilter):
         not_conds = []
         not_args  = []
         for term in terms.get('text', []):
-            if term['not']:
-                not_conds.append("trg_index.contents MATCH ?")
-                not_args.append(('substr:' if term['case_sensitive']
-                                           else 'isubstr:') +
-                                term['arg'])
-            else:
-                yield ("trg_index.contents MATCH ?",
-                       [('substr-extents:' if term['case_sensitive']
-                                           else 'isubstr-extents:') +
-                        term['arg']],
-                       True)
+            if term['arg']:
+                if term['not']:
+                    not_conds.append("trg_index.contents MATCH ?")
+                    not_args.append(('substr:' if term['case_sensitive']
+                                               else 'isubstr:') +
+                                    term['arg'])
+                else:
+                    yield ("trg_index.contents MATCH ?",
+                           [('substr-extents:' if term['case_sensitive']
+                                               else 'isubstr-extents:') +
+                            term['arg']],
+                           True)
         for term in terms.get('regexp', []):
-            if term['not']:
-                not_conds.append("trg_index.contents MATCH ?")
-                not_args.append("regexp:" + term['arg'])
-            else:
-                yield ("trg_index.contents MATCH ?",
-                       ["regexp-extents:" + term['arg']],
-                       True)
+            if term['arg']:
+                if term['not']:
+                    not_conds.append("trg_index.contents MATCH ?")
+                    not_args.append("regexp:" + term['arg'])
+                else:
+                    yield ("trg_index.contents MATCH ?",
+                           ["regexp-extents:" + term['arg']],
+                           True)
 
         if not_conds:
             yield (""" files.id NOT IN (SELECT id FROM trg_index WHERE %s) """
@@ -1127,16 +1129,16 @@ filters = [
 
 
 query_grammar = Grammar(ur'''
-    query = _ term+  # file subdict into dict according to filter type
+    query = _ term*
     term = not_term / positive_term
     not_term = not positive_term
     positive_term = filtered_term / text
 
     # A term with a filter name prepended:
-    filtered_term = maybe_plus filter ":" text  # filter name, subdict with qualified
+    filtered_term = maybe_plus filter ":" text
 
     # Bare or quoted text, possibly with spaces. Not empty.
-    text = (double_quoted_text / single_quoted_text / bare_text) _  # 'text', subdict
+    text = (double_quoted_text / single_quoted_text / bare_text) _
 
     filter = ~r"''' +
         # regexp, function, etc. No filter is a prefix of a later one. This

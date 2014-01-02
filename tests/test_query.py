@@ -141,6 +141,10 @@ class VisitorTests(TestCase):
                        'case_sensitive': False,
                        'qualified': False}]})
 
+    def test_empty(self):
+        """An empty query shouldn't give a ParseError."""
+        eq_(self.visit(''), {})
+
 
 # Not in VisitorTests because nose doesn't support test generators in TestCase
 # subclasses.
