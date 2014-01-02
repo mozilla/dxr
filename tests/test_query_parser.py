@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for the query parser and executor"""
+"""Tests for the query parser"""
 
 from unittest import TestCase
 
