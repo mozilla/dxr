@@ -83,7 +83,7 @@ class Query(object):
         # files:
         has_extents = False
         for f in filters:
-            for conds, args, exts in f.filter(**self.terms):
+            for conds, args, exts in f.filter(self.terms):
                 has_extents = exts or has_extents
                 conditions += " AND " + conds
                 arguments += args
@@ -97,7 +97,7 @@ class Query(object):
 
         # For each returned file (including, only in the case of the trilite
         # filter, a set of extents)...
-        for path, icon, encoding, content, fileid, extents in cursor:
+        for path, icon, encoding, content, file_id, extents in cursor:
             elist = []
 
             # Special hack for TriLite extents
@@ -111,7 +111,7 @@ class Query(object):
             # Let each filter do one or more additional queries to find the
             # extents to highlight:
             for f in filters:
-                for e in f.extents(self.conn, self, fileid):
+                for e in f.extents(self.terms, self.execute_sql, file_id):
                     elist.append(e)
             offsets = list(merge_extents(*elist))
 
@@ -379,13 +379,13 @@ class SearchFilter(object):
     """Base class for all search filters, plugins subclasses this class and
             registers an instance of them calling register_filter
     """
-    def filter(self, **kwargs):
+    def filter(self, terms):
         """Yield tuples of SQL conditions, list of arguments, and True if this
         filter offers extents for results.
 
         SQL conditions must be string and condition on files.id.
 
-        :arg kwargs: A dictionary with keys for each filter name I handle (as
+        :arg terms: A dictionary with keys for each filter name I handle (as
             well as others, possibly, which should be ignored). Example::
 
                 {'function': [{'arg': 'o hai',
@@ -401,8 +401,17 @@ class SearchFilter(object):
         """
         return []
 
-    def extents(self, conn, query, fileid):
-        """Given a connection, query and a file id yield a ordered lists of extents to highlight"""
+    def extents(self, terms, execute_sql, file_id):
+        """Return an ordered iterable of extents to highlight. Or an iterable
+        of generators. It seems to vary.
+
+        :arg execute_sql: A callable that takes some SQL and an iterable of
+            params and executes it, returning the result
+        :arg file_id: The ID of the file from which to return extents
+        :arg kwargs: A dictionary with keys for each filter name I handle (as
+            well as others, possibly), as in filter()
+
+        """
         return []
 
     def names(self):
@@ -418,10 +427,10 @@ class SearchFilter(object):
 class TriLiteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
 
-    def filter(self, text, regexp, **_):
+    def filter(self, terms):
         not_conds = []
         not_args  = []
-        for term in text:
+        for term in terms.get('text', []):
             if term['not']:
                 not_conds.append("trg_index.contents MATCH ?")
                 not_args.append(('substr:' if term['case_sensitive']
@@ -433,7 +442,7 @@ class TriLiteSearchFilter(SearchFilter):
                                            else 'isubstr-extents:') +
                         term['arg']],
                        True)
-        for term in regexp:
+        for term in terms.get('regexp', []):
             if term['not']:
                 not_conds.append("trg_index.contents MATCH ?")
                 not_args.append("regexp:" + term['arg'])
@@ -445,7 +454,7 @@ class TriLiteSearchFilter(SearchFilter):
         if not_conds:
             yield (""" files.id NOT IN (SELECT id FROM trg_index WHERE %s) """
                        % " AND ".join(not_conds),
-                   args,
+                   not_args,
                    False)
 
     # Notice that extents is more efficiently handled in the search query
@@ -471,17 +480,19 @@ class SimpleFilter(SearchFilter):
         self.ext_sql = ext_sql
         self.formatter = formatter
 
-    def filter(self, **kwargs):
-        for term in kwargs[self.param]:
+    def filter(self, terms):
+        for term in terms.get(self.param, []):
+            arg = term['arg']
             if term['not']:
                 yield self.neg_filter_sql, self.formatter(arg), False
             else:
                 yield self.filter_sql, self.formatter(arg), self.ext_sql is not None
 
-    def extents(self, conn, query, fileid):
+    def extents(self, terms, execute_sql, file_id):
         if self.ext_sql:
-            for arg in query.params[self.param]:
-                for start, end in query.execute_sql(self.ext_sql, [fileid] + self.formatter(arg)):
+            for term in terms.get(self.param, []):
+                for start, end in execute_sql(self.ext_sql,
+                                              [file_id] + self.formatter(term['arg'])):
                     yield start, end, []
 
 
@@ -507,8 +518,8 @@ class ExistsLikeFilter(SearchFilter):
         self.qual_expr = " %s = ? " % qual_name
         self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
 
-    def filter(self, **kwargs):
-        for term in kwargs[self.param]:
+    def filter(self, terms):
+        for term in terms.get(self.param, []):
             is_qualified = term['qualified']
             arg = term['arg']
             filter_sql = (self.filter_sql % (self.qual_expr if is_qualified
@@ -519,27 +530,20 @@ class ExistsLikeFilter(SearchFilter):
             else:
                 yield 'EXISTS (%s)' % filter_sql, sql_params, self.ext_sql is not None
 
-    def extents(self, conn, query, fileid):
+    def extents(self, terms, execute_sql, file_id):
+        def builder():
+            for term in terms.get(self.param, []):
+                arg = term['arg']
+                escaped_arg, sql_expr = (
+                    (arg, self.qual_expr) if term['qualified']
+                    else (like_escape(arg), self.like_expr))
+                for start, end in execute_sql(self.ext_sql % sql_expr,
+                                              [file_id, escaped_arg]):
+                    # Nones used to occur in the DB. Is this still true?
+                    if start and end:
+                        yield start, end, []
         if self.ext_sql:
-            for arg in query.params[self.param]:
-                params = [fileid, like_escape(arg)]
-                def builder():
-                    sql = self.ext_sql % self.like_expr
-                    for start, end in query.execute_sql(sql, params):
-                        # Apparently sometime, None can occur in the database
-                        if start and end:
-                            yield start, end, []
-                yield builder()  # TODO: Can this be right? It seems like extents() will yield 2 iterables: one for each builder() proc. Huh?
-            for arg in query.params["+" + self.param]:
-                params = [fileid, arg]
-                def builder():
-                    sql = self.ext_sql % self.qual_expr
-                    for start, end in query.execute_sql(sql, params):
-                        # Apparently sometime, None can occur in the database
-                        if start and end:
-                            yield start, end, []
-                yield builder()
-
+            yield builder()
 
 class UnionFilter(SearchFilter):
     """Provides a filter matching the union of the given filters.
@@ -556,16 +560,16 @@ class UnionFilter(SearchFilter):
         self.param = unique_params.pop()  # for consistency with other
         self.filters = filters
 
-    def filter(self, query):
-        for res in zip(*(filt.filter(query) for filt in self.filters)):
+    def filter(self, terms):
+        for res in zip(*(filt.filter(terms) for filt in self.filters)):
             yield ('(' + ' OR '.join(conds for (conds, args, exts) in res) + ')',
                    [arg for (conds, args, exts) in res for arg in args],
                    any(exts for (conds, args, exts) in res))
 
-    def extents(self, conn, query, fileid):
+    def extents(self, terms, execute_sql, file_id):
         def builder():
             for filt in self.filters:
-                for hits in filt.extents(conn, query, fileid):
+                for hits in filt.extents(terms, execute_sql, file_id):
                     for hit in hits:
                         yield hit
         def sorter():
