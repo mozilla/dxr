@@ -15,10 +15,10 @@
             <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
             <input type="submit" value="Filter" class="visually-hidden" />
         </form>
-        <ul class="ts-options" tabindex="-1">
+        <ul class="selector-options" tabindex="-1">
           {% for t in trees %}
               <li>
-                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
+                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="selector-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
               </li>
           {% endfor %}
         </ul>
@@ -50,7 +50,6 @@
             {% endfor %}
             </tbody>
         </table>
-        <p class="top"><a href="#search-box">Back to Top</a></p>
     </div>
     {% endfor %}
 {% else %}

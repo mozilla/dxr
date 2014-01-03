@@ -303,7 +303,7 @@ mark {
     height: 1rem;
 }
 .content {
-    margin-top: 4%;
+    margin-top: 80px;
     padding: 1em;
 }
 .path {
@@ -480,7 +480,7 @@ a.c {
 .panel {
     display: none;
     position: absolute;
-    top: 118px;
+    top: 140px;
     right: 16px;
     background-color: #fff;
     border: 1px solid #e0e0e0;

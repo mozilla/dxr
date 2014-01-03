@@ -10,6 +10,8 @@
     {% block site_css %}
       <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
       <link href="{{ wwwroot }}/static/css/code-style.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ wwwroot }}/static/css/selector-common.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ wwwroot }}/static/css/filter.css" rel="stylesheet" type="text/css" media="screen" />
     {% endblock %}
   </head>
   <body {% block body_class %}{% endblock %}>
@@ -37,6 +39,7 @@
           <input type="submit" value="Search" class="visually-hidden" />
         {% endblock %}
       </form>
+      {% include '/partial/filter.html' %}
     </div>
 
     {% block content %}
@@ -100,6 +103,7 @@
       <script src="{{ wwwroot }}/static/js/nunjucks-min.js"></script>
       <script src="{{ wwwroot }}/static/js/templates.js"></script>
       <script src="{{ wwwroot }}/static/js/dxr.js"></script>
+      <script src="{{ wwwroot }}/static/js/filter.js"></script>
     {% endblock %}
   </body>
 </html>
