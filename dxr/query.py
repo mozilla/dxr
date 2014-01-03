@@ -1000,6 +1000,58 @@ filters = [
       ),
     ]),
 
+    # overridden filter
+    ExistsLikeFilter(
+        param         = "overridden",
+        filter_sql    = """SELECT 1
+                             FROM functions as base, functions as derived, targets
+                            WHERE %s
+                              AND base.id = -targets.targetid
+                              AND derived.id = targets.funcid
+                              AND base.id <> derived.id
+                              AND base.file_id = files.id
+                        """,
+        ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                            FROM functions
+                           WHERE functions.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions as derived, targets
+                                          WHERE %s
+                                            AND functions.id = -targets.targetid
+                                            AND derived.id = targets.funcid
+                                            AND functions.id <> derived.id
+                                        )
+                           ORDER BY functions.extent_start
+                        """,
+        like_name     = "derived.name",
+        qual_name     = "derived.qualname"
+    ),
+
+    # overrides filter
+    ExistsLikeFilter(
+        param         = "overrides",
+        filter_sql    = """SELECT 1
+                             FROM functions as base, functions as derived, targets
+                            WHERE %s
+                              AND base.id = -targets.targetid
+                              AND derived.id = targets.funcid
+                              AND base.id <> derived.id
+                              AND derived.file_id = files.id
+                        """,
+        ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                            FROM functions
+                           WHERE functions.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions as base, targets
+                                          WHERE %s
+                                            AND base.id = -targets.targetid
+                                            AND functions.id = targets.funcid
+                                            AND base.id <> functions.id
+                                        )
+                           ORDER BY functions.extent_start
+                        """,
+        like_name     = "base.name",
+        qual_name     = "base.qualname"
+    ),
+
     #warning filter
     ExistsLikeFilter(
         param         = "warning",

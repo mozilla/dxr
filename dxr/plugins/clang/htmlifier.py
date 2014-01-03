@@ -24,12 +24,13 @@ class ClangHtmlifier(object):
 
         # Extents for functions defined here
         sql = """
-            SELECT extent_start, extent_end, qualname
+            SELECT extent_start, extent_end, qualname,
+                EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
                 FROM functions
               WHERE file_id = ?
         """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.function_menu(qualname), qualname, None)
+        for start, end, qualname, isvirtual in self.conn.execute(sql, args):
+            yield start, end, (self.function_menu(qualname, isvirtual), qualname, None)
 
         # Extents for functions declared here
         sql = """
@@ -37,13 +38,14 @@ class ClangHtmlifier(object):
                           decldef.extent_end,
                           functions.qualname,
                           (SELECT path FROM files WHERE files.id = functions.file_id),
-                          functions.file_line
+                          functions.file_line,
+                          EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
                 FROM function_decldef AS decldef, functions
               WHERE decldef.defid = functions.id
                   AND decldef.file_id = ?
         """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.function_menu(qualname)
+        for start, end, qualname, path, line, isvirtual in self.conn.execute(sql, args):
+            menu = self.function_menu(qualname, isvirtual)
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname, None)
 
@@ -169,12 +171,13 @@ class ClangHtmlifier(object):
             SELECT refs.extent_start, refs.extent_end,
                           functions.qualname,
                           (SELECT path FROM files WHERE files.id = functions.file_id),
-                          functions.file_line
+                          functions.file_line,
+                          EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
                 FROM functions, function_refs AS refs
               WHERE functions.id = refs.refid AND refs.file_id = ?
         """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.function_menu(qualname)
+        for start, end, qualname, path, line, isvirtual in self.conn.execute(sql, args):
+            menu = self.function_menu(qualname, isvirtual)
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname, None)
 
@@ -381,7 +384,7 @@ class ClangHtmlifier(object):
         return menu
 
 
-    def function_menu(self, qualname):
+    def function_menu(self, qualname, isvirtual):
         """ Build menu for a function """
         menu = []
         # Things we can do with qualified name
@@ -409,6 +412,19 @@ class ClangHtmlifier(object):
             'href':   self.search("+function-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
         })
+        if isvirtual:
+            menu.append({
+                'text':   "Find overridden",
+                'title':  "Find functions that this function overrides",
+                'href':   self.search("+overridden:%s" % self.quote(qualname)),
+                'icon':   'method'
+            })
+            menu.append({
+                'text':   "Find overrides",
+                'title':  "Find overrides of this function",
+                'href':   self.search("+overrides:%s" % self.quote(qualname)),
+                'icon':   'method'
+            })
         return menu
 
 
