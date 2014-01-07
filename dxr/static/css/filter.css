@@ -9,14 +9,15 @@
 .search-filter {
     display: inline-block;
     position: absolute;
-    right: 12.8%;
-    top: 24%;
+    right: 13%;
+    top: 26%;
     width: auto;
 }
 .sf-select-options {
     display: none;
     position: absolute;
-    right: -2px;
+    right: 11.70%;
+    width: 86.50%;
 }
 .sf-select-trigger {
     background-color: white;
@@ -44,37 +45,40 @@
 .sf-modal {
     border: 1px solid #d4d4d4;
     border-radius: 0 0 6px 6px;
-    min-width: 120%;
 }
 .sf-select-options li:first-child a {
     border-top-right-radius: 0;
     border-top-left-radius: 0;
 }
-@media only screen and (min-width: 1000px) and (max-width: 1280px) {
-    .search-filter {
-        right: 20.7%;
-    }
-}
-@media only screen and (min-width: 760px) and (max-width: 1000px) {
-    .search-filter {
-        right: 21%;
-    }
-}
-@media only screen and (min-width: 320px) and (max-width: 740px) {
+@media only screen and (min-device-width: 320px) {
     .search-filter {
         top: 18%;
-        right: 5%;
+        right: 3%;
     }
     .sf-select-options {
-        right: -4px;
+        top: 52%;
+        right: 1.80%;
+        width: 96.40%;
     }
-    .sf-modal {
-        border: 1px solid #d4d4d4;
-        border-radius: 0 0 6px 6px;
-        width: 260px;
-        min-width: 200px;
+}
+@media only screen and (min-width: 740px) {
+    .search-filter {
+        top: 17%;
+        right: 2%;
     }
-    .selector-options a {
-        white-space: normal;
+    .sf-select-options {
+        right: 1.10%;
+        width: 97.80%;
+    }
+}
+@media only screen and (min-width: 1224px) {
+    .search-filter {
+        right: 12%;
+        top: 26%;
+    }
+    .sf-select-options {
+        top: 76%;
+        right: 11.70%;
+        width: 87.40%;
     }
 }

@@ -45,7 +45,7 @@ $(function() {
     trigger.click(function(event) {
         event.stopPropagation();
 
-        var optionsContainer = $('.search-filter').find('.sf-select-options');
+        var optionsContainer = $('.sf-select-options');
         var expanded = optionsContainer.attr('aria-expanded');
 
         optionsContainer.toggle();

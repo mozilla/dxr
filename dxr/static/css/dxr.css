@@ -581,37 +581,7 @@ a.c {
     width: 1px;
     overflow: hidden;
 }
-@media only screen and (min-width: 1000px) and (max-width: 1280px) {
-    .text_search .query {
-        width: 80%;
-    }
-}
-@media only screen and (min-width: 760px) and (max-width: 1000px) {
-    input[type="submit"] {
-        margin-right: 16.3%;
-    }
-    .text_search label {
-        width: 20%;
-    }
-    .text_search input {
-        width: 64%;
-    }
-    .text_search .query {
-        width: 80%;
-    }
-    .form_group label {
-        padding: 0 0 .2rem 0;
-        width: auto;
-        text-align: left;
-    }
-    .form_group input {
-        width: 90%;
-    }
-    .basic_search {
-        right: 13%;
-    }
-}
-@media only screen and (min-width: 320px) and (max-width: 740px) {
+@media only screen and (min-device-width: 320px) {
     input[type="submit"] {
         margin-right: 14%;
     }
@@ -652,5 +622,32 @@ a.c {
         top: 11%;
         left: 13px;
         text-align: left;
+    }
+}
+@media only screen and (min-width: 740px) {
+    input[type="submit"] {
+        margin-right: 16.3%;
+    }
+    .text_search label {
+        width: 20%;
+    }
+    .text_search input {
+        width: 64%;
+    }
+    .form_group label {
+        padding: 0 0 .2rem 0;
+        width: auto;
+        text-align: left;
+    }
+    .form_group input {
+        width: 90%;
+    }
+    .basic_search {
+        right: 13%;
+    }
+}
+@media only screen and (min-width: 1224px) {
+    .text_search .query {
+        width: 89%;
     }
 }
