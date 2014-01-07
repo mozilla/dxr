@@ -144,7 +144,11 @@ public:
   virtual void MacroDefined(const Token &tok, const MacroDirective *md);
   virtual void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma);
   virtual void MacroUndefined(const Token &tok, const MacroDirective *md);
+#if CLANG_AT_LEAST(3, 4)
+  virtual void Defined(const Token &tok, const MacroDirective *md, SourceRange range);
+#else
   virtual void Defined(const Token &tok, const MacroDirective *md);
+#endif
   virtual void Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md);
   virtual void Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md);
 #else
@@ -539,7 +543,11 @@ public:
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
       VarDecl *def = vd->getDefinition();
       if (!def) {
+#if CLANG_AT_LEAST(3, 4)
+        VarDecl *first = vd->getFirstDecl();
+#else
         VarDecl *first = vd->getFirstDeclaration();
+#endif
         VarDecl *lastTentative = 0;
         for (VarDecl::redecl_iterator i = first->redecls_begin(), e = first->redecls_end();
              i != e; ++i) {
@@ -1070,7 +1078,11 @@ public:
   void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
     real->MacroUndefined(tok, md->getMacroInfo());
   }
+#if CLANG_AT_LEAST(3, 4)
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md, SourceRange) {
+#else
   void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
+#endif
     real->Defined(tok, md->getMacroInfo());
   }
   void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) {
