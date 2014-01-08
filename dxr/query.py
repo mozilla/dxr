@@ -236,7 +236,7 @@ class Query(object):
         # See if we can find only one file match
         cur.execute("""
             SELECT path FROM files WHERE
-                path LIKE :term
+                path = :term
                 OR path LIKE :termPre 
             LIMIT 2
         """, {"term": term,
