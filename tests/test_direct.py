@@ -37,3 +37,9 @@ class MemberFunctionTests(SingleFileTestCase):
         """A unique, case-insensitive prefix match on fully qualified type name
         should take you directly to the result."""
         self.direct_result_eq('MemberFunction::InnerCLASS', 8)
+
+    def test_line_number(self):
+        """A file name and line number should take you directly to that
+           file and line number."""
+        self.direct_result_eq('main.cpp:6', 6)
+        
