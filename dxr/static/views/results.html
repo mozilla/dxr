@@ -1,5 +1,6 @@
 <p class="top-of-tree">Results from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree:</p>
 
+{% if trees|length > 1 %}
 <section id="tree-selector" class="tree-selector">
     <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
         <!-- arrow icon using icon font -->
@@ -24,6 +25,7 @@
         </ul>
     </div>
 </section>
+{% endif %}
 
 {% if results|length > 0 %}
     {% for result in results %}
