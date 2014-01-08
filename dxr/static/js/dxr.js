@@ -190,12 +190,13 @@ $(function() {
             var params = {
                 q: data.query,
                 case: data.is_case_sensitive
-            }
-            data['query_string'] = $.param(params);
+            };
+
+            data.query_string = $.param(params);
 
             // If no data is returned, inform the user.
             if (!data.results.length) {
-                data['user_message'] = contentContainer.data('no-results');
+                data.user_message = contentContainer.data('no-results');
                 contentContainer.empty().append(tmpl.render(data));
             } else {
 
