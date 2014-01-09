@@ -64,10 +64,10 @@
                     <input type="submit" value="Filter" class="visually-hidden" />
                 </form>
                 {% block tree_selector_options %}
-                  <ul class="ts-options" tabindex="-1">
+                  <ul class="selector-options" tabindex="-1">
                   {% for t in trees %}
                       <li>
-                        <a href="{{ wwwroot }}/{{ t }}/parallel/" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="ts-option-label">{{ t }}</span>: The ships hung in the sky in much the same way that bricks don't.</a>
+                        <a href="{{ wwwroot }}/{{ t }}/parallel/" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="selector-option-label">{{ t }}</span>: The ships hung in the sky in much the same way that bricks don't.</a>
                       </li>
                   {% endfor %}
                   </ul>
