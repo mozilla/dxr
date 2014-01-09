@@ -527,7 +527,6 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
     # Load template
     env = load_template_env(tree.config.temp_folder,
                             tree.config.template_folder)
-    tmpl = env.get_template('file.html')
 
     arguments = {
         # Set common template variables
@@ -553,8 +552,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
 
-    # Fill-in variables and dump to file with utf-8 encoding
-    tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
+    _fill_and_write_template(env, 'file.html', dst_path, arguments)
 
 
 class Line(object):
