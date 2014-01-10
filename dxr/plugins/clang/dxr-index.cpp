@@ -244,6 +244,14 @@ public:
         ret += " const";
     }
 
+    // Make anonymous namespaces in separate files have separate names
+    const std::string anon_ns = "<anonymous namespace>";
+    if (StringRef(ret).startswith(anon_ns))
+    {
+      const std::string &filename = ci.getFrontendOpts().Inputs[0].getFile().str();
+      const std::string &realname = getFileInfo(filename)->realname;
+      ret = ret.substr(0, anon_ns.size() - 1) + " in " + realname + ">" + ret.substr(anon_ns.size());
+    }
     return ret;
   }
 
