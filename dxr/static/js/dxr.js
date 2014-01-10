@@ -102,14 +102,10 @@ $(function() {
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex in paths) {
-            var isFirstOrLast = false;
-
-            if ((splitPathLength - 1) === pathIndex || splitPathLength === 1) {
-                isFirstOrLast = true;
-            }
+            var isFirstOrLast = (splitPathLength - 1) === pathIndex || splitPathLength === 1;
 
             // Do not add a forward slash if there is only one item in the Array
-            //or, if this is the last iteration.
+            // or if this is the last iteration.
             var displayPath = isFirstOrLast ? paths[pathIndex] : paths[pathIndex] + '/';
 
             dataPath.push(paths[pathIndex]);
@@ -190,7 +186,6 @@ $(function() {
             data['wwwroot'] = dxr.wwwroot;
             data['tree'] = dxr.tree;
             data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
-            data['trees'] = data.trees;
 
             var params = {
                 q: data.query,
