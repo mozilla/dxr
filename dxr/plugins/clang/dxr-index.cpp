@@ -130,7 +130,7 @@ private:
   LangOptions &features;
   DiagnosticConsumer *inner;
 
-  FileInfo *getFileInfo(std::string &filename) {
+  FileInfo *getFileInfo(const std::string &filename) {
     std::map<std::string, FileInfo *>::iterator it;
     it = relmap.find(filename);
     if (it == relmap.end()) {
