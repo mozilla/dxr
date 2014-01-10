@@ -59,58 +59,6 @@ const char *hash(std::string &str) {
   return hashstr;
 }
 
-// This is a wrapper around NamedDecl::getQualifiedNameAsString.
-// It produces more qualified output to distinguish several cases
-// which would otherwise be ambiguous.
-std::string getQualifiedName(const NamedDecl &d) {
-  std::string ret;
-  const DeclContext *ctx = d.getDeclContext();
-  if (ctx->isFunctionOrMethod() && isa<NamedDecl>(ctx))
-  {
-    // This is a local variable.
-    // d.getQualifiedNameAsString() will return the unqualifed name for this
-    // but we want an actual qualified name so we can distinguish variables
-    // with the same name but that are in different functions.
-    ret = getQualifiedName(*cast<NamedDecl>(ctx)) + "::" + d.getNameAsString();
-  }
-  else
-  {
-    ret = d.getQualifiedNameAsString();
-  }
-
-  if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d))
-  {
-    // This is a function.  getQualifiedNameAsString will return a string
-    // like "ANamespace::AFunction".  To this we append the list of parameters
-    // so that we can distinguish correctly between
-    // void ANamespace::AFunction(int);
-    //    and
-    // void ANamespace::AFunction(float);
-    ret += "(";
-    const FunctionType *ft = fd->getType()->castAs<FunctionType>();
-    if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft))
-    {
-      unsigned num_params = fd->getNumParams();
-      for (unsigned i = 0; i < num_params; ++i) {
-        if (i)
-          ret += ", ";
-        ret += fd->getParamDecl(i)->getType().getAsString();
-      }
-
-      if (fpt->isVariadic()) {
-        if (num_params > 0)
-          ret += ", ";
-        ret += "...";
-      }
-    }
-    ret += ")";
-    if (ft->isConst())
-      ret += " const";
-  }
-
-  return ret;
-}
-
 std::string srcdir;
 std::string output;
 std::string tmpdir; // Place to save all the csv files to
@@ -245,6 +193,58 @@ public:
     buffer += ":";
     buffer += fixed.getColumn();
     return buffer;
+  }
+
+  // This is a wrapper around NamedDecl::getQualifiedNameAsString.
+  // It produces more qualified output to distinguish several cases
+  // which would otherwise be ambiguous.
+  std::string getQualifiedName(const NamedDecl &d) {
+    std::string ret;
+    const DeclContext *ctx = d.getDeclContext();
+    if (ctx->isFunctionOrMethod() && isa<NamedDecl>(ctx))
+    {
+      // This is a local variable.
+      // d.getQualifiedNameAsString() will return the unqualifed name for this
+      // but we want an actual qualified name so we can distinguish variables
+      // with the same name but that are in different functions.
+      ret = getQualifiedName(*cast<NamedDecl>(ctx)) + "::" + d.getNameAsString();
+    }
+    else
+    {
+      ret = d.getQualifiedNameAsString();
+    }
+
+    if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d))
+    {
+      // This is a function.  getQualifiedNameAsString will return a string
+      // like "ANamespace::AFunction".  To this we append the list of parameters
+      // so that we can distinguish correctly between
+      // void ANamespace::AFunction(int);
+      //    and
+      // void ANamespace::AFunction(float);
+      ret += "(";
+      const FunctionType *ft = fd->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft))
+      {
+        unsigned num_params = fd->getNumParams();
+        for (unsigned i = 0; i < num_params; ++i) {
+          if (i)
+            ret += ", ";
+          ret += fd->getParamDecl(i)->getType().getAsString();
+        }
+
+        if (fpt->isVariadic()) {
+          if (num_params > 0)
+            ret += ", ";
+          ret += "...";
+        }
+      }
+      ret += ")";
+      if (ft->isConst())
+        ret += " const";
+    }
+
+    return ret;
   }
 
   void beginRecord(const char *name, SourceLocation loc) {
