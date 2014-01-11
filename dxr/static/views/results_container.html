@@ -1,6 +1,6 @@
 <p class="top-of-tree">Results from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree:</p>
 
-{% if trees|length > 1 %}
+{% if tree_tuples|length > 1 %}
 <section id="tree-selector" class="tree-selector">
     <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
         <!-- arrow icon using icon font -->
@@ -17,9 +17,9 @@
             <input type="submit" value="Filter" class="visually-hidden" />
         </form>
         <ul class="selector-options" tabindex="-1">
-          {% for t in trees %}
+          {% for t, url in tree_tuples %}
               <li>
-                <a href="{{ wwwroot }}/{{ t }}/search?{{ query_string }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="selector-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
+                <a href="{{ url }}" {% if t == tree %}class="selected" aria-checked="true"{% endif %}><span class="selector-option-label">{{ t }}</span>: the answer to life, the universe, and everything else is 42.</a>
               </li>
           {% endfor %}
         </ul>

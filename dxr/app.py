@@ -55,20 +55,21 @@ def search(tree):
     limit = min(non_negative_int(querystring.get('limit'), 100), 1000)
 
     config = current_app.config
+    www_root = config['WWW_ROOT']
+    trees = config['TREES']
 
     # Arguments for the template:
     arguments = {
         # Common template variables
-        'wwwroot': config['WWW_ROOT'],
-        'tree': config['TREES'][0],
-        'trees': config['TREES'],
+        'wwwroot': www_root,
+        'tree': trees[0],
         'config': config['TEMPLATE_PARAMETERS'],
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''
     status_code = None
 
-    if tree in config['TREES']:
+    if tree in trees:
         arguments['tree'] = tree
 
         # Connect to database
@@ -90,7 +91,7 @@ def search(tree):
                     # TODO: Does this escape qtext properly?
                     return redirect(
                         '%s/%s/source/%s?from=%s%s#%i' %
-                        (config['WWW_ROOT'],
+                        (www_root,
                          tree,
                          path,
                          qtext,
@@ -115,7 +116,7 @@ def search(tree):
                 # Search template variables:
                 arguments['time'] = time() - start
                 arguments['query'] = qtext
-                arguments['search_url'] = search_url(arguments['wwwroot'],
+                arguments['search_url'] = search_url(www_root,
                                                      arguments['tree'],
                                                      qtext,
                                                      redirect=False)
@@ -123,6 +124,13 @@ def search(tree):
                 arguments['offset'] = offset
                 arguments['limit'] = limit
                 arguments['is_case_sensitive'] = is_case_sensitive
+                arguments['tree_tuples'] = [
+                        (t,
+                         search_url(www_root,
+                                    t,
+                                    qtext,
+                                    case=True if is_case_sensitive else None))
+                        for t in trees]
         else:
             error = 'Failed to establish database connection.'
     else:

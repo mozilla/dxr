@@ -23,7 +23,7 @@ from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
-from dxr.utils import load_template_env, connect_database, open_log
+from dxr.utils import load_template_env, connect_database, open_log, browse_url
 
 try:
     from itertools import compress
@@ -326,7 +326,9 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
         {# Common template variables:
          'wwwroot': tree.config.wwwroot,
          'tree': tree.name,
-         'trees': [t.name for t in tree.config.trees],
+         'tree_tuples': [(t.name,
+                          browse_url(t.name, tree.config.wwwroot, folder))
+                         for t in tree.config.trees],
          'config': tree.config.template_parameters,
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
@@ -532,7 +534,9 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         # Set common template variables
         'wwwroot': tree.config.wwwroot,
         'tree': tree.name,
-        'trees': [t.name for t in tree.config.trees],
+        'tree_tuples': [(t.name,
+                         browse_url(t.name, tree.config.wwwroot, path))
+                        for t in tree.config.trees],
         'config': tree.config.template_parameters,
         'generated_date': tree.config.generated_date,
 

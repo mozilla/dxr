@@ -114,7 +114,6 @@ class Config(object):
                 self.trees.append(TreeConfig(self, self.configfile, tree))
 
 
-
 class TreeConfig(object):
     """ Tree configuration for DXR """
     def __init__(self, config, configfile, name):
@@ -129,7 +128,7 @@ class TreeConfig(object):
             'source_encoding':  'utf-8',
         })
         parser.read(configfile)
-        
+
         # Set config values
         self.enabled_plugins  = parser.get(name, 'enabled_plugins',   False)
         self.disabled_plugins = parser.get(name, 'disabled_plugins',  False)
