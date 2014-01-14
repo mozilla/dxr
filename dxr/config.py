@@ -97,7 +97,7 @@ class Config(object):
 
         # Test for conflicting plugins settings
         conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
-        if len(conflicts) > 0:
+        if conflicts:
             msg = "Plugin: '%s' is both enabled and disabled"
             for p in conflicts:
                 print >> sys.stderr, msg % p
@@ -184,7 +184,7 @@ class TreeConfig(object):
 
         # Test for conflicting plugins settings
         conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
-        if len(conflicts) > 0:
+        if conflicts:
             msg = "Plugin: '%s' is both enabled and disabled in '%s'"
             for p in conflicts:
                 print >> sys.stderr, msg % (p, name)
