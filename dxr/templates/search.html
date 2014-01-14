@@ -2,29 +2,6 @@
 
 {% block title %}{{ query }} - DXR Search{% endblock %}
 
-{% block tip -%}
-  {%- if error -%}
-    <b>{{ error }}</b>
-  {%- else -%}
-    Query executed in {{"%.3f"|format(time)}}s
-  {%- endif -%}
-{%- endblock %}
-
-{% set state_offset = offset + results|length %}
-{% set state_limit  = limit %}
-{% set state_eof    = results|length < limit %}
-
-{% block head %}
-  {% if error %}
-  <script>
-    window.addEventListener('load', function(){
-      // Write a the error message to search tip
-      dxr.setErrorTip("{{ error }}");
-    });
-  </script>
-  {% endif %}
-{% endblock %}
-
 {% block site_css %}
   {{ super() }}
   <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
@@ -97,6 +74,9 @@
     <p class="user-message info">No results returned for current query.</p>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block footer %}
 {% endblock %}
 
 {% block site_js %}

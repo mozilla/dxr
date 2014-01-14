@@ -5,30 +5,33 @@ $(function() {
     'use strict';
 
     var constants = $('#data');
+    var stateConstants = $('#state');
     var dxr = {};
 
     dxr.wwwroot = constants.data('root');
+    dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.icons = dxr.wwwroot + '/static/icons/';
     dxr.views = dxr.wwwroot + '/static/views';
     dxr.tree = constants.data('tree');
 
     /**
-     * Disable and enable pointer events on scroll begin and scroll end.
+     * Disable and enable pointer events on scroll begin and scroll end to
+     * avoid unnecessary paints and recalcs caused by hover effets.
      * @see http://www.thecssninja.com/javascript/pointer-events-60fps
      */
-    var root = document.documentElement;
-    var timer;
+    var docElem = document.documentElement,
+        timer;
 
     window.addEventListener('scroll', function() {
         // User scrolling so stop the timeout
         clearTimeout(timer);
         // Pointer events has not already been disabled.
-        if (!root.style.pointerEvents) {
-            root.style.pointerEvents = 'none';
+        if (!docElem.style.pointerEvents) {
+            docElem.style.pointerEvents = 'none';
         }
 
         timer = setTimeout(function() {
-            root.style.pointerEvents = '';
+            docElem.style.pointerEvents = '';
         }, 500);
     }, false);
 
@@ -82,7 +85,8 @@ $(function() {
     }
 
     var env = nunjucks.env,
-        tmpl = env.getTemplate('results.html'),
+        resultsContainerTmpl = env.getTemplate('results_container.html'),
+        resultsTmpl = env.getTemplate('partial/results.html'),
         pathLineTmpl = env.getTemplate('path_line.html');
 
     /**
@@ -122,8 +126,21 @@ $(function() {
 
     var searchForm = $('#basic_search'),
         queryField = $('#query'),
+        query = null,
         caseSensitiveBox = $('#case'),
-        contentContainer = $('#content');
+        contentContainer = $('#content'),
+        waiter = null,
+        nextRequestNumber = 1, // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
+        displayedRequestNumber = 0,
+        didScroll = false,
+        resultCount = 0,
+        dataOffset = 0,
+        previousDataLimit = 0,
+        defaultDataLimit = 100;
+
+    $(window).scroll(function() {
+        didScroll = true;
+    });
 
     /**
      * Returns the full Ajax URL for search and explicitly sets
@@ -133,21 +150,119 @@ $(function() {
      *
      * @param {string} query - The query string
      * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
+     * @param {int} limit - The number of results to return.
+     * @param [int] offset - The cursor position
      */
-    function buildAjaxURL(query, isCaseSensitive) {
+    function buildAjaxURL(query, isCaseSensitive, limit, offset) {
         var search = constants.data('search');
         var params = {};
         params.q = query;
         params.redirect = false;
         params.format = 'json';
         params['case'] = isCaseSensitive;
+        params.limit = limit;
+        params.offset = offset
 
         return search + '?' + $.param(params);
     }
 
-    var waiter = null,
-        nextRequestNumber = 1,  // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
-        displayedRequestNumber = 0;
+    // Return the maximum number of pixels the document can be scrolled.
+    function getMaxScrollY() {
+        // Because the user might have resized the window since the last call,
+        // always get innerHeight at call time and do not cache.
+        var scrollMaxY = docElem.scrollHeight - window.innerHeight;
+
+        // window.scrollMaxY is a non standard implementation in
+        // Gecko(Firefox) based browsers. If this is thus available,
+        // simply return it, else return the calculated value above.
+        // @see https://developer.mozilla.org/en-US/docs/Web/API/Window.scrollMaxY
+        return window.scrollMaxY || scrollMaxY;
+    }
+
+    var scrollPoll = null;
+
+    /**
+     * Starts or restarts the scroll position poller.
+     */
+    function pollScrollPosition() {
+        scrollPoll = setInterval(infiniteScroll, 250);
+    }
+
+    // On document ready start the scroll pos poller.
+    pollScrollPosition();
+
+    /**
+     * Updates the window's history entry to not break the back button with
+     * infinite scroll.
+     * @param {int} offset - The offset to store in the URL
+     */
+    function setHistoryState(offset) {
+        var state = {},
+            re = /offset=\d+/,
+            locationSearch = '';
+
+        if (location.search.indexOf('offset') > -1) {
+            locationSearch = location.search.replace(re, 'offset=' + offset);
+        } else {
+            locationSearch = location.search ? location.search + '&offset=' + offset : '?offset=' + offset;
+        }
+
+        var url = dxr.baseUrl + location.pathname + locationSearch + location.hash;
+
+        history.replaceState(state, '', url);
+    }
+
+    function infiniteScroll() {
+        if (didScroll) {
+
+            didScroll = false;
+
+            // If the previousDataLimit is 0 we are on the search.html page and doQuery
+            // has not yet been called, get the previousDataLimit and resultCount from
+            // the page constants.
+            if (previousDataLimit === 0) {
+                previousDataLimit = stateConstants.data('limit');
+                resultCount = stateConstants.data('result-count');
+            }
+
+            var maxScrollY = getMaxScrollY(),
+                currentScrollPos = window.scrollY,
+                threshold = window.innerHeight + 500;
+
+            // Has the user reached the scrolling threshold and are there more results?
+            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultCount) {
+                clearInterval(scrollPoll);
+
+                // If a user hits enter on the landing page and there was no direct result,
+                // we get redirected to the search page and lose the query so, if query is null,
+                // get the query from the input field.
+                query = query ? query : $.trim(queryField.val());
+
+                dataOffset += previousDataLimit;
+                previousDataLimit = defaultDataLimit;
+
+                //Resubmit query for the next set of results.
+                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
+                    if(data.results.length > 0) {
+                        var state = {};
+
+                        // Update result count
+                        resultCount = data.results.length;
+                        // Use the results.html partial so we do not inject the entire container again.
+                        populateResults(resultsTmpl, data, true);
+                        // update URL with new offset
+                        setHistoryState(dataOffset);
+                        // start the scrolling poller
+                        pollScrollPosition();
+                    }
+                })
+                .fail(function() {
+                    // Should we fail silently here or notify the user?
+                    console.log('query failed');
+                });
+            }
+        }
+    }
 
     /**
      * Clears any existing query timer and sets a new one to query in a moment.
@@ -166,48 +281,61 @@ $(function() {
     }
 
     /**
+     * Populates the results template.
+     * @param {object} tmpl - The template to use to render results.
+     * @param {object} data - The data returned from the query
+     * @param {bool} append - Should the content be appended or overwrite
+     */
+    function populateResults(tmpl, data, append) {
+        data['wwwroot'] = dxr.wwwroot;
+        data['tree'] = dxr.tree;
+        data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
+        data['trees'] = data.trees;
+
+        var params = {
+            q: data.query,
+            case: data.is_case_sensitive
+        }
+        data['query_string'] = $.param(params);
+
+        // If no data is returned, inform the user.
+        if (!data.results.length) {
+            data['user_message'] = contentContainer.data('no-results');
+            contentContainer.empty().append(tmpl.render(data));
+        } else {
+
+            var results = data.results;
+            resultCount = results.length;
+
+            for (var result in results) {
+                var icon = results[result].icon;
+                results[result].pathLine = buildPathLine(results[result].path, data.tree, icon);
+            }
+
+            var container = append ? contentContainer : contentContainer.empty();
+            container.append(tmpl.render(data));
+        }
+    }
+
+    /**
      * Queries and populates the results templates with the returned data.
      */
     function doQuery() {
-        var query = $.trim(queryField.val()),
-            myRequestNumber = nextRequestNumber;
+        query = $.trim(queryField.val());
+        var myRequestNumber = nextRequestNumber,
+            lineHeight = parseInt(contentContainer.css('line-height'), 10),
+            limit = previousDataLimit = parseInt((window.innerHeight / lineHeight) + 25);
 
-        if (query.length < 3)
+        if (query.length < 3) {
             return;
+        }
 
         nextRequestNumber += 1;
-        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked')), function(data) {
-            // A newer response already arrived and is displayed. Don't overwrite it.
-            if (myRequestNumber < displayedRequestNumber)
-                return;
-
-            displayedRequestNumber = myRequestNumber;
-
-            data['wwwroot'] = dxr.wwwroot;
-            data['tree'] = dxr.tree;
-            data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
-
-            var params = {
-                q: data.query,
-                case: data.is_case_sensitive
-            };
-
-            data.query_string = $.param(params);
-
-            // If no data is returned, inform the user.
-            if (!data.results.length) {
-                data.user_message = contentContainer.data('no-results');
-                contentContainer.empty().append(tmpl.render(data));
-            } else {
-
-                var results = data.results;
-
-                for (var result in results) {
-                    var icon = results[result].icon;
-                    results[result].pathLine = buildPathLine(results[result].path, data.tree, icon);
-                }
-
-                contentContainer.empty().append(tmpl.render(data));
+        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
+            // New results, overwrite
+            if (myRequestNumber > displayedRequestNumber) {
+                displayedRequestNumber = myRequestNumber;
+                populateResults(resultsContainerTmpl, data, false);
             }
         })
         .fail(function(jqxhr, textStatus, error) {
@@ -247,9 +375,9 @@ $(function() {
      *
      */
     function formatDate(dateString) {
-        var fullDateTime = new Date(dateString);
-        var date = fullDateTime.getFullYear() + '-' + (fullDateTime.getMonth() + 1) + '-' + addLeadingZero(fullDateTime.getDate());
-        var time = fullDateTime.getHours() + ':' + addLeadingZero(fullDateTime.getMinutes());
+        var fullDateTime = new Date(dateString),
+            date = fullDateTime.getFullYear() + '-' + (fullDateTime.getMonth() + 1) + '-' + addLeadingZero(fullDateTime.getDate()),
+            time = fullDateTime.getHours() + ':' + addLeadingZero(fullDateTime.getMinutes());
 
         return date + ' ' + time;
     }
