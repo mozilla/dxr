@@ -96,9 +96,11 @@ class Config(object):
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any((p in self.disabled_plugins for p in self.enabled_plugins)):
-            msg = "Plugin: '%s' is both enabled and disabled in '%s'"
-            print >> sys.stderr, msg % (p, name)
+        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
+        if conflicts:
+            msg = "Plugin: '%s' is both enabled and disabled"
+            for p in conflicts:
+                print >> sys.stderr, msg % p
             sys.exit(1)
 
         # Load trees
@@ -181,9 +183,11 @@ class TreeConfig(object):
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any(p in self.disabled_plugins for p in self.enabled_plugins):
+        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
+        if conflicts:
             msg = "Plugin: '%s' is both enabled and disabled in '%s'"
-            print >> sys.stderr, msg % (p, name)
+            for p in conflicts:
+                print >> sys.stderr, msg % (p, name)
             sys.exit(1)
 
         # Warn if $jobs isn't used...
