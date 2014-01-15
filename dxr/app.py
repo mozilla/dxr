@@ -63,7 +63,6 @@ def search(tree):
         # Common template variables
         'wwwroot': www_root,
         'tree': trees[0],
-        'config': config['TEMPLATE_PARAMETERS'],
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''
