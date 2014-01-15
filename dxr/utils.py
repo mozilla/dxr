@@ -44,7 +44,10 @@ def load_template_env(temp_folder, dxr_root):
             os.mkdir(tmpl_cache)
         # Create jinja2 environment
         _template_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(join(dxr_root, 'templates')),
+                loader=jinja2.FileSystemLoader(
+                        [join(dxr_root, 'templates'),
+                         # Templates shared between Jinja and nunjucks:
+                         join(dxr_root, 'static', 'views')]),
                 auto_reload=False,
                 bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache)
         )

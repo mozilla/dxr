@@ -1,5 +1,5 @@
 {% macro tree_menu(tree_tuples, selected_tree) %}
-  {% if tree_tuples %}
+  {% if tree_tuples|length > 1 %}
     <section id="tree-selector" class="tree-selector">
       <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
         <!-- arrow icon using icon font -->

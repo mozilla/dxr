@@ -12,8 +12,10 @@ from dxr.server_utils import connect_db
 from dxr.utils import non_negative_int, search_url, sqlite3  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
 
 
-# Look in the 'dxr' package for static files, templates, etc.:
-dxr_blueprint = Blueprint('dxr_blueprint', 'dxr')
+# Look in the 'dxr' package for static files, templates, etc. The additional
+# template folder specified here lets us share a template or two between
+# nunjucks and Jinja2.
+dxr_blueprint = Blueprint('dxr_blueprint', 'dxr', template_folder='static/views')
 
 
 def make_app(instance_path):
