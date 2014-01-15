@@ -10,3 +10,4 @@ vagrantconfig_local.yaml
 build
 dist
 *.egg-info
+/node_modules/*
