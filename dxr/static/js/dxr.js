@@ -138,6 +138,30 @@ $(function() {
         previousDataLimit = 0,
         defaultDataLimit = 100;
 
+    // Has the user been redirected to a direct result?
+    if (location.search.indexOf('from') > -1) {
+        // Offer the user the option to see all the results instead.
+        var viewResultsTxt = 'You have been taken to a direct result ' +
+                             '<a href="{{ url }}">click here to view all search results.</a>',
+            searchUrl = constants.data('search'),
+            fromQuery = /from=(\w+)/.exec(location.search),
+            isCaseSensitive = /case=(\w+)/.exec(location.search);
+
+        searchUrl += '?q=' + fromQuery[1];
+
+        if(isCaseSensitive) {
+            searchUrl += '&case=' + isCaseSensitive[1];
+        }
+
+        var msgContainer = $('<p />', {
+                'class': 'user-message simple',
+                'html': viewResultsTxt.replace('{{ url }}', searchUrl)
+            }),
+            fileContainer = $('#file');
+
+        fileContainer.before(msgContainer);
+    }
+
     $(window).scroll(function() {
         didScroll = true;
     });
