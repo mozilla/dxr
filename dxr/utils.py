@@ -19,6 +19,9 @@ from sys import stdout
 from urllib import quote, quote_plus
 
 
+TEMPLATE_DIR = 'static/templates'
+
+
 def connect_database(tree):
     """Connect to database ensuring that dependencies are built first"""
     # Create connection
@@ -45,9 +48,7 @@ def load_template_env(temp_folder, dxr_root):
         # Create jinja2 environment
         _template_env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(
-                        [join(dxr_root, 'templates'),
-                         # Templates shared between Jinja and nunjucks:
-                         join(dxr_root, 'static', 'views')]),
+                        join(dxr_root, TEMPLATE_DIR)),
                 auto_reload=False,
                 bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache)
         )

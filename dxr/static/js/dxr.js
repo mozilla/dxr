@@ -11,7 +11,7 @@ $(function() {
     dxr.wwwroot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.icons = dxr.wwwroot + '/static/icons/';
-    dxr.views = dxr.wwwroot + '/static/views';
+    dxr.views = dxr.wwwroot + '/static/templates';
     dxr.tree = constants.data('tree');
 
     /**
