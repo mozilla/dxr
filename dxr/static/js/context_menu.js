@@ -1,4 +1,5 @@
 $(function() {
+    'use strict';
     // Get the file content container
     var fileContainer = $('#file');
 
@@ -73,7 +74,7 @@ $(function() {
             contextMenu.searchLink = {
                 text: 'Search for the substring <strong>' + word + '</strong>',
                 href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word)
-            }
+            };
 
             var currentNode = $(node).closest('a');
             // Only check for the data-menu attribute if the current node has an
@@ -100,7 +101,7 @@ $(function() {
                 // to the window, so that the menu is not
                 // removed and links will be followed.
                 event.stopPropagation();
-            })
+            });
 
             // Remove the menu when a user clicks outside it.
             window.addEventListener('mousedown', function() {
