@@ -16,6 +16,9 @@ from parsimonious.nodes import NodeVisitor
 #   - If no plugin returns an extents query, don't fetch content
 
 
+# Pattern for matching a file and line number filename:n
+_line_number = re.compile("^.*:[0-9]+$")
+
 class Query(object):
     """Query object, constructor will parse any search query"""
 
@@ -158,10 +161,26 @@ class Query(object):
             return None
         cur = self.conn.cursor()
 
+        line_number = -1
+        if _line_number.match(term):
+            parts = term.split(":")
+            if len(parts) == 2:
+                term = parts[0]
+                line_number = int(parts[1])
+
         # See if we can find only one file match
-        cur.execute("SELECT path FROM files WHERE path LIKE ? LIMIT 2", ("%/" + term,))
+        cur.execute("""
+            SELECT path FROM files WHERE
+                path = :term
+                OR path LIKE :termPre 
+            LIMIT 2
+        """, {"term": term,
+              "termPre": "%/" + term})
+
         rows = cur.fetchall()
         if rows and len(rows) == 1:
+            if line_number >= 0:
+                return (rows[0]['path'], line_number)
             return (rows[0]['path'], 1)
 
         # Case sensitive type matching
