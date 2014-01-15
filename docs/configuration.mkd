@@ -6,10 +6,9 @@ documenting all configuration settings._
 
 Configuration File Format
 -------------------------
-The configuration file is split into different sections, sections `DXR` and
-`Template` are special, all other sections describes a tree for indexing.
-Keys that must and can be specified for different sections are listed in
-relevant section below.
+The configuration file is split into different sections, sections `DXR` is
+special; all other sections describes a tree for indexing. Keys that must and
+can be specified for different sections are listed in relevant section below.
 
 The config file must be written in a format compatible with python's built-in
 [ConfigParser](http://docs.python.org/library/configparser.html), see python
@@ -29,8 +28,6 @@ _Configuration keys for the `DXR` section of the configuration file._
                         running `dxr-build.py`
  - `temp_folder`        Temporary folder (default `/tmp/dxr-temp`)
  - `log_folder`         Log folder (default `<temp_folder>/logs`)
- - `template`           Template folder, see templating.mkd
-                        (default `<dxrroot>/templates/mozilla`)
  - `wwwroot`            Virtual root on deployment server (default `/`)
  - `enabled_plugins`    Enabled plugins (default `*`)
  - `disabled_plugins`   Disabled plugins (default ` `)
@@ -66,8 +63,8 @@ Tree Configuration
 ------------------
 _Configuration keys for tree sections of the configuration file._
 
-Any section that is not named `DXR` or `Template` specifies a tree using the
-keys listed below.
+Any section that is not named `DXR` specifies a tree using the keys listed
+below.
 
  - `source_folder`      Source folder (**required**)
  - `build_command`      Command for building sources (defaults to `make -j $jobs`)
@@ -92,16 +89,6 @@ Notice that is strongly recommended that you don't define `temp_folder`;
 this feature is just here for completeness. If you define a `build_command`
 without using `$jobs` somewhere in the command, you will be warned, but the
 build will continue.
-
-
-Template Configuration
-----------------------
-Configuration keys in the `Template` section will passed on to the template
-as properties in the `config` dictionary. Take a look at the documentation for
-your template of choice to see which keys are relevant here.
-
-Usually this section is used to provide external links to source code
-repositories, or information about which revision of the tree is being indexed.
 
 
 Plugin Configuration

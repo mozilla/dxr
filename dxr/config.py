@@ -1,4 +1,4 @@
-import ConfigParser
+from ConfigParser import ConfigParser
 from datetime import datetime
 import os
 from os.path import isdir
@@ -17,13 +17,12 @@ class Config(object):
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
-        parser = ConfigParser.ConfigParser({
+        parser = ConfigParser({
             'dxrroot':          os.path.dirname(dxr.__file__),
             'plugin_folder':    "%(dxrroot)s/plugins",
             'nb_jobs':          "1",
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
-            'template':         "%(dxrroot)s/templates",
             'wwwroot':          "/",
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
@@ -41,7 +40,6 @@ class Config(object):
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.template_folder  = parser.get('DXR', 'template',         False, override)
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
@@ -52,16 +50,9 @@ class Config(object):
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
-        # Set template parameters (using new parser to avoid defaults)
-        tmp_cfg = ConfigParser.ConfigParser()
-        tmp_cfg.read(configfile)
-        if tmp_cfg.has_section('Template'):
-            self.template_parameters = dict(tmp_cfg.items('Template'))
-        else:
-            self.template_parameters = dict()
 
         # Read all plugin_ keys
-        for key, value in tmp_cfg.items('DXR'):
+        for key, value in parser.items('DXR'):
             if key.startswith('plugin_'):
                 setattr(self, key, value)
 
@@ -71,7 +62,6 @@ class Config(object):
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
-        self.template_folder  = os.path.abspath(self.template_folder)
 
         # Make sure wwwroot doesn't end in /
         if self.wwwroot[-1] == '/':
@@ -96,9 +86,11 @@ class Config(object):
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any((p in self.disabled_plugins for p in self.enabled_plugins)):
-            msg = "Plugin: '%s' is both enabled and disabled in '%s'"
-            print >> sys.stderr, msg % (p, name)
+        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
+        if conflicts:
+            msg = "Plugin: '%s' is both enabled and disabled"
+            for p in conflicts:
+                print >> sys.stderr, msg % p
             sys.exit(1)
 
         # Load trees
@@ -110,6 +102,7 @@ class Config(object):
             return -1 if parser.has_option(a, "order") else 1
 
         for tree in sorted(parser.sections(), section_cmp):
+            # Don't interpret legacy [Template] section as a tree:
             if tree not in ('DXR', 'Template'):
                 self.trees.append(TreeConfig(self, self.configfile, tree))
 
@@ -118,7 +111,7 @@ class TreeConfig(object):
     """ Tree configuration for DXR """
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
-        parser = ConfigParser.ConfigParser({
+        parser = ConfigParser({
             'enabled_plugins':  "*",
             'disabled_plugins': "",
             'temp_folder':      os.path.join(config.temp_folder, name),
@@ -180,9 +173,11 @@ class TreeConfig(object):
             self.enabled_plugins = self.enabled_plugins.split()
 
         # Test for conflicting plugins settings
-        if any(p in self.disabled_plugins for p in self.enabled_plugins):
+        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
+        if conflicts:
             msg = "Plugin: '%s' is both enabled and disabled in '%s'"
-            print >> sys.stderr, msg % (p, name)
+            for p in conflicts:
+                print >> sys.stderr, msg % (p, name)
             sys.exit(1)
 
         # Warn if $jobs isn't used...

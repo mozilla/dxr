@@ -97,7 +97,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     ensure_folder(config.temp_folder, not skip_indexing)
     ensure_folder(config.log_folder, not skip_indexing)
 
-    jinja_env = load_template_env(config.temp_folder, config.template_folder)
+    jinja_env = load_template_env(config.temp_folder, config.dxrroot)
 
     # We don't want to load config file on the server, so we just write all the
     # setting into the config.py script, simple as that.
@@ -107,7 +107,6 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         os.path.join(config.target_folder, 'config.py'),
         dict(trees=repr([t.name for t in config.trees]),
              wwwroot=repr(config.wwwroot),
-             template_parameters=repr(config.template_parameters),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index)))
 
@@ -314,7 +313,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Lay down the HTML:
     jinja_env = load_template_env(tree.config.temp_folder,
-                                  tree.config.template_folder)
+                                  tree.config.dxrroot)
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
@@ -329,7 +328,6 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'tree_tuples': [(t.name,
                           browse_url(t.name, tree.config.wwwroot, folder))
                          for t in tree.config.trees],
-         'config': tree.config.template_parameters,
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
 
@@ -528,7 +526,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
             htmlifiers.append(htmlifier)
     # Load template
     env = load_template_env(tree.config.temp_folder,
-                            tree.config.template_folder)
+                            tree.config.dxrroot)
 
     arguments = {
         # Set common template variables
@@ -537,7 +535,6 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'tree_tuples': [(t.name,
                          browse_url(t.name, tree.config.wwwroot, path))
                         for t in tree.config.trees],
-        'config': tree.config.template_parameters,
         'generated_date': tree.config.generated_date,
 
         # Set file template variables
