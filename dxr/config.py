@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from ConfigParser import ConfigParser
 from datetime import datetime
 import os
 from os.path import isdir
@@ -17,7 +17,7 @@ class Config(object):
     """ Configuration for DXR """
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
-        parser = SafeConfigParser({
+        parser = ConfigParser({
             'dxrroot':          os.path.dirname(dxr.__file__),
             'plugin_folder':    "%(dxrroot)s/plugins",
             'nb_jobs':          "1",
@@ -53,7 +53,7 @@ class Config(object):
         self.configfile       = configfile
         self.trees            = []
         # Set template parameters (using new parser to avoid defaults)
-        tmp_cfg = SafeConfigParser()
+        tmp_cfg = ConfigParser()
         tmp_cfg.read(configfile)
         if tmp_cfg.has_section('Template'):
             self.template_parameters = dict(tmp_cfg.items('Template'))
@@ -121,7 +121,7 @@ class TreeConfig(object):
     """ Tree configuration for DXR """
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
-        parser = SafeConfigParser({
+        parser = ConfigParser({
             'enabled_plugins':  "*",
             'disabled_plugins': "",
             'temp_folder':      os.path.join(config.temp_folder, name),
