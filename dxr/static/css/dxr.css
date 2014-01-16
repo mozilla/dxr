@@ -435,6 +435,17 @@ mark {
     background: linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
     color: white;
 }
+.simple {
+    font-size: .8rem;
+    background: -webkit-linear-gradient(green, darkgreen);
+    background: -moz-linear-gradient(green, darkgreen);
+    background: -o-linear-gradient(green, darkgreen);
+    background: linear-gradient(green, darkgreen);
+    color: white;
+}
+.simple a {
+    text-decoration: underline;
+}
 #fetch-results {
     display: none;
 }
