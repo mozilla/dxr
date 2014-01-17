@@ -62,7 +62,6 @@ def search(tree):
     arguments = {
         # Common template variables
         'wwwroot': www_root,
-        'tree': trees[0],
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''
@@ -128,11 +127,13 @@ def search(tree):
                          search_url(www_root,
                                     t,
                                     qtext,
-                                    case=True if is_case_sensitive else None))
-                        for t in trees]
+                                    case=True if is_case_sensitive else None),
+                         description)
+                        for t, description in trees.iteritems()]
         else:
             error = 'Failed to establish database connection.'
     else:
+        arguments['tree'] = trees.keys()[0]
         error = "Tree '%s' is not a valid tree." % tree
         status_code = 404
 

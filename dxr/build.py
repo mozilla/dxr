@@ -18,6 +18,7 @@ from warnings import warn
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from jinja2 import Markup
+from ordereddict import OrderedDict
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
@@ -105,7 +106,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         jinja_env,
         'config.py.jinja',
         os.path.join(config.target_folder, 'config.py'),
-        dict(trees=repr([t.name for t in config.trees]),
+        dict(trees=repr(OrderedDict((t.name, t.description)
+                                    for t in config.trees)),
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index)))
@@ -326,7 +328,8 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'wwwroot': tree.config.wwwroot,
          'tree': tree.name,
          'tree_tuples': [(t.name,
-                          browse_url(t.name, tree.config.wwwroot, folder))
+                          browse_url(t.name, tree.config.wwwroot, folder),
+                          t.description)
                          for t in tree.config.trees],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
@@ -533,7 +536,8 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'wwwroot': tree.config.wwwroot,
         'tree': tree.name,
         'tree_tuples': [(t.name,
-                         browse_url(t.name, tree.config.wwwroot, path))
+                         browse_url(t.name, tree.config.wwwroot, path),
+                         t.description)
                         for t in tree.config.trees],
         'generated_date': tree.config.generated_date,
 
