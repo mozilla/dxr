@@ -123,15 +123,15 @@ class TreeConfig(object):
         parser.read(configfile)
 
         # Set config values
-        self.enabled_plugins  = parser.get(name, 'enabled_plugins',   False)
-        self.disabled_plugins = parser.get(name, 'disabled_plugins',  False)
-        self.temp_folder      = parser.get(name, 'temp_folder',       False)
-        self.log_folder       = parser.get(name, 'log_folder',         False)
-        self.object_folder    = parser.get(name, 'object_folder',     False)
-        self.source_folder    = parser.get(name, 'source_folder',     False)
-        self.build_command    = parser.get(name, 'build_command',     False)
-        self.ignore_patterns  = parser.get(name, 'ignore_patterns',   False)
-        self.source_encoding  = parser.get(name, 'source_encoding',   False)
+        self.enabled_plugins  = parser.get(name, 'enabled_plugins')
+        self.disabled_plugins = parser.get(name, 'disabled_plugins')
+        self.temp_folder      = parser.get(name, 'temp_folder')
+        self.log_folder       = parser.get(name, 'log_folder')
+        self.object_folder    = parser.get(name, 'object_folder')
+        self.source_folder    = parser.get(name, 'source_folder')
+        self.build_command    = parser.get(name, 'build_command')
+        self.ignore_patterns  = parser.get(name, 'ignore_patterns')
+        self.source_encoding  = parser.get(name, 'source_encoding')
 
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
