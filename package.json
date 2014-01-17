@@ -4,13 +4,12 @@
   "author": "espressive <sneethling@mozilla.com>",
   "version": "0.1.2",
   "devDependencies": {
-    "nunjucks": ">=0.1.10",
-    "grunt": ">=0.4.x",
-    "grunt-uncss": "0.1.x",
+    "nunjucks": "1.0.1",
+    "grunt": "0.4.2",
+    "grunt-uncss": "0.1.6",
     "grunt-processhtml": "0.2.7",
-    "grunt-contrib-jshint": "0.8.x"
+    "grunt-contrib-jshint": "0.8.0"
 
   },
   "engine": "node >= 0.8.x"
 }
-
