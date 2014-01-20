@@ -1,6 +1,6 @@
 {% if is_first_or_only %}
-    <a class="{{ icon_class }}" href="{{ url }}">{{display_path}}</a>
+    <a class="{{ icon_class }}" {% if is_dir %}data-path="{{ data_path }}"{% endif %} href="{{ url }}">{{display_path}}</a>
 {% else %}
     <span class="path-separator">/</span>
-    <a class="{{ icon_class }}" {% if is_dir %}data-path="{{ data_path }}"{% endif %} href="{{ url }}">{{display_path}}</a>
+    <a {% if is_dir %}data-path="{{ data_path }}"{% endif %} href="{{ url }}">{{display_path}}</a>
 {% endif %}

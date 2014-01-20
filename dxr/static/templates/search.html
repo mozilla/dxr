@@ -19,7 +19,19 @@
       <div class="result">
         <div class="path">
           {% set iconclass = icon.split('/')[1] %}
-          <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}" class="{{ iconclass }}">{{ path }}</a>
+          {% set paths = path.split('/') %}
+
+          {% for item in paths %}
+            {% set is_first_or_only = loop.first or paths|length == 1 %}
+            {% set is_dir = not loop.last %}
+
+            {% if is_first_or_only %}
+              <a class="{{ iconclass }}" {% if is_dir %}data-path="{{ item }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
+            {% else %}
+              <span class="path-separator">/</span>
+              <a {% if is_dir %}data-path="{{ item }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
+            {% endif %}
+          {% endfor %}
         </div>
         <table class="result_snippet">
           <caption class="visually-hidden">Query matches in {{ path }}</caption>
