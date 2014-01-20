@@ -106,7 +106,7 @@ $(function() {
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex in paths) {
-            var isFirstOrLast = (splitPathLength - 1) === pathIndex || splitPathLength === 1;
+            var isFirstOrLast = (splitPathLength - 1) === parseInt(pathIndex) || splitPathLength === 1;
 
             // Do not add a forward slash if there is only one item in the Array
             // or if this is the last iteration.
