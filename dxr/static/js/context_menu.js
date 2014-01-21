@@ -39,8 +39,8 @@ $(function() {
      */
     function setContextMenu(target, contextMenu, event) {
         // Mouse coordinates
-        var top = event.clientY;
-        var left = event.clientX;
+        var top = event.clientY,
+            left = event.clientX;
 
         // If we arrived at the page via a search result and there is a hash in the url,
         // or the document has been scrolled, incorporate the scrollY amount for the
@@ -97,12 +97,12 @@ $(function() {
         // a text selection.
         if (selection.isCollapsed) {
 
-            var offset = selection.focusOffset;
-            var node = selection.anchorNode;
-            var selectedTxtString = node.nodeValue;
-            var startIndex = selectedTxtString.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1;
-            var endIndex = selectedTxtString.regexIndexOf(/[^A-Z0-9_]/i, offset);
-            var word = '';
+            var offset = selection.focusOffset,
+                node = selection.anchorNode,
+                selectedTxtString = node.nodeValue,
+                startIndex = selectedTxtString.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1,
+                endIndex = selectedTxtString.regexIndexOf(/[^A-Z0-9_]/i, offset),
+                word = '';
 
             // If the regex did not find a start index, start from index 0
             if (startIndex === -1) {
