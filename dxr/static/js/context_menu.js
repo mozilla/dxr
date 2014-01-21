@@ -39,8 +39,8 @@ $(function() {
      */
     function setContextMenu(target, contextMenu, event) {
         // Mouse coordinates
-        var top = event.clientY;
-        var left = event.clientX;
+        var top = event.clientY,
+            left = event.clientX;
 
         // If we arrived at the page via a search result and there is a hash in the url,
         // or the document has been scrolled, incorporate the scrollY amount for the
@@ -74,13 +74,31 @@ $(function() {
     contentContainer.on('click', 'a[data-path]', function(event) {
         event.preventDefault();
 
-        var contextMenu = {
-            folder: 'true',
-            www_root: dxr.wwwroot + '/',
-            tree: dxr.tree,
-            path: $(this).data('path'),
-            query: $.trim(queryField.val())
-        };
+        var contextMenu = {},
+            path = $(this).data('path'),
+            baseSearchParams = '?limit=100&amp;redirect=false&amp;q=',
+            query = $.trim(queryField.val()),
+            browseUrl = dxr.wwwroot + '/' + dxr.tree + '/source/' + path,
+            limitSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20path%3A' + path + '%2F',
+            excludeSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20-path%3A' + path + '%2F';
+
+        contextMenu.menuItems = [
+                {
+                    text: 'Browse folder contents',
+                    href: browseUrl,
+                    icon: 'goto-folder'
+                },
+                {
+                    text: 'Limit search to folder',
+                    href: limitSearchUrl,
+                    icon: 'path-search'
+                },
+                {
+                    text: 'Exclude folder from search',
+                    href: excludeSearchUrl,
+                    icon: 'exclude-path'
+                }
+            ];
 
         setContextMenu(contentContainer, contextMenu, event);
     });
@@ -97,12 +115,12 @@ $(function() {
         // a text selection.
         if (selection.isCollapsed) {
 
-            var offset = selection.focusOffset;
-            var node = selection.anchorNode;
-            var selectedTxtString = node.nodeValue;
-            var startIndex = selectedTxtString.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1;
-            var endIndex = selectedTxtString.regexIndexOf(/[^A-Z0-9_]/i, offset);
-            var word = '';
+            var offset = selection.focusOffset,
+                node = selection.anchorNode,
+                selectedTxtString = node.nodeValue,
+                startIndex = selectedTxtString.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1,
+                endIndex = selectedTxtString.regexIndexOf(/[^A-Z0-9_]/i, offset),
+                word = '';
 
             // If the regex did not find a start index, start from index 0
             if (startIndex === -1) {
@@ -118,20 +136,24 @@ $(function() {
             word = selectedTxtString.substr(startIndex, endIndex - startIndex);
 
             // Build the Object needed for the context-menu template.
-            var contextMenu = {};
-            contextMenu.searchLink = {
-                text: 'Search for the substring <strong>' + word + '</strong>',
-                href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word)
-            };
+            var contextMenu = {},
+                menuItems = [{
+                    text: 'Search for the substring <strong>' + word + '</strong>',
+                    href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word),
+                    icon: 'search'
+                }];
 
             var currentNode = $(node).closest('a');
             // Only check for the data-menu attribute if the current node has an
             // ancestor that is an anchor.
             if (currentNode.length) {
                 toggleSymbolHighlights(currentNode);
-                contextMenu.menuItems = currentNode.data('menu');
+
+                var currentNodeData = currentNode.data('menu');
+                menuItems = menuItems.concat(currentNodeData);
             }
 
+            contextMenu.menuItems = menuItems;
             setContextMenu(fileContainer, contextMenu, event);
         }
     });
@@ -142,14 +164,7 @@ $(function() {
         $('#context-menu').remove();
     }, false);
 
-    window.addEventListener('keyup', function(event) {
-        // 'key' is the standard but has not been implemented in Gecko
-        // yet, see https://bugzilla.mozilla.org/show_bug.cgi?id=680830
-        // so, we check both.
-        var keyPressed = event.key || event.keyCode;
-        // esc key pressed.
-        if (keyPressed === 27 || keyPressed === 'Esc') {
-           $('#context-menu').remove();
-        }
-    }, false);
+    onEsc(function() {
+        $('#context-menu').remove();
+    });
 });

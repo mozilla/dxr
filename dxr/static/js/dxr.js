@@ -12,6 +12,7 @@ $(function() {
     dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.icons = dxr.wwwroot + '/static/icons/';
     dxr.views = dxr.wwwroot + '/static/templates';
+    dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
     /**
@@ -179,7 +180,7 @@ $(function() {
      * @param [int] offset - The cursor position
      */
     function buildAjaxURL(query, isCaseSensitive, limit, offset) {
-        var search = constants.data('search');
+        var search = dxr.searchUrl;
         var params = {};
         params.q = query;
         params.redirect = false;

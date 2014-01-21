@@ -67,18 +67,9 @@ $(function() {
         hideOptions();
     });
 
-    window.addEventListener('click', function() {
-        hideOptions();
-    }, false);
+    window.addEventListener('click', hideOptions, false);
 
-    window.addEventListener('keyup', function(event) {
-        // 'key' is the standard but has not been implemented in Gecko
-        // yet, see https://bugzilla.mozilla.org/show_bug.cgi?id=680830
-        // so, we check both.
-        var keyPressed = event.key || event.keyCode;
-        // esc key pressed.
-        if (keyPressed === 27 || keyPressed === 'Esc') {
-           hideOptions();
-        }
-    }, false);
+    onEsc(function() {
+        $('.sf-select-options').hide();
+    });
 });
