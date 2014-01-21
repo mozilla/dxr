@@ -167,7 +167,8 @@ function setInProgressTimer(){
 var request = null;
 // Clear contents of results on set
 var clearOnSet = false;
-
+// Run pushState on the first time
+var firstRun = true;
 /** Fetch results, using current state */
 function fetchResults(displayFetcher){
 
@@ -256,6 +257,26 @@ function fetchResults(displayFetcher){
 
   // Start a new request
   request.open("GET", createSearchUrl(dxr.tree(), params), true);
+
+  // History Pushstate and Replacestate
+  if(history.pushState && history.replaceState) {  
+    // Update title and URL
+    document.title = state.query + "- DXR Search";
+    // parameters for url
+    var param_history = {
+      tree:           dxr.tree(),
+      q:              state.query, 
+      redirect:       'true'
+    };
+  
+    if(firstRun == true){
+      history.pushState(null, "DXR Search Index", document.URL);
+      loadPage = true;
+      firstRun = false;
+    }
+    history.replaceState(params, state.query + "- DXR Search", createSearchUrl(dxr.tree(), param_history));
+  }
+  
   setInProgressTimer();
   request.send();
 }
@@ -350,5 +371,11 @@ window.addEventListener('load', function(){
   initMenu();
 }, false);
 
+var loadPage = window.history.state;
+window.onpopstate = function(event) {
+    if (loadPage) {
+        window.location.reload();
+    }
+};
 
 }());
