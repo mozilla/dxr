@@ -1,8 +1,14 @@
 <ul id="context-menu" class="context-menu" tabindex="0">
-    <li>
-        <a href="{{ searchLink.href }}" class="search">{{ searchLink.text }}</a>
-    </li>
-    {% for item in menuItems %}
-        <li><a href="{{ item.href }}" class="{{ item.icon }}">{{ item.text }}</a></li>
-    {% endfor %}
+    {% if folder %}
+        <li><a href="{{ www_root }}{{ tree }}/source/{{ path }}">Browse folder contents</a></li>
+        <li><a href="{{ www_root }}{{ tree }}/search?limit=100&amp;redirect=false&amp;q={{ query }}%20path%3A{{ path }}%2F">Limit search to folder</a></li>
+        <li><a href="{{ www_root }}{{ tree }}/search?limit=100&amp;redirect=false&amp;q={{ query }}%20-path%3A{{ path }}%2F">Exclude folder from search</a></li>
+    {% else %}
+        <li>
+            <a href="{{ searchLink.href }}" class="search">{{ searchLink.text }}</a>
+        </li>
+        {% for item in menuItems %}
+            <li><a href="{{ item.href }}" class="{{ item.icon }}">{{ item.text }}</a></li>
+        {% endfor %}
+    {% endif %}
 </ul>

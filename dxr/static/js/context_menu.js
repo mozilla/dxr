@@ -1,7 +1,16 @@
 $(function() {
     'use strict';
     // Get the file content container
-    var fileContainer = $('#file');
+    var fileContainer = $('#file'),
+        queryField = $('#query'),
+        contentContainer = $('#content');
+
+    if (!nunjucks.env) {
+        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
+    }
+
+    var env = nunjucks.env,
+        tmpl = env.getTemplate('context_menu.html');
 
     /**
      * Highlight, or remove highlighting from, all symbols with the same class
@@ -20,6 +29,62 @@ $(function() {
         }
     }
 
+    /**
+     * Populates the context menu template, positions and shows
+     * the widget. Also attached required listeners.
+     *
+     * @param {object} target - The target container to which the menu will be attached.
+     * @param {object} contextMenu - The context menu data object.
+     * @param {object} event - The event object returned in the handler callback.
+     */
+    function setContextMenu(target, contextMenu, event) {
+        // Mouse coordinates
+        var top = event.clientY;
+        var left = event.clientX;
+
+        // If we arrived at the page via a search result and there is a hash in the url,
+        // or the document has been scrolled, incorporate the scrollY amount for the
+        // top location of the context menu.
+        if (window.location.href.indexOf('#') > -1 || window.scrollY > 0) {
+            top += window.scrollY;
+        }
+
+        target.append(tmpl.render(contextMenu));
+        var currentContextMenu =  $('#context-menu');
+
+        // Immediately after appending the context menu, position it.
+        currentContextMenu.css({
+            top: top,
+            left: left
+        });
+
+        // Move focus to the context menu
+        currentContextMenu[0].focus();
+
+        currentContextMenu.on('mousedown', function(event) {
+            // Prevent clicks on the menu to propagate
+            // to the window, so that the menu is not
+            // removed and links will be followed.
+            event.stopPropagation();
+        });
+    }
+
+    // Listen for clicks bubbling up from children of the content container,
+    // but only act if the element was an anchor with a data-path attribute.
+    contentContainer.on('click', 'a[data-path]', function(event) {
+        event.preventDefault();
+
+        var contextMenu = {
+            folder: 'true',
+            www_root: dxr.wwwroot + '/',
+            tree: dxr.tree,
+            path: $(this).data('path'),
+            query: $.trim(queryField.val())
+        };
+
+        setContextMenu(contentContainer, contextMenu, event);
+    });
+
     // Listen and handle click events, but only if on
     // a code element.
     fileContainer.on('click', 'code', function(event) {
@@ -31,16 +96,6 @@ $(function() {
         // Only show the context menu if the user did not make
         // a text selection.
         if (selection.isCollapsed) {
-            // Mouse coordinates
-            var top = event.clientY;
-            var left = event.clientX;
-
-            // If we arrived at the page via a search result and there is a hash in the url,
-            // or the document has been scrolled, incorporate the scrollY amount for the
-            // top location of the context menu.
-            if (window.location.href.indexOf('#') > -1 || window.scrollY > 0) {
-                top += window.scrollY;
-            }
 
             var offset = selection.focusOffset;
             var node = selection.anchorNode;
@@ -62,13 +117,6 @@ $(function() {
 
             word = selectedTxtString.substr(startIndex, endIndex - startIndex);
 
-            if (!nunjucks.env) {
-                nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
-            }
-
-            var env = nunjucks.env,
-                tmpl = env.getTemplate('context_menu.html');
-
             // Build the Object needed for the context-menu template.
             var contextMenu = {};
             contextMenu.searchLink = {
@@ -84,30 +132,24 @@ $(function() {
                 contextMenu.menuItems = currentNode.data('menu');
             }
 
-            fileContainer.append(tmpl.render(contextMenu));
-            var currentContextMenu =  $('#context-menu');
-
-            // Immediately after appending the context menu, position it.
-            currentContextMenu.css({
-                top: top,
-                left: left
-            });
-
-            // Move focus to the context menu
-            currentContextMenu[0].focus();
-
-            currentContextMenu.on('mousedown', function(event) {
-                // Prevent clicks on the menu to propagate
-                // to the window, so that the menu is not
-                // removed and links will be followed.
-                event.stopPropagation();
-            });
-
-            // Remove the menu when a user clicks outside it.
-            window.addEventListener('mousedown', function() {
-                toggleSymbolHighlights();
-                currentContextMenu.remove();
-            }, false);
+            setContextMenu(fileContainer, contextMenu, event);
         }
     });
+
+    // Remove the menu when a user clicks outside it.
+    window.addEventListener('mousedown', function() {
+        toggleSymbolHighlights();
+        $('#context-menu').remove();
+    }, false);
+
+    window.addEventListener('keyup', function(event) {
+        // 'key' is the standard but has not been implemented in Gecko
+        // yet, see https://bugzilla.mozilla.org/show_bug.cgi?id=680830
+        // so, we check both.
+        var keyPressed = event.key || event.keyCode;
+        // esc key pressed.
+        if (keyPressed === 27 || keyPressed === 'Esc') {
+           $('#context-menu').remove();
+        }
+    }, false);
 });

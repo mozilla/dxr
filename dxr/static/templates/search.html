@@ -22,14 +22,15 @@
           {% set paths = path.split('/') %}
 
           {% for item in paths %}
+            {% set data_path = '%s/%s' % (data_path, item) if data_path else item %}
             {% set is_first_or_only = loop.first or paths|length == 1 %}
             {% set is_dir = not loop.last %}
 
             {% if is_first_or_only %}
-              <a class="{{ iconclass }}" {% if is_dir %}data-path="{{ item }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
+              <a class="{{ iconclass }}" {% if is_dir %}data-path="{{ data_path }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
             {% else %}
               <span class="path-separator">/</span>
-              <a {% if is_dir %}data-path="{{ item }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
+              <a {% if is_dir %}data-path="{{ data_path }}"{% endif %} href="{{ wwwroot }}/{{ tree }}/source/{{ item }}">{{ item }}</a>
             {% endif %}
           {% endfor %}
         </div>
