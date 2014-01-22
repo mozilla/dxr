@@ -35,7 +35,7 @@ On the VM...
     make
     cd ~/dxr/tests/test_basic
     make
-    dxr-serve.py --all target
+    dxr-serve --all target
 
 You need to bind to all interfaces (--all) or else you will be unable to
 get to the Vagrant box's test server from the host machine.
@@ -56,7 +56,7 @@ If, after trying a search, you see the error...
     Database error: no such module: trilite
 
 SSH into the VM and, run `ldconfig` as root to sort out the shared library
-linking problem. Then restart `dxr-serve.py`, and all should work as expected.
+linking problem. Then restart `dxr-serve`, and all should work as expected.
 
 
 ## Installing on a Real Machine
@@ -99,7 +99,7 @@ To install DXR on a machine of your choice, do the following
    an index for to test your build. `cd` into this directory and run `make`. If
    it successfully runs, your build is fine.
 
-6. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve.py
+6. Then run `LD_LIBRARY_PATH=/path/to/dxr/trilite dxr-serve
    tests/test_basic/target` to start the server and browse the code. Without
    the `LD_LIBRARY_PATH`, it will complain about not being able to find the
    `trilite` module when you do a search on the web interface. You can dispense

@@ -187,7 +187,7 @@ foot_text =
 """.format(config_dir_path=cls._config_dir_path))
 
         chdir(cls._config_dir_path)
-        run('dxr-build.py')
+        run('dxr-build')
 
     @classmethod
     def teardown_class(cls):
