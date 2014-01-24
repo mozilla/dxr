@@ -252,7 +252,10 @@ def process_csv(file_name, conn, limit):
             for i in range(1, len(line), 2):
                 args[line[i]] = line[i + 1]
 
-            globals()['process_' + line[0]](args, conn)
+            try:
+                globals()['process_' + line[0]](args, conn)
+            except KeyError:
+                print " - process_" + line[0] + " not implemented!"
 
             change_count += 1
             if change_count > 10000:
@@ -366,6 +369,18 @@ def process_function(args, conn):
 def process_method_decl(args, conn):
     process_function_impl(args, conn)
 
+def process_enum(args, conn):
+    args['language'] = 'rust'
+    args['kind'] = 'enum'
+    args['name'] = args['qualname'].split('::')[-1]
+    execute_sql(conn, language_schema.get_insert_sql('types', convert_ids(args, conn)))
+
+def process_variant(args, conn):
+    process_variable(args, conn)
+
+def process_variant_struct(args, conn):
+    process_struct(args, conn, 'variant_struct')
+
 def process_fn_call(args, conn):
     if add_external_item(args, conn):
         return;
@@ -392,7 +407,7 @@ def process_var_ref(args, conn):
 
     execute_sql(conn, schema.get_insert_sql('variable_refs', convert_ids(args, conn)))
 
-def process_struct(args, conn):
+def process_struct(args, conn, kind = 'struct'):
     mod_parents[args['id']] = args['scopeid']
 
     # Used for fixing up the refid in fixup_struct_ids
@@ -400,7 +415,7 @@ def process_struct(args, conn):
         ctor_ids[args['ctor_id']] = find_id('', args['id'])
 
     args['name'] = args['qualname'].split('::')[-1]
-    args['kind'] = 'struct'
+    args['kind'] = kind
     args['language'] = 'rust'
 
     scope_args = {'id': args['id'],
