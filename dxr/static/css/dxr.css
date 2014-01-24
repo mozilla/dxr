@@ -106,6 +106,15 @@ table th {
     padding: .5em;
     text-align: left;
 }
+.folder-content th:first-child {
+    padding-left: .5em;
+}
+.folder-content th {
+    padding-left: 0;
+    padding-right: .5em;
+    padding-top: .2em;
+    padding-bottom: .2em;
+}
 table.folder-content tr:nth-child(odd) {
     background-color: #fafafa;
 }
@@ -115,6 +124,16 @@ table.folder-content tr:nth-child(even) {
 table.folder-content tbody tr:hover,
 table tbody tr:hover {
     background-color: #e8e8e8;
+}
+table.folder-content td {
+    padding: 0;
+}
+table.folder-content a {
+    display: block;  /* Make entire cells clickable. */
+    padding-top: .5em;
+    padding-right: .5em;
+    padding-bottom: .5em;
+    text-decoration: none;
 }
 table td {
     padding: .5em;
