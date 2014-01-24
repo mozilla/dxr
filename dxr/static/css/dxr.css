@@ -112,7 +112,8 @@ table.folder-content tr:nth-child(odd) {
 table.folder-content tr:nth-child(even) {
     background-color: #f3f3f3;
 }
-table.folder-content tbody tr:hover, table tbody tr:hover {
+table.folder-content tbody tr:hover,
+table tbody tr:hover {
     background-color: #e8e8e8;
 }
 table td {
