@@ -236,6 +236,14 @@ $(function() {
         history.replaceState(state, '', url);
     }
 
+    /**
+     * Add an entry into the history stack whenever we do a new search.
+     */
+    function pushHistoryState(data) {
+        var searchUrl = constants.data('search') + '?' + data['query_string'];
+        history.pushState({}, '', searchUrl);
+    }
+
     function infiniteScroll() {
         if (didScroll) {
 
@@ -339,6 +347,10 @@ $(function() {
             var container = append ? contentContainer : contentContainer.empty();
             container.append(tmpl.render(data));
         }
+
+        if (!append) {
+            document.title = data.query + "- DXR Search";
+        }
     }
 
     /**
@@ -360,6 +372,7 @@ $(function() {
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
                 populateResults(resultsContainerTmpl, data, false);
+                pushHistoryState(data);
             }
         })
         .fail(function(jqxhr, textStatus, error) {
@@ -413,4 +426,9 @@ $(function() {
 
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
+
+    // Reload the page when we go back or forward.
+    window.onpopstate = function(event) {
+        window.location.reload();
+    };
 });
