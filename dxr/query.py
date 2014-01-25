@@ -16,44 +16,6 @@ from parsimonious.nodes import NodeVisitor
 #   - Special argument files-only to just search for file names
 #   - If no plugin returns an extents query, don't fetch content
 
-<<<<<<< HEAD
-=======
-#TODO _parameters should be extracted from filters (possible if filters are defined first)
-# List of parameters to isolate in the search query, ie. path:mypath
-_parameters = ["path", "ext",
-"type", "type-ref", "type-decl",
-"function", "function-ref", "function-decl",
-"var", "var-ref", "var-decl",
-"namespace", "namespace-ref",
-"namespace-alias", "namespace-alias-ref",
-"module", "module-ref", "module-use",
-"module-alias", "module-alias-ref",
-"impl", "fn-impls", "extern-ref",
-"macro", "macro-ref", "callers", "called-by",
-"overridden", "overrides", "warning",
-"warning-opt", "bases", "derived", "member"]
-
-_parameters += ["-" + param for param in _parameters] + ["+" + param for param
-    in _parameters] + ["-+" + param for param in _parameters] + ["+-" + param for param in _parameters]
-
-#TODO Support negation of phrases, support phrases as args to params, ie. path:"my path", or warning:"..."
-
-
-# Pattern recognizing a parameter and a argument, a phrase or a keyword
-_pat = ("(?:(?P<regpar>-?regexp):(?P<del>.)(?P<regarg>(?:(?!(?P=del)).)+)(?P=del))|"
-        "(?:(?P<param>%s):(?:\"(?P<qarg>[^\"]+)\"|(?P<arg>[^ ]+)))|"
-        "(?:\"(?P<phrase>[^\"]+)\")|"
-        "(?:-\"(?P<notphrase>[^\"]+)\")|"
-        "(?P<keyword>[^ \"]+)")
-# Regexp for parsing regular expression
-_pat = re.compile(_pat % "|".join([re.escape(p) for p in _parameters]))
-
-# Pattern for recognizing if a word will be tokenized as a single term.
-# Ideally we should reuse our custom sqlite tokenizer, but that'll just
-# complicated things, anyways, if it's not a identifier, it must be a single
-# token, in which we'll wrap it anyway :)
-_single_term = re.compile("^[a-zA-Z]+[a-zA-Z0-9]*$")
->>>>>>> multiple and external crates
 
 # Pattern for matching a file and line number filename:n
 _line_number = re.compile("^.*:[0-9]+$")
@@ -128,14 +90,12 @@ class Query(object):
             for conds, args, exts in f.filter(self.terms):
                 has_extents = exts or has_extents
                 conditions += " AND " + conds
-                print "adding: " + str(args) + " from " + str(f)
                 arguments += args
 
         sql %= conditions
         arguments += [limit, offset]
 
         #TODO Actually do something with the has_extents, ie. don't fetch contents
-        print "executing sql: " + sql + " args: " + str(arguments)
 
         cursor = self.execute_sql(sql, arguments)
 
@@ -679,7 +639,7 @@ filters = [
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
         ext_sql           = None,
         formatter         = lambda arg: ['%' + like_escape(arg) + '%'],
-        languages          = ["C"]
+        languages          = ["C","Rust"]
     ),
 
     # ext filter
@@ -691,7 +651,7 @@ filters = [
         ext_sql           = None,
         formatter         = lambda arg: ['%' +
             like_escape(arg if arg.startswith(".") else "." + arg)],
-        languages          = ["C"]
+        languages          = ["C","Rust"]
     ),
 
     TriLiteSearchFilter(),
@@ -711,7 +671,7 @@ filters = [
                         """,
         like_name     = "functions.name",
         qual_name     = "functions.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # function-ref filter
@@ -720,18 +680,18 @@ filters = [
         param         = "function-ref",
         filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
                            WHERE %s
-                             AND functions.id = refs.refid AND refs.file_id = files.id
+                             AND (functions.id = refs.refid OR functions.id = refs.declid) AND refs.file_id = files.id
                         """,
         ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
                            WHERE refs.file_id = ?
                              AND EXISTS (SELECT 1 FROM functions
                                          WHERE %s
-                                           AND functions.id = refs.refid)
+                                           AND (functions.id = refs.refid OR functions.id = refs.declid))
                            ORDER BY refs.extent_start
                         """,
         like_name     = "functions.name",
         qual_name     = "functions.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # function-decl filter
@@ -805,7 +765,7 @@ filters = [
           qual_name     = "target.qualname")],
 
       description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'),
-      languages    = ["C"]
+      languages    = ["C","Rust"]
     ),
 
     UnionFilter([
@@ -860,7 +820,7 @@ filters = [
       )],
 
       description = 'Functions or methods which are called by the given one',
-      languages    = ["C"]
+      languages    = ["C","Rust"]
     ),
 
     # type filter
@@ -893,7 +853,7 @@ filters = [
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
       description=Markup('Type or class definition: <code>type:Stack</code>'),
-      languages   = ["C"]
+      languages   = ["C","Rust"]
     ),
 
     # type-ref filter
@@ -930,14 +890,13 @@ filters = [
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
       description='Type or class references, uses, or instantiations',
-      languages   = ["C"]
+      languages   = ["C","Rust"]
     ),
 
     # type-decl filter
     ExistsLikeFilter(
       description   = 'Type or class declaration',
       param         = "type-decl",
-      languages      = ["C"],
       filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
                          WHERE %s
                            AND types.id = decldef.defid AND decldef.file_id = files.id
@@ -950,7 +909,8 @@ filters = [
                          ORDER BY decldef.extent_start
                       """,
       like_name     = "types.name",
-      qual_name     = "types.qualname"
+      qual_name     = "types.qualname",
+      languages      = ["C"]
     ),
 
     # var filter
@@ -968,7 +928,7 @@ filters = [
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # var-ref filter
@@ -988,7 +948,7 @@ filters = [
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # var-decl filter
@@ -1025,7 +985,8 @@ filters = [
                            ORDER BY modules.extent_start
                         """,
         like_name     = "modules.name",
-        qual_name     = "modules.qualname"
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
     ),
 
     # module-ref filter
@@ -1044,7 +1005,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "modules.name",
-        qual_name     = "modules.qualname"
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
     ),
 
     # module-alias filter
@@ -1061,7 +1023,8 @@ filters = [
                            ORDER BY module_aliases.extent_start
                         """,
         like_name     = "module_aliases.name",
-        qual_name     = "module_aliases.qualname"
+        qual_name     = "module_aliases.qualname",
+        languages      = ["Rust"]
     ),
 
     # module-use filter
@@ -1081,7 +1044,8 @@ filters = [
                            ORDER BY module_aliases.extent_start
                         """,
         like_name     = "modules.name",
-        qual_name     = "modules.qualname"
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
     ),
 
     # module-alias-ref filter
@@ -1100,7 +1064,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "module_aliases.name",
-        qual_name     = "module_aliases.qualname"
+        qual_name     = "module_aliases.qualname",
+        languages      = ["Rust"]
     ),
 
     # impl filter
@@ -1120,7 +1085,8 @@ filters = [
                            ORDER BY impl_defs.extent_start
                         """,
         like_name     = "types.name",
-        qual_name     = "types.qualname"
+        qual_name     = "types.qualname",
+        languages      = ["Rust"]
     ),
 
     # find implementations of a trait method
@@ -1141,7 +1107,8 @@ filters = [
                            ORDER BY def.extent_start
                         """,
         like_name     = "decl.name",
-        qual_name     = "decl.qualname"
+        qual_name     = "decl.qualname",
+        languages      = ["Rust"]
     ),
 
     # external items filter
@@ -1160,7 +1127,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "unknowns.id",
-        qual_name     = "unknowns.id"
+        qual_name     = "unknowns.id",
+        languages      = ["Rust"]
     ),
 
     # macro filter
@@ -1277,6 +1245,7 @@ filters = [
         languages      = ["C"]
     ),
 
+    # bases filter -- reorder these things so more frequent at top.
     ExistsLikeFilter(
         description   = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'),
         param         = "bases",
@@ -1382,7 +1351,6 @@ filters = [
     ExistsLikeFilter(
         description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
         param         = "overridden",
-        languages      = ["C"],
         filter_sql    = """SELECT 1
                              FROM functions as base, functions as derived, targets
                             WHERE %s
@@ -1403,7 +1371,8 @@ filters = [
                            ORDER BY functions.extent_start
                         """,
         like_name     = "derived.name",
-        qual_name     = "derived.qualname"
+        qual_name     = "derived.qualname",
+        languages      = ["C"]
     ),
 
     # overrides filter

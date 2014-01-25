@@ -3,7 +3,7 @@ all:
 	# replaces PWD with `pwd` and produces dxr.config
 	cat dxr.config.in | sed -e 's?PWD?'`pwd`'?g' > dxr.config
 	# Navigate into the DXR folder, build using config file
-	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:../../trilite PYTHONPATH=$$PYTHONPATH:../../ ../../bin/dxr-build.py
+	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:../../trilite PYTHONPATH=$$PYTHONPATH:../../ dxr-build.py
 	# Launch test server at port 8000:
 	# dxr-serve.py target
 clean:

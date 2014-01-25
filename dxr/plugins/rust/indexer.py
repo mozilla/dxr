@@ -1,4 +1,4 @@
-import dxr.plugins
+import dxr.plugins, dxr.utils as utils
 import csv
 import os
 from dxr.languages import language_schema
@@ -6,8 +6,7 @@ from dxr.languages import language_schema
 __all__ = dxr.plugins.indexer_exports()
 
 PLUGIN_NAME = 'rust'
-PATH_TO_RUSTC = "/home/ncameron/rust/x86_64-unknown-linux-gnu/stage1/bin/rustc"
-RUST_DXR_FLAG = " --save-analysis"
+RUST_DXR_FLAG = " -Zsave-analysis"
 
 def pre_process(tree, env):
     print("rust-dxr pre-process")
@@ -15,11 +14,12 @@ def pre_process(tree, env):
     # We'll store all the havested metadata in the plugins temporary folder.
     plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
     temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-    env['RUST'] = PATH_TO_RUSTC + RUST_DXR_FLAG
-    if 'RUSTFLAGS' in env:
-        env['RUSTFLAGS'] += RUST_DXR_FLAG
+    if 'RUST' in env:
+        env['RUST'] += RUST_DXR_FLAG
+    if 'RUSTFLAGS_STAGE2' in env:
+        env['RUSTFLAGS_STAGE2'] += RUST_DXR_FLAG
     else:
-        env['RUSTFLAGS'] = RUST_DXR_FLAG
+        env['RUSTFLAGS_STAGE2'] = RUST_DXR_FLAG
     env['DXR_RUST_OBJECT_FOLDER'] = tree.object_folder
     env['DXR_RUST_TEMP_FOLDER'] = temp_folder
 
@@ -31,6 +31,7 @@ schema = dxr.schema.Schema({
         ("name", "VARCHAR(256)", False),
         ("qualname", "VARCHAR(256)", False),
         ("def_file", "INTEGER", False),
+        ("kind", "VARCHAR(32)", False),
         ("scopeid", "INTEGER", False),
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
@@ -57,7 +58,7 @@ schema = dxr.schema.Schema({
         ("refid", "INTEGER", False),      # ID of the module being aliased
         ("name", "VARCHAR(256)", False),
         ("qualname", "VARCHAR(256)", False),
-        ("scopeid", "INTEGER", False),
+        ("scopeid", "INTEGER", True),
         ("location", "VARCHAR(256)", True), # only used for extern mod
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
@@ -70,17 +71,17 @@ schema = dxr.schema.Schema({
     "function_refs": [
         ("refid", "INTEGER", True),      # ID of the function defintion, if it exists
         ("declid", "INTEGER", True),     # ID of the funtion declaration, if it exists
-        ("scopeid", "INTEGER", True),    # ID of the scope in which the call occurs
+        ("scopeid", "INTEGER", False),   # ID of the scope in which the call occurs
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
         ("_location", True, 'referenced'),
         ("_fkey", "refid", "functions", "id"),
-        ("_index", "refid"),
+        ("_fkey", "declid", "functions", "id"),
     ],
     # References to variables
     "variable_refs": [
-        ("refid", "INTEGER", True),      # ID of the variable being referenced
+        ("refid", "INTEGER", False),      # ID of the variable being referenced
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),
@@ -90,7 +91,7 @@ schema = dxr.schema.Schema({
     ],
     # References to types
     "type_refs": [
-        ("refid", "INTEGER", True),      # ID of the type being referenced
+        ("refid", "INTEGER", False),      # ID of the type being referenced
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("qualname", "VARCHAR(256)", False), # Used when we don't have a refid from rustc
@@ -109,7 +110,7 @@ schema = dxr.schema.Schema({
         ("extent_end", "INTEGER", True),
         ("_location", True),
         # id is not a primary key - an impl can have two representations - one
-        # for the trait and on for the struct.
+        # for the trait and one for the struct.
         ("_fkey", "refid", "types", "id"),
     ],
     # We use a simpler version of the callgraph than the Clang plugin - there is
@@ -153,9 +154,47 @@ schema = dxr.schema.Schema({
         ("_fkey", "refid", "unknowns", "id"),
         ("_index", "refid"),
     ],
+
+
+    # FIXME the following are from the Clang plugin - we don't use them, but
+    # they must be present so some queries don't fail.
+    "typedefs": [
+        ("id", "INTEGER", False),              # The typedef's id
+        ("name", "VARCHAR(256)", False),       # Simple name of the typedef
+        ("qualname", "VARCHAR(256)", False),   # Fully-qualified name of the typedef
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_key", "id"),
+        ("_index", "qualname"),
+    ],
+    "typedef_refs": [
+        ("refid", "INTEGER", True),      # ID of the typedef being referenced
+        ("extent_start", "INTEGER", True),
+        ("extent_end", "INTEGER", True),
+        ("_location", True),
+        ("_location", True, 'referenced'),
+        ("_fkey", "refid", "typedefs", "id"),
+        ("_index", "refid"),
+    ],
+    "targets": [
+        ("targetid", "INTEGER", False), # The target of the call
+        ("funcid", "INTEGER", False),   # One of the functions in the target set
+        ("_key", "targetid", "funcid"),
+        ("_fkey", "funcid", "functions", "id"),
+        ("_index", "funcid"),
+    ],
+
 })
 
+src_folder = ''
+
 def post_process(tree, conn):
+    global src_folder
+    src_folder = tree.source_folder
+    if not src_folder.endswith('/'):
+        src_folder += '/'
+
     print "rust-dxr post-process"
 
     print " - Adding tables"
@@ -193,7 +232,7 @@ files = {}
 # The domains should be disjoint
 ctor_ids = {}
 
-# map from the id of a scope to the id of its parent (or 0), if there is no parent
+# Map from the id of a scope to the id of its parent (or 0), if there is no parent.
 mod_parents = {}
 
 # list of (base, derived) trait ids
@@ -204,12 +243,20 @@ crate_map = {}
 
 # We know these crates come from the rust distribution (probably, the user could
 # override that, but lets assume for now...).
-std_libs = ['std', 'extra', 'native', 'green', 'syntax', 'rustc', 'rustpkg', 'rustdoc', 'rustuv']
+std_libs = ['alloc', 'arena', 'backtrace', 'collections', 'core', 'debug', 'flate',
+            'fmt_macros', 'fourcc', 'getopts', 'glob', 'graphviz', 'green',
+            'hexfloat', 'libc', 'log', 'native', 'num', 'rand', 'regex',
+            'regex_macros', 'rlibc', 'rustc', 'rustdoc', 'rustrt', 'rustuv',
+            'semver', 'serialize', 'std', 'sync', 'syntax', 'term', 'test',
+            'time', 'url', 'uuid', 'uv']
 # These are the crates used in the current crate and indexed by DXR in the
 # current run.
 local_libs = []
 
 def get_file_id(file_name, conn):
+    if file_name.startswith(src_folder):
+        file_name = file_name[len(src_folder):]
+
     file_id = files.get(file_name, False)
 
     if file_id is not False:
@@ -225,11 +272,11 @@ def get_file_id(file_name, conn):
     files[file_name] = file_id
     return file_id
 
-# just record the crates we index (process_crate)
+# Just record the crates we index (process_crate).
 def process_csv_first_pass(file_name, conn):
     process_csv(file_name, conn, 1)
 
-# all the proper indexing
+# All the proper indexing.
 def process_csv_second_pass(file_name, conn):
     process_csv(file_name, conn, 0)
 
@@ -239,7 +286,9 @@ def process_csv(file_name, conn, limit):
 
     try:
         f = open(file_name, 'rb')
+        print 'processing ' + file_name
         parsed_iter = csv.reader(f)
+
         # the first item on a line is the kind of entity we are dealing with and so
         # we can use that to dispatch to the appropriate process_... function
         change_count = 0
@@ -255,11 +304,10 @@ def process_csv(file_name, conn, limit):
             try:
                 globals()['process_' + line[0]](args, conn)
             except KeyError:
-                print " - process_" + line[0] + " not implemented!"
+                print " - 'process_" + line[0] + "' not implemented!"
 
             change_count += 1
             if change_count > 10000:
-                print " - Committing changes (eager commit)"
                 conn.commit()
                 change_count = 0
                 # this is a bit of hack and means limit can never be > 10000
@@ -289,31 +337,28 @@ def execute_sql(conn, stmt):
     else:
         conn.execute(stmt)
 
-next_id = 0;
 id_map = {}
 
-def get_next_id():
-    global next_id
-    next_id += 1
-    return next_id
-
-# maps a crate name and a node number to a globally unique id
+""" Maps a crate name and a node number to a globally unique id. """
 def find_id(crate, node):
     global id_map
+
+    if not node:
+        return None
 
     if node == '0':
         return 0
 
     if (crate, node) not in id_map:
-        result = get_next_id()
+        result = utils.next_global_id()
         # Our IDs are SQLite INTEGERS which are 64bit, so we are unlikely to overflow.
         # Python ints do not overflow.
-        id_map[(crate, node)] = result
+        id_map[(crate, node)] = (result, 0)
         return result
 
-    return id_map[(crate, node)]
+    return id_map[(crate, node)][0]
 
-# shorthand for nodes in the current crate
+""" Shorthand for nodes in the current crate. """
 def find_id_cur(node):
     return find_id(crate_map['0'][0], node)
 
@@ -326,6 +371,8 @@ def convert_ids(args, conn):
             return v
         elif k == 'id' or k == 'scopeid':
             return find_id_cur(v)
+        elif v == '' and (k.endswith('id') or k == 'base' or k == 'derived'):
+            return None
         elif k.endswith('id') or k == 'base' or k == 'derived':
             return find_id(crate_map[args[k + 'crate']][0], v)
         else:
@@ -336,24 +383,47 @@ def convert_ids(args, conn):
         new_args['file_id'] = get_file_id(args['file_name'], conn)
     return new_args
 
-# Returns True if the refid in the args points to an item in an external crate.
+""" Returns True if the refid in the args points to an item in an external crate. """
 def add_external_item(args, conn):
     node, crate = args['refid'], args['refidcrate']
+    if not node:
+        return False
     crate = crate_map[crate][0]
-    if crate in local_libs or not node:
+    if crate in local_libs:
         return False
 
     requires_item = (crate, node) not in id_map
     execute_sql(conn, schema.get_insert_sql('unknown_refs', convert_ids(args, conn)))
 
-    if not requires_item:
-        return True
+    if requires_item:
+        item_args = {'id': find_id(crate, node), 'crate': crate}
+        execute_sql(conn, schema.get_insert_sql('unknowns', item_args))
 
-    item_args = {}
-    item_args['id'] = find_id(crate, node)
-    item_args['crate'] = crate
-    execute_sql(conn, schema.get_insert_sql('unknowns', item_args))
     return True
+
+def add_external_decl(args, conn):
+    decl_node, decl_crate = args['declid'], args['declidcrate']
+    if not decl_node:
+        return False
+    decl_crate = crate_map[decl_crate][0]
+    if decl_crate in local_libs:
+        return False
+
+    requires_item = (decl_crate, decl_node) not in id_map
+
+    un_args = convert_ids(args, conn)
+    un_args['refid'] = un_args['declid']
+    execute_sql(conn, schema.get_insert_sql('unknown_refs', un_args))
+
+    if requires_item:
+        item_args = {'id': find_id(decl_crate, decl_node), 'crate': decl_crate}
+        execute_sql(conn, schema.get_insert_sql('unknowns', item_args))
+
+    return True
+
+# Don't error due to output from the span checker tool.
+def process_span(args, conn):
+    pass
 
 def process_function_impl(args, conn):
     args['name'] = args['qualname'].split('::')[-1]
@@ -387,17 +457,27 @@ def process_fn_call(args, conn):
 
     execute_sql(conn, schema.get_insert_sql('function_refs', convert_ids(args, conn)))
 
+# FIXME: hmm, I'm not exactly clear on the difference between a fn call and fn ref, some of the former
+# are logically the latter and this is stupid code dup...
+def process_fn_ref(args, conn):
+    if add_external_item(args, conn):
+        return;
+
+    execute_sql(conn, schema.get_insert_sql('function_refs', convert_ids(args, conn)))
+
 def process_method_call(args, conn):
     if args['refid'] == '0':
         args['refid'] = None
-    if add_external_item(args, conn):
+
+    ex_def = add_external_item(args, conn)
+    ex_decl = add_external_decl(args, conn)
+    if (ex_def and ex_decl) or (ex_def and not args['declid']) or (ex_decl and not args['refid']):
         return;
 
     execute_sql(conn, schema.get_insert_sql('function_refs', convert_ids(args, conn)))
 
 def process_variable(args, conn):
     args['language'] = 'rust'
-    args['type'] = ''
 
     execute_sql(conn, language_schema.get_insert_sql('variables', convert_ids(args, conn)))
 
@@ -411,8 +491,8 @@ def process_struct(args, conn, kind = 'struct'):
     mod_parents[args['id']] = args['scopeid']
 
     # Used for fixing up the refid in fixup_struct_ids
-    if args['ctor_id'] != '0':
-        ctor_ids[args['ctor_id']] = find_id('', args['id'])
+    if args['ctor_id'] != '-1':
+        ctor_ids[find_id_cur(args['ctor_id'])] = find_id_cur(args['id'])
 
     args['name'] = args['qualname'].split('::')[-1]
     args['kind'] = kind
@@ -452,6 +532,7 @@ def process_module(args, conn):
     args['name'] = args['qualname'].split('::')[-1]
     args['language'] = 'rust'
     args['def_file'] = get_file_id(args['def_file'], conn)
+    args['kind'] = 'mod'
 
     scope_args = {'id': args['id'],
                   'name' : args['name'],
@@ -467,9 +548,10 @@ def process_mod_ref(args, conn):
 
     execute_sql(conn, schema.get_insert_sql('module_refs', convert_ids(args, conn)))
 
-def process_module_alias(args, conn):
+def process_use_alias(args, conn):
     args['qualname'] = args['scopeid'] + "$" + args['name']
 
+    # module_aliases includes aliases to things other than modules
     execute_sql(conn, schema.get_insert_sql('module_aliases', convert_ids(args, conn)))
 
 def process_impl(args, conn):
@@ -494,10 +576,9 @@ def process_type_ref(args, conn):
         args['qualname'] = ''
     if add_external_item(args, conn):
         return;
-
     execute_sql(conn, schema.get_insert_sql('type_refs', convert_ids(args, conn)))
 
-def process_extern_mod(args, conn):
+def process_extern_crate(args, conn):
     args['qualname'] = args['scopeid'] + "$" + args['name']
     args['refid'] = '0'
     args['refidcrate'] = '0'
@@ -508,17 +589,18 @@ def process_extern_mod(args, conn):
 
     execute_sql(conn, schema.get_insert_sql('module_aliases', args))
 
-# These have to happen before anything else in the csv and have to be concluded
-# by 'end_external_crate'.
+""" These have to happen before anything else in the csv and have to be concluded
+    by 'end_external_crate'. """
 def process_external_crate(args, conn):
     global crate_map
-    mod_id = get_next_id()
+    mod_id = utils.next_global_id()
     crate_map[args['crate']] = (args['name'], mod_id)
 
     args = {'id': mod_id,
             'name': args['name'],
             'qualname': "0$" + args['name'],
             'def_file': get_file_id(args['file_name'], conn),
+            'kind': 'extern',
             'scopeid': '0',
             'extent_start': -1,
             'extent_end': -1}
@@ -529,21 +611,32 @@ def process_end_external_crates(args, conn):
     # We've got all the info we're going to get about external crates now.
     pass
 
-# There should only be one of these per crate and it gives info about the current
-# crate.
-# Note that this gets called twice for the same crate line - once per pass.
+""" There should only be one of these per crate and it gives info about the current
+    crate.
+    Note that this gets called twice for the same crate line - once per pass. """
 def process_crate(args, conn):
     crate_map['0'] = (args['name'], 0)
     if args['name'] not in local_libs:
         local_libs.append(args['name'])
     execute_sql(conn, schema.get_insert_sql('crates', convert_ids(args, conn)))
 
-# When we have a path like a::b::c, we want to have info for a and a::b.
-# Unfortunately Rust does not give us much info, so we have to
-# construct it ourselves from the module info we have.
-# We have the qualname for the module (e.g, a or a::b) but we do not have
-# the refid
+""" When we have a path like a::b::c, we want to have info for a and a::b.
+    Unfortunately Rust does not give us much info, so we have to
+    construct it ourselves from the module info we have.
+    We have the qualname for the module (e.g, a or a::b) but we do not have
+    the refid. """
 def fixup_sub_mods(conn):
+    fixup_sub_mods_impl(conn, 'modules', 'module_refs')
+    # paths leading up to a static method have a module path, then a type at the
+    # so we have to fixup the type in the same way as we do modules.
+    fixup_sub_mods_impl(conn, 'types', 'type_refs')
+
+# TODO - does not seem to work for external crates - refid = 0, crateid = 0
+# they must be in the same module crate as their parent though, and we can cache
+# module name and scope -> crate and always get a hit, so maybe we can win.
+""" NOTE table_name and table_ref_name should not come from user input, otherwise
+    there is potential for SQL injection attacks. """
+def fixup_sub_mods_impl(conn, table_name, table_ref_name):
     # First create refids for module refs whose qualnames match the qualname of
     # the module (i.e., no aliases).
     conn.execute("""
@@ -563,7 +656,6 @@ def fixup_sub_mods(conn):
     if table_name == 'modules':
         # Next account for where the path is an aliased modules e.g., alias::c,
         # where c is already accounted for.
-        # We can't do all this in one statement because sqlite does not have joins.
         cur = conn.execute("""
             SELECT refs.extent_start, module_aliases.id, modules.id,
                 module_aliases.name, modules.name, modules.qualname,
@@ -621,47 +713,31 @@ def fixup_sub_mods(conn):
         if mod:
             (refid, qualname) = mod
             conn.execute("""
-                UPDATE module_refs SET
+                UPDATE %s SET
                    refid = ?,
-                   aliasid = ?,
                    qualname = ?
                 WHERE extent_start=?
-                """,
-                (refid, aliasid, qualname, ex_start))
+                """%table_ref_name,
+                (refid, qualname, ex_start))
 
-def process_type_ref(args, conn):
-    args['file_id'] = get_file_id(args['file_name'], conn)
-
-    execute_sql(conn, schema.get_insert_sql('type_refs', args))
-
+""" Sadness. Structs have an id for their definition and an id for their ctor.
+    Sometimes, we get one, sometimes the other. This method fixes up any refs
+    to the latter into refs to the former."""
 def fixup_struct_ids(conn):
-    # Sadness. Structs have an id for their definition and an id for their ctor.
-    # Sometimes, we get one, sometimes the other. This method fixes up any refs
-    # to the latter into refs to the former.
     for ctor in ctor_ids.keys():
-        conn.execute('UPDATE type_refs SET refid=? WHERE refid=?', (ctor_ids[ctor],ctor))
+        conn.execute('UPDATE type_refs SET refid=? WHERE refid=?', (ctor_ids[ctor], ctor))
 
 def process_inheritance(args, conn):
     inheritance.append((args['base'], args['derived']))
 
-# compute the transitive closure of the inheritance graph and save it to the db
+""" Compute the transitive closure of the inheritance graph and save it to the db."""
 def generate_inheritance(conn):
     for (base, deriv) in inheritance:
         conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, 'direct')",
                      (base, deriv))
 
     # transitive inheritance
-    closure = set(inheritance)
-    while True:
-        next_set = set([(b,dd) for (b,d) in closure for (bb,dd) in closure if d == bb])
-        next_set |= closure
-
-        if next_set == closure:
-            break
-
-        closure = next_set
-
-    for (base, deriv) in closure:
+    for (base, deriv) in closure(inheritance):
         if (base, deriv) not in inheritance:
             conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, NULL)",
                          (base, deriv))
@@ -704,12 +780,6 @@ def generate_locations(conn):
         # them special treatment.
         if l not in local_libs:
             conn.execute(sql, (l, docurl%l, srcurl%l, dxrurl%l))
-
-    # crates from github
-    sql = "SELECT location FROM module_aliases WHERE location LIKE 'github.com'"
-    srcurl = "https://%s"
-    for l in conn.execute(sql):
-        conn.execute("INSERT OR IGNORE INTO extern_locations(location, docurl, srcurl, dxrurl) VALUES (?, '', ?, '')", (l, srcurl%l))
         
 def generate_scopes(conn):
     global mod_parents
@@ -724,20 +794,22 @@ def generate_scopes(conn):
         conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, 'scope')",
             (child, child))
 
-    # transitive scoping
-    closure = set(mod_parents.items())
-    while True:
-        next_set = set([(b,dd) for (b,d) in closure for (bb,dd) in closure if d == bb])
-        next_set |= closure
-
-        if next_set == closure:
-            break
-
-        closure = next_set
-
-    for (child, parent) in closure:
+    # transitivity
+    for (child, parent) in closure(mod_parents.items()):
         if (child, parent) not in mod_parents.items():
             conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, 'scope')",
                          (parent, child))
 
     mod_parents = {}
+
+""" Compute the (non-refexive) transitive closure of a list."""
+def closure(input):
+    closure = set(input)
+    while True:
+        next_set = set([(b,dd) for (b,d) in closure for (bb,dd) in closure if d == bb])
+        next_set |= closure
+
+        if next_set == closure:
+            return closure
+
+        closure = next_set

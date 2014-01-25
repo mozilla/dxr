@@ -26,7 +26,7 @@ class Config(object):
             'log_folder':       "%(temp_folder)s/logs",
             'wwwroot':          "/",
             'enabled_plugins':  "*",
-            'disabled_plugins': "rust",
+            'disabled_plugins': "",
             'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
             'disable_workers':  "",

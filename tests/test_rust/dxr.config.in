@@ -1,0 +1,15 @@
+[DXR]
+wwwroot=/
+target_folder=PWD/target
+temp_folder=PWD/temp
+nb_jobs=4
+disabled_plugins=clang
+filter_language=Rust
+
+[code]
+source_folder=PWD/code
+object_folder=PWD/code
+build_command=make clean; make -j $jobs
+plugin_buglink_name=github
+plugin_buglink_url=https://github.com/mozilla/rust/issues/%s
+plugin_buglink_regex=#([0-9]+)

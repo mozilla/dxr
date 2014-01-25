@@ -1,0 +1,5 @@
+crate,file_name,hello.rs,file_line,1,file_col,0,extent_start,0,file_line_end,6,file_col_end,0,extent_end,65,name,"hello"
+external_crate,name,"std",crate,"1",file_name,"hello.rs"
+external_crate,name,"native",crate,"2",file_name,"hello.rs"
+end_external_crates
+function,file_name,hello.rs,file_line,3,file_col,3,extent_start,27,file_line_end,3,file_col_end,7,extent_end,31,id,"4",qualname,"hello::main",declid,"",declidcrate,"",scopeid,"0"

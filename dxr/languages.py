@@ -53,6 +53,7 @@ language_schema = dxr.schema.Schema({
     # Functions: functions, methods, constructors, operator overloads, etc.
     "functions": [
         ("id", "INTEGER", False),            # Function ID (also in scopes)
+        ("declid", "INTEGER", True),         # Function ID of trait method (Rust only)
         ("scopeid", "INTEGER", True),        # Scope defined in
         ("name", "VARCHAR(256)", False),     # Short name (no args)
         ("qualname", "VARCHAR(512)", False), # Fully qualified name, excluding args
@@ -65,6 +66,7 @@ language_schema = dxr.schema.Schema({
         ("_location", True),
         ("_key", "id"),
         ("_fkey", "scopeid", "scopes", "id"),
+        ("_fkey", "declid", "functions", "id"),
         ("_index", "qualname"),
     ],
     # Variables: class, global, local, enum constants; they're all in here

@@ -34,50 +34,103 @@ class RustHtmlifier(object):
 
         # Extents for functions definitions
         sql = """
-            SELECT extent_start, extent_end, qualname
+            SELECT extent_start, extent_end, qualname, id, declid
                 FROM functions
               WHERE file_id = ?
         """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.function_menu(qualname), qualname, None)
+        for start, end, qualname, def_id, declid, in self.conn.execute(sql, args):
+            if declid:
+                # XXX I'm sure someone with more SQL smarts than me could do this
+                # in one statement
+                sql = """
+                    SELECT (SELECT path FROM files WHERE files.id = file_id),
+                           file_line
+                        FROM functions
+                      WHERE id = ?
+                """
+                declpath, declline = self.conn.execute(sql, (declid, )).fetchone()
+                yield start, end, (self.function_menu(qualname, def_id, declpath, declline), qualname, None)
+            else:
+                yield start, end, (self.function_menu(qualname, def_id), qualname, None)
 
-        # Add references to functions
+        # Add references to function def only
+        # These are statically dispatched functions with no trait decl.
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           functions.qualname,
                           (SELECT path FROM files WHERE files.id = functions.file_id),
                           functions.file_line
                 FROM functions, function_refs AS refs
-              WHERE functions.id = refs.refid AND refs.file_id = ?
+              WHERE functions.id = refs.refid AND refs.file_id = ? AND
+              refs.declid IS NULL
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.function_menu(qualname)
+            menu = self.function_menu(qualname, 0)
+            self.add_jump_definition(menu, path, line)
+            yield start, end, (menu, qualname, None)
+
+        # Add references to function decl only
+        # dynamically dispatched functions
+        sql = """
+            SELECT refs.extent_start, refs.extent_end,
+                          functions.qualname,
+                          (SELECT path FROM files WHERE files.id = functions.file_id),
+                          functions.file_line,
+                          refs.declid
+                FROM functions, function_refs AS refs
+              WHERE functions.id = refs.declid AND refs.file_id = ? AND
+              refs.refid IS NULL
+        """
+        for start, end, qualname, path, line, decl_id in self.conn.execute(sql, args):
+            menu = self.function_menu(qualname, decl_id)
+            self.add_jump_definition(menu, path, line, "Jump to trait method")
+            yield start, end, (menu, qualname, None)
+
+        # Add references to function def and decl
+        # statically dispatched, but implementing a trait method
+        sql = """
+            SELECT refs.extent_start, refs.extent_end,
+                          fn_def.qualname,
+                          (SELECT path FROM files WHERE files.id = fn_def.file_id),
+                          fn_def.file_line,
+                          fn_decl.qualname,
+                          (SELECT path FROM files WHERE files.id = fn_decl.file_id),
+                          fn_decl.file_line
+                FROM functions as fn_def, functions as fn_decl, function_refs AS refs
+              WHERE fn_def.id = refs.refid AND refs.file_id = ? AND
+              fn_decl.id = refs.declid
+        """
+        for start, end, qualname, path, line, decl_qualname, decl_path, decl_line in self.conn.execute(sql, args):
+            menu = self.function_menu(qualname, 0)
+            if decl_line != line or decl_path != path:
+                self.add_jump_definition(menu, decl_path, decl_line, "Jump to trait method")
             self.add_jump_definition(menu, path, line)
             yield start, end, (menu, qualname, None)
 
         # Extents for variables defined here
         sql = """
-            SELECT extent_start, extent_end, qualname
+            SELECT extent_start, extent_end, qualname, type
                 FROM variables
               WHERE file_id = ?
         """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.variable_menu(qualname), qualname, None)
+        for start, end, qualname, typ in self.conn.execute(sql, args):
+            yield start, end, (self.variable_menu(qualname), qualname, self.truncate_value("", typ))
 
         # Add references to variables
         sql = """
             SELECT refs.extent_start, refs.extent_end,
                           variables.qualname,
                           variables.value,
+                          variables.type,
                           (SELECT path FROM files WHERE files.id = variables.file_id),
                           variables.file_line
                 FROM variables, variable_refs AS refs
               WHERE variables.id = refs.refid AND refs.file_id = ?
         """
-        for start, end, qualname, value, path, line in self.conn.execute(sql, args):
+        for start, end, qualname, value, typ, path, line in self.conn.execute(sql, args):
             menu = self.variable_menu(qualname)
             self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, qualname, value)
+            yield start, end, (menu, qualname, self.truncate_value(value, typ))
 
         # Add struct and trait defs, and typedefs
         sql = """
@@ -102,7 +155,7 @@ class RustHtmlifier(object):
         for start, end, qualname, kind, path, line, value in self.conn.execute(sql, args):
             menu = self.type_menu(qualname, kind)
             self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, qualname, value)
+            yield start, end, (menu, qualname, self.truncate_value(value))
 
         # modules
         sql = """
@@ -179,8 +232,58 @@ class RustHtmlifier(object):
                 module_aliases.location IS NULL
         """
         for start, end, qualname, mod_path, mod_line in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.add_jump_definition(menu, mod_path, mod_line, "jump to module definition")
+            yield start, end, (menu, qualname, None)
+
+        # 'module' aliases to things other than modules - types, vars, fns
+        sql = """
+            SELECT module_aliases.extent_start,
+                module_aliases.extent_end,
+                types.qualname,
+                (SELECT path FROM files WHERE files.id = types.file_id),
+                types.file_line
+                FROM module_aliases, types
+              WHERE module_aliases.file_id = ? AND
+                module_aliases.refid = types.id AND
+                module_aliases.name != types.name AND
+                module_aliases.location IS NULL
+        """
+        for start, end, qualname, ty_path, ty_line in self.conn.execute(sql, args):
+            menu = self.module_alias_menu(qualname, "type-ref")
+            self.add_jump_definition(menu, ty_path, ty_line, "jump to type definition")
+            yield start, end, (menu, qualname, None)
+        sql = """
+            SELECT module_aliases.extent_start,
+                module_aliases.extent_end,
+                variables.qualname,
+                (SELECT path FROM files WHERE files.id = variables.file_id),
+                variables.file_line
+                FROM module_aliases, variables
+              WHERE module_aliases.file_id = ? AND
+                module_aliases.refid = variables.id AND
+                module_aliases.name != variables.name AND
+                module_aliases.location IS NULL
+        """
+        for start, end, qualname, var_path, var_line in self.conn.execute(sql, args):
+            menu = self.module_alias_menu(qualname, "var-ref")
+            self.add_jump_definition(menu, var_path, var_line, "jump to variable definition")
+            yield start, end, (menu, qualname, None)
+        sql = """
+            SELECT module_aliases.extent_start,
+                module_aliases.extent_end,
+                functions.qualname,
+                (SELECT path FROM files WHERE files.id = functions.file_id),
+                functions.file_line
+                FROM module_aliases, functions
+              WHERE module_aliases.file_id = ? AND
+                module_aliases.refid = functions.id AND
+                module_aliases.name != functions.name AND
+                module_aliases.location IS NULL
+        """
+        for start, end, qualname, fn_path, fn_line in self.conn.execute(sql, args):
+            menu = self.module_alias_menu(qualname, "function-ref")
+            self.add_jump_definition(menu, fn_path, fn_line, "jump to function definition")
             yield start, end, (menu, qualname, None)
 
         # extern mods to known local crates
@@ -195,7 +298,7 @@ class RustHtmlifier(object):
                 module_aliases.location = crates.name
         """
         for start, end, qualname, mod_path, mod_line in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.add_jump_definition(menu, mod_path, mod_line, "jump to crate")
             yield start, end, (menu, qualname, None)
 
@@ -212,7 +315,7 @@ class RustHtmlifier(object):
                 module_aliases.location = extern_locations.location
         """
         for start, end, qualname, docurl, srcurl, dxrurl in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.std_lib_links(menu, docurl, srcurl, dxrurl)
             yield start, end, (menu, qualname, None)
 
@@ -228,7 +331,7 @@ class RustHtmlifier(object):
                 module_aliases.location IS NOT NULL
         """
         for start, end, qualname in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             yield start, end, (menu, qualname, None)
 
         # Add references to extern mods via aliases (known local crates)
@@ -246,7 +349,7 @@ class RustHtmlifier(object):
                 module_aliases.location = crates.name
         """
         for start, end, qualname, path, line, mod_path, mod_line in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.add_jump_definition(menu, mod_path, mod_line, "jump to crate")
             self.add_jump_definition(menu, path, line, "jump to alias definition")
             yield start, end, (menu, qualname, None)
@@ -267,7 +370,7 @@ class RustHtmlifier(object):
                 module_aliases.location = extern_locations.location
         """
         for start, end, qualname, path, line, docurl, srcurl, dxrurl in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.std_lib_links(menu, docurl, srcurl, dxrurl)
             self.add_jump_definition(menu, path, line, "jump to alias definition")
             yield start, end, (menu, qualname, None)
@@ -287,7 +390,7 @@ class RustHtmlifier(object):
                 module_aliases.location IS NOT NULL
         """
         for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.module_alias_menu(qualname)
+            menu = self.module_alias_menu(qualname, "module-alias-ref")
             self.add_jump_definition(menu, path, line, "jump to alias definition")
             yield start, end, (menu, qualname, None)
 
@@ -320,6 +423,29 @@ class RustHtmlifier(object):
             menu = self.extern_menu(uid)
             yield start, end, (menu, 'extern$' + str(uid), None)
 
+    def truncate_value(self, value, typ=""):
+        result = ""
+        if value:
+            eol = value.find('\n')
+            if eol < 0:
+                result = value.strip()
+            else:
+                value = value[0:eol]
+                value = value.strip()
+                result = value + " ..."
+            result = "( " + result + " )"
+
+        if typ:
+            if result:
+                result = typ + " " + result
+            else:
+                result = typ
+
+        if not result:
+            return None
+
+        return result
+
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
@@ -335,34 +461,54 @@ class RustHtmlifier(object):
 
     def std_lib_links(self, menu, docurl, srcurl, dxrurl, extra_text = ""):
         self.add_link_to_menu(menu, dxrurl,
-                              "go to DXR index" + extra_text,
-                              "go to DXR index of this crate on " + get_domain(dxrurl))
+                              "Go to DXR index" + extra_text,
+                              "Go to DXR index of this crate on " + get_domain(dxrurl))
         self.add_link_to_menu(menu, srcurl,
-                              "go to source" + extra_text,
-                              "go to source code for this crate on " + get_domain(srcurl))
+                              "Go to source" + extra_text,
+                              "Go to source code for this crate on " + get_domain(srcurl))
         self.add_link_to_menu(menu, docurl,
-                              "go to docs" + extra_text,
-                              "go to documentation for this crate on " + get_domain(docurl))
+                              "Go to docs" + extra_text,
+                              "Go to documentation for this crate on " + get_domain(docurl))
 
     def add_find_references(self, menu, qualname, search_term, kind):
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this " + kind,
             'href':   self.search("+" + search_term + ":%s" % self.quote(qualname)),
             'icon':   'reference'
         })
 
-    def function_menu(self, qualname):
+    def function_menu(self, qualname, def_id, declpath=None, declline=None, is_trait_method=False):
         """ Build menu for a function """
         menu = []
+        if declpath:
+            self.add_jump_definition(menu, declpath, declline, "Jump to trait method")
+        if not declpath:
+            # no point adding 'find implementations' if there are no implementations
+            # note, that this will include methods in structs, which have no trait
+            # method or other defintions
+            sql = """
+                SELECT COUNT(*)
+                FROM functions 
+                WHERE declid = ?
+            """
+            c_decls = self.conn.execute(sql, (def_id,)).fetchone()[0]
+            if c_decls > 0:
+                menu.append({
+                    'html':   "Find implementations (%d)"%c_decls,
+                    'title':  "Find implementations of this trait method",
+                    'href':   self.search("+fn-impls:%s" % self.quote(qualname)),
+                    'icon':   'method'
+                })
+
         menu.append({
-            'text':   "Find callers",
+            'html':   "Find callers",
             'title':  "Find functions that call this function",
             'href':   self.search("+callers:%s" % self.quote(qualname)),
             'icon':   'method'
         })
         menu.append({
-            'text':   "Find callees",
+            'html':   "Find callees",
             'title':  "Find functions that are called by this function",
             'href':   self.search("+called-by:%s" % self.quote(qualname)),
             'icon':   'method'
@@ -381,33 +527,21 @@ class RustHtmlifier(object):
         menu = []
         if kind == 'trait':
             menu.append({
-                'text':   "Find sub-traits",
+                'html':   "Find sub-traits",
                 'title':  "Find sub-traits of this trait",
                 'href':   self.search("+derived:%s" % self.quote(qualname)),
                 'icon':   'type'
             })
             menu.append({
-                'text':   "Find super-traits",
+                'html':   "Find super-traits",
                 'title':  "Find super-traits of this trait",
                 'href':   self.search("+bases:%s" % self.quote(qualname)),
                 'icon':   'type'
             })
         
-        member = None
-        if kind == 'struct':
-            member = 'fields'
-        elif kind == 'trait':
-            member = 'methods'
-
-        if member:
+        if kind == 'struct' or kind == 'trait':
             menu.append({
-                'text':   "Find " + member,
-                'title':  "Find " + member + " of this " + kind,
-                'href':   self.search("+member:%s" % self.quote(qualname)),
-                'icon':   'members'
-            })
-            menu.append({
-                'text':   "Find impls",
+                'html':   "Find impls",
                 'title':  "Find impls which involve this " + kind,
                 'href':   self.search("+impl:%s" % self.quote(qualname)),
                 'icon':   'reference'
@@ -420,17 +554,17 @@ class RustHtmlifier(object):
         menu = []
         self.add_find_references(menu, qualname, "module-ref", "module")
         menu.append({
-            'text':   "Find use items",
+            'html':   "Find use items",
             'title':  "Find instances of this module in 'use' items",
             'href':   self.search("+module-use:%s" % self.quote(qualname)),
             'icon':   'reference'
         })
         return menu
 
-    def module_alias_menu(self, qualname):
+    def module_alias_menu(self, qualname, ref_search_kind):
         """ Build menu for a module alias """
         menu = []
-        self.add_find_references(menu, qualname, "module-alias-ref", "alias")
+        self.add_find_references(menu, qualname, ref_search_kind, "alias")
         return menu
 
     def extern_menu(self, uid):
@@ -441,12 +575,17 @@ class RustHtmlifier(object):
 
     def add_jump_definition(self, menu, path, line, text="Jump to definition"):
         """ Add a jump to definition to the menu """
+        if not path:
+            print "Can't add jump to empty path. Menu:", menu
+            print "text: ", text
+            return
+            
         # Definition url
         url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
         url += "#%s" % line
         menu.insert(0, { 
-            'text':   text,
-            'title':  "Jump to the definition in '%s'" % os.path.basename(path),
+            'html':   text,
+            'title':  "%s in '%s'" % (text,os.path.basename(path)),
             'href':   url,
             'icon':   'jump'
         })
@@ -456,7 +595,7 @@ class RustHtmlifier(object):
             return menu;
 
         menu.insert(0, {
-            'text':   text,
+            'html':   text,
             'title':  long_text,
             'href':   url,
             'icon':   'jump'
@@ -464,20 +603,127 @@ class RustHtmlifier(object):
         return menu
 
     def annotations(self):
-        # TODO - compiler warnings
+        # XXX - add compiler warnings here, once we support that
         return []
 
     def links(self):
-        # TODO when we have methods in the functions table, we will need to be more
-        # selective here
-        # TODO only want top level functions
-        # TODO probably need to think about how to organise the whole side bar thing properly
-        sql = "SELECT name, file_line FROM functions WHERE file_id = ? ORDER BY file_line"
+        # modules
+        for name, id in self.top_level_mods():
+            links = []
+            for mod_name, line in self.scoped_items('modules', id):
+                links.append(('struct', mod_name, "#%s" % line))
+            for type_name, line in self.scoped_items('types', id):
+                links.append(('type', type_name, "#%s" % line))
+            for method_name, line in self.scoped_items('variables', id):
+                links.append(('field', method_name, "#%s" % line))
+            for method_name, line in self.scoped_items('functions', id):
+                links.append(('method', method_name, "#%s" % line))
+            if links:
+                yield (20, name, links)
+
+        # structs
+        for name, id in self.top_level_scopes('struct'):
+            links = []
+            for field_name, line in self.scoped_items('variables', id):
+                links.append(('field', field_name, "#%s" % line))
+            # methods from impls
+            sql = """
+                SELECT fn.name, fn.file_line
+                FROM functions AS fn, impl_defs AS impl
+                WHERE fn.scopeid = impl.id AND
+                    impl.refid = ?
+                ORDER BY fn.file_line
+                """
+            for method_name, line in self.conn.execute(sql, (id,)):
+                if len(method_name) == 0: continue
+                links.append(('method', method_name, "#%s" % line))
+            if links:
+                yield (40, name, links)
+
+        # traits
+        for name, id in self.top_level_scopes('trait'):
+            links = []
+            for method_name, line in self.scoped_items('functions', id):
+                links.append(('method', method_name, "#%s" % line))
+            if links:
+                yield (30, name, links)
+
+        # enums
+        for name, id in self.top_level_scopes('enum'):
+            links = []
+            for variant, line in self.scoped_items('variables', id):
+                links.append(('field', variant, "#%s" % line))
+            for variant, line in self.scoped_items('types', id):
+                links.append(('field', variant, "#%s" % line))
+            if links:
+                yield (35, name, links)
+
+        # functions
         links = []
+        for name, line in self.top_level_items('functions'):
+            links.append(('method', name, "#%s" % line))
+        if links:
+            yield (50, 'functions', links)
+
+        # statics
+        links = []
+        for name, line in self.top_level_items('variables'):
+            links.append(('field', name, "#%s" % line))
+        if links:
+            yield (60, 'statics', links)
+
+    def top_level_items(self, kind):
+        sql = """
+            SELECT item.name, item.file_line
+            FROM %s AS item
+            WHERE item.file_id = ? AND
+                (item.scopeid = 0 OR
+                 EXISTS (SELECT 1 FROM modules AS mod WHERE item.scopeid = mod.id AND mod.def_file <> mod.file_id))
+            ORDER BY item.file_line
+            """%kind
         for name, line in self.conn.execute(sql, (self.file_id,)):
             if len(name) == 0: continue
-            links.append(('function', name, "#%s" % line))
-        yield (30, 'functions', links)
+            yield (name,line)
+
+    def top_level_mods(self):
+        sql = """
+            SELECT name, id
+            FROM modules AS m
+            WHERE file_id = ? AND
+                file_id = def_file AND
+                (scopeid = 0 OR
+                 EXISTS (SELECT 1 FROM modules AS mod WHERE m.scopeid = mod.id AND mod.def_file <> mod.file_id))
+            ORDER BY file_line
+            """
+        for name, id in self.conn.execute(sql, (self.file_id,)):
+            if len(name) == 0: continue
+            yield (name,id)
+
+    def top_level_scopes(self, kind):
+        sql = """
+            SELECT name, id
+            FROM types
+            WHERE kind = '%s' AND
+                file_id = ? AND
+                (scopeid = 0 OR
+                 EXISTS (SELECT 1 FROM modules AS mod WHERE types.scopeid = mod.id AND mod.def_file <> mod.file_id))
+            ORDER BY file_line
+            """%kind
+        for name, id in self.conn.execute(sql, (self.file_id,)):
+            if len(name) == 0: continue
+            yield (name,id)
+
+    def scoped_items(self, kind, scope):
+        sql = """
+            SELECT name, file_line
+            FROM %s
+            WHERE scopeid == ?
+            ORDER BY file_line
+            """%kind
+        for name, line in self.conn.execute(sql, (scope,)):
+            if len(name) == 0: continue
+            yield(name, line)
+
 
 # helper method, extract the 'foo.com' from 'http://foo.com/bar.html'
 def get_domain(url):
