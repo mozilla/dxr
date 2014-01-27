@@ -97,7 +97,6 @@ table {
     overflow: auto;
 }
 table.folder-content thead tr:first-child {
-    background-color: #f3f3f3;
     color: #555;
     padding: .5em;
 }
@@ -115,14 +114,14 @@ table th {
     padding-top: .2em;
     padding-bottom: .2em;
 }
-table.folder-content tr:nth-child(odd) {
-    background-color: #fafafa;
-}
+table.folder-content thead tr:first-child,
 table.folder-content tr:nth-child(even) {
-    background-color: #f3f3f3;
+    background-color: #f5f5f5;
 }
 table.folder-content tbody tr:hover,
-table tbody tr:hover {
+table tbody tr:hover,
+.result_snippet tr:hover,
+.context-menu a:hover {
     background-color: #e8e8e8;
 }
 table.folder-content td {
@@ -160,9 +159,6 @@ mark {
 }
 table.result_snippet tr {
     border: 0;
-}
-.result_snippet tr:hover {
-    background-color: #f0f0f0;
 }
 .result_snippet td:first-child {
     border-right: 1px solid #fff;
@@ -228,9 +224,6 @@ mark {
     padding: .4rem;
     text-decoration: none;
 }
-.context-menu a:hover {
-    background-color: #e0e0e0;
-}
 .context-menu li:first-child a:hover {
     border-top-right-radius: 6px;
 }
@@ -246,7 +239,7 @@ mark {
 .search-box {
     position: fixed;
     top: 0;
-    background-color: #f3f3f3;
+    background-color: #f5f5f5;
     color: #333;
     padding: .8rem;
     width: 100%;

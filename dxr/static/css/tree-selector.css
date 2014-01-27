@@ -19,7 +19,7 @@
     right: 0;
 }
 .ts-select-trigger {
-    background-color: #f3f3f3;
+    background-color: #fff;
     margin-bottom: .2rem;
     padding: .3rem .3rem .5rem .3rem;
     border: 1px solid #999;
@@ -30,7 +30,7 @@
     cursor: pointer;
 }
 .ts-select-trigger:hover {
-    background-color: #e3e3e3;
+    background-color: #e8e8e8;
 }
 [data-icon]:before {
     margin-right: .3rem;
