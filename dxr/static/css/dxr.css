@@ -204,7 +204,7 @@ table.result_snippet tr {
     margin: .3rem;
 }
 mark {
-    padding: .3rem;
+    padding: .3rem 0;
 }
 /* Context Menu */
 .context-menu {
