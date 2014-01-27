@@ -1,7 +1,7 @@
 /* icons */
 .folder-icon {
-    background: transparent url(/static/icons/folder.png) 0 4px no-repeat;
-    padding: .5em .5em .5em 1.7em;
+    background: transparent url(/static/icons/folder.png) .5em 7px no-repeat;
+    padding: .5em .5em .5em 30px;  /* 30px = 16px icon + 7px padding above + a little more whitespace */
 }
 .folder-content,
 .result {
@@ -9,9 +9,9 @@
 }
 .folder-content .icon {
     background-color: transparent;
-    background-position: 0 4px;
+    background-position: .5em 6px;
     background-repeat: no-repeat;
-    padding: .5em .5em .5em 1.7em;
+    padding: .5em .5em .5em 30px;
 }
 a.reference {
     background: transparent url(/static/icons/reference.png) 4px 8px no-repeat;
