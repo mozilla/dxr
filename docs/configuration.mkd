@@ -26,7 +26,7 @@ _Configuration keys for the `DXR` section of the configuration file._
  - `plugin_folder`      Plugin folder (default `<dxrroot>/plugins`)
  - `nb_jobs`            Number of jobs allowed (default `1`), note that this
                         value can be overwritten by the `-j` argument when
-                        running `dxr-build.py`
+                        running `dxr-build`
  - `temp_folder`        Temporary folder (default `/tmp/dxr-temp`)
  - `log_folder`         Log folder (default `<temp_folder>/logs`)
  - `template`           Template folder, see templating.mkd
@@ -51,7 +51,7 @@ using `/tmp` (default) is not recommended. Creating a sub-directory under `/tmp`
 is better, but preferable you'd want something on the same file system as the
 `target_folder`.
 
-Please note that `dxr-build.py` assume the plugins in `plugin_folder` are
+Please note that `dxr-build` assume the plugins in `plugin_folder` are
 already built and ready for use. If you specify your own plugin folder, the
 top-level makefile will not do this for you. This setting is mainly here for
 completion, it's not recommended for normal operation.

@@ -22,12 +22,12 @@ configuration file details one DXR deployment. For information on the
 configuration file, see configuration.mkd.
 
 When you have configured your DXR deployment, you can generate the source code
-index using `dxr-build.py -f <config-file>`. This will generate a "DXR
+index using `dxr-build -f <config-file>`. This will generate a "DXR
 instance": a folder containing a source code index and HTML-formatted source
 for one or more trees.
 
 If you wish to build an instance for an individual source tree, use
-`dxr-build.py --file <config-file> --tree <tree>`. This can, for example, be
+`dxr-build --file <config-file> --tree <tree>`. This can, for example, be
 used to build each source tree on its own server.
 
 DXR has the following dependencies on the build servers:

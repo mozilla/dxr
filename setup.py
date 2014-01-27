@@ -9,6 +9,14 @@ except ImportError:
 
 from setuptools import setup, find_packages
 
+install_requires = [
+    'Flask>=0.9',
+    'futures>=2.1.1',
+    'Jinja2>=2.6',
+    'Pygments>=1.6',
+]
+if sys.version_info[:2] < (2, 7):
+    install_requires.append('argparse>=1.2.1')
 
 setup(
     name='dxr',
@@ -19,11 +27,13 @@ setup(
     author_email='erik@mozilla.com',
     license='MIT',
     packages=find_packages(exclude=['ez_setup']),
-    scripts=['bin/dxr-build.py', 'bin/dxr-serve.py'],
-    install_requires=['Flask>=0.9',
-                      'futures>=2.1.1',
-                      'Jinja2>=2.6',
-                      'Pygments>=1.6'],
+    entry_points={
+        'console_scripts': [
+            'dxr-build = dxr.cmdline:build_main',
+            'dxr-serve = dxr.cmdline:serve_main'
+        ]
+    },
+    install_requires=install_requires,
     tests_require=['nose'],
     test_suite='nose.collector',
     url='https://github.com/mozilla/dxr',
