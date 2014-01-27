@@ -340,7 +340,7 @@ mark {
 .path-separator {
     margin: 0 .4rem;
 }
-.file-name,
+.breadcrumbs,
 .top-of-tree {
     display: inline-block;
     float: left;
@@ -352,16 +352,16 @@ mark {
 /* top of tree */
 .top-of-tree a:link,
 .top-of-tree a:visited,
-.file-name a:link,
-.file-name a:visited {
+.breadcrumbs a:link,
+.breadcrumbs a:visited {
     color: #0095dd;
 }
 .top-of-tree a:hover,
-.file-name a:hover {
+.breadcrumbs a:hover {
     color: #00539f;
 }
 .top-of-tree a:focus,
-.file-name a:focus {
+.breadcrumbs a:focus {
     color: #00539f;
     text-decoration: none;
 }
