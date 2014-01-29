@@ -21,7 +21,7 @@
 .ts-select-trigger {
     background-color: #fff;
     margin-bottom: .2rem;
-    padding: .3rem .3rem .5rem .3rem;
+    padding: .3rem;
     border: 1px solid #999;
     width: auto;
     min-width: 100px;
@@ -31,22 +31,15 @@
 .ts-select-trigger:hover {
     background-color: #e8e8e8;
 }
-[data-icon]:before {
-    margin-right: .3rem;
-    font-family: icons;
-    font-size: 1.2rem;
-    content: attr(data-icon);
-    speak: none;
-}
 .selector-arrow {
     display: inline-block;
     position: relative;
-    padding-right: 1.5rem;
+    padding-right: 1rem;
 }
 [data-icon-arrow]:before {
     display: block;
     position: absolute;
-    top: 6px;
+    top: 0;
     right: 0;
     font-family: icons;
     content: attr(data-icon-arrow);
