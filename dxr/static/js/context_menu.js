@@ -78,7 +78,7 @@ $(function() {
             path = $(this).data('path'),
             baseSearchParams = '?limit=100&amp;redirect=false&amp;q=',
             query = $.trim(queryField.val()),
-            browseUrl = dxr.wwwroot + '/' + dxr.tree + '/' + 'source/' + path,
+            browseUrl = dxr.wwwroot + '/' + dxr.tree + '/source/' + path,
             limitSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20path%3A' + path + '%2F',
             excludeSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20-path%3A' + path + '%2F';
 
