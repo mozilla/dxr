@@ -150,7 +150,7 @@ table.result_snippet tr {
 }
 .result_snippet td:first-child {
     border-right: 1px solid #fff;
-    color: #777;
+    color: #aaa;
     text-align: right;
     width: 4%;
 }
@@ -176,10 +176,10 @@ table.result_snippet tr {
     white-space: nowrap;
 }
 .file tr {
-    line-height: 0.8;
+    line-height: 0.5;
 }
 .result_snippet {
-    line-height: 1.3;
+    line-height: 1.1;
 }
 .file th {
     line-height: 1.5;
