@@ -25,7 +25,6 @@
     border: 1px solid #999;
     width: auto;
     min-width: 100px;
-    font-size: .8rem;
     border-radius: .2rem;
     cursor: pointer;
 }
@@ -71,7 +70,6 @@ header {
     padding: .6rem .8rem .6rem .8rem;
     border-top-right-radius: 6px;
     border-top-left-radius: 6px;
-    font-size: 1rem;
     font-weight: bold;
     letter-spacing: .5px;
 }
@@ -86,7 +84,6 @@ header {
     padding: 5px 2%;
     border: 1px solid #b2b2b2;
     width: 100%;
-    font-size: .8rem;
     border-radius: .2rem;
     box-shadow: 0 1px rgba(255, 255, 255, 0.5);
 }

@@ -39,7 +39,7 @@ body {
     background-color: #fff;
     color: #333;
     margin: 0;
-    font: 16px/1.5 Arial, Helvetica, sans-serif;
+    font: 12px/1.5 Arial, Helvetica, sans-serif;
 }
 h4 {
     margin: 0 0 .5rem 0;
@@ -53,11 +53,7 @@ a:hover {
     text-decoration: underline;
 }
 caption {
-    font-size: 12px;
     text-align: left;
-}
-label {
-    font-size: 14px;
 }
 fieldset {
     position: relative;
@@ -68,9 +64,6 @@ fieldset {
 input,
 select {
     padding: .5em;
-}
-option {
-    font-size: 12px;
 }
 /* Kudos to David Walsh */
 input[placeholder],
@@ -87,13 +80,11 @@ input[type="submit"] {
     margin: 0 17% 0 0;
     width: 6rem;
     height: 2rem;
-    font-size: .8rem
 }
 table {
     margin: 0;
     padding: 0;
     width: 100%;
-    font-size: 12px;
     overflow: auto;
 }
 table.folder-content thead tr:first-child {
@@ -149,9 +140,6 @@ mark {
 }
 .logo a:focus {
     background-color: transparent;
-}
-.top-of-tree {
-    font-size: .8rem;
 }
 .result_snippet th:first-child {
     border-right: 1px solid #fff;
@@ -216,7 +204,6 @@ mark {
     -moz-border-top-left-radius: 0;
     border-top-left-radius: 0;
     width: auto;
-    font-size: .8rem;
     list-style: none;
 }
 .context-menu a {
@@ -230,11 +217,6 @@ mark {
 .context-menu li:last-child a:hover {
     border-bottom-right-radius: 6px;
     border-bottom-left-radius: 6px;
-}
-.top {
-    margin-right: .5em;
-    font-size: 11px;
-    text-align: right;
 }
 .search-box {
     position: fixed;
@@ -251,7 +233,6 @@ mark {
     right: 0;
     margin: 0 4% 0 0;
     padding: 0.4rem 0 0;
-    font-size: .8rem;
     text-align: right;
     list-style: none;
 }
@@ -339,7 +320,6 @@ mark {
     float: left;
     margin: 0;
     padding: .5rem 0 1rem 0;
-    font-size: .9rem;
     text-align: left;
 }
 /* top of tree */
@@ -385,7 +365,6 @@ mark {
     padding: .5rem .2rem .5rem .7rem;
     border: 0;
     width: 100%;
-    font-size: .9rem;
     text-align: left;
     cursor: pointer;
 }
@@ -411,12 +390,10 @@ mark {
 .panel h4 {
     margin: 0;
     padding: .5rem;
-    font-size: .9rem;
 }
 .panel ul {
     margin: 0;
     padding: 0;
-    font-size: .9rem;
     list-style: none;
 }
 .panel a.class {
@@ -455,7 +432,6 @@ mark {
     color: white;
 }
 .simple {
-    font-size: .8rem;
     background: -webkit-linear-gradient(green, darkgreen);
     background: -moz-linear-gradient(green, darkgreen);
     background: -o-linear-gradient(green, darkgreen);

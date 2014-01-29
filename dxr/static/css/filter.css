@@ -26,7 +26,6 @@
     border: 1px solid white;
     width: auto;
     min-width: 70px;
-    font-size: .8rem;
     cursor: pointer;
 }
 .sf-select-trigger:hover {
