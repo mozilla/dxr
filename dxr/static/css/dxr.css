@@ -151,7 +151,7 @@ table.result_snippet tr {
 .result_snippet td:first-child {
     border-right: 1px solid #fff;
     color: #777;
-    text-align: center;
+    text-align: right;
     width: 4%;
 }
 .result_snippet td {
@@ -314,6 +314,13 @@ mark {
 .path-separator {
     margin: 0 .4rem;
 }
+
+/* Keep icons in search results from clipping: */
+.result .path a {
+    display: inline-block;
+    min-height: 16px;
+}
+
 .breadcrumbs,
 .top-of-tree {
     display: inline-block;
