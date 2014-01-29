@@ -69,7 +69,7 @@ $(function() {
 
     window.addEventListener('click', hideOptions, false);
 
-    window.addEventListener('keyup', function(event) {
-        keyEventHandler(event, '.sf-select-options', 'hide');
-    }, false);
+    onEsc(function() {
+        $('.sf-select-options').hide();
+    });
 });

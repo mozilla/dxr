@@ -62,7 +62,7 @@ $(function() {
 
     window.addEventListener('click', hideOptions, false);
 
-    window.addEventListener('keyup', function(event) {
-        keyEventHandler(event, '.select-options', 'hide');
-    }, false);
+    onEsc(function() {
+        $('.select-options').hide();
+    });
 });

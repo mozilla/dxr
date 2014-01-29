@@ -86,17 +86,17 @@ $(function() {
                 {
                     text: 'Browse folder contents',
                     href: browseUrl,
-                    icon: 'goto_folder'
+                    icon: 'goto-folder'
                 },
                 {
                     text: 'Limit search to folder',
                     href: limitSearchUrl,
-                    icon: 'path_search'
+                    icon: 'path-search'
                 },
                 {
                     text: 'Exclude folder from search',
                     href: excludeSearchUrl,
-                    icon: 'exclude_path'
+                    icon: 'exclude-path'
                 }
             ];
 
@@ -143,20 +143,14 @@ $(function() {
                     icon: 'search'
                 }];
 
-            //contextMenu.menuItems = [searchMenuItem];
-
             var currentNode = $(node).closest('a');
             // Only check for the data-menu attribute if the current node has an
             // ancestor that is an anchor.
             if (currentNode.length) {
                 toggleSymbolHighlights(currentNode);
 
-                var currentNodeData = currentNode.data('menu'),
-                    currentNodeDataLength = currentNodeData.length;
-
-                for (var i = 0; i < currentNodeDataLength; i++) {
-                    menuItems.push(currentNodeData[i]);
-                }
+                var currentNodeData = currentNode.data('menu');
+                menuItems = menuItems.concat(currentNodeData);
             }
 
             contextMenu.menuItems = menuItems;
@@ -170,7 +164,7 @@ $(function() {
         $('#context-menu').remove();
     }, false);
 
-    window.addEventListener('keyup', function(event) {
-        keyEventHandler(event, '#context-menu', 'remove');
-    }, false);
+    onEsc(function() {
+        $('#context-menu').remove();
+    });
 });
