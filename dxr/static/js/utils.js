@@ -1,3 +1,19 @@
+/**
+ * Handles Esc key events.
+ * @param {function} func - The function to execute on esc
+ */
+function onEsc(func) {
+    window.addEventListener('keyup', function (event) {
+        // 'key' is the standard but has not been implemented in Gecko
+        // yet, see https://bugzilla.mozilla.org/show_bug.cgi?id=680830
+        // so, we check both.
+        var keyPressed = event.key || event.keyCode;
+        // esc key pressed.
+        if (keyPressed === 27 || keyPressed === 'Esc')
+            func();
+        });
+}
+
 /** Add auxiliary string method for indexOf using regexp
  * Credits to: http://stackoverflow.com/a/274094
  */

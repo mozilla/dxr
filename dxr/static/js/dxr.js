@@ -12,6 +12,7 @@ $(function() {
     dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.icons = dxr.wwwroot + '/static/icons/';
     dxr.views = dxr.wwwroot + '/static/templates';
+    dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
     /**
@@ -106,18 +107,19 @@ $(function() {
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex in paths) {
-            var isFirstOrLast = (splitPathLength - 1) === pathIndex || splitPathLength === 1;
-
-            // Do not add a forward slash if there is only one item in the Array
-            // or if this is the last iteration.
-            var displayPath = isFirstOrLast ? paths[pathIndex] : paths[pathIndex] + '/';
+            var index = parseInt(pathIndex),
+                isFirstOrOnly = index === 0 || splitPathLength === 1,
+                isLastOrOnly = (splitPathLength - 1) === index || splitPathLength === 1;
 
             dataPath.push(paths[pathIndex]);
+
             pathLines += pathLineTmpl.render({
                 'data_path': dataPath.join('/'),
-                'display_path': displayPath,
-                'icon_class': iconClass,
-                'url': pathRoot + dataPath.join('/')
+                'display_path': paths[pathIndex],
+                'icon_class': isFirstOrOnly ? iconClass : '',
+                'url': pathRoot + dataPath.join('/'),
+                'is_first_or_only': isFirstOrOnly,
+                'is_dir': !isLastOrOnly
             });
         }
 
@@ -178,7 +180,7 @@ $(function() {
      * @param [int] offset - The cursor position
      */
     function buildAjaxURL(query, isCaseSensitive, limit, offset) {
-        var search = constants.data('search');
+        var search = dxr.searchUrl;
         var params = {};
         params.q = query;
         params.redirect = false;

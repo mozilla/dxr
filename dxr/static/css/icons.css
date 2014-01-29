@@ -33,6 +33,19 @@ a.class {
     background: transparent url(/static/icons/class.png) 4px 2px no-repeat;
     padding-left: 1.5rem;
 }
+/* Folder context menu */
+a.goto-folder {
+    background: transparent url(/static/icons/goto_folder.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.path-search {
+    background: transparent url(/static/icons/path_search.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.exclude-path {
+    background: transparent url(/static/icons/exclude_path.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
 /* MimeType Icons */
 .build {
     background: transparent url(/static/icons/mimetypes/build.png) 4px 0 no-repeat;
