@@ -36,6 +36,39 @@ $(function() {
         }, 500);
     }, false);
 
+    // Return the maximum number of pixels the document can be scrolled.
+    function getMaxScrollY() {
+        // window.scrollMaxY is a non standard implementation in
+        // Gecko(Firefox) based browsers. If this is thus available,
+        // simply return it, else return the calculated value above.
+        // @see https://developer.mozilla.org/en-US/docs/Web/API/Window.scrollMaxY
+        return window.scrollMaxY || (docElem.scrollHeight - window.innerHeight);
+    }
+
+    /**
+     * Because we have a fixed header and often link to anchors inside pages, we can
+     * run into the situation where the highled anchor is hidden behind the header.
+     * This ensures that the highlighted anchor will always be in view.
+     * @param {string} id = The id of the highlighted table row
+     */
+    function scrollIntoView(id) {
+        var elementPos = document.getElementById(id).offsetTop;
+
+        if ((getMaxScrollY() - elementPos) > 100) {
+            window.scroll(0, window.scrollY - 150);
+        }
+    }
+
+    // Check if the currently loaded page has a hash in the URL
+    if (window.location.hash) {
+        scrollIntoView(window.location.hash.substr(1));
+    }
+
+    // We also need to cater for the above scenario when a user clicks on in page links.
+    window.onhashchange = function() {
+        scrollIntoView(window.location.hash.substr(1));
+    }
+
     /**
      * Presents the user with a notification message
      * @param {string} type - The type of notification to set, must be one of info, warn or error.
@@ -190,19 +223,6 @@ $(function() {
         params.offset = offset
 
         return search + '?' + $.param(params);
-    }
-
-    // Return the maximum number of pixels the document can be scrolled.
-    function getMaxScrollY() {
-        // Because the user might have resized the window since the last call,
-        // always get innerHeight at call time and do not cache.
-        var scrollMaxY = docElem.scrollHeight - window.innerHeight;
-
-        // window.scrollMaxY is a non standard implementation in
-        // Gecko(Firefox) based browsers. If this is thus available,
-        // simply return it, else return the calculated value above.
-        // @see https://developer.mozilla.org/en-US/docs/Web/API/Window.scrollMaxY
-        return window.scrollMaxY || scrollMaxY;
     }
 
     var scrollPoll = null;
