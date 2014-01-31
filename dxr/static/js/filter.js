@@ -1,22 +1,6 @@
 $(function() {
     var trigger = $('.sf-select-trigger');
-    var options = $('.selector-options');
-
-    /**
-     * Mark the selected element as checked.
-     * @param {Object} selected - The item to mark as checked.
-     */
-    function setSelectedItem(selected) {
-        var items = options.find('a');
-
-        items.each(function() {
-            $(this).removeClass('selected')
-                   .removeAttr('aria-checked');
-        });
-
-        selected.addClass('selected');
-        selected.attr('aria-checked', 'true');
-    }
+    var options = $('.sf-select-options .selector-options');
 
     /**
      * Hide the current selector's options.
@@ -29,10 +13,10 @@ $(function() {
     }
 
     /**
-     * Update the query field with the selected filter.
+     * Append the selected filter to the query field.
      * @param {String} selectedFilter - The selected filter.
      */
-    function setFilter(selectedFilter) {
+    function appendFilter(selectedFilter) {
         var queryField = $('#query');
         var value = queryField.val();
 
@@ -61,8 +45,7 @@ $(function() {
     options.on('click', 'a', function(event) {
         event.stopPropagation();
 
-        setSelectedItem($(this));
-        setFilter($(this).data('value'));
+        appendFilter($(this).data('value'));
 
         hideOptions();
     });

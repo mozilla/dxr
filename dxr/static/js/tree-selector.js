@@ -1,6 +1,6 @@
 $(function() {
     var contentContainer = $('#content');
-    var options = $('.selector-options');
+    var options = $('.select-options .selector-options');
 
     /**
      * Mark the selected element as checked.
