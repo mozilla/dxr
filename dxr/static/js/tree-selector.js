@@ -25,7 +25,7 @@ $(function() {
         // Because the tree selector can be injected by a JS
         // template, we need to use the selector directly here,
         // as the element will not exist on DOM ready.
-        $('.selector-options').parents('.select-options').hide();
+        $('.select-options').hide();
     }
 
     // Show/Hide the options
@@ -60,18 +60,9 @@ $(function() {
         hideOptions();
     });
 
-    window.addEventListener('click', function() {
-        hideOptions();
-    }, false);
+    window.addEventListener('click', hideOptions, false);
 
-    window.addEventListener('keyup', function(event) {
-        // 'key' is the standard but has not been implemented in Gecko
-        // yet, see https://bugzilla.mozilla.org/show_bug.cgi?id=680830
-        // so, we check both.
-        var keyPressed = event.key || event.keyCode;
-        // esc key pressed.
-        if (keyPressed === 27 || keyPressed === 'Esc') {
-            hideOptions();
-        }
-    }, false);
+    onEsc(function() {
+        $('.select-options').hide();
+    });
 });

@@ -1,3 +1,5 @@
+"""Tests specific to multiple-tree instances"""
+
 from dxr.testing import DxrInstanceTestCase
 
 from nose.tools import eq_

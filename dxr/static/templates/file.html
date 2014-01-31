@@ -14,7 +14,7 @@
 
 {% block content %}
 <div id="content" class="content" data-no-results="No results returned for current query.">
-  <div class="file-name">
+  <div class="breadcrumbs">
     {%- for path, name in paths_and_names -%}
       {% if not loop.first or loop.last %}
         <span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
@@ -89,7 +89,6 @@
 
 {% block site_js %}
   {{ super() }}
-  <script src="{{ wwwroot }}/static/js/context_menu.js"></script>
   <script src="{{ wwwroot }}/static/js/panel.js"></script>
   <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
 {% endblock %}

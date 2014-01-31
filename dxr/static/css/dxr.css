@@ -39,7 +39,7 @@ body {
     background-color: #fff;
     color: #333;
     margin: 0;
-    font: 16px/1.5 Arial, Helvetica, sans-serif;
+    font: 12px/1.5 Arial, Helvetica, sans-serif;
 }
 h4 {
     margin: 0 0 .5rem 0;
@@ -53,11 +53,7 @@ a:hover {
     text-decoration: underline;
 }
 caption {
-    font-size: 12px;
     text-align: left;
-}
-label {
-    font-size: 14px;
 }
 fieldset {
     position: relative;
@@ -68,9 +64,6 @@ fieldset {
 input,
 select {
     padding: .5em;
-}
-option {
-    font-size: 12px;
 }
 /* Kudos to David Walsh */
 input[placeholder],
@@ -87,30 +80,50 @@ input[type="submit"] {
     margin: 0 17% 0 0;
     width: 6rem;
     height: 2rem;
-    font-size: .8rem
 }
 table {
-    background-color: #f6f4ec;
     margin: 0;
     padding: 0;
     width: 100%;
-    font-size: 12px;
     overflow: auto;
 }
-table thead {
-    background-color: #333;
-    color: #fff;
+table.folder-content thead tr:first-child {
+    color: #555;
     padding: .5em;
 }
 table th {
+    font-weight: bold;
     padding: .5em;
     text-align: left;
 }
-table tr {
-    border-bottom: 1px solid #fff;
+.folder-content th:first-child {
+    padding-left: .5em;
 }
-table tbody tr:hover {
-    background-color: #E4E4D7;
+.folder-content th {
+    padding-left: 0;
+    padding-right: .5em;
+    padding-top: .2em;
+    padding-bottom: .2em;
+}
+table.folder-content thead tr:first-child,
+table.folder-content tr:nth-child(even) {
+    background-color: #f5f5f5;
+}
+table.folder-content tbody tr:hover,
+table tbody tr:hover,
+.result_snippet tr:hover,
+.context-menu a:hover {
+    background-color: #e8e8e8;
+}
+table.folder-content td {
+    padding: 0;
+}
+table.folder-content a {
+    display: block;  /* Make entire cells clickable. */
+    padding-top: .5em;
+    padding-right: .5em;
+    padding-bottom: .5em;
+    text-decoration: none;
 }
 table td {
     padding: .5em;
@@ -128,9 +141,6 @@ mark {
 .logo a:focus {
     background-color: transparent;
 }
-.top-of-tree {
-    font-size: .8rem;
-}
 .result_snippet th:first-child {
     border-right: 1px solid #fff;
     text-align: center;
@@ -139,19 +149,17 @@ table.result_snippet tr {
     border: 0;
 }
 .result_snippet td:first-child {
-    background-color: #e0e0e0;
     border-right: 1px solid #fff;
-    border-bottom: 1px solid #edefef;
+    color: #aaa;
+    text-align: right;
     width: 4%;
-    text-align: center;
-}
-.result_snippet td:first-child a:hover {
-    background-color: #e0e0e0;
 }
 .result_snippet td {
     padding: .1rem .5rem;
 }
 .result_snippet a {
+    cursor: pointer;
+    display: block;
     width: 100%;
 }
 .result_snippet tr:target {
@@ -168,7 +176,10 @@ table.result_snippet tr {
     white-space: nowrap;
 }
 .file tr {
-    line-height: 1.2;
+    line-height: 0.5;
+}
+.result_snippet {
+    line-height: 1.1;
 }
 .file th {
     line-height: 1.5;
@@ -177,7 +188,7 @@ table.result_snippet tr {
     margin: .3rem;
 }
 mark {
-    padding: .3rem;
+    padding: .3rem 0;
 }
 /* Context Menu */
 .context-menu {
@@ -193,16 +204,12 @@ mark {
     -moz-border-top-left-radius: 0;
     border-top-left-radius: 0;
     width: auto;
-    font-size: .8rem;
     list-style: none;
 }
 .context-menu a {
     display: block;
     padding: .4rem;
     text-decoration: none;
-}
-.context-menu a:hover {
-    background-color: #e0e0e0;
 }
 .context-menu li:first-child a:hover {
     border-top-right-radius: 6px;
@@ -211,18 +218,12 @@ mark {
     border-bottom-right-radius: 6px;
     border-bottom-left-radius: 6px;
 }
-.top {
-    margin-right: .5em;
-    font-size: 11px;
-    text-align: right;
-}
 .search-box {
     position: fixed;
     top: 0;
-    background-color: #f6f4ec;
+    background-color: #f5f5f5;
     color: #333;
     padding: .8rem;
-    border-bottom: 10px solid #333;
     width: 100%;
     z-index: 100;
 }
@@ -232,7 +233,6 @@ mark {
     right: 0;
     margin: 0 4% 0 0;
     padding: 0.4rem 0 0;
-    font-size: .8rem;
     text-align: right;
     list-style: none;
 }
@@ -304,38 +304,44 @@ mark {
 }
 .content {
     margin-top: 80px;
-    padding: 1em;
+    padding: 1em 2em;
 }
 .path {
     background-repeat: no-repeat;
     background-position: 0 3px;
-    margin: 1.2em 0 .5em 0;
+    margin: 1.2em 0 0.1em 0;
 }
 .path-separator {
     margin: 0 .4rem;
 }
-.file-name,
+
+/* Keep icons in search results from clipping: */
+.result .path a {
+    display: inline-block;
+    min-height: 16px;
+}
+
+.breadcrumbs,
 .top-of-tree {
     display: inline-block;
     float: left;
     margin: 0;
     padding: .5rem 0 1rem 0;
-    font-size: .9rem;
     text-align: left;
 }
 /* top of tree */
 .top-of-tree a:link,
 .top-of-tree a:visited,
-.file-name a:link,
-.file-name a:visited {
+.breadcrumbs a:link,
+.breadcrumbs a:visited {
     color: #0095dd;
 }
 .top-of-tree a:hover,
-.file-name a:hover {
+.breadcrumbs a:hover {
     color: #00539f;
 }
 .top-of-tree a:focus,
-.file-name a:focus {
+.breadcrumbs a:focus {
     color: #00539f;
     text-decoration: none;
 }
@@ -366,7 +372,6 @@ mark {
     padding: .5rem .2rem .5rem .7rem;
     border: 0;
     width: 100%;
-    font-size: .9rem;
     text-align: left;
     cursor: pointer;
 }
@@ -392,12 +397,10 @@ mark {
 .panel h4 {
     margin: 0;
     padding: .5rem;
-    font-size: .9rem;
 }
 .panel ul {
     margin: 0;
     padding: 0;
-    font-size: .9rem;
     list-style: none;
 }
 .panel a.class {
@@ -436,7 +439,6 @@ mark {
     color: white;
 }
 .simple {
-    font-size: .8rem;
     background: -webkit-linear-gradient(green, darkgreen);
     background: -moz-linear-gradient(green, darkgreen);
     background: -o-linear-gradient(green, darkgreen);
@@ -479,8 +481,8 @@ mark {
         position: absolute;
         clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
         clip: rect(1px, 1px, 1px, 1px);
-        padding:0;
-        border:0;
+        padding: 0;
+        border: 0;
         height: 1px;
         width: 1px;
         overflow: hidden;

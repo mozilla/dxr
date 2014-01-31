@@ -18,8 +18,17 @@
     {% for icon, path, lines in results %}
       <div class="result">
         <div class="path">
-          {% set iconclass = icon.split('/')[1] %}
-          <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}" class="{{ iconclass }}">{{ path }}</a>
+          {% set icon_class = icon.split('/')[1] %}
+          {% set paths = path.split('/') %}
+
+          {% for display_path in paths %}
+            {% set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path %}
+            {% set is_first_or_only = loop.first or paths|length == 1 %}
+            {% set is_dir = not loop.last %}
+            {% set url = '%s/%s/source/%s' % (wwwroot, tree, path) %}
+
+            {% include 'path_line.html' %}
+          {% endfor %}
         </div>
         <table class="result_snippet">
           <caption class="visually-hidden">Query matches in {{ path }}</caption>
