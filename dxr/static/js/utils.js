@@ -48,3 +48,13 @@ String.prototype.regexLastIndexOf = function(regex, startpos) {
     }
     return lastIndexOf;
 };
+
+/**
+ * Close all the pretend pop-up menus.
+ */
+function hideOptions() {
+    // Because the tree selector can be injected by a JS
+    // template, we need to use the selector directly here,
+    // as the element will not exist on DOM ready.
+    $('.select-options, .sf-select-options').hide();
+}

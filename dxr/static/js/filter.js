@@ -3,16 +3,6 @@ $(function() {
     var options = $('.sf-select-options .selector-options');
 
     /**
-     * Hide the current selector's options.
-     */
-    function hideOptions() {
-        // Because the tree selector can be injected by a JS
-        // template, we need to use the selector directly here,
-        // as the element will not exist on DOM ready.
-        $('.sf-select-options').hide();
-    }
-
-    /**
      * Append the selected filter to the query field.
      * @param {String} selectedFilter - The selected filter.
      */
@@ -51,8 +41,5 @@ $(function() {
     });
 
     window.addEventListener('click', hideOptions, false);
-
-    onEsc(function() {
-        $('.sf-select-options').hide();
-    });
+    onEsc(hideOptions);
 });
