@@ -441,8 +441,19 @@ $(function() {
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
 
-    // Reload the page when we go back or forward.
-    window.onpopstate = function(event) {
-        window.location.reload();
+    // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
+    // That means that if we naively set onpopstate, we would get into an
+    // infinite loop of reloading whenever onpopstate is triggered. Therefore,
+    // we have to only add out onpopstate handler once the page has loaded.
+    window.onload = function() {
+        setTimeout(function() {
+            window.onpopstate = popStateHandler;
+        }, 0);
     };
+
+    // Reload the page when we go back or forward.
+    function popStateHandler(event) {
+        window.onpopstate = null;
+        window.location.reload();
+    }
 });
