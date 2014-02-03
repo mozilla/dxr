@@ -175,6 +175,9 @@ table.result_snippet tr {
 .checkbox_label {
     white-space: nowrap;
 }
+.access-key {
+    text-decoration: underline;
+}
 .file tr {
     line-height: 0.5;
 }
