@@ -15,6 +15,13 @@ $(function() {
     dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
+    var timeouts = {};
+    timeouts.scroll = 500;
+    timeouts.search = 300;
+    // We start the history timeout after the search updates (i.e., after
+    // timeouts.search has elapsed).
+    timeouts.history = 2000 - timeouts.search;
+
     /**
      * Disable and enable pointer events on scroll begin and scroll end to
      * avoid unnecessary paints and recalcs caused by hover effets.
@@ -33,7 +40,7 @@ $(function() {
 
         timer = setTimeout(function() {
             docElem.style.pointerEvents = '';
-        }, 500);
+        }, timeouts.scroll);
     }, false);
 
     // Return the maximum number of pixels the document can be scrolled.
@@ -165,6 +172,7 @@ $(function() {
         caseSensitiveBox = $('#case'),
         contentContainer = $('#content'),
         waiter = null,
+        historyWaiter = null,
         nextRequestNumber = 1, // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
         displayedRequestNumber = 0,
         didScroll = false,
@@ -258,6 +266,14 @@ $(function() {
         history.replaceState(state, '', url);
     }
 
+    /**
+     * Add an entry into the history stack whenever we do a new search.
+     */
+    function pushHistoryState(data) {
+        var searchUrl = constants.data('search') + '?' + data['query_string'];
+        history.pushState({}, '', searchUrl);
+    }
+
     function infiniteScroll() {
         if (didScroll) {
 
@@ -315,7 +331,8 @@ $(function() {
      */
     function querySoon() {
         clearTimeout(waiter);
-        waiter = setTimeout(doQuery, 300);
+        clearTimeout(historyWaiter);
+        waiter = setTimeout(doQuery, timeouts.search);
     }
 
     /**
@@ -361,12 +378,18 @@ $(function() {
             var container = append ? contentContainer : contentContainer.empty();
             container.append(tmpl.render(data));
         }
+
+        if (!append) {
+            document.title = data.query + "- DXR Search";
+        }
     }
 
     /**
      * Queries and populates the results templates with the returned data.
      */
     function doQuery() {
+        clearTimeout(historyWaiter);
+
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
@@ -382,6 +405,8 @@ $(function() {
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
                 populateResults(resultsContainerTmpl, data, false);
+
+                historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
         })
         .fail(function(jqxhr, textStatus, error) {
@@ -435,4 +460,20 @@ $(function() {
 
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
+
+    // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
+    // That means that if we naively set onpopstate, we would get into an
+    // infinite loop of reloading whenever onpopstate is triggered. Therefore,
+    // we have to only add out onpopstate handler once the page has loaded.
+    window.onload = function() {
+        setTimeout(function() {
+            window.onpopstate = popStateHandler;
+        }, 0);
+    };
+
+    // Reload the page when we go back or forward.
+    function popStateHandler(event) {
+        window.onpopstate = null;
+        window.location.reload();
+    }
 });
