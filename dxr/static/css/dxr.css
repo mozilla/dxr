@@ -535,3 +535,21 @@ mark {
         width: 89%;
     }
 }
+.sf-select-options .selector-option-label {
+    display: inline-block;
+    vertical-align: top;
+    width: 10rem;
+}
+.sf-select-options .selector-option-description {
+    display: inline-block;
+    margin-right: 12rem;  /* Width of label plus padding */
+    vertical-align: top;
+    white-space: normal;
+}
+.selector-option-description code {
+    border: 1px solid #ddd;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    margin: 0 2px;
+    padding: 0 5px;
+}

@@ -7,7 +7,7 @@ from urllib import quote_plus
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template)
 
-from dxr.query import Query
+from dxr.query import Query, filter_menu_items
 from dxr.server_utils import connect_db
 from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, sqlite3  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
 
@@ -161,6 +161,7 @@ def search(tree):
     if error:
         return render_template('error.html', **arguments), status_code or 500
     else:
+        arguments['filters'] = filter_menu_items()
         return render_template('search.html', **arguments)
 
 
