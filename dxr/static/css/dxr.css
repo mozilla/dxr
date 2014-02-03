@@ -111,7 +111,6 @@ table.folder-content tr:nth-child(even) {
 }
 table.folder-content tbody tr:hover,
 table tbody tr:hover,
-.result_snippet tr:hover,
 .context-menu a:hover {
     background-color: #e8e8e8;
 }
@@ -141,6 +140,10 @@ mark {
 .logo a:focus {
     background-color: transparent;
 }
+/* result-snippet */
+table.result_snippet tr:hover {
+    background: none;
+}
 .result_snippet th:first-child {
     border-right: 1px solid #fff;
     text-align: center;
@@ -153,6 +156,7 @@ table.result_snippet tr {
     color: #aaa;
     text-align: right;
     width: 4%;
+    line-height: 1.4;
 }
 .result_snippet td {
     padding: .1rem .5rem;
@@ -160,15 +164,20 @@ table.result_snippet tr {
 .result_snippet a {
     cursor: pointer;
     display: block;
+    padding-left: .5rem;
     width: 100%;
 }
-.result_snippet tr:target {
-    background-color: gold;
+.result_snippet a:target {
+    background-color: gray;
+    color: white;
+    padding-right: .5rem;
+    border-right: 3px solid gold;
 }
 .result_snippet code a {
     display: inline;
     width: 100%;
 }
+/* end result-snippet */
 .checkbox_case {
     margin: .5em;
 }
@@ -176,10 +185,7 @@ table.result_snippet tr {
     white-space: nowrap;
 }
 .file tr {
-    line-height: 0.5;
-}
-.result_snippet {
-    line-height: 1.1;
+    line-height: 0.7;
 }
 .file th {
     line-height: 1.5;
@@ -304,7 +310,7 @@ mark {
 }
 .content {
     margin-top: 80px;
-    padding: 1em 2em;
+    padding: 1rem;
 }
 .path {
     background-repeat: no-repeat;

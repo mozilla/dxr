@@ -1,16 +1,12 @@
+/* jshint devel:true, esnext: true */
+/* globals nunjucks: true, $ */
+
 $(function() {
     'use strict';
     // Get the file content container
     var fileContainer = $('#file'),
         queryField = $('#query'),
         contentContainer = $('#content');
-
-    if (!nunjucks.env) {
-        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
-    }
-
-    var env = nunjucks.env,
-        tmpl = env.getTemplate('context_menu.html');
 
     /**
      * Highlight, or remove highlighting from, all symbols with the same class
@@ -49,7 +45,7 @@ $(function() {
             top += window.scrollY;
         }
 
-        target.append(tmpl.render(contextMenu));
+        target.append(nunjucks.render('context_menu.html', contextMenu));
         var currentContextMenu =  $('#context-menu');
 
         // Immediately after appending the context menu, position it.

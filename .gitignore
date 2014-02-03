@@ -12,3 +12,4 @@
 /dist
 /*.egg-info
 /node_modules
+/dxr/static/js/templates.js
