@@ -70,18 +70,20 @@
         <th scope="col">Code</th>
     </thead>
     <tbody>
-    {% for line, annotations in lines %}
-      <tr id="{{ loop.index }}">
-          <td>
-            <a href="#{{ loop.index }}">{{ loop.index }}</a>
+      <tr>
+        <td>
+          {% for line in lines %}
+            <a id="{{ loop.index }}" href="#{{ loop.index }}">{{ loop.index }}</a>
+          {% endfor %}
           </td>
           <td class="code">
 <pre>
+{% for line, annotations in lines %}
 <code aria-labelledby="{{ loop.index }}">{{ line }}</code>
+{% endfor %}
 </pre>
           </td>
       </tr>
-    {% endfor %}
     </tbody>
   </table>
  </div>
