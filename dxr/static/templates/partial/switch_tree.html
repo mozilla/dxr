@@ -19,7 +19,8 @@
           {% for tree, url, description in tree_tuples %}
             <li>
               <a href="{{ url }}" {% if tree == selected_tree %}class="selected" aria-checked="true"{% endif %}>
-                <span class="selector-option-label">{{ tree }}</span> {{ description }}
+                <span class="selector-option-label">{{ tree }}</span>
+                <span class="selector-option-description">{{ description }}</span>
               </a>
             </li>
           {% endfor %}

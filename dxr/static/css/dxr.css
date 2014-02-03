@@ -38,8 +38,8 @@ table {
 body {
     background-color: #fff;
     color: #333;
-    margin: 0;
     font: 12px/1.5 Arial, Helvetica, sans-serif;
+    margin: 0;
 }
 h4 {
     margin: 0 0 .5rem 0;
@@ -545,11 +545,4 @@ mark {
     margin-right: 12rem;  /* Width of label plus padding */
     vertical-align: top;
     white-space: normal;
-}
-.selector-option-description code {
-    border: 1px solid #ddd;
-    background-color: #f8f8f8;
-    border-radius: 3px;
-    margin: 0 2px;
-    padding: 0 5px;
 }
