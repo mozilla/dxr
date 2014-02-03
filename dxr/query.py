@@ -618,8 +618,6 @@ class UnionFilter(SearchFilter):
 
 # Register filters by adding them to this list:
 filters = [
-    TriLiteSearchFilter(),
-
     # path filter
     SimpleFilter(
         param             = "path",
@@ -641,93 +639,7 @@ filters = [
             like_escape(arg if arg.startswith(".") else "." + arg)]
     ),
 
-
-    # type filter
-    UnionFilter([
-      ExistsLikeFilter(
-        param         = "type",
-        filter_sql    = """SELECT 1 FROM types
-                           WHERE %s
-                             AND types.file_id = files.id
-                        """,
-        ext_sql       = """SELECT types.extent_start, types.extent_end FROM types
-                           WHERE types.file_id = ?
-                             AND %s
-                           ORDER BY types.extent_start
-                        """,
-        like_name     = "types.name",
-        qual_name     = "types.qualname"
-      ),
-      ExistsLikeFilter(
-        param         = "type",
-        filter_sql    = """SELECT 1 FROM typedefs
-                           WHERE %s
-                             AND typedefs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT typedefs.extent_start, typedefs.extent_end FROM typedefs
-                           WHERE typedefs.file_id = ?
-                             AND %s
-                           ORDER BY typedefs.extent_start
-                        """,
-        like_name     = "typedefs.name",
-        qual_name     = "typedefs.qualname")],
-      description=Markup('Type or class definition: <code>type:Stack</code>')
-    ),
-
-    # type-ref filter
-    UnionFilter([
-      ExistsLikeFilter(
-        param         = "type-ref",
-        filter_sql    = """SELECT 1 FROM types, type_refs AS refs
-                           WHERE %s
-                             AND types.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM type_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM types
-                                         WHERE %s
-                                           AND types.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "types.name",
-        qual_name     = "types.qualname"
-      ),
-      ExistsLikeFilter(
-        param         = "type-ref",
-        filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
-                           WHERE %s
-                             AND typedefs.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM typedef_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM typedefs
-                                         WHERE %s
-                                           AND typedefs.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "typedefs.name",
-        qual_name     = "typedefs.qualname")],
-      description='Type or class references, uses, or instantiations'
-    ),
-
-    # type-decl filter
-    ExistsLikeFilter(
-      description   = 'Type or class declaration',
-      param         = "type-decl",
-      filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
-                         WHERE %s
-                           AND types.id = decldef.defid AND decldef.file_id = files.id
-                      """,
-      ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM type_decldef AS decldef
-                         WHERE decldef.file_id = ?
-                           AND EXISTS (SELECT 1 FROM types
-                                       WHERE %s
-                                         AND types.id = decldef.defid)
-                         ORDER BY decldef.extent_start
-                      """,
-      like_name     = "types.name",
-      qual_name     = "types.qualname"
-    ),
+    TriLiteSearchFilter(),
 
     # function filter
     ExistsLikeFilter(
@@ -782,169 +694,6 @@ filters = [
                         """,
         like_name     = "functions.name",
         qual_name     = "functions.qualname"
-    ),
-
-    # var filter
-    ExistsLikeFilter(
-        description   = 'Variable definition',
-        param         = "var",
-        filter_sql    = """SELECT 1 FROM variables
-                           WHERE %s
-                             AND variables.file_id = files.id
-                        """,
-        ext_sql       = """SELECT variables.extent_start, variables.extent_end FROM variables
-                           WHERE variables.file_id = ?
-                             AND %s
-                           ORDER BY variables.extent_start
-                        """,
-        like_name     = "variables.name",
-        qual_name     = "variables.qualname"
-    ),
-
-    # var-ref filter
-    ExistsLikeFilter(
-        description   = 'Variable uses (lvalue, rvalue, dereference, etc.)',
-        param         = "var-ref",
-        filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
-                           WHERE %s
-                             AND variables.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM variable_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM variables
-                                         WHERE %s
-                                           AND variables.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "variables.name",
-        qual_name     = "variables.qualname"
-    ),
-
-    # var-decl filter
-    ExistsLikeFilter(
-        description   = 'Variable declaration',
-        param         = "var-decl",
-        filter_sql    = """SELECT 1 FROM variables, variable_decldef AS decldef
-                           WHERE %s
-                             AND variables.id = decldef.defid AND decldef.file_id = files.id
-                        """,
-        ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM variable_decldef AS decldef
-                           WHERE decldef.file_id = ?
-                             AND EXISTS (SELECT 1 FROM variables
-                                         WHERE %s
-                                           AND variables.id = decldef.defid)
-                           ORDER BY decldef.extent_start
-                        """,
-        like_name     = "variables.name",
-        qual_name     = "variables.qualname"
-    ),
-
-    # namespace filter
-    ExistsLikeFilter(
-        description   = 'Namespace definition',
-        param         = "namespace",
-        filter_sql    = """SELECT 1 FROM namespaces
-                           WHERE %s
-                             AND namespaces.file_id = files.id
-                        """,
-        ext_sql       = """SELECT namespaces.extent_start, namespaces.extent_end FROM namespaces
-                           WHERE namespaces.file_id = ?
-                             AND %s
-                           ORDER BY namespaces.extent_start
-                        """,
-        like_name     = "namespaces.name",
-        qual_name     = "namespaces.qualname"
-    ),
-
-    # namespace-ref filter
-    ExistsLikeFilter(
-        description   = 'Namespace references',
-        param         = "namespace-ref",
-        filter_sql    = """SELECT 1 FROM namespaces, namespace_refs AS refs
-                           WHERE %s
-                             AND namespaces.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM namespaces
-                                         WHERE %s
-                                           AND namespaces.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "namespaces.name",
-        qual_name     = "namespaces.qualname"
-    ),
-
-    # namespace-alias filter
-    ExistsLikeFilter(
-        description   = 'Namespace alias',
-        param         = "namespace-alias",
-        filter_sql    = """SELECT 1 FROM namespace_aliases
-                           WHERE %s
-                             AND namespace_aliases.file_id = files.id
-                        """,
-        ext_sql       = """SELECT namespace_aliases.extent_start, namespace_aliases.extent_end FROM namespace_aliases
-                           WHERE namespace_aliases.file_id = ?
-                             AND %s
-                           ORDER BY namespace_aliases.extent_start
-                        """,
-        like_name     = "namespace_aliases.name",
-        qual_name     = "namespace_aliases.qualname"
-    ),
-
-    # namespace-alias-ref filter
-    ExistsLikeFilter(
-        description   = 'Namespace alias references',
-        param         = "namespace-alias-ref",
-        filter_sql    = """SELECT 1 FROM namespace_aliases, namespace_alias_refs AS refs
-                           WHERE %s
-                             AND namespace_aliases.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_alias_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM namespace_aliases
-                                         WHERE %s
-                                           AND namespace_aliases.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "namespace_aliases.name",
-        qual_name     = "namespace_aliases.qualname"
-    ),
-
-    # macro filter
-    ExistsLikeFilter(
-        description   = 'Macro definition',
-        param         = "macro",
-        filter_sql    = """SELECT 1 FROM macros
-                           WHERE %s
-                             AND macros.file_id = files.id
-                        """,
-        ext_sql       = """SELECT macros.extent_start, macros.extent_end FROM macros
-                           WHERE macros.file_id = ?
-                             AND %s
-                           ORDER BY macros.extent_start
-                        """,
-        like_name     = "macros.name",
-        qual_name     = "macros.name"
-    ),
-
-    # macro-ref filter
-    ExistsLikeFilter(
-        description   = 'Macro uses',
-        param         = "macro-ref",
-        filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
-                           WHERE %s
-                             AND macros.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM macros
-                                         WHERE %s
-                                           AND macros.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "macros.name",
-        qual_name     = "macros.name"
     ),
 
     UnionFilter([
@@ -1054,93 +803,257 @@ filters = [
       description = 'Functions or methods which are called by the given one'
     ),
 
-    # overridden filter
-    ExistsLikeFilter(
-        description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
-        param         = "overridden",
-        filter_sql    = """SELECT 1
-                             FROM functions as base, functions as derived, targets
-                            WHERE %s
-                              AND base.id = -targets.targetid
-                              AND derived.id = targets.funcid
-                              AND base.id <> derived.id
-                              AND base.file_id = files.id
+    # type filter
+    UnionFilter([
+      ExistsLikeFilter(
+        param         = "type",
+        filter_sql    = """SELECT 1 FROM types
+                           WHERE %s
+                             AND types.file_id = files.id
                         """,
-        ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                            FROM functions
-                           WHERE functions.file_id = ?
-                             AND EXISTS (SELECT 1 FROM functions as derived, targets
-                                          WHERE %s
-                                            AND functions.id = -targets.targetid
-                                            AND derived.id = targets.funcid
-                                            AND functions.id <> derived.id
-                                        )
-                           ORDER BY functions.extent_start
+        ext_sql       = """SELECT types.extent_start, types.extent_end FROM types
+                           WHERE types.file_id = ?
+                             AND %s
+                           ORDER BY types.extent_start
                         """,
-        like_name     = "derived.name",
-        qual_name     = "derived.qualname"
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+      ),
+      ExistsLikeFilter(
+        param         = "type",
+        filter_sql    = """SELECT 1 FROM typedefs
+                           WHERE %s
+                             AND typedefs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT typedefs.extent_start, typedefs.extent_end FROM typedefs
+                           WHERE typedefs.file_id = ?
+                             AND %s
+                           ORDER BY typedefs.extent_start
+                        """,
+        like_name     = "typedefs.name",
+        qual_name     = "typedefs.qualname")],
+      description=Markup('Type or class definition: <code>type:Stack</code>')
     ),
 
-    # overrides filter
-    ExistsLikeFilter(
-        description   = Markup('Methods which override the given one: <code>overrides:someMethod</code>'),
-        param         = "overrides",
-        filter_sql    = """SELECT 1
-                             FROM functions as base, functions as derived, targets
-                            WHERE %s
-                              AND base.id = -targets.targetid
-                              AND derived.id = targets.funcid
-                              AND base.id <> derived.id
-                              AND derived.file_id = files.id
+    # type-ref filter
+    UnionFilter([
+      ExistsLikeFilter(
+        param         = "type-ref",
+        filter_sql    = """SELECT 1 FROM types, type_refs AS refs
+                           WHERE %s
+                             AND types.id = refs.refid AND refs.file_id = files.id
                         """,
-        ext_sql       = """SELECT functions.extent_start, functions.extent_end
-                            FROM functions
-                           WHERE functions.file_id = ?
-                             AND EXISTS (SELECT 1 FROM functions as base, targets
-                                          WHERE %s
-                                            AND base.id = -targets.targetid
-                                            AND functions.id = targets.funcid
-                                            AND base.id <> functions.id
-                                        )
-                           ORDER BY functions.extent_start
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM type_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND types.id = refs.refid)
+                           ORDER BY refs.extent_start
                         """,
-        like_name     = "base.name",
-        qual_name     = "base.qualname"
+        like_name     = "types.name",
+        qual_name     = "types.qualname"
+      ),
+      ExistsLikeFilter(
+        param         = "type-ref",
+        filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
+                           WHERE %s
+                             AND typedefs.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM typedef_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM typedefs
+                                         WHERE %s
+                                           AND typedefs.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "typedefs.name",
+        qual_name     = "typedefs.qualname")],
+      description='Type or class references, uses, or instantiations'
     ),
 
-    #warning filter
+    # type-decl filter
     ExistsLikeFilter(
-        description   = 'Compiler warning messages',
-        param         = "warning",
-        filter_sql    = """SELECT 1 FROM warnings
-                            WHERE %s
-                              AND warnings.file_id = files.id """,
-        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
-                             FROM warnings
-                            WHERE warnings.file_id = ?
-                              AND %s
-                        """,
-        like_name     = "warnings.msg",
-        qual_name     = "warnings.msg"
+      description   = 'Type or class declaration',
+      param         = "type-decl",
+      filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
+                         WHERE %s
+                           AND types.id = decldef.defid AND decldef.file_id = files.id
+                      """,
+      ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM type_decldef AS decldef
+                         WHERE decldef.file_id = ?
+                           AND EXISTS (SELECT 1 FROM types
+                                       WHERE %s
+                                         AND types.id = decldef.defid)
+                         ORDER BY decldef.extent_start
+                      """,
+      like_name     = "types.name",
+      qual_name     = "types.qualname"
     ),
 
-    #warning-opt filter
+    # var filter
     ExistsLikeFilter(
-        description   = 'More (less severe?) warning messages',
-        param         = "warning-opt",
-        filter_sql    = """SELECT 1 FROM warnings
-                            WHERE %s
-                              AND warnings.file_id = files.id """,
-        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
-                             FROM warnings
-                            WHERE warnings.file_id = ?
-                              AND %s
+        description   = 'Variable definition',
+        param         = "var",
+        filter_sql    = """SELECT 1 FROM variables
+                           WHERE %s
+                             AND variables.file_id = files.id
                         """,
-        like_name     = "warnings.opt",
-        qual_name     = "warnings.opt"
+        ext_sql       = """SELECT variables.extent_start, variables.extent_end FROM variables
+                           WHERE variables.file_id = ?
+                             AND %s
+                           ORDER BY variables.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
     ),
 
-    # bases filter
+    # var-ref filter
+    ExistsLikeFilter(
+        description   = 'Variable uses (lvalue, rvalue, dereference, etc.)',
+        param         = "var-ref",
+        filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
+                           WHERE %s
+                             AND variables.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM variable_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM variables
+                                         WHERE %s
+                                           AND variables.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
+    ),
+
+    # var-decl filter
+    ExistsLikeFilter(
+        description   = 'Variable declaration',
+        param         = "var-decl",
+        filter_sql    = """SELECT 1 FROM variables, variable_decldef AS decldef
+                           WHERE %s
+                             AND variables.id = decldef.defid AND decldef.file_id = files.id
+                        """,
+        ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM variable_decldef AS decldef
+                           WHERE decldef.file_id = ?
+                             AND EXISTS (SELECT 1 FROM variables
+                                         WHERE %s
+                                           AND variables.id = decldef.defid)
+                           ORDER BY decldef.extent_start
+                        """,
+        like_name     = "variables.name",
+        qual_name     = "variables.qualname"
+    ),
+
+    # macro filter
+    ExistsLikeFilter(
+        description   = 'Macro definition',
+        param         = "macro",
+        filter_sql    = """SELECT 1 FROM macros
+                           WHERE %s
+                             AND macros.file_id = files.id
+                        """,
+        ext_sql       = """SELECT macros.extent_start, macros.extent_end FROM macros
+                           WHERE macros.file_id = ?
+                             AND %s
+                           ORDER BY macros.extent_start
+                        """,
+        like_name     = "macros.name",
+        qual_name     = "macros.name"
+    ),
+
+    # macro-ref filter
+    ExistsLikeFilter(
+        description   = 'Macro uses',
+        param         = "macro-ref",
+        filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
+                           WHERE %s
+                             AND macros.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM macros
+                                         WHERE %s
+                                           AND macros.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "macros.name",
+        qual_name     = "macros.name"
+    ),
+
+    # namespace filter
+    ExistsLikeFilter(
+        description   = 'Namespace definition',
+        param         = "namespace",
+        filter_sql    = """SELECT 1 FROM namespaces
+                           WHERE %s
+                             AND namespaces.file_id = files.id
+                        """,
+        ext_sql       = """SELECT namespaces.extent_start, namespaces.extent_end FROM namespaces
+                           WHERE namespaces.file_id = ?
+                             AND %s
+                           ORDER BY namespaces.extent_start
+                        """,
+        like_name     = "namespaces.name",
+        qual_name     = "namespaces.qualname"
+    ),
+
+    # namespace-ref filter
+    ExistsLikeFilter(
+        description   = 'Namespace references',
+        param         = "namespace-ref",
+        filter_sql    = """SELECT 1 FROM namespaces, namespace_refs AS refs
+                           WHERE %s
+                             AND namespaces.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM namespaces
+                                         WHERE %s
+                                           AND namespaces.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "namespaces.name",
+        qual_name     = "namespaces.qualname"
+    ),
+
+    # namespace-alias filter
+    ExistsLikeFilter(
+        description   = 'Namespace alias',
+        param         = "namespace-alias",
+        filter_sql    = """SELECT 1 FROM namespace_aliases
+                           WHERE %s
+                             AND namespace_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT namespace_aliases.extent_start, namespace_aliases.extent_end FROM namespace_aliases
+                           WHERE namespace_aliases.file_id = ?
+                             AND %s
+                           ORDER BY namespace_aliases.extent_start
+                        """,
+        like_name     = "namespace_aliases.name",
+        qual_name     = "namespace_aliases.qualname"
+    ),
+
+    # namespace-alias-ref filter
+    ExistsLikeFilter(
+        description   = 'Namespace alias references',
+        param         = "namespace-alias-ref",
+        filter_sql    = """SELECT 1 FROM namespace_aliases, namespace_alias_refs AS refs
+                           WHERE %s
+                             AND namespace_aliases.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM namespace_alias_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM namespace_aliases
+                                         WHERE %s
+                                           AND namespace_aliases.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "namespace_aliases.name",
+        qual_name     = "namespace_aliases.qualname"
+    ),
+
+    # bases filter -- reorder these things so more frequent at top.
     ExistsLikeFilter(
         description   = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'),
         param         = "bases",
@@ -1237,6 +1150,92 @@ filters = [
         qual_name     = "type.qualname")],
 
       description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
+    ),
+
+    # overridden filter
+    ExistsLikeFilter(
+        description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
+        param         = "overridden",
+        filter_sql    = """SELECT 1
+                             FROM functions as base, functions as derived, targets
+                            WHERE %s
+                              AND base.id = -targets.targetid
+                              AND derived.id = targets.funcid
+                              AND base.id <> derived.id
+                              AND base.file_id = files.id
+                        """,
+        ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                            FROM functions
+                           WHERE functions.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions as derived, targets
+                                          WHERE %s
+                                            AND functions.id = -targets.targetid
+                                            AND derived.id = targets.funcid
+                                            AND functions.id <> derived.id
+                                        )
+                           ORDER BY functions.extent_start
+                        """,
+        like_name     = "derived.name",
+        qual_name     = "derived.qualname"
+    ),
+
+    # overrides filter
+    ExistsLikeFilter(
+        description   = Markup('Methods which override the given one: <code>overrides:someMethod</code>'),
+        param         = "overrides",
+        filter_sql    = """SELECT 1
+                             FROM functions as base, functions as derived, targets
+                            WHERE %s
+                              AND base.id = -targets.targetid
+                              AND derived.id = targets.funcid
+                              AND base.id <> derived.id
+                              AND derived.file_id = files.id
+                        """,
+        ext_sql       = """SELECT functions.extent_start, functions.extent_end
+                            FROM functions
+                           WHERE functions.file_id = ?
+                             AND EXISTS (SELECT 1 FROM functions as base, targets
+                                          WHERE %s
+                                            AND base.id = -targets.targetid
+                                            AND functions.id = targets.funcid
+                                            AND base.id <> functions.id
+                                        )
+                           ORDER BY functions.extent_start
+                        """,
+        like_name     = "base.name",
+        qual_name     = "base.qualname"
+    ),
+
+    #warning filter
+    ExistsLikeFilter(
+        description   = 'Compiler warning messages',
+        param         = "warning",
+        filter_sql    = """SELECT 1 FROM warnings
+                            WHERE %s
+                              AND warnings.file_id = files.id """,
+        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
+                             FROM warnings
+                            WHERE warnings.file_id = ?
+                              AND %s
+                        """,
+        like_name     = "warnings.msg",
+        qual_name     = "warnings.msg"
+    ),
+
+    #warning-opt filter
+    ExistsLikeFilter(
+        description   = 'More (less severe?) warning messages',
+        param         = "warning-opt",
+        filter_sql    = """SELECT 1 FROM warnings
+                            WHERE %s
+                              AND warnings.file_id = files.id """,
+        ext_sql       = """SELECT warnings.extent_start, warnings.extent_end
+                             FROM warnings
+                            WHERE warnings.file_id = ?
+                              AND %s
+                        """,
+        like_name     = "warnings.opt",
+        qual_name     = "warnings.opt"
     )
 ]
 
