@@ -295,18 +295,12 @@ mark {
 .text_search label {
     width: 11%;
 }
-.text_search input {
-    width: 60%;
-}
-.text_search .query {
-    width: 88%;
-}
 .text_search input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
 }
 .content {
-    margin-top: 80px;
+    margin-top: 55px;
     padding: 1em 2em;
 }
 .path {
@@ -357,8 +351,8 @@ mark {
 .panel {
     display: none;
     position: absolute;
-    top: 140px;
-    right: 16px;
+    top: 105px;
+    right: 22px;
     background-color: #fff;
     border: 1px solid #e0e0e0;
     border-right: 0;
@@ -466,6 +460,9 @@ mark {
     overflow: hidden;
 }
 @media only screen and (min-device-width: 320px) {
+    .text_search .query {
+        width: 62%;
+    }
     input[type="submit"] {
         margin-right: 14%;
     }
@@ -475,9 +472,6 @@ mark {
         padding: 0 0 .2rem 0;
         width: auto;
         text-align: left;
-    }
-    .text_search input {
-        width: 90%;
     }
     .query_label {
         /*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
@@ -489,9 +483,6 @@ mark {
         height: 1px;
         width: 1px;
         overflow: hidden;
-    }
-    .text_search .query {
-        width: 100%;
     }
     .form_group input {
         width: 98%;
@@ -509,14 +500,11 @@ mark {
     }
 }
 @media only screen and (min-width: 740px) {
+    .text_search .query {
+        width: 84%;
+    }
     input[type="submit"] {
         margin-right: 16.3%;
-    }
-    .text_search label {
-        width: 20%;
-    }
-    .text_search input {
-        width: 64%;
     }
     .form_group label {
         padding: 0 0 .2rem 0;
@@ -528,11 +516,6 @@ mark {
     }
     .basic_search {
         right: 13%;
-    }
-}
-@media only screen and (min-width: 1224px) {
-    .text_search .query {
-        width: 89%;
     }
 }
 .sf-select-options .selector-option-label {
