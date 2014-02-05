@@ -181,6 +181,8 @@ class Deployment(object):
                 venv_bin_path = join(new_build_path, VENV_NAME, 'bin')
                 run('{pip} install -r requirements.txt',
                     pip=join(venv_bin_path, 'pip'))
+                # Compile nunjucks templates:
+                run('make templates')
                 # Quiet the complaint about there being no matches for *.so:
                 run('{python} setup.py install 2>/dev/null',
                     python=join(venv_bin_path, 'python'))
