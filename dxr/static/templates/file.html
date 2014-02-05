@@ -16,11 +16,11 @@
 <div id="content" class="content" data-no-results="No results returned for current query.">
   <div class="breadcrumbs">
     {%- for path, name in paths_and_names -%}
-      {% if not loop.first or loop.last %}
+      {%- if not loop.first or loop.last -%}
         <span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
-      {% else %}
+      {%- else -%}
         <a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
-      {% endif %}
+      {%- endif -%}
     {%- endfor -%}
   </div>
 
