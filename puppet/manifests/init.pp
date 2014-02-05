@@ -14,8 +14,11 @@ class dev {
     class {
         init: ;
     }
+    class { "npm":
+        require => Class[init];
+    }
     class { "python":
-        require => Class[init],
+        require => Class[npm],
         project_path => $PROJ_DIR;
     }
     class { "apache":
