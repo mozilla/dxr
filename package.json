@@ -12,5 +12,9 @@
     "grunt-contrib-watch": "0.5.3",
     "grunt-nunjucks": "0.1.1"
   },
-  "engine": "node >= 0.8.x"
+  "engine": "node >= 0.8.x",
+  "dependencies": {
+    "lockdown": "0.0.5"
+  },
+  "scripts": { "preinstall": "lockdown" }
 }
