@@ -55,8 +55,8 @@
 }
 @media only screen and (min-device-width: 320px) {
     .search-filter {
-        top: 18%;
-        right: 3%;
+        top: 29%;
+        right: 39.5%;
     }
     .sf-select-options {
         top: 52%;
@@ -66,8 +66,8 @@
 }
 @media only screen and (min-width: 740px) {
     .search-filter {
-        top: 17%;
-        right: 2%;
+        top: 29%;
+        right: 16.5%;
     }
     .sf-select-options {
         right: 1.10%;
@@ -76,8 +76,8 @@
 }
 @media only screen and (min-width: 1224px) {
     .search-filter {
-        right: 12%;
-        top: 26%;
+        top: 29%;
+        right: 16%;
     }
     .sf-select-options {
         top: 76%;
