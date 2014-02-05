@@ -118,6 +118,9 @@
   "grunt": {
     "0.4.2": "895b4f28a6102bffd41d365a65e8be2d6a293d93"
   },
+  "grunt-cli": {
+    "0.1.13": "e9ebc4047631f5012d922770c39378133cad10f4"
+  },
   "grunt-contrib-jshint": {
     "0.8.0": "6bd52325dcce1d995dbbf648030c59e1a606acda"
   },
@@ -227,6 +230,9 @@
   },
   "readable-stream": {
     "1.0.25": "df19f64e6f74fd37ecf9d3ab8dbf1e2d11c9a045"
+  },
+  "resolve": {
+    "0.3.1": "34c63447c664c70598d1c9b126fc43b2a24310a4"
   },
   "rimraf": {
     "2.0.3": "f50a2965e7144e9afd998982f15df706730f56a9",

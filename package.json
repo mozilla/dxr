@@ -6,6 +6,7 @@
   "devDependencies": {
     "nunjucks": "1.0.1",
     "grunt": "0.4.2",
+    "grunt-cli": "0.1.13",
     "grunt-uncss": "0.1.6",
     "grunt-processhtml": "0.2.7",
     "grunt-contrib-jshint": "0.8.0",
