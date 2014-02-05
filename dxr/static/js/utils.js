@@ -11,6 +11,8 @@ function onEsc(func) {
         // esc key pressed.
         if (keyPressed === 27 || keyPressed === 'Esc')
             func();
+        else
+            return true;
         });
 }
 
