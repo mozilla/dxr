@@ -70,5 +70,5 @@ ln -sf /usr/bin/llvm-config-3.3 /usr/local/bin/llvm-config
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
 /sbin/ldconfig
 
-make clean
-make test
+make -d clean
+make -d test
