@@ -38,8 +38,8 @@ table {
 body {
     background-color: #fff;
     color: #333;
-    margin: 0;
     font: 12px/1.5 Arial, Helvetica, sans-serif;
+    margin: 0;
 }
 h4 {
     margin: 0 0 .5rem 0;
@@ -184,6 +184,9 @@ table.result_snippet tr {
 .checkbox_label {
     white-space: nowrap;
 }
+.access-key {
+    text-decoration: underline;
+}
 .file tr {
     line-height: 0.7;
 }
@@ -318,7 +321,7 @@ mark {
     margin: 1.2em 0 0.1em 0;
 }
 .path-separator {
-    margin: 0 .4rem;
+    margin: 0 .2rem;
 }
 
 /* Keep icons in search results from clipping: */
@@ -537,4 +540,15 @@ mark {
     .text_search .query {
         width: 89%;
     }
+}
+.sf-select-options .selector-option-label {
+    display: inline-block;
+    vertical-align: top;
+    width: 10rem;
+}
+.sf-select-options .selector-option-description {
+    display: inline-block;
+    margin-right: 12rem;  /* Width of label plus padding */
+    vertical-align: top;
+    white-space: normal;
 }

@@ -7,14 +7,14 @@
     display: block;
     background-color: white;
     color: #000;
-    padding: .6rem .6rem .6rem 2rem;
+    padding: .5rem .6rem .5rem 2rem;
     text-decoration: none;
 }
 .selector-options a:hover {
     background-color: #e8e8e8;
 }
 .selector-options li {
-    border-top: 1px solid #e0e0e0;
+    line-height: 1.2;
 }
 .selector-options li:first-child {
     border-top: none;
@@ -28,7 +28,18 @@
     border-top-left-radius: 6px;
 }
 .selector-option-label {
+    color: #505050;
     font-weight: bold;
+}
+.selector-option-description {
+    color: #555;
+}
+.selector-option-description code {
+    border: 1px solid #ddd;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    margin: 0 2px;
+    padding: 0 5px;
 }
 @media only screen and (min-device-width: 320px) {
     .selector-options a {

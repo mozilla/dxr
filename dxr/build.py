@@ -24,6 +24,7 @@ from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
+from dxr.query import filter_menu_items
 from dxr.utils import load_template_env, connect_database, open_log, browse_url
 
 try:
@@ -333,6 +334,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                          for t in tree.config.trees],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
+         'filters': filter_menu_items(),
 
          # Folder template variables:
          'name': name,
@@ -540,6 +542,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
                          t.description)
                         for t in tree.config.trees],
         'generated_date': tree.config.generated_date,
+        'filters': filter_menu_items(),
 
         # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),

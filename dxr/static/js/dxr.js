@@ -19,6 +19,53 @@ $(function() {
     // Tell nunjucks our base location for template files.
     nunjucks.configure('dxr/static/templates/');
 
+    var timeouts = {};
+    timeouts.scroll = 500;
+    timeouts.search = 300;
+    // We start the history timeout after the search updates (i.e., after
+    // timeouts.search has elapsed).
+    timeouts.history = 2000 - timeouts.search;
+
+    /**
+     * Disable and enable pointer events on scroll begin and scroll end to
+     * avoid unnecessary paints and recalcs caused by hover effets.
+     * @see http://www.thecssninja.com/javascript/pointer-events-60fps
+     */
+    var docElem = document.documentElement;
+
+    // Return the maximum number of pixels the document can be scrolled.
+    function getMaxScrollY() {
+        // window.scrollMaxY is a non standard implementation in
+        // Gecko(Firefox) based browsers. If this is thus available,
+        // simply return it, else return the calculated value above.
+        // @see https://developer.mozilla.org/en-US/docs/Web/API/Window.scrollMaxY
+        return window.scrollMaxY || (docElem.scrollHeight - window.innerHeight);
+    }
+
+    /**
+     * Because we have a fixed header and often link to anchors inside pages, we can
+     * run into the situation where the highled anchor is hidden behind the header.
+     * This ensures that the highlighted anchor will always be in view.
+     * @param {string} id = The id of the highlighted table row
+     */
+    function scrollIntoView(id) {
+        var elementPos = document.getElementById(id).offsetTop;
+
+        if ((getMaxScrollY() - elementPos) > 100) {
+            window.scroll(0, window.scrollY - 150);
+        }
+    }
+
+    // Check if the currently loaded page has a hash in the URL
+    if (window.location.hash) {
+        scrollIntoView(window.location.hash.substr(1));
+    }
+
+    // We also need to cater for the above scenario when a user clicks on in page links.
+    window.onhashchange = function() {
+        scrollIntoView(window.location.hash.substr(1));
+    }
+
     /**
      * Presents the user with a notification message
      * @param {string} type - The type of notification to set, must be one of info, warn or error.
@@ -106,6 +153,7 @@ $(function() {
         caseSensitiveBox = $('#case'),
         contentContainer = $('#content'),
         waiter = null,
+        historyWaiter = null,
         nextRequestNumber = 1, // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
         displayedRequestNumber = 0,
         didScroll = false,
@@ -166,19 +214,6 @@ $(function() {
         return search + '?' + $.param(params);
     }
 
-    // Return the maximum number of pixels the document can be scrolled.
-    function getMaxScrollY() {
-        // Because the user might have resized the window since the last call,
-        // always get innerHeight at call time and do not cache.
-        var scrollMaxY = docElem.scrollHeight - window.innerHeight;
-
-        // window.scrollMaxY is a non standard implementation in
-        // Gecko(Firefox) based browsers. If this is thus available,
-        // simply return it, else return the calculated value above.
-        // @see https://developer.mozilla.org/en-US/docs/Web/API/Window.scrollMaxY
-        return window.scrollMaxY || scrollMaxY;
-    }
-
     var scrollPoll = null;
 
     /**
@@ -210,6 +245,14 @@ $(function() {
         var url = dxr.baseUrl + location.pathname + locationSearch + location.hash;
 
         history.replaceState(state, '', url);
+    }
+
+    /**
+     * Add an entry into the history stack whenever we do a new search.
+     */
+    function pushHistoryState(data) {
+        var searchUrl = constants.data('search') + '?' + data['query_string'];
+        history.pushState({}, '', searchUrl);
     }
 
     function infiniteScroll() {
@@ -269,7 +312,8 @@ $(function() {
      */
     function querySoon() {
         clearTimeout(waiter);
-        waiter = setTimeout(doQuery, 300);
+        clearTimeout(historyWaiter);
+        waiter = setTimeout(doQuery, timeouts.search);
     }
 
     /**
@@ -315,12 +359,18 @@ $(function() {
             var container = append ? contentContainer : contentContainer.empty();
             container.append(nunjucks.render(tmpl, data));
         }
+
+        if (!append) {
+            document.title = data.query + "- DXR Search";
+        }
     }
 
     /**
      * Queries and populates the results templates with the returned data.
      */
     function doQuery() {
+        clearTimeout(historyWaiter);
+
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
@@ -336,6 +386,7 @@ $(function() {
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
                 populateResults('results_container.html', data, false);
+                historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
         })
         .fail(function(jqxhr, textStatus, error) {
@@ -389,4 +440,20 @@ $(function() {
 
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
+
+    // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
+    // That means that if we naively set onpopstate, we would get into an
+    // infinite loop of reloading whenever onpopstate is triggered. Therefore,
+    // we have to only add out onpopstate handler once the page has loaded.
+    window.onload = function() {
+        setTimeout(function() {
+            window.onpopstate = popStateHandler;
+        }, 0);
+    };
+
+    // Reload the page when we go back or forward.
+    function popStateHandler(event) {
+        window.onpopstate = null;
+        window.location.reload();
+    }
 });
