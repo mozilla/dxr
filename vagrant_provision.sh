@@ -20,7 +20,7 @@ cd ~vagrant/dxr
 # "Insert Guest Additions CD" from the Devices menu. On the guest, mount
 # /dev/cdrom /mnt && cd /mnt && ./VBoxLinuxAdditions.run. Shut the guest back
 # down.
-./peep.py install -r requirements.txt
+pip install --no-deps -r requirements.txt
 python setup.py develop
 
 # Apache:
