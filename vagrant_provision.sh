@@ -21,7 +21,7 @@ cd ~vagrant/dxr
 # /dev/cdrom /mnt && cd /mnt && ./VBoxLinuxAdditions.run. Shut the guest back
 # down.
 pip install --no-deps -r requirements.txt
-#python setup.py develop
+python setup.py develop
 
 # Apache:
 apt-get install -y apache2-dev apache2
