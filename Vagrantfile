@@ -18,7 +18,7 @@ MOUNT_POINT = '/home/vagrant/dxr'
 Vagrant::Config.run do |config|
     config.vm.box = "saucy64"
     config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
-    config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
+    config.vm.customize ["modifyvm", :id, "--memory", 1024]
 
     is_jenkins = ENV['USER'] == 'jenkins'
 
