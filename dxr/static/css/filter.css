@@ -59,9 +59,9 @@
         right: 39.5%;
     }
     .sf-select-options {
-        top: 52%;
-        right: 1.80%;
-        width: 96.40%;
+        top: 76%;
+        right: 38.50%;
+        width: 59.70%;
     }
 }
 @media only screen and (min-width: 740px) {
@@ -70,8 +70,9 @@
         right: 17%;
     }
     .sf-select-options {
-        right: 1.10%;
-        width: 97.80%;
+        top: 76%;
+        right: 16.80%;
+        width: 82.10%;
     }
 }
 @media only screen and (min-width: 1220px) {
@@ -81,7 +82,7 @@
     }
     .sf-select-options {
         top: 76%;
-        right: 11.70%;
-        width: 87.40%;
+        right: 16.50%;
+        width: 82.80%;
     }
 }
