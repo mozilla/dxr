@@ -18,6 +18,8 @@
     position: absolute;
     right: 11.70%;
     width: 86.50%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 .sf-select-trigger {
     background-color: white;
@@ -84,5 +86,25 @@
         top: 76%;
         right: 16.50%;
         width: 82.80%;
+    }
+}
+@media only screen and (max-height: 1200px) {
+    .sf-select-options {
+        max-height: 1024px;
+    }
+}
+@media only screen and (max-height: 960px) {
+    .sf-select-options {
+        max-height: 700px;
+    }
+}
+@media only screen and (max-height: 720px) {
+    .sf-select-options {
+        max-height: 500px;
+    }
+}
+@media only screen and (max-height: 480px) {
+    .sf-select-options {
+        max-height: 320px;
     }
 }
