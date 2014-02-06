@@ -1,6 +1,6 @@
 $(function() {
     var contentContainer = $('#content');
-    var options = $('.selector-options');
+    var options = $('.select-options .selector-options');
 
     /**
      * Mark the selected element as checked.
@@ -16,16 +16,6 @@ $(function() {
 
         selected.addClass('selected');
         selected.attr('aria-checked', 'true');
-    }
-
-    /**
-     * Hide the current selector's options.
-     */
-    function hideOptions() {
-        // Because the tree selector can be injected by a JS
-        // template, we need to use the selector directly here,
-        // as the element will not exist on DOM ready.
-        $('.select-options').hide();
     }
 
     // Show/Hide the options
@@ -61,8 +51,5 @@ $(function() {
     });
 
     window.addEventListener('click', hideOptions, false);
-
-    onEsc(function() {
-        $('.select-options').hide();
-    });
+    onEsc(hideOptions);
 });

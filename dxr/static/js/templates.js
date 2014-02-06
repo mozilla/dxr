@@ -81,7 +81,7 @@ frame.set("selected_tree", l_selected_tree);
 var output= "";
 output += "\n  ";
 if(env.getFilter("length").call(context, l_tree_tuples) > 1) {
-output += "\n    <section id=\"tree-selector\" class=\"tree-selector\">\n      <button type=\"button\" class=\"ts-select-trigger\" aria-label=\"Switch Tree\">\n        <!-- arrow icon using icon font -->\n        <span aria-hidden=\"true\" data-icon-arrow=\"&#xe801;\" class=\"selector-arrow\">\n          <!-- tree icon using icon font -->\n          <span aria-hidden=\"true\" data-icon=\"&#xe800;\"></span>\n          <span class='current-tree'>Switch Tree</span>\n        </span>\n      </button>\n      <div class=\"select-options ts-modal\" aria-expanded=\"false\">\n        <form name=\"options-filter\" class=\"options-filter\" data-active=\"false\">\n          <label for=\"filter-txt\" class=\"visually-hidden\">Filter Trees</label>\n          <input type=\"text\" name=\"filter-txt\" id=\"filter-txt\" placeholder=\"Filter trees\" />\n          <input type=\"submit\" value=\"Filter\" class=\"visually-hidden\" />\n        </form>\n          <ul class=\"selector-options\" tabindex=\"-1\">\n            ";
+output += "\n    <section id=\"tree-selector\" class=\"tree-selector\">\n      <button type=\"button\" class=\"ts-select-trigger\" aria-label=\"Switch Tree\">\n        <!-- arrow icon using icon font -->\n        <span aria-hidden=\"true\" data-icon-arrow=\"&#xe801;\" class=\"selector-arrow\">\n          <!-- tree icon using icon font -->\n          <span aria-hidden=\"true\" data-icon=\"&#xe800;\"></span>\n          <span class='current-tree'>Switch Tree</span>\n        </span>\n      </button>\n      <div class=\"select-options ts-modal\" aria-expanded=\"false\">\n        <form name=\"options-filter\" class=\"options-filter\" data-active=\"false\">\n          <label for=\"filter-txt\" class=\"visually-hidden\">Filter Trees</label>\n          <input type=\"text\" name=\"filter-txt\" id=\"filter-txt\" placeholder=\"Filter trees\" />\n          <input type=\"submit\" value=\"Filter\" class=\"visually-hidden\" />\n        </form>\n        <ul class=\"selector-options\" tabindex=\"-1\">\n          ";
 frame = frame.push();
 var t_4 = l_tree_tuples;
 if(t_4) {var t_2;
@@ -93,18 +93,18 @@ var t_6 = t_4[t_2][1]
 frame.set("url", t_4[t_2][1]);
 var t_7 = t_4[t_2][2]
 frame.set("description", t_4[t_2][2]);
-output += "\n              <li>\n                <a href=\"";
+output += "\n            <li>\n              <a href=\"";
 output += runtime.suppressValue(t_6, env.autoesc);
 output += "\" ";
 if(t_5 == l_selected_tree) {
 output += "class=\"selected\" aria-checked=\"true\"";
 ;
 }
-output += ">\n                  <span class=\"selector-option-label\">";
+output += ">\n                <span class=\"selector-option-label\">";
 output += runtime.suppressValue(t_5, env.autoesc);
-output += "</span> ";
+output += "</span>\n                <span class=\"selector-option-description\">";
 output += runtime.suppressValue(t_7, env.autoesc);
-output += "\n                </a>\n              </li>\n            ";
+output += "</span>\n              </a>\n            </li>\n          ";
 ;
 }
 } else {
@@ -114,24 +114,24 @@ t_2++;
 var t_9 = t_4[t_8];
 frame.set("tree", t_8);
 frame.set("url", t_9);
-output += "\n              <li>\n                <a href=\"";
+output += "\n            <li>\n              <a href=\"";
 output += runtime.suppressValue(t_9, env.autoesc);
 output += "\" ";
 if(t_8 == l_selected_tree) {
 output += "class=\"selected\" aria-checked=\"true\"";
 ;
 }
-output += ">\n                  <span class=\"selector-option-label\">";
+output += ">\n                <span class=\"selector-option-label\">";
 output += runtime.suppressValue(t_8, env.autoesc);
-output += "</span> ";
+output += "</span>\n                <span class=\"selector-option-description\">";
 output += runtime.suppressValue(t_7, env.autoesc);
-output += "\n                </a>\n              </li>\n            ";
+output += "</span>\n              </a>\n            </li>\n          ";
 ;
 }
 }
 }
 frame = frame.pop();
-output += "\n          </ul>\n      </div>\n    </section>\n  ";
+output += "\n        </ul>\n      </div>\n    </section>\n  ";
 ;
 }
 output += "\n";
@@ -192,7 +192,7 @@ var colno = null;
 var output = "";
 try {
 if(runtime.contextOrFrameLookup(context, frame, "is_first_or_only")) {
-output += "\n    <a class=\"";
+output += "<a class=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "icon_class"), env.autoesc);
 output += "\" ";
 if(runtime.contextOrFrameLookup(context, frame, "is_dir")) {
@@ -205,11 +205,11 @@ output += " href=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "url"), env.autoesc);
 output += "\">";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "display_path"), env.autoesc);
-output += "</a>\n";
+output += "</a>";
 ;
 }
 else {
-output += "\n    <span class=\"path-separator\">/</span>\n    <a ";
+output += "<span class=\"path-separator\">/</span><a ";
 if(runtime.contextOrFrameLookup(context, frame, "is_dir")) {
 output += "data-path=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "data_path"), env.autoesc);
@@ -220,10 +220,9 @@ output += " href=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "url"), env.autoesc);
 output += "\">";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "display_path"), env.autoesc);
-output += "</a>\n";
+output += "</a>";
 ;
 }
-output += "\n";
 cb(null, output);
 ;
 } catch (e) {

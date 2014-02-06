@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     {% block head %}
-      <link href="{{ wwwroot }}/static/tango-search.png" rel="shortcut icon">
+      <link href="{{ wwwroot }}/static/icons/search.png" rel="shortcut icon">
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
 
@@ -25,8 +25,8 @@
 
             {% block text_search %}
               <label for="query" class="query_label visually-hidden">Find</label>
-              <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" />
-              <label class="checkbox_label"><input type="checkbox" name="case" id="case" class="checkbox_case" value="true"{% if is_case_sensitive %} checked{% endif %} />Case-sensitive</label>
+              <input type="text" name="q" value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
+              <label class="checkbox_label"><input type="checkbox" name="case" id="case" class="checkbox_case" value="true" accesskey="c"{% if is_case_sensitive %} checked{% endif %} /><span class="access-key">C</span>ase-sensitive</label>
             {% endblock %}
           </fieldset>
 

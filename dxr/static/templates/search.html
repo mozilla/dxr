@@ -15,20 +15,20 @@
   {{ tree_menu(tree_tuples, tree) }}
 
   {% if results|length > 0 %}
-    {% for icon, path, lines in results %}
+    {%- for icon, path, lines in results -%}
       <div class="result">
         <div class="path">
-          {% set icon_class = icon.split('/')[1] %}
-          {% set paths = path.split('/') %}
+          {%- set icon_class = icon.split('/')[1] -%}
+          {%- set paths = path.split('/') -%}
 
-          {% for display_path in paths %}
-            {% set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path %}
-            {% set is_first_or_only = loop.first or paths|length == 1 %}
-            {% set is_dir = not loop.last %}
-            {% set url = '%s/%s/source/%s' % (wwwroot, tree, path) %}
+          {%- for display_path in paths -%}
+            {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
+            {%- set is_first_or_only = loop.first or paths|length == 1 -%}
+            {%- set is_dir = not loop.last -%}
+            {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
 
-            {% include 'path_line.html' %}
-          {% endfor %}
+            {%- include 'path_line.html' -%}
+          {%- endfor -%}
         </div>
         <table class="result_snippet">
           <caption class="visually-hidden">Query matches in {{ path }}</caption>
