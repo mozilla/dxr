@@ -61,9 +61,6 @@ linking problem. Then restart `dxr-serve.py`, and all should work as expected.
 
 ## Installing on a Real Machine
 
-*dxr requires exactly llvm-3.2 to build. Anything newer or older will break the
-build.*
-
 To install DXR on a machine of your choice, do the following
 
 1. Install the dependencies in `docs/deployment.mkd`.
@@ -89,11 +86,7 @@ To install DXR on a machine of your choice, do the following
    * It should build the `libclang-index-plugin.so` inside the
      `dxr/plugins/clang` directory. You might have to edit the `makefile` in
      that directory to make the locations of `llvm-config`, `clang` and
-     `clang++` accurate. As mentioned earlier, the compile will succeed only
-     with exactly llvm/clang-3.2. Anything else will fail with this message.
-
-            dxr-index.cpp: In function 'std::string {anonymous}::getQualifiedName(const clang::NamedDecl&)':
-            dxr-index.cpp:93:13: error: 'const class clang::FunctionType' has no member named 'isConst'
+     `clang++` accurate.
 
 5. The `tests/test_basic` directory contains a small tree which you can build
    an index for to test your build. `cd` into this directory and run `make`. If
