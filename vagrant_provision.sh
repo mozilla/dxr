@@ -69,3 +69,6 @@ ln -sf /usr/bin/llvm-config-3.3 /usr/local/bin/llvm-config
 # Install libtrilite so Apache WSGI processes can see it:
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
 /sbin/ldconfig
+
+make clean
+make test
