@@ -501,7 +501,7 @@ mark {
 }
 @media only screen and (min-width: 740px) {
     .text_search .query {
-        width: 85%;
+        width: 84%;
     }
     input[type="submit"] {
         margin-right: 16.3%;

@@ -67,17 +67,17 @@
 @media only screen and (min-width: 740px) {
     .search-filter {
         top: 29%;
-        right: 16.5%;
+        right: 17%;
     }
     .sf-select-options {
         right: 1.10%;
         width: 97.80%;
     }
 }
-@media only screen and (min-width: 1224px) {
+@media only screen and (min-width: 1220px) {
     .search-filter {
         top: 29%;
-        right: 16%;
+        right: 17%;
     }
     .sf-select-options {
         top: 76%;
