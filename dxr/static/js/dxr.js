@@ -6,7 +6,8 @@ $(function() {
 
     var constants = $('#data');
     var stateConstants = $('#state');
-    var dxr = {};
+    var dxr = {},
+        docElem = document.documentElement;
 
     dxr.wwwroot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
@@ -14,6 +15,9 @@ $(function() {
     dxr.views = dxr.wwwroot + '/static/templates';
     dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
+
+    // Tell nunjucks our base location for template files.
+    nunjucks.configure('dxr/static/templates/');
 
     var timeouts = {};
     timeouts.scroll = 500;
@@ -27,21 +31,7 @@ $(function() {
      * avoid unnecessary paints and recalcs caused by hover effets.
      * @see http://www.thecssninja.com/javascript/pointer-events-60fps
      */
-    var docElem = document.documentElement,
-        timer;
-
-    window.addEventListener('scroll', function() {
-        // User scrolling so stop the timeout
-        clearTimeout(timer);
-        // Pointer events has not already been disabled.
-        if (!docElem.style.pointerEvents) {
-            docElem.style.pointerEvents = 'none';
-        }
-
-        timer = setTimeout(function() {
-            docElem.style.pointerEvents = '';
-        }, timeouts.scroll);
-    }, false);
+    var docElem = document.documentElement;
 
     // Return the maximum number of pixels the document can be scrolled.
     function getMaxScrollY() {
@@ -121,15 +111,6 @@ $(function() {
         }
     }
 
-    if (!nunjucks.env) {
-        nunjucks.env = new nunjucks.Environment(new nunjucks.HttpLoader(dxr.views));
-    }
-
-    var env = nunjucks.env,
-        resultsContainerTmpl = env.getTemplate('results_container.html'),
-        resultsTmpl = env.getTemplate('partial/results.html'),
-        pathLineTmpl = env.getTemplate('path_line.html');
-
     /**
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
@@ -153,7 +134,7 @@ $(function() {
 
             dataPath.push(paths[pathIndex]);
 
-            pathLines += pathLineTmpl.render({
+            pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
                 'icon_class': isFirstOrOnly ? iconClass : '',
@@ -311,7 +292,7 @@ $(function() {
                         // Update result count
                         resultCount = data.results.length;
                         // Use the results.html partial so we do not inject the entire container again.
-                        populateResults(resultsTmpl, data, true);
+                        populateResults('partial/results.html', data, true);
                         // update URL with new offset
                         setHistoryState(dataOffset);
                         // start the scrolling poller
@@ -376,7 +357,7 @@ $(function() {
             }
 
             var container = append ? contentContainer : contentContainer.empty();
-            container.append(tmpl.render(data));
+            container.append(nunjucks.render(tmpl, data));
         }
 
         if (!append) {
@@ -404,8 +385,7 @@ $(function() {
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
-                populateResults(resultsContainerTmpl, data, false);
-
+                populateResults('results_container.html', data, false);
                 historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
         })

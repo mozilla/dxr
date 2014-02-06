@@ -16,9 +16,9 @@ CONF = _config
 MOUNT_POINT = '/home/vagrant/dxr'
 
 Vagrant::Config.run do |config|
-    config.vm.box = "precise64"
-    config.vm.box_url = "http://files.vagrantup.com/precise64.box"
-    config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
+    config.vm.box = "saucy64"
+    config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
+    config.vm.customize ["modifyvm", :id, "--memory", 1024]
 
     is_jenkins = ENV['USER'] == 'jenkins'
 
@@ -41,12 +41,5 @@ Vagrant::Config.run do |config|
 
     config.vm.share_folder("vagrant-root", MOUNT_POINT, ".")
 
-    config.vm.provision :puppet do |puppet|
-        puppet.manifests_path = "puppet/manifests"
-        puppet.manifest_file = "init.pp"
-        # enable this to see verbose and debug puppet output
-        if CONF['debug_mode'] == true
-            puppet.options = "--verbose --debug"
-        end
-    end
+    config.vm.provision "shell", path: "vagrant_provision.sh"
 end
