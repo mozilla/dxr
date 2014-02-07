@@ -17,8 +17,18 @@ MOUNT_POINT = '/home/vagrant/dxr'
 
 Vagrant::Config.run do |config|
     config.vm.box = "precise64"
-    config.vm.box_url = "http://files.vagrantup.com/precise64.box"
-    config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
+    config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
+
+    Vagrant.configure("1") do |config|
+        config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
+    end
+
+    Vagrant.configure("2") do |config|
+        config.vm.provider "virtualbox" do |v|
+          v.name = "DXR_VM"
+          v.customize ["modifyvm", :id, "--memory", CONF['memory']]
+        end
+    end
 
     is_jenkins = ENV['USER'] == 'jenkins'
 
@@ -32,8 +42,16 @@ Vagrant::Config.run do |config|
         config.vm.forward_port 80, 8000
     end
 
-    # Enable symlinks, which trilite uses during build:
-    config.vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+    Vagrant.configure("1") do |config|
+        # Enable symlinks, which trilite uses during build:
+        config.vm.customize ["setextradata", :id,
+            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+    end
+
+    Vagrant.configure("2") do |config|
+        v.customize ["setextradata", :id,
+            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+    end
 
     if CONF['boot_mode'] == 'gui'
         config.vm.boot_mode = :gui
