@@ -181,9 +181,6 @@ nb_jobs = 4
 source_folder = {config_dir_path}/code
 object_folder = {config_dir_path}/code
 build_command = $CXX -o main main.cpp
-
-[Template]
-foot_text =
 """.format(config_dir_path=cls._config_dir_path))
 
         chdir(cls._config_dir_path)

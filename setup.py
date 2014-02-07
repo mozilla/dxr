@@ -23,6 +23,7 @@ setup(
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',
                       'Jinja2>=2.6',
+                      'parsimonious==0.5',
                       'Pygments>=1.6'],
     tests_require=['nose'],
     test_suite='nose.collector',

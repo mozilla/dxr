@@ -23,7 +23,6 @@ class Config(object):
             'nb_jobs':          "1",
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
-            'template':         "%(dxrroot)s/templates",
             'wwwroot':          "/",
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
@@ -41,7 +40,6 @@ class Config(object):
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.template_folder  = parser.get('DXR', 'template',         False, override)
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
@@ -52,16 +50,9 @@ class Config(object):
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
-        # Set template parameters (using new parser to avoid defaults)
-        tmp_cfg = ConfigParser()
-        tmp_cfg.read(configfile)
-        if tmp_cfg.has_section('Template'):
-            self.template_parameters = dict(tmp_cfg.items('Template'))
-        else:
-            self.template_parameters = dict()
 
         # Read all plugin_ keys
-        for key, value in tmp_cfg.items('DXR'):
+        for key, value in parser.items('DXR'):
             if key.startswith('plugin_'):
                 setattr(self, key, value)
 
@@ -71,7 +62,6 @@ class Config(object):
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
-        self.template_folder  = os.path.abspath(self.template_folder)
 
         # Make sure wwwroot doesn't end in /
         if self.wwwroot[-1] == '/':
@@ -112,9 +102,9 @@ class Config(object):
             return -1 if parser.has_option(a, "order") else 1
 
         for tree in sorted(parser.sections(), section_cmp):
+            # Don't interpret legacy [Template] section as a tree:
             if tree not in ('DXR', 'Template'):
                 self.trees.append(TreeConfig(self, self.configfile, tree))
-
 
 
 class TreeConfig(object):
@@ -129,19 +119,21 @@ class TreeConfig(object):
             'ignore_patterns':  ".hg .git CVS .svn .bzr .deps .libs",
             'build_command':    "make -j $jobs",
             'source_encoding':  'utf-8',
+            'description':  ''
         })
         parser.read(configfile)
-        
+
         # Set config values
-        self.enabled_plugins  = parser.get(name, 'enabled_plugins',   False)
-        self.disabled_plugins = parser.get(name, 'disabled_plugins',  False)
-        self.temp_folder      = parser.get(name, 'temp_folder',       False)
-        self.log_folder       = parser.get(name, 'log_folder',         False)
-        self.object_folder    = parser.get(name, 'object_folder',     False)
-        self.source_folder    = parser.get(name, 'source_folder',     False)
-        self.build_command    = parser.get(name, 'build_command',     False)
-        self.ignore_patterns  = parser.get(name, 'ignore_patterns',   False)
-        self.source_encoding  = parser.get(name, 'source_encoding',   False)
+        self.enabled_plugins  = parser.get(name, 'enabled_plugins')
+        self.disabled_plugins = parser.get(name, 'disabled_plugins')
+        self.temp_folder      = parser.get(name, 'temp_folder')
+        self.log_folder       = parser.get(name, 'log_folder')
+        self.object_folder    = parser.get(name, 'object_folder')
+        self.source_folder    = parser.get(name, 'source_folder')
+        self.build_command    = parser.get(name, 'build_command')
+        self.ignore_patterns  = parser.get(name, 'ignore_patterns')
+        self.source_encoding  = parser.get(name, 'source_encoding')
+        self.description      = parser.get(name, 'description')
 
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)

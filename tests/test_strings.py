@@ -20,6 +20,17 @@ class StringTests(SingleFileTestCase):
         """Make sure a negated phrase search doesn't crash."""
         self.found_nothing('void -"int"')
 
+    def test_empty_quotes(self):
+        """An effectively empty query should not filter the results at all.
+
+        It also should not trigger the trilite bug in which empty extents
+        queries hang: https://github.com/jonasfj/trilite/issues/6.
+
+        """
+        eq_(len(self.found_files('"')), 1)
+        eq_(len(self.found_files('""')), 1)
+        eq_(len(self.found_files('regexp:""')), 1)
+
 
 class RepeatedResultTests(SingleFileTestCase):
     # Putting code on the first line triggers the bug:

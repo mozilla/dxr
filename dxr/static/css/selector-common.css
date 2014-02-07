@@ -1,0 +1,58 @@
+.selector-options {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.selector-options a {
+    display: block;
+    background-color: white;
+    color: #000;
+    padding: .5rem .6rem .5rem 2rem;
+    text-decoration: none;
+}
+.selector-options a:hover {
+    background-color: #e8e8e8;
+}
+.selector-options li {
+    line-height: 1.2;
+}
+.selector-options li:first-child {
+    border-top: none;
+}
+.selector-options li:last-child a {
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+.selector-options li:first-child a {
+    border-top-right-radius: 6px;
+    border-top-left-radius: 6px;
+}
+.selector-option-label {
+    color: #505050;
+    font-weight: bold;
+}
+.selector-option-description {
+    color: #555;
+}
+.selector-option-description code {
+    border: 1px solid #ddd;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    margin: 0 2px;
+    padding: 0 5px;
+}
+@media only screen and (min-device-width: 320px) {
+    .selector-options a {
+        white-space: inherit;
+    }
+}
+@media only screen and (min-width: 740px) {
+    .selector-options a {
+        white-space: nowrap;
+    }
+}
+@media only screen and (min-width: 1224px) {
+    .selector-options a {
+        white-space: nowrap;
+    }
+}

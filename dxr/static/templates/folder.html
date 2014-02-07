@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% from "partial/switch_tree.html" import tree_menu %}
+
+{% block title %}{{ name }} - DXR{% endblock %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% set state_eof = True %}
+
+{% block content %}
+<div id="content" class="content" data-no-results="No results returned for current query.">
+  <div class="breadcrumbs">
+    {%- for path, name in paths_and_names -%}
+      {%- if not loop.first or loop.last and loop.length != 1 -%}
+        <span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
+      {%- else -%}
+        <a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+
+  {{ tree_menu(tree_tuples, tree) }}
+
+  <table class="folder-content">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Modified</th>
+        <th scope="col">Size</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for icon, name, modified, relative_url in folders %}
+      <tr>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}" class="folder-icon">{{ name }}/</a></td>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ modified.strftime("%Y-%b-%d %H:%m") }}</a></td>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}">-</a></td>
+      </tr>
+      {% endfor %}
+
+      {% for icon, name, modified, size, relative_url in files %}
+      <tr>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}"
+               style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png')"
+               class="icon">
+               {{ name }}</a></td>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ modified.strftime("%Y-%b-%d %H:%m") }}</a></td>
+        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ size|filesizeformat }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+{% endblock %}

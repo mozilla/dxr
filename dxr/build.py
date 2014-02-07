@@ -18,12 +18,14 @@ from warnings import warn
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from jinja2 import Markup
+from ordereddict import OrderedDict
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
-from dxr.utils import load_template_env, connect_database, open_log
+from dxr.query import filter_menu_items
+from dxr.utils import load_template_env, connect_database, open_log, browse_url
 
 try:
     from itertools import compress
@@ -97,7 +99,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     ensure_folder(config.temp_folder, not skip_indexing)
     ensure_folder(config.log_folder, not skip_indexing)
 
-    jinja_env = load_template_env(config.temp_folder, config.template_folder)
+    jinja_env = load_template_env(config.temp_folder, config.dxrroot)
 
     # We don't want to load config file on the server, so we just write all the
     # setting into the config.py script, simple as that.
@@ -105,29 +107,19 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         jinja_env,
         'config.py.jinja',
         os.path.join(config.target_folder, 'config.py'),
-        dict(trees=repr([t.name for t in config.trees]),
+        dict(trees=repr(OrderedDict((t.name, t.description)
+                                    for t in config.trees)),
              wwwroot=repr(config.wwwroot),
-             template_parameters=repr(config.template_parameters),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
 
-    # Build root-level index.html:
-    ensure_folder(os.path.join(config.target_folder, 'trees'))
-    _fill_and_write_template(
-        jinja_env,
-        'index.html',
-        os.path.join(config.target_folder, 'trees', 'index.html'),
-        {'wwwroot': config.wwwroot,
-          'tree': config.trees[0].name,
-          'trees': [t.name for t in config.trees],
-          'config': config.template_parameters,
-          'generated_date': config.generated_date})
     # TODO Make open-search.xml things (or make the server so it can do them!)
 
     # Build trees requested
+    ensure_folder(os.path.join(config.target_folder, 'trees'))
     for tree in trees:
         # Note starting time
         start_time = datetime.now()
@@ -324,7 +316,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Lay down the HTML:
     jinja_env = load_template_env(tree.config.temp_folder,
-                                  tree.config.template_folder)
+                                  tree.config.dxrroot)
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
@@ -336,10 +328,13 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
         {# Common template variables:
          'wwwroot': tree.config.wwwroot,
          'tree': tree.name,
-         'trees': [t.name for t in tree.config.trees],
-         'config': tree.config.template_parameters,
+         'tree_tuples': [(t.name,
+                          browse_url(t.name, tree.config.wwwroot, folder),
+                          t.description)
+                         for t in tree.config.trees],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
+         'filters': filter_menu_items(),
 
          # Folder template variables:
          'name': name,
@@ -536,16 +531,18 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
             htmlifiers.append(htmlifier)
     # Load template
     env = load_template_env(tree.config.temp_folder,
-                            tree.config.template_folder)
-    tmpl = env.get_template('file.html')
+                            tree.config.dxrroot)
 
     arguments = {
         # Set common template variables
         'wwwroot': tree.config.wwwroot,
         'tree': tree.name,
-        'trees': [t.name for t in tree.config.trees],
-        'config': tree.config.template_parameters,
+        'tree_tuples': [(t.name,
+                         browse_url(t.name, tree.config.wwwroot, path),
+                         t.description)
+                        for t in tree.config.trees],
         'generated_date': tree.config.generated_date,
+        'filters': filter_menu_items(),
 
         # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),
@@ -563,8 +560,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'sections': build_sections(tree, conn, path, text, htmlifiers)
     }
 
-    # Fill-in variables and dump to file with utf-8 encoding
-    tmpl.stream(**arguments).dump(dst_path, encoding='utf-8')
+    _fill_and_write_template(env, 'file.html', dst_path, arguments)
 
 
 class Line(object):
