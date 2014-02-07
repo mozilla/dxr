@@ -36,5 +36,4 @@ the `dxr` Python package.
  - `dxr/`               Supporting shared Python code. This gets installed as a
                         Python package
  - `dxr/plugins/`       Plugins (see plugins.mkd for details)
- - `dxr/templates/`     Templates (see templating.mkd for details)
  - `tests/`             Automated tests (see tests.mkd for details)

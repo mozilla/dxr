@@ -1,8 +1,25 @@
+# sha256: L9XU_-gfdi3So-WEctaQoNu6N2Z3ZQYAOu4-16qor-8
 Flask==0.9
+
+# sha256: jE8mkbKU170cPWDs26wtQ2uxvmGITzIcBGhCUuDV7C0
 futures==2.1.4
+
+# sha256: qF4YU3XbdcEJ-Z7N49VUFfA15waKgiUs9PFsZnrDj0k
 Jinja2==2.6
+
+# sha256: HDW0rCBs7y0kgWyJ-Jzyid09OM98RJuz-re_bUPwGx8
+ordereddict==1.1
+
+# sha256: 1DgyuiXqTOdHsKq2dcB-pGOEF6LMm5xcDLjvaClLEsA
+parsimonious==0.5
+
+# sha256: eZ7Uyvd1FuVEQIBtjZzYKnYH399OT7ZDgVFxpLXJIcA
 Pygments==1.6
+
+# sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
 Werkzeug==0.8.3
 
+
 # For deployment script only:
+# sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3

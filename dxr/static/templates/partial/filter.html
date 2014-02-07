@@ -1,0 +1,24 @@
+<section id="search-filter" class="search-filter">
+  <button type="button" class="sf-select-trigger" aria-label="Select Filter">
+      <!-- arrow icon using icon font -->
+      <span aria-hidden="true" data-filter-arrow="&#xe801;" class="sf-selector-arrow">
+          <span class='current-filter'>Filters</span>
+      </span>
+  </button>
+</section>
+<div class="sf-select-options sf-modal" aria-expanded="false">
+  <ul class="selector-options" tabindex="-1">
+    {% for filter in filters %}
+      <li>
+        <a href="javascript:void(0)" data-value="{{ filter.name }}:">
+          <span class="selector-option-label">
+            {{ filter.name }}:
+          </span>
+          <span class="selector-option-description">
+            {{ filter.description }}
+          </span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

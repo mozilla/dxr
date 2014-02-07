@@ -1,0 +1,30 @@
+{% if results|length > 0 %}
+    {% for result in results %}
+    <div class="result">
+        <div class="path">
+            {{ result.pathLine }}
+        </div>
+        <table class="result_snippet">
+            <caption class="visually-hidden">Query matches in {{ result.path }}</caption>
+            <thead class="visually-hidden">
+                <th scope="col">Line</th>
+                <th scope="col">Code Snippet</th>
+            </thead>
+            <tbody>
+            {% for entry in result.lines %}
+                <tr>
+                    <td>{{ entry.line_number }}</td>
+                    <td>
+    <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+    <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
+    </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="user-message info">{{ user_message }}</p>
+{% endif %}
