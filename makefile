@@ -1,4 +1,4 @@
-PLUGINS = clang pygmentize
+PLUGINS ?= clang pygmentize
 
 BUILD_PLUGINS = $(PLUGINS:%=build-plugin-%)
 CHECK_PLUGINS = $(PLUGINS:%=check-plugin-%)
