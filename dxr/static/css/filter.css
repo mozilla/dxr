@@ -6,8 +6,12 @@
     font-weight: normal;
     font-style: normal;
 }
+.in-progress .search-filter {
+    background: transparent url('/static/images/spinner-large.gif') 0 0 / contain no-repeat;
+}
 .search-filter {
     display: inline-block;
+    padding-left: 2rem;
     position: absolute;
     right: 45%;
     top: 26%;
@@ -55,6 +59,7 @@
     border-top-right-radius: 0;
     border-top-left-radius: 0;
 }
+
 @media only screen and (min-device-width: 320px) {
     .search-filter {
         top: 29%;
@@ -88,6 +93,7 @@
         width: 82.80%;
     }
 }
+
 @media only screen and (max-height: 1200px) {
     .sf-select-options {
         max-height: 1024px;

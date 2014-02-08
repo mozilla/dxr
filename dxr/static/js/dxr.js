@@ -155,6 +155,7 @@ $(function() {
         waiter = null,
         historyWaiter = null,
         nextRequestNumber = 1, // A monotonically increasing int that keeps old AJAX requests in flight from overwriting the results of newer ones, in case more than one is in flight simultaneously and they arrive out of order.
+        requestsInFlight = 0,  // Number of search requests in flight, so we know whether to hide the activity indicator
         displayedRequestNumber = 0,
         didScroll = false,
         resultCount = 0,
@@ -369,6 +370,21 @@ $(function() {
      * Queries and populates the results templates with the returned data.
      */
     function doQuery() {
+
+        function oneMoreRequest() {
+            if (requestsInFlight == 0) {
+                $('#search-box').addClass('in-progress');
+            }
+            requestsInFlight += 1;
+        }
+
+        function oneFewerRequest() {
+            requestsInFlight -= 1;
+            if (requestsInFlight == 0) {
+                $('#search-box').removeClass('in-progress');
+            }
+        }
+
         clearTimeout(historyWaiter);
 
         query = $.trim(queryField.val());
@@ -381,6 +397,7 @@ $(function() {
         }
 
         nextRequestNumber += 1;
+        oneMoreRequest()
         $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {
@@ -388,9 +405,12 @@ $(function() {
                 populateResults('results_container.html', data, false);
                 historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
+            oneFewerRequest()
         })
         .fail(function(jqxhr, textStatus, error) {
             var errorMessage = searchForm.data('error');
+
+            oneFewerRequest()
 
             // A newer response already arrived and is displayed. Don't both complaining about this old one.
             if (myRequestNumber < displayedRequestNumber)
