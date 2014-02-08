@@ -140,18 +140,22 @@ mark {
 .logo a:focus {
     background-color: transparent;
 }
+
 /* result-snippet */
-table.result_snippet tr:hover {
+table.result_snippet tr:hover,
+.file tr:hover {
     background: none;
 }
 .result_snippet th:first-child {
     border-right: 1px solid #fff;
     text-align: center;
 }
-table.result_snippet tr {
+table.result_snippet tr,
+.file tr {
     border: 0;
 }
-.result_snippet td:first-child {
+.result_snippet td:first-child,
+.file td:first-child {
     border-right: 1px solid #fff;
     color: #aaa;
     text-align: right;
@@ -164,28 +168,26 @@ table.result_snippet tr {
 .result_snippet a {
     cursor: pointer;
     display: block;
-    padding-left: .5rem;
     width: 100%;
 }
-.result_snippet a:target {
+.result_snippet a:nth-child(2) {
+    padding-left: .5rem;
+}
+.result_snippet a:target,
+.file a:target {
     background-color: gray;
     color: white;
-    padding-right: .5rem;
-    border-right: 3px solid gold;
+    padding: 0 .5rem;
 }
 .result_snippet code a {
     display: inline;
     width: 100%;
 }
 /* end result-snippet */
-.checkbox_case {
-    margin: .5em;
-}
-.checkbox_label {
-    white-space: nowrap;
-}
-.access-key {
-    text-decoration: underline;
+
+.file td:first-child a {
+    display: block;
+    padding: 0 .5rem;
 }
 .file tr {
     line-height: 0.7;
@@ -195,6 +197,16 @@ table.result_snippet tr {
 }
 .file pre {
     margin: .3rem;
+}
+
+.checkbox_case {
+    margin: .5em;
+}
+.checkbox_label {
+    white-space: nowrap;
+}
+.access-key {
+    text-decoration: underline;
 }
 mark {
     padding: .3rem 0;
