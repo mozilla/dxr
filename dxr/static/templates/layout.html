@@ -40,7 +40,32 @@
             <input type="submit" value="Search" class="visually-hidden" />
           {% endblock %}
         </form>
-        {% include '/partial/filter.html' %}
+
+        <section id="search-filter" class="search-filter">
+          <button type="button" class="sf-select-trigger" aria-label="Select Filter">
+              <!-- arrow icon using icon font -->
+              <span aria-hidden="true" data-filter-arrow="&#xe801;" class="sf-selector-arrow">
+                  Filters
+              </span>
+          </button>
+        </section>
+        <div class="sf-select-options sf-modal" aria-expanded="false">
+          <ul class="selector-options" tabindex="-1">
+            {% for filter in filters %}
+              <li>
+                <a href="javascript:void(0)" data-value="{{ filter.name }}:">
+                  <span class="selector-option-label">
+                    {{ filter.name }}:
+                  </span>
+                  <span class="selector-option-description">
+                    {{ filter.description }}
+                  </span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+
       </div>
 
       {% block content %}
