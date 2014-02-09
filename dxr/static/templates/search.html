@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% from "partial/switch_tree.html" import tree_menu %}
+
+{% block title %}{{ query }} - DXR Search{% endblock %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+<div id="content" class="content" data-no-results="No results returned for current query.">
+  <p class="top-of-tree">Results from the <a href="{{ wwwroot }}/{{ tree }}/source/">{{ tree }}</a> tree:</p>
+
+  {{ tree_menu(tree_tuples, tree) }}
+
+  {% if results|length > 0 %}
+    {%- for icon, path, lines in results -%}
+      <div class="result">
+        <div class="path">
+          {%- set icon_class = icon.split('/')[1] -%}
+          {%- set paths = path.split('/') -%}
+
+          {%- for display_path in paths -%}
+            {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
+            {%- set is_first_or_only = loop.first or paths|length == 1 -%}
+            {%- set is_dir = not loop.last -%}
+            {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
+
+            {%- include 'path_line.html' -%}
+          {%- endfor -%}
+        </div>
+        <table class="result_snippet">
+          <caption class="visually-hidden">Query matches in {{ path }}</caption>
+          <thead class="visually-hidden">
+              <th scope="col">Line</th>
+              <th scope="col">Code Snippet</th>
+          </thead>
+          {% for number, line in lines %}
+          <tbody>
+              <tr>
+                  <td>{{ number }}</td>
+                  <td>
+  <a class="snippet" href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+  <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
+  </a>
+                  </td>
+              </tr>
+          </tbody>
+          {% endfor %}
+      </table>
+      {% endfor %}
+      </div>
+  {% else %}
+    <p class="user-message info">No results returned for current query.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block footer %}
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+{% endblock %}

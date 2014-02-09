@@ -1,0 +1,145 @@
+/* icons */
+.folder-icon {
+    background: transparent url(/static/icons/folder.png) .5em 7px no-repeat;
+    padding: .5em .5em .5em 30px;  /* 30px = 16px icon + 7px padding above + a little more whitespace */
+}
+.folder-content,
+.result {
+    clear: both;
+}
+.folder-content .icon {
+    background-color: transparent;
+    background-position: .5em 6px;
+    background-repeat: no-repeat;
+    padding: .5em .5em .5em 30px;
+}
+a.reference {
+    background: transparent url(/static/icons/reference.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.method {
+    background: transparent url(/static/icons/method.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.field {
+    background: transparent url(/static/icons/field.png) 2px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.search {
+    background: transparent url(/static/icons/search.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.class {
+    background: transparent url(/static/icons/class.png) 4px 2px no-repeat;
+    padding-left: 1.5rem;
+}
+/* Folder context menu */
+a.goto-folder {
+    background: transparent url(/static/icons/goto_folder.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.path-search {
+    background: transparent url(/static/icons/path_search.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+a.exclude-path {
+    background: transparent url(/static/icons/exclude_path.png) 4px 8px no-repeat;
+    padding-left: 1.5rem;
+}
+/* MimeType Icons */
+.build {
+    background: transparent url(/static/icons/mimetypes/build.png) no-repeat;
+    padding-left: 1.5rem;
+}
+a.c {
+    background: transparent url(/static/icons/mimetypes/c.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.conf {
+    background: transparent url(/static/icons/mimetypes/conf.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.cpp {
+    background: transparent url(/static/icons/mimetypes/cpp.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.cs {
+    background: transparent url(/static/icons/mimetypes/cs.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.diff {
+    background: transparent url(/static/icons/mimetypes/diff.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.h {
+    background: transparent url(/static/icons/mimetypes/h.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.html {
+    background: transparent url(/static/icons/mimetypes/html.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.iso {
+    background: transparent url(/static/icons/mimetypes/iso.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.java {
+    background: transparent url(/static/icons/mimetypes/java.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.js {
+    background: transparent url(/static/icons/mimetypes/js.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.mm {
+    background: transparent url(/static/icons/mimetypes/mm.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.page_white_code_red {
+    background: transparent url(/static/icons/mimetypes/page_white_code_red.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.php {
+    background: transparent url(/static/icons/mimetypes/php.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.py {
+    background: transparent url(/static/icons/mimetypes/py.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.rb {
+    background: transparent url(/static/icons/mimetypes/rb.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.sh {
+    background: transparent url(/static/icons/mimetypes/sh.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.svg {
+    background: transparent url(/static/icons/mimetypes/svg.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.tex {
+    background: transparent url(/static/icons/mimetypes/tex.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.txt {
+    background: transparent url(/static/icons/mimetypes/txt.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.ui {
+    background: transparent url(/static/icons/mimetypes/ui.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.unknown {
+    background: transparent url(/static/icons/mimetypes/unknown.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.vs {
+    background: transparent url(/static/icons/mimetypes/vs.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.xml {
+    background: transparent url(/static/icons/mimetypes/xml.png) no-repeat;
+    padding-left: 1.5rem;
+}

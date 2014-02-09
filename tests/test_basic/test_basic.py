@@ -1,6 +1,6 @@
 from dxr.testing import DxrInstanceTestCase
 
-from nose.tools import ok_
+from nose.tools import eq_, ok_
 
 
 class BasicTests(DxrInstanceTestCase):
@@ -42,3 +42,9 @@ class BasicTests(DxrInstanceTestCase):
         self.found_files_eq('MAIN',
                             ['main.c', 'makefile'],
                             is_case_sensitive=False)
+
+    def test_index(self):
+        """Make sure the index controller redirects."""
+        response = self.client().get('/')
+        eq_(response.status_code, 302)
+        ok_(response.headers['Location'].endswith('/code/source/'))

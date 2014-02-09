@@ -1,0 +1,31 @@
+{% macro tree_menu(tree_tuples, selected_tree) %}
+  {% if tree_tuples|length > 1 %}
+    <section id="tree-selector" class="tree-selector">
+      <button type="button" class="ts-select-trigger" aria-label="Switch Tree">
+        <!-- arrow icon using icon font -->
+        <span aria-hidden="true" data-icon-arrow="&#xe801;" class="selector-arrow">
+          <!-- tree icon using icon font -->
+          <span aria-hidden="true" data-icon="&#xe800;"></span>
+          <span class='current-tree'>Switch Tree</span>
+        </span>
+      </button>
+      <div class="select-options ts-modal" aria-expanded="false">
+        <form name="options-filter" class="options-filter" data-active="false">
+          <label for="filter-txt" class="visually-hidden">Filter Trees</label>
+          <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
+          <input type="submit" value="Filter" class="visually-hidden" />
+        </form>
+        <ul class="selector-options" tabindex="-1">
+          {% for tree, url, description in tree_tuples %}
+            <li>
+              <a href="{{ url }}" {% if tree == selected_tree %}class="selected" aria-checked="true"{% endif %}>
+                <span class="selector-option-label">{{ tree }}</span>
+                <span class="selector-option-description">{{ description }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+  {% endif %}
+{% endmacro %}

@@ -1,0 +1,1 @@
+We don't really need to build any C to prove multi-tree is working.

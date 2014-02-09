@@ -1,0 +1,116 @@
+@font-face {
+    font-family: 'icons';
+    src: url('/static/fonts/icons.eot?#iefix2013') format('embedded-opentype'),
+         url('/static/fonts/icons.woff?2013') format('woff'),
+         url('/static/fonts/icons.ttf?2013') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+.in-progress .search-filter {
+    background: transparent url('/static/images/spinner-large.gif') 0 0 / contain no-repeat;
+}
+.search-filter {
+    display: inline-block;
+    padding-left: 2rem;
+    position: absolute;
+    right: 45%;
+    top: 26%;
+    width: auto;
+}
+.sf-select-options {
+    display: none;
+    position: absolute;
+    right: 11.70%;
+    width: 86.50%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sf-select-trigger {
+    background-color: white;
+    border-radius: .4rem;
+    padding: .1rem 0 .3rem 0;
+    border: 1px solid white;
+    width: auto;
+    min-width: 70px;
+    cursor: pointer;
+}
+.sf-select-trigger:hover {
+    background-color: #e8e8e8;
+}
+.sf-selector-arrow {
+    display: inline-block;
+    position: relative;
+    padding-right: 1rem;
+}
+[data-filter-arrow]:before {
+    display: block;
+    position: absolute;
+    top: 1px;
+    right: 0;
+    font-family: icons;
+    content: attr(data-filter-arrow);
+    speak: none;
+}
+.sf-modal {
+    border: 1px solid #d4d4d4;
+    border-radius: 0 0 6px 6px;
+}
+.sf-select-options li:first-child a {
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+}
+
+@media only screen and (min-device-width: 320px) {
+    .search-filter {
+        top: 29%;
+        right: 39.5%;
+    }
+    .sf-select-options {
+        top: 76%;
+        right: 38.50%;
+        width: 59.70%;
+    }
+}
+@media only screen and (min-width: 740px) {
+    .search-filter {
+        top: 29%;
+        right: 17%;
+    }
+    .sf-select-options {
+        top: 76%;
+        right: 16.80%;
+        width: 82.10%;
+    }
+}
+@media only screen and (min-width: 1220px) {
+    .search-filter {
+        top: 29%;
+        right: 17%;
+    }
+    .sf-select-options {
+        top: 76%;
+        right: 16.50%;
+        width: 82.80%;
+    }
+}
+
+@media only screen and (max-height: 1200px) {
+    .sf-select-options {
+        max-height: 1024px;
+    }
+}
+@media only screen and (max-height: 960px) {
+    .sf-select-options {
+        max-height: 700px;
+    }
+}
+@media only screen and (max-height: 720px) {
+    .sf-select-options {
+        max-height: 500px;
+    }
+}
+@media only screen and (max-height: 480px) {
+    .sf-select-options {
+        max-height: 320px;
+    }
+}

@@ -4,9 +4,14 @@
 /tests/*/target
 /tests/*/temp
 /tests/*/code/code
+/tests/*/code2/code
 /tests/*/dxr.config
 /vagrantconfig_local.yaml
 /.vagrant
 /build
 /dist
 /*.egg-info
+/node_modules/.bin/grunt
+/node_modules/.bin/nunjucks-precompile
+/node_modules/grunt*
+/node_modules/nunjucks

@@ -177,13 +177,12 @@ class Deployment(object):
                 # Does this recurse into submodules?
                 run('git fsck --no-dangling')
 
-                # Install stuff:
-                venv_bin_path = join(new_build_path, VENV_NAME, 'bin')
-                run('{pip} install -r requirements.txt',
-                    pip=join(venv_bin_path, 'pip'))
+                # Install stuff, using the new copy of peep from the checkout:
+                python = join(new_build_path, VENV_NAME, 'bin', 'python')
+                run('{python} ./peep.py install -r requirements.txt',
+                    python=python)
                 # Quiet the complaint about there being no matches for *.so:
-                run('{python} setup.py install 2>/dev/null',
-                    python=join(venv_bin_path, 'python'))
+                run('{python} setup.py install 2>/dev/null', python=python)
 
             # After installing, you always have to re-run this, even if we
             # were reusing a venv:
