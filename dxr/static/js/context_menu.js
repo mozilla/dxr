@@ -135,7 +135,7 @@ $(function() {
             var contextMenu = {},
                 menuItems = [{
                     text: 'Search for the substring <strong>' + word + '</strong>',
-                    href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word),
+                    href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word) + "&case=true",
                     icon: 'search'
                 }];
 
