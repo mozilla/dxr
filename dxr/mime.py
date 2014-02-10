@@ -22,6 +22,7 @@ ext_map = {
     "htm":        'html',
     "js":         'js',
     "h":          'h',
+    "hpp":        'h',
     "cpp":        'cpp',
     "cc":         'cpp',
     "cxx":        'cpp',
