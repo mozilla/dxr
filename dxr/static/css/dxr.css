@@ -351,7 +351,6 @@ mark {
 }
 /* Navigation panel */
 .panel {
-    display: none;
     position: absolute;
     top: 105px;
     right: 22px;
@@ -359,9 +358,6 @@ mark {
     border: 1px solid #e0e0e0;
     border-right: 0;
     min-width: 12rem;
-}
-.panel section {
-    display: none;
 }
 .panel button{
     display: inline-block;
@@ -380,13 +376,13 @@ mark {
     -webkit-transform: rotate(-90deg);
     -moz-transform: rotate(-90deg);
     transform: rotate(-90deg);
-    transition: all .5s;
+    transition: all .1s;
 }
 .navpanel-icon.expanded {
     -webkit-transform: rotate(0deg);
     -moz-transform: rotate(0deg);
     transform: rotate(0deg);
-    transition: all .5s;
+    transition: all .1s;
 }
 .navpanel-icon:before {
     font-family: icons;
