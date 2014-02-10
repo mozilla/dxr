@@ -318,6 +318,14 @@ $(function() {
     }
 
     /**
+     * Saves checkbox checked property to cookie and invokes queryNow function.
+     */
+    function updateCookieAndQueryNow(){
+       $.cookie('CaseSensitive', $('#case').prop('checked'), { expires : 42 });
+       queryNow();
+    }
+
+    /**
      * Clears any existing query timer and queries immediately.
      */
     function queryNow() {
@@ -426,7 +434,7 @@ $(function() {
     queryField.on('input', querySoon);
 
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
-    caseSensitiveBox.on('change', queryNow);
+    caseSensitiveBox.on('change', updateCookieAndQueryNow);
 
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0
@@ -469,6 +477,8 @@ $(function() {
         setTimeout(function() {
             window.onpopstate = popStateHandler;
         }, 0);
+        // initialization of case checkbox by value remembered in cookie
+        $('#case').prop('checked', 'true' === $.cookie('CaseSensitive'));
     };
 
     // Reload the page when we go back or forward.
