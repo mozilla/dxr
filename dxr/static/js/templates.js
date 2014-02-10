@@ -22,7 +22,7 @@ var t_8 = t_7[t_5];
 frame.set("entry", t_8);
 output += "\n                <tr>\n                    <td>";
 output += runtime.suppressValue(runtime.memberLookup((t_8),"line_number", env.autoesc), env.autoesc);
-output += "</td>\n                    <td>\n    <a class=\"snippet\" href=\"";
+output += "</td>\n                    <td>\n    <a href=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "wwwroot"), env.autoesc);
 output += "/";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "tree"), env.autoesc);
