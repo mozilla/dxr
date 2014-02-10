@@ -265,18 +265,6 @@ mark {
     right: 25.2%;
     padding: .2rem 0 0;
 }
-.simple_form_group {
-    display: block;
-    margin-right: .3rem;
-    padding: .7rem .3rem 0 .7rem;
-}
-.form_group {
-    display: inline-block;
-    width: 32.1%;
-    min-height: 185px;
-    vertical-align: top;
-    transition: height 1s;
-}
 .wide {
     width: 44.4%;
 }
@@ -498,15 +486,6 @@ mark {
         width: 1px;
         overflow: hidden;
     }
-    .form_group input {
-        width: 98%;
-    }
-    .simple_form_group {
-        padding-left: 0;
-    }
-    .simple_form_group label {
-        display: inline-block;
-    }
     .basic_search {
         top: 11%;
         left: 13px;
@@ -519,14 +498,6 @@ mark {
     }
     input[type="submit"] {
         margin-right: 16.3%;
-    }
-    .form_group label {
-        padding: 0 0 .2rem 0;
-        width: auto;
-        text-align: left;
-    }
-    .form_group input {
-        width: 90%;
     }
     .basic_search {
         right: 13%;
