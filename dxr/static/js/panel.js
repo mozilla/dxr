@@ -9,8 +9,8 @@ $(function() {
     function toggleAria(elem) {
         var expandedState = elem.attr('aria-expanded') === 'true' ? 'false' : 'true';
         var hiddenState = elem.attr('aria-hidden') === 'true' ? 'false' : 'true';
-        elem.attr('aria-hidden', state);
-        elem.attr('aria-expanded', state);
+        elem.attr('aria-hidden', hiddenState);
+        elem.attr('aria-expanded', expandedState);
     }
 
     $('#panel-toggle').click(function(event) {
