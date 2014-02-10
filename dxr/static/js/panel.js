@@ -1,6 +1,4 @@
 $(function() {
-    var panelContent = $('#panel-content');
-
     /**
      * Toggles the ARIA expanded and hidden attributes' state.
      *
@@ -14,7 +12,7 @@ $(function() {
     }
 
     $('#panel-toggle').click(function(event) {
-        var panelContent = $(this).next();
+        var panelContent = $('#panel-content');
         var icon = $('.navpanel-icon', this);
 
         icon.toggleClass('expanded');
