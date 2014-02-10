@@ -170,18 +170,14 @@ table.result_snippet tr,
     display: block;
     width: 100%;
 }
-.result_snippet a:nth-child(2) {
-    padding-left: .5rem;
-}
 .result_snippet a:target,
 .file a:target {
     background-color: gray;
     color: white;
     padding: 0 .5rem;
 }
-.result_snippet code a {
-    display: inline;
-    width: 100%;
+.result_snippet code {
+    white-space: pre;
 }
 /* end result-snippet */
 

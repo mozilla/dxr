@@ -260,7 +260,8 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
     """Return a line of string ``content`` with the given ``offsets`` prefixed
     by ``markup`` and suffixed by ``markdown``.
 
-    We assume that none of the offsets split a multibyte character.
+    We assume that none of the offsets split a multibyte character. Leading
+    whitespace is stripped.
 
     """
     def chunks():
@@ -283,7 +284,7 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
             next_newline = None
         yield cgi.escape(content[chars_before:next_newline].decode(encoding,
                                                                    'replace'))
-    return ''.join(chunks())
+    return ''.join(chunks()).lstrip()
 
 
 def _highlit_lines(content, offsets, markup, markdown, encoding):
