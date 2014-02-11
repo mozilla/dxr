@@ -455,6 +455,14 @@ mark {
     width: 1px;
     overflow: hidden;
 }
+.text_search .query {
+    padding-right: 6.2rem;
+    transition: padding-right .2s;
+}
+.in-progress .text_search .query {
+    padding-right: 8rem;
+    transition: padding-right .2s;
+}
 @media only screen and (min-device-width: 320px) {
     .text_search .query {
         width: 62%;
