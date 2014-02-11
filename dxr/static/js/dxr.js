@@ -318,10 +318,10 @@ $(function() {
     }
 
     /**
-     * Saves checkbox checked property to cookie and invokes queryNow function.
+     * Saves checkbox checked property to localStorage and invokes queryNow function.
      */
-    function updateCookieAndQueryNow(){
-       $.cookie('CaseSensitive', $('#case').prop('checked'), { expires : 42 });
+    function updateLocalStorageAndQueryNow(){
+       localStorage.setItem('caseSensitive', $('#case').prop('checked'));
        queryNow();
     }
 
@@ -434,7 +434,7 @@ $(function() {
     queryField.on('input', querySoon);
 
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
-    caseSensitiveBox.on('change', updateCookieAndQueryNow);
+    caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
 
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0
@@ -477,8 +477,8 @@ $(function() {
         setTimeout(function() {
             window.onpopstate = popStateHandler;
         }, 0);
-        // initialization of case checkbox by value remembered in cookie
-        $('#case').prop('checked', 'true' === $.cookie('CaseSensitive'));
+        // initialization of case checkbox by value remembered in localStorage
+        $('#case').prop('checked', 'true' === localStorage.getItem('caseSensitive'));
     };
 
     // Reload the page when we go back or forward.
