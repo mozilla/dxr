@@ -160,7 +160,6 @@ table.result_snippet tr,
     color: #aaa;
     text-align: right;
     width: 4%;
-    line-height: 1.4;
 }
 .result_snippet td {
     padding: .1rem .5rem;
@@ -186,7 +185,7 @@ table.result_snippet tr,
     padding: 0 .5rem;
 }
 .file tr {
-    line-height: 0.7;
+    line-height: 1.4;
 }
 .file th {
     line-height: 1.5;
