@@ -34,8 +34,8 @@
         <span class="navpanel-icon expanded" aria-hidden="false"></span>
         Navigation
       </button>
-      {% for section, items in sections %}
-        <section id="panel-content" aria-expanded="true" aria-hidden="false">
+      <section id="panel-content" aria-expanded="true" aria-hidden="false">
+        {% for section, items in sections %}
           <h4>{{ section }}</h4>
           <ul>
           {% for icon, title, href in items %}
@@ -44,8 +44,8 @@
             </li>
           {%- endfor %}
           </ul>
-        </section>
-      {% endfor %}
+        {% endfor %}
+      </section>
     </div>
   {% endif %}
 
@@ -72,14 +72,14 @@
           {% for line in lines %}
             <a id="{{ loop.index }}" href="#{{ loop.index }}">{{ loop.index }}</a>
           {% endfor %}
-          </td>
-          <td class="code">
+        </td>
+        <td class="code">
 <pre>
 {% for line, annotations in lines %}
 <code aria-labelledby="{{ loop.index }}">{{ line }}</code>
 {% endfor %}
 </pre>
-          </td>
+        </td>
       </tr>
     </tbody>
   </table>
