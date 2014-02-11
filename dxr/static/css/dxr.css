@@ -153,6 +153,8 @@ table.result_snippet tr:hover,
 table.result_snippet tr,
 .file tr {
     border: 0;
+    line-height: 1.3;
+    vertical-align: baseline;
 }
 .result_snippet td:first-child,
 .file td:first-child {
@@ -180,18 +182,15 @@ table.result_snippet tr,
 }
 /* end result-snippet */
 
+.file td {
+    padding: 0 .5em 0 .5em;
+}
 .file td:first-child a {
     display: block;
     padding: 0 .5rem;
 }
-.file tr {
-    line-height: 1.4;
-}
-.file th {
-    line-height: 1.5;
-}
 .file pre {
-    margin: .3rem;
+    margin: 0;
 }
 
 .checkbox_case {
