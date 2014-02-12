@@ -349,7 +349,7 @@ mark {
 }
 /* Navigation panel */
 .panel {
-    position: absolute;
+    position: fixed;
     top: 105px;
     right: 22px;
     background-color: #fff;
