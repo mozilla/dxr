@@ -5,6 +5,7 @@ class dxr ($project_path){
          "libsqlite3-dev": ensure => installed;
          "git": ensure => installed;
          "mercurial": ensure => installed;
+         "python-dev": ensure => installed;  # for MarkupSafe speedups
     }
 
     exec { "install-builddeps":
