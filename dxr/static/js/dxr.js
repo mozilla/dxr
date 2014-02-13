@@ -112,6 +112,15 @@ $(function() {
     }
 
     /**
+     * If the `case` param is in the URL, returns its boolean value. Otherwise,
+     * returns null.
+     */
+    function caseFromUrl() {
+        var match = /case=(\w+)/.exec(location.search);
+        return match ? (match[1] === 'true') : null;
+    }
+
+    /**
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
      *
@@ -170,12 +179,12 @@ $(function() {
                              '<a href="{{ url }}">click here to view all search results.</a>',
             searchUrl = constants.data('search'),
             fromQuery = /[&?from]=(\w+)/.exec(location.search),
-            isCaseSensitive = /case=(\w+)/.exec(location.search);
+            isCaseSensitive = caseFromUrl();
 
         searchUrl += '?q=' + fromQuery[1];
 
-        if(isCaseSensitive) {
-            searchUrl += '&case=' + isCaseSensitive[1];
+        if (isCaseSensitive !== null) {
+            searchUrl += '&case=' + isCaseSensitive;
         }
 
         var msgContainer = $('<p />', {
@@ -287,7 +296,7 @@ $(function() {
 
                 //Resubmit query for the next set of results.
                 $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
-                    if(data.results.length > 0) {
+                    if (data.results.length > 0) {
                         var state = {};
 
                         // Update result count
@@ -437,12 +446,12 @@ $(function() {
     caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
 
 
-    var urlCaseSensitive = /case=(\w+)/.exec(location.search)
-    if (urlCaseSensitive){
-        // persisting url case sensitivity param
-        localStorage.setItem('caseSensitive','true' === urlCaseSensitive[1]);
-    }else{
-        // restoring checkbox state from localStorage
+    var urlCaseSensitive = caseFromUrl();
+    if (urlCaseSensitive !== null) {
+        // Any case-sensitivity specification in the URL overrides what was in localStorage:
+        localStorage.setItem('caseSensitive', urlCaseSensitive);
+    } else {
+        // Restore checkbox state from localStorage:
         caseSensitiveBox.prop('checked', 'true' === localStorage.getItem('caseSensitive'));
     }
 
