@@ -237,6 +237,9 @@ mark {
     position: fixed;
     top: 0;
     background-color: #f5f5f5;
+    background-image: linear-gradient(to bottom, #f8f8f8, #eaeaea);
+    border-bottom: 1px solid #6d6d6d;
+    border-top: 1px solid #f5f5f5;
     color: #333;
     padding: .8rem;
     width: 100%;
