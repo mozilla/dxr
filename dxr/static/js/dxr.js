@@ -318,6 +318,14 @@ $(function() {
     }
 
     /**
+     * Saves checkbox checked property to localStorage and invokes queryNow function.
+     */
+    function updateLocalStorageAndQueryNow(){
+       localStorage.setItem('caseSensitive', $('#case').prop('checked'));
+       queryNow();
+    }
+
+    /**
      * Clears any existing query timer and queries immediately.
      */
     function queryNow() {
@@ -426,7 +434,18 @@ $(function() {
     queryField.on('input', querySoon);
 
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
-    caseSensitiveBox.on('change', queryNow);
+    caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
+
+
+    var urlCaseSensitive = /case=(\w+)/.exec(location.search)
+    if (urlCaseSensitive){
+        // persisting url case sensitivity param
+        localStorage.setItem('caseSensitive','true' === urlCaseSensitive[1]);
+    }else{
+        // restoring checkbox state from localStorage
+        caseSensitiveBox.prop('checked', 'true' === localStorage.getItem('caseSensitive'));
+    }
+
 
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0
