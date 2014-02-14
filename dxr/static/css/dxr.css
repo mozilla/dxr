@@ -333,7 +333,9 @@ mark {
 .top-of-tree a:link,
 .top-of-tree a:visited,
 .breadcrumbs a:link,
-.breadcrumbs a:visited {
+.breadcrumbs a:visited,
+.bubble a:link,
+.bubble a:visited {
     color: #0095dd;
 }
 .top-of-tree a:hover,
@@ -436,16 +438,6 @@ mark {
     background: -moz-linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
     background: linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
     color: white;
-}
-.simple {
-    background: -webkit-linear-gradient(green, darkgreen);
-    background: -moz-linear-gradient(green, darkgreen);
-    background: -o-linear-gradient(green, darkgreen);
-    background: linear-gradient(green, darkgreen);
-    color: white;
-}
-.simple a {
-    text-decoration: underline;
 }
 #fetch-results {
     display: none;

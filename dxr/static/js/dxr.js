@@ -69,10 +69,10 @@ $(function() {
     /**
      * Hang an advisory message off the search field.
      * @param {string} level - The seriousness: 'info', 'warning', or 'error'
-     * @param {string} message - The message to be displayed.
+     * @param {string} html - The HTML message to be displayed
      */
-    function showBubble(level, message) {
-        $('.bubble').text(message)
+    function showBubble(level, html) {
+        $('.bubble').html(html)
                     .removeClass('error warning info')
                     .addClass(level)
                     .show();
@@ -157,27 +157,18 @@ $(function() {
         defaultDataLimit = 100;
 
     // Has the user been redirected to a direct result?
-    if (location.search.indexOf('from') > -1) {
+    if (location.search.indexOf('from=') > -1) {
         // Offer the user the option to see all the results instead.
-        var viewResultsTxt = 'You have been taken to a direct result ' +
-                             '<a href="{{ url }}">click here to view all search results.</a>',
-            searchUrl = constants.data('search'),
+        var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>',
             fromQuery = /[&?from]=(\w+)/.exec(location.search),
             isCaseSensitive = caseFromUrl();
 
-        searchUrl += '?q=' + fromQuery[1];
-
+        var searchUrl = constants.data('search') + '?q=' + fromQuery[1];
         if (isCaseSensitive !== null) {
             searchUrl += '&case=' + isCaseSensitive;
         }
 
-        var msgContainer = $('<p />', {
-                'class': 'user-message simple',
-                'html': viewResultsTxt.replace('{{ url }}', searchUrl)
-            }),
-            fileContainer = $('#file');
-
-        fileContainer.before(msgContainer);
+        showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
     }
 
     $(window).scroll(function() {
