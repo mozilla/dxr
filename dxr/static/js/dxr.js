@@ -422,12 +422,12 @@ $(function() {
                 populateResults('results_container.html', data, false);
                 historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
-            oneFewerRequest()
+            oneFewerRequest();
         })
         .fail(function(jqxhr, textStatus, error) {
             var errorMessage = searchForm.data('error');
 
-            oneFewerRequest()
+            oneFewerRequest();
 
             // A newer response already arrived and is displayed. Don't both complaining about this old one.
             if (myRequestNumber < displayedRequestNumber)
