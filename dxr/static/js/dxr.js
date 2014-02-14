@@ -385,7 +385,10 @@ $(function() {
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
             limit = previousDataLimit = parseInt((window.innerHeight / lineHeight) + 25);
 
-        if (query.length < 3) {
+        if (query.length === 0) {
+            hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
+            return;
+        } else if (query.length < 3) {
             showBubble('warning', 'Enter at least 3 characters to do a search.');
             return;
         }
