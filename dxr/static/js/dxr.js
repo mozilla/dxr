@@ -389,7 +389,7 @@ $(function() {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
             return;
         } else if (query.length < 3) {
-            showBubble('warning', 'Enter at least 3 characters to do a search.');
+            showBubble('info', 'Enter at least 3 characters to do a search.');
             return;
         }
 
