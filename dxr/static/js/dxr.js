@@ -67,35 +67,19 @@ $(function() {
     }
 
     /**
-     * Presents the user with a notification message
-     * @param {string} type - The type of notification to set, must be one of info, warn or error.
+     * Hang an advisory message off the search field.
+     * @param {string} level - The seriousness: 'info', 'warning', or 'error'
      * @param {string} message - The message to be displayed.
-     * @param {Object} target - The element to use as the display target for the message.
      */
-    function setUserMessage(type, message, target) {
-        var messageContainer = document.createElement('p'),
-            msg = document.createTextNode(message);
+    function showBubble(level, message) {
+        $('.bubble').text(message)
+                    .removeClass('error warning info')
+                    .addClass(level)
+                    .show();
+    }
 
-        messageContainer.appendChild(msg);
-
-        switch(type) {
-            case 'info':
-                messageContainer.setAttribute('class', 'user-message info');
-                break;
-            case 'warn':
-                messageContainer.setAttribute('class', 'user-message warn');
-                break;
-            case 'error':
-                messageContainer.setAttribute('class', 'user-message error');
-                break;
-            default:
-                console.log('Unrecognized message type. See function documentation for supported types.');
-                return;
-        }
-        // If we are already showing a user message in the target, do not append again.
-        if (!$('.message', target).length) {
-            target.append(messageContainer);
-        }
+    function hideBubble() {
+        $('.bubble').fadeOut(300);
     }
 
     /**
@@ -410,9 +394,11 @@ $(function() {
             limit = previousDataLimit = parseInt((window.innerHeight / lineHeight) + 25);
 
         if (query.length < 3) {
+            showBubble('warning', 'Enter at least 3 characters to do a search.');
             return;
         }
 
+        hideBubble();
         nextRequestNumber += 1;
         oneMoreRequest()
         $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
@@ -425,7 +411,7 @@ $(function() {
             oneFewerRequest();
         })
         .fail(function(jqxhr, textStatus, error) {
-            var errorMessage = searchForm.data('error');
+            var errorMessage = 'An error occurred. Please try again.';
 
             oneFewerRequest();
 
@@ -434,8 +420,8 @@ $(function() {
                 return;
 
             if (error)
-                errorMessage += ' Error: ' + error;
-            setUserMessage('error', errorMessage, $('.text_search', searchForm));
+                errorMessage += '(' + error + ')';
+            showBubble('error', errorMessage);
         });
     }
 

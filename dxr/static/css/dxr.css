@@ -469,9 +469,13 @@ mark {
     padding-right: 8rem;
     transition: padding-right .2s;
 }
+
 @media only screen and (min-device-width: 320px) {
     .text_search .query {
         width: 62%;
+    }
+    .bubble {
+        margin-right: 38%;  /* 100% minus the above */
     }
     input[type="submit"] {
         margin-right: 14%;
@@ -504,6 +508,9 @@ mark {
     .text_search .query {
         width: 84%;
     }
+    .bubble {
+        margin-right: 16%;  /* 100% minus the above */
+    }
     input[type="submit"] {
         margin-right: 16.3%;
     }
@@ -511,6 +518,7 @@ mark {
         right: 13%;
     }
 }
+
 .sf-select-options .selector-option-label {
     display: inline-block;
     vertical-align: top;
@@ -521,4 +529,62 @@ mark {
     margin-right: 12rem;  /* Width of label plus padding */
     vertical-align: top;
     white-space: normal;
+}
+
+/* Message bubble */
+.bubble {
+    border: 1px solid #ccc;
+    border-radius: 9px;
+    color: #6c6c6c;
+    display: none;
+    font-size: 85%;
+    padding: 0.1rem 30px 0.1rem 34px;
+    position: absolute;
+    top: .25rem;
+}
+/* The big triangle */
+.bubble:before {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    border-color: #ccc transparent;
+    /* reduce the damage in FF3.0 */
+    display: block;
+    width: 0;
+
+    top: -9px; /* value = - border-top-width - border-bottom-width */
+    bottom: auto;
+    right: auto;
+    left: 11px; /* controls horizontal position */
+    border-width: 0 9px 9px;
+}
+/* The small triangle */
+.bubble:after {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    border-color: #fff transparent;
+    /* reduce the damage in FF3.0 */
+    display: block;
+    width: 0;
+
+    top: -8px; /* value = - border-top-width - border-bottom-width */
+    bottom: auto;
+    right: auto;
+    left: 11px; /* value = (:before left) + (:before border-left) - (:after border-left) */
+    border-width: 0 9px 9px;
+}
+.bubble.info {
+    background: white url(/static/images/info.gif) 12px 0 / 3ex no-repeat;
+}
+.bubble.warning {
+    background: white url('/static/images/warning.gif') 10px -2px / 3.5ex no-repeat;
+}
+.bubble.error {
+    background: white url(/static/images/error.gif) 12px 0 / 3ex no-repeat;
+}
+.zero-size-container {
+    position: relative;
+    height: 0;
+    width: 100%;
 }
