@@ -157,10 +157,10 @@ $(function() {
         defaultDataLimit = 100;
 
     // Has the user been redirected to a direct result?
-    if (location.search.indexOf('from=') > -1) {
+    var fromQuery = /[(&|^)from]=([^&]+)/.exec(location.search);
+    if (fromQuery !== null) {
         // Offer the user the option to see all the results instead.
         var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>',
-            fromQuery = /[&?from]=(\w+)/.exec(location.search),
             isCaseSensitive = caseFromUrl();
 
         var searchUrl = constants.data('search') + '?q=' + fromQuery[1];
@@ -168,6 +168,7 @@ $(function() {
             searchUrl += '&case=' + isCaseSensitive;
         }
 
+        $('#query').val(decodeURIComponent(fromQuery[1]));
         showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
     }
 
