@@ -83,19 +83,6 @@ $(function() {
     }
 
     /**
-     * Removes previously added notification message from target.
-     * @param {Object} target - The element to use as the display target for the message.
-     */
-    function removeUserMessage(target) {
-        var userMessage = $('.message', target);
-
-        // If the user message container is found, remove it completely.
-        if (userMessage.length) {
-            userMessage.remove();
-        }
-    }
-
-    /**
      * If the `case` param is in the URL, returns its boolean value. Otherwise,
      * returns null.
      */
