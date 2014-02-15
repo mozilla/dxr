@@ -427,17 +427,9 @@ mark {
     background-color: #e0e0e0;
     text-decoration: underline;
 }
-/* user messages */
-.user-message {
+.no-results {
     clear: both;
-    padding: .5rem;
-    border-bottom: 3px solid darkgreen;
-}
-.user-message.info {
-    background: -webkit-linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
-    background: -moz-linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
-    background: linear-gradient(rgb(129, 188, 46), rgb(101, 147, 36));
-    color: white;
+    font-style: italic;
 }
 #fetch-results {
     display: none;

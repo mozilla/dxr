@@ -48,7 +48,7 @@ output += "\n";
 ;
 }
 else {
-output += "\n    <p class=\"user-message info\">";
+output += "\n    <p class=\"no-results\">";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "user_message"), env.autoesc);
 output += "</p>\n";
 ;
