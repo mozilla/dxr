@@ -335,6 +335,8 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
          'filters': filter_menu_items(),
+         # Autofocus only at the root of each tree:
+         'should_autofocus_query': folder == '',
 
          # Folder template variables:
          'name': name,
