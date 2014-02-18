@@ -51,7 +51,7 @@ def run(command):
 
 
 class TestCase(unittest.TestCase):
-    """Container for general convenience functions for DXR tests"""
+    """Abstract container for general convenience functions for DXR tests"""
 
     def client(self):
         # TODO: DRY between here and the config file with 'target'.
