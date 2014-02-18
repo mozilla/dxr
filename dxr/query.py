@@ -496,7 +496,7 @@ class TriLiteSearchFilter(SearchFilter):
 
     def menu_item(self):
         return {'name': 'regexp',
-                'description': Markup(r'Regular expression. Example: <code>regexp:(?i)\bs?printf</code>')}
+                'description': Markup(r'Regular expression. Examples: <code>regexp:(?i)\bs?printf</code> <code>regexp:"(three|3) mice"</code>')}
 
 
 class SimpleFilter(SearchFilter):

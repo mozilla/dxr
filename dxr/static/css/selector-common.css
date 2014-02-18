@@ -40,6 +40,7 @@
     border-radius: 3px;
     margin: 0 2px;
     padding: 0 5px;
+    white-space: nowrap;
 }
 @media only screen and (min-device-width: 320px) {
     .selector-options a {
