@@ -23,13 +23,6 @@ $(function() {
     // timeouts.search has elapsed).
     timeouts.history = 2000 - timeouts.search;
 
-    /**
-     * Disable and enable pointer events on scroll begin and scroll end to
-     * avoid unnecessary paints and recalcs caused by hover effets.
-     * @see http://www.thecssninja.com/javascript/pointer-events-60fps
-     */
-    var docElem = document.documentElement;
-
     // Tell nunjucks our base location for template files.
     nunjucks.configure('dxr/static/templates/');
 
@@ -64,7 +57,7 @@ $(function() {
     // We also need to cater for the above scenario when a user clicks on in page links.
     window.onhashchange = function() {
         scrollIntoView(window.location.hash.substr(1));
-    }
+    };
 
     /**
      * Hang an advisory message off the search field.
@@ -182,7 +175,7 @@ $(function() {
         params.format = 'json';
         params['case'] = isCaseSensitive;
         params.limit = limit;
-        params.offset = offset
+        params.offset = offset;
 
         return search + '?' + $.param(params);
     }
@@ -224,7 +217,7 @@ $(function() {
      * Add an entry into the history stack whenever we do a new search.
      */
     function pushHistoryState(data) {
-        var searchUrl = constants.data('search') + '?' + data['query_string'];
+        var searchUrl = constants.data('search') + '?' + data.query_string;
         history.pushState({}, '', searchUrl);
     }
 
@@ -312,20 +305,20 @@ $(function() {
      * @param {bool} append - Should the content be appended or overwrite
      */
     function populateResults(tmpl, data, append) {
-        data['wwwroot'] = dxr.wwwroot;
-        data['tree'] = dxr.tree;
-        data['top_of_tree'] = dxr.wwwroot + '/' + data['tree'] + '/source/';
-        data['trees'] = data.trees;
+        data.wwwroot = dxr.wwwroot;
+        data.tree = dxr.tree;
+        data.top_of_tree = dxr.wwwroot + '/' + data.tree + '/source/';
+        data.trees = data.trees;
 
         var params = {
             q: data.query,
             case: data.is_case_sensitive
-        }
-        data['query_string'] = $.param(params);
+        };
+        data.query_string = $.param(params);
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
-            data['user_message'] = contentContainer.data('no-results');
+            data.user_message = contentContainer.data('no-results');
             contentContainer.empty().append(nunjucks.render(tmpl, data));
         } else {
 
@@ -352,7 +345,7 @@ $(function() {
     function doQuery() {
 
         function oneMoreRequest() {
-            if (requestsInFlight == 0) {
+            if (requestsInFlight === 0) {
                 $('#search-box').addClass('in-progress');
             }
             requestsInFlight += 1;
@@ -360,7 +353,7 @@ $(function() {
 
         function oneFewerRequest() {
             requestsInFlight -= 1;
-            if (requestsInFlight == 0) {
+            if (requestsInFlight === 0) {
                 $('#search-box').removeClass('in-progress');
             }
         }
@@ -382,7 +375,7 @@ $(function() {
 
         hideBubble();
         nextRequestNumber += 1;
-        oneMoreRequest()
+        oneMoreRequest();
         $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {

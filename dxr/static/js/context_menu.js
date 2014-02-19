@@ -46,7 +46,7 @@ $(function() {
         }
 
         target.append(nunjucks.render('context_menu.html', contextMenu));
-        var currentContextMenu =  $('#context-menu');
+        var currentContextMenu = $('#context-menu');
 
         // Immediately after appending the context menu, position it.
         currentContextMenu.css({
