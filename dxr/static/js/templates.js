@@ -11,7 +11,7 @@ if(t_3) {for(var t_1=0; t_1 < t_3.length; t_1++) {
 var t_4 = t_3[t_1];
 frame.set("result", t_4);
 output += "\n    <div class=\"result\">\n        <div class=\"path\">\n            ";
-output += runtime.suppressValue(runtime.memberLookup((t_4),"pathLine", env.autoesc), env.autoesc);
+output += runtime.suppressValue(env.getFilter("safe").call(context, runtime.memberLookup((t_4),"pathLine", env.autoesc)), env.autoesc);
 output += "\n        </div>\n        <table class=\"result_snippet\">\n            <caption class=\"visually-hidden\">Query matches in ";
 output += runtime.suppressValue(runtime.memberLookup((t_4),"path", env.autoesc), env.autoesc);
 output += "</caption>\n            <thead class=\"visually-hidden\">\n                <th scope=\"col\">Line</th>\n                <th scope=\"col\">Code Snippet</th>\n            </thead>\n            <tbody>\n            ";
@@ -33,7 +33,7 @@ output += runtime.suppressValue(runtime.memberLookup((t_8),"line_number", env.au
 output += "\">\n    <code aria-labelledby=\"";
 output += runtime.suppressValue(runtime.memberLookup((t_8),"line_number", env.autoesc), env.autoesc);
 output += "\">";
-output += runtime.suppressValue(runtime.memberLookup((t_8),"line", env.autoesc), env.autoesc);
+output += runtime.suppressValue(env.getFilter("safe").call(context, runtime.memberLookup((t_8),"line", env.autoesc)), env.autoesc);
 output += "</code>\n    </a>\n                    </td>\n                </tr>\n            ";
 ;
 }
@@ -168,7 +168,7 @@ output += runtime.suppressValue(runtime.memberLookup((t_4),"href", env.autoesc),
 output += "\" class=\"";
 output += runtime.suppressValue(runtime.memberLookup((t_4),"icon", env.autoesc), env.autoesc);
 output += "\">";
-output += runtime.suppressValue(runtime.memberLookup((t_4),"text", env.autoesc), env.autoesc);
+output += runtime.suppressValue(env.getFilter("safe").call(context, runtime.memberLookup((t_4),"html", env.autoesc)), env.autoesc);
 output += "</a></li>\n    ";
 ;
 }
@@ -194,24 +194,15 @@ try {
 if(runtime.contextOrFrameLookup(context, frame, "is_first_or_only")) {
 output += "<a class=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "icon_class"), env.autoesc);
-output += "\" ";
-if(runtime.contextOrFrameLookup(context, frame, "is_dir")) {
-output += "data-path=\"";
-output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "data_path"), env.autoesc);
 output += "\"";
-;
-}
-output += " href=\"";
-output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "url"), env.autoesc);
-output += "\">";
-output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "display_path"), env.autoesc);
-output += "</a>";
 ;
 }
 else {
-output += "<span class=\"path-separator\">/</span><a ";
+output += "<span class=\"path-separator\">/</span><a";
+;
+}
 if(runtime.contextOrFrameLookup(context, frame, "is_dir")) {
-output += "data-path=\"";
+output += " data-path=\"";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "data_path"), env.autoesc);
 output += "\"";
 ;
@@ -221,8 +212,6 @@ output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "ur
 output += "\">";
 output += runtime.suppressValue(runtime.contextOrFrameLookup(context, frame, "display_path"), env.autoesc);
 output += "</a>";
-;
-}
 cb(null, output);
 ;
 } catch (e) {

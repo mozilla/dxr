@@ -2,7 +2,7 @@
     {% for result in results %}
     <div class="result">
         <div class="path">
-            {{ result.pathLine }}
+            {{ result.pathLine|safe }}
         </div>
         <table class="result_snippet">
             <caption class="visually-hidden">Query matches in {{ result.path }}</caption>
@@ -16,7 +16,7 @@
                     <td>{{ entry.line_number }}</td>
                     <td>
     <a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-    <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
+    <code aria-labelledby="{{ entry.line_number }}">{{ entry.line|safe }}</code>
     </a>
                     </td>
                 </tr>

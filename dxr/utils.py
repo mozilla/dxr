@@ -50,7 +50,8 @@ def load_template_env(temp_folder, dxr_root):
                 loader=jinja2.FileSystemLoader(
                         join(dxr_root, TEMPLATE_DIR)),
                 auto_reload=False,
-                bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache)
+                bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache),
+                autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
         )
     return _template_env
 

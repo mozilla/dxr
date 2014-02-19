@@ -72,25 +72,25 @@ $(function() {
 
         var contextMenu = {},
             path = $(this).data('path'),
-            baseSearchParams = '?limit=100&amp;redirect=false&amp;q=',
+            baseSearchParams = '?limit=100&redirect=false&q=',
             query = $.trim(queryField.val()),
-            browseUrl = dxr.wwwroot + '/' + dxr.tree + '/source/' + path,
-            limitSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20path%3A' + path + '%2F',
-            excludeSearchUrl = dxr.searchUrl + baseSearchParams + query + '%20-path%3A' + path + '%2F';
+            browseUrl = dxr.wwwroot + '/' + encodeURIComponent(dxr.tree) + '/source/' + path,
+            limitSearchUrl = dxr.searchUrl + baseSearchParams + encodeURIComponent(query) + '%20path%3A' + path + '%2F',  // TODO: Escape path properly.
+            excludeSearchUrl = dxr.searchUrl + baseSearchParams + encodeURIComponent(query) + '%20-path%3A' + path + '%2F';
 
         contextMenu.menuItems = [
                 {
-                    text: 'Browse folder contents',
+                    html: 'Browse folder contents',
                     href: browseUrl,
                     icon: 'goto-folder'
                 },
                 {
-                    text: 'Limit search to folder',
+                    html: 'Limit search to folder',
                     href: limitSearchUrl,
                     icon: 'path-search'
                 },
                 {
-                    text: 'Exclude folder from search',
+                    html: 'Exclude folder from search',
                     href: excludeSearchUrl,
                     icon: 'exclude-path'
                 }
@@ -134,7 +134,7 @@ $(function() {
             // Build the Object needed for the context-menu template.
             var contextMenu = {},
                 menuItems = [{
-                    text: 'Search for the substring <strong>' + word + '</strong>',
+                    html: 'Search for the substring <strong>' + htmlEscape(word) + '</strong>',
                     href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word) + "&case=true",
                     icon: 'search'
                 }];

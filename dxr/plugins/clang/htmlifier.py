@@ -243,7 +243,7 @@ class ClangHtmlifier(object):
                 'SELECT extent_start, extent_end, path FROM includes '
                 'INNER JOIN files ON files.id=includes.target_id '
                 'WHERE includes.file_id = ?', args):
-            yield start, end, ([{'text': 'Jump to file',
+            yield start, end, ([{'html': 'Jump to file',
                                  'title': 'Jump to what is included here.',
                                  'href': self.tree.config.wwwroot + '/' +
                                          self.tree.name + '/source/' + path,
@@ -267,7 +267,7 @@ class ClangHtmlifier(object):
         url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
         url += "#%s" % line
         menu.insert(0, { 
-            'text':   "Jump to definition",
+            'html':   "Jump to definition",
             'title':  "Jump to the definition in '%s'" % os.path.basename(path),
             'href':   url,
             'icon':   'jump'
@@ -278,32 +278,32 @@ class ClangHtmlifier(object):
         menu = []
         # Things we can do with qualname
         menu.append({
-            'text':   "Find declarations",
+            'html':   "Find declarations",
             'title':  "Find declarations of this class",
             'href':   self.search("+type-decl:%s" % self.quote(qualname)),
             'icon':   'reference'  # FIXME?
         })
         if kind == 'class' or kind == 'struct':
             menu.append({
-                'text':   "Find sub classes",
+                'html':   "Find sub classes",
                 'title':  "Find sub classes of this class",
                 'href':   self.search("+derived:%s" % self.quote(qualname)),
                 'icon':   'type'
             })
             menu.append({
-                'text':   "Find base classes",
+                'html':   "Find base classes",
                 'title':  "Find base classes of this class",
                 'href':   self.search("+bases:%s" % self.quote(qualname)),
                 'icon':   'type'
             })
         menu.append({
-            'text':   "Find members",
+            'html':   "Find members",
             'title':  "Find members of this class",
             'href':   self.search("+member:%s" % self.quote(qualname)),
             'icon':   'members'
         })
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this class",
             'href':   self.search("+type-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
@@ -315,7 +315,7 @@ class ClangHtmlifier(object):
         """ Build menu for typedef """
         menu = []
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this typedef",
             'href':   self.search("+type-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
@@ -327,13 +327,13 @@ class ClangHtmlifier(object):
         """ Build menu for a variable """
         menu = []
         menu.append({
-            'text':   "Find declarations",
+            'html':   "Find declarations",
             'title':  "Find declarations of this variable",
             'href':   self.search("+var-decl:%s" % self.quote(qualname)),
             'icon':   'reference' # FIXME?
         })
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find reference to this variable",
             'href':   self.search("+var-ref:%s" % self.quote(qualname)),
             'icon':   'field'
@@ -346,13 +346,13 @@ class ClangHtmlifier(object):
         """ Build menu for a namespace """
         menu = []
         menu.append({
-            'text':   "Find definitions",
+            'html':   "Find definitions",
             'title':  "Find definitions of this namespace",
             'href':   self.search("+namespace:%s" % self.quote(qualname)),
             'icon':   'jump'
         })
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this namespace",
             'href':   self.search("+namespace-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
@@ -364,7 +364,7 @@ class ClangHtmlifier(object):
         """ Build menu for a namespace """
         menu = []
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this namespace alias",
             'href':   self.search("+namespace-alias-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
@@ -376,7 +376,7 @@ class ClangHtmlifier(object):
         menu = []
         # Things we can do with macros
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to macros with this name",
             'href':    self.search("+macro-ref:%s" % name),
             'icon':   'reference'
@@ -389,38 +389,38 @@ class ClangHtmlifier(object):
         menu = []
         # Things we can do with qualified name
         menu.append({
-            'text':   "Find declarations",
+            'html':   "Find declarations",
             'title':  "Find declarations of this function",
             'href':   self.search("+function-decl:%s" % self.quote(qualname)),
             'icon':   'reference'  # FIXME?
         })
         menu.append({
-            'text':   "Find callers",
+            'html':   "Find callers",
             'title':  "Find functions that call this function",
             'href':   self.search("+callers:%s" % self.quote(qualname)),
             'icon':   'method'
         })
         menu.append({
-            'text':   "Find callees",
+            'html':   "Find callees",
             'title':  "Find functions that are called by this function",
             'href':   self.search("+called-by:%s" % self.quote(qualname)),
             'icon':   'method'
         })
         menu.append({
-            'text':   "Find references",
+            'html':   "Find references",
             'title':  "Find references to this function",
             'href':   self.search("+function-ref:%s" % self.quote(qualname)),
             'icon':   'reference'
         })
         if isvirtual:
             menu.append({
-                'text':   "Find overridden",
+                'html':   "Find overridden",
                 'title':  "Find functions that this function overrides",
                 'href':   self.search("+overridden:%s" % self.quote(qualname)),
                 'icon':   'method'
             })
             menu.append({
-                'text':   "Find overrides",
+                'html':   "Find overrides",
                 'title':  "Find overrides of this function",
                 'href':   self.search("+overrides:%s" % self.quote(qualname)),
                 'icon':   'method'

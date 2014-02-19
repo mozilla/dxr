@@ -36,7 +36,7 @@ class UrlHtmlifier(object):
                 pass
             else:
                 yield start, end, ([{
-                    'text':   "Follow link",
+                    'html':   "Follow link",
                     'title':  "Visit %s" % url,
                     'href':   url,
                     'icon':   'external_link'

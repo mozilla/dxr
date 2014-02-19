@@ -26,6 +26,7 @@ class Schema(object):
     def get_insert_sql(self, tblname, args):
         return self.tables[tblname].get_insert_sql(args)
 
+
 class SchemaTable(object):
     """ A table schema dictionary has column names as keys and information tuples
         as values: "col": (type, mayBeNull)
