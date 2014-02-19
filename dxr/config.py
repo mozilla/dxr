@@ -1,5 +1,6 @@
 from ConfigParser import ConfigParser
 from datetime import datetime
+from ordereddict import OrderedDict
 import os
 from os.path import isdir
 import sys
@@ -30,7 +31,7 @@ class Config(object):
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
             'disable_workers':  "",
             'skip_stages': ""
-        })
+        }, dict_type = OrderedDict)
         parser.read(configfile)
 
         # Set config values
@@ -94,14 +95,7 @@ class Config(object):
             sys.exit(1)
 
         # Load trees
-        def section_cmp(a, b):
-            if parser.has_option(a, "order") and parser.has_option(b, "order"):
-                return cmp(parser.getint(a, "order"), parser.getint(b, "order"))
-            if (not parser.has_option(a, "order")) and (not parser.has_option(b, "order")):
-                return cmp(a, b)
-            return -1 if parser.has_option(a, "order") else 1
-
-        for tree in sorted(parser.sections(), section_cmp):
+        for tree in parser.sections():
             # Don't interpret legacy [Template] section as a tree:
             if tree not in ('DXR', 'Template'):
                 self.trees.append(TreeConfig(self, self.configfile, tree))
