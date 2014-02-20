@@ -29,8 +29,9 @@ class Config(object):
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  "",
-            'skip_stages': ""
+            'disable_workers':  "",   
+            'skip_stages':      "",
+            'default_tree':     ""
         }, dict_type = OrderedDict)
         parser.read(configfile)
 
@@ -48,6 +49,7 @@ class Config(object):
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
+        self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
