@@ -5,7 +5,7 @@ from fnmatch import fnmatchcase
 from heapq import merge
 from itertools import chain, groupby, izip_longest
 import json
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 import os
 from os import stat
 from os.path import dirname
@@ -331,7 +331,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'tree_tuples': [(t.name,
                           browse_url(t.name, tree.config.wwwroot, folder),
                           t.description)
-                         for t in sorted(tree.config.trees, name_cmp)],
+                         for t in sorted(tree.config.trees, key=attrgetter('name'))],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
          'filters': filter_menu_items(),
@@ -344,9 +344,6 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'folders': folders,
          'files': files})
 
-def name_cmp(a, b):
-    # Sort Tree Names in alphabetical order in Switch Tree Menu
-    return cmp(a.name, b.name)
 def _join_url(*args):
     """Join URL path segments with "/", skipping empty segments."""
     return '/'.join(a for a in args if a)
