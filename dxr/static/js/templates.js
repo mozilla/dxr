@@ -168,7 +168,7 @@ output += runtime.suppressValue(runtime.memberLookup((t_4),"href", env.autoesc),
 output += "\" class=\"";
 output += runtime.suppressValue(runtime.memberLookup((t_4),"icon", env.autoesc), env.autoesc);
 output += "\">";
-output += runtime.suppressValue(env.getFilter("safe").call(context, runtime.memberLookup((t_4),"html", env.autoesc)), env.autoesc);
+output += runtime.suppressValue(env.getFilter("safe").call(context, env.getFilter("default").call(context, runtime.memberLookup((t_4),"html", env.autoesc),runtime.memberLookup((t_4),"text", env.autoesc))), env.autoesc);
 output += "</a></li>\n    ";
 ;
 }
