@@ -1,6 +1,7 @@
 from ConfigParser import ConfigParser
 from datetime import datetime
 from ordereddict import OrderedDict
+from operator import attrgetter
 import os
 from os.path import isdir
 import sys
@@ -101,6 +102,9 @@ class Config(object):
             # Don't interpret legacy [Template] section as a tree:
             if tree not in ('DXR', 'Template'):
                 self.trees.append(TreeConfig(self, self.configfile, tree))
+        
+        # Sorted Tree Order Attribute for Switch Tree Menu
+        self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
 
 
 class TreeConfig(object):

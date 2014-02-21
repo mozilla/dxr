@@ -5,7 +5,7 @@ from fnmatch import fnmatchcase
 from heapq import merge
 from itertools import chain, groupby, izip_longest
 import json
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 import os
 from os import stat
 from os.path import dirname
@@ -331,7 +331,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'tree_tuples': [(t.name,
                           browse_url(t.name, tree.config.wwwroot, folder),
                           t.description)
-                         for t in sorted(tree.config.trees, key=attrgetter('name'))],
+                         for t in tree.config.sorted_tree_order],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
          'filters': filter_menu_items(),
@@ -541,7 +541,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         'tree_tuples': [(t.name,
                          browse_url(t.name, tree.config.wwwroot, path),
                          t.description)
-                        for t in tree.config.trees],
+                        for t in tree.config.sorted_tree_order],
         'generated_date': tree.config.generated_date,
         'filters': filter_menu_items(),
 
