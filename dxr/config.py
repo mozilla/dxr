@@ -99,8 +99,7 @@ class Config(object):
 
         # Load trees
         for tree in parser.sections():
-            # Don't interpret legacy [Template] section as a tree:
-            if tree not in ('DXR', 'Template'):
+            if tree != 'DXR':
                 self.trees.append(TreeConfig(self, self.configfile, tree))
         
         # Sorted Tree Order Attribute for Switch Tree Menu
