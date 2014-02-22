@@ -104,6 +104,11 @@ class Config(object):
         
         # Sorted Tree Order Attribute for Switch Tree Menu
         self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
+        
+        # Make sure that default_tree is defined
+        if self.default_tree == "":
+            self.default_tree = self.sorted_tree_order[0].name
+
 
 
 class TreeConfig(object):
