@@ -41,7 +41,7 @@ def make_app(instance_path):
 def index():
     config = current_app.config
     wwwroot = config['WWW_ROOT']    
-    tree = config['TREES'].keys()[0] if config['DEFAULT_TREE'] == "" else config['DEFAULT_TREE']
+    tree = config['DEFAULT_TREE']
     return redirect('%s/%s/source/' % (wwwroot, tree))
 
 
