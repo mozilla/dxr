@@ -84,7 +84,7 @@ $(function() {
      * returns null.
      */
     function caseFromUrl() {
-        var match = /case=(\w+)/.exec(location.search);
+        var match = /[?&]?case=([^&]+)/.exec(location.search);
         return match ? (match[1] === 'true') : null;
     }
 
@@ -141,7 +141,7 @@ $(function() {
         defaultDataLimit = 100;
 
     // Has the user been redirected to a direct result?
-    var fromQuery = /[(&|^)from]=([^&]+)/.exec(location.search);
+    var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
     if (fromQuery !== null) {
         // Offer the user the option to see all the results instead.
         var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>',
