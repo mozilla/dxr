@@ -33,7 +33,7 @@ class Config(object):
             'disable_workers':  "",   
             'skip_stages':      "",
             'default_tree':     ""
-        }, dict_type = OrderedDict)
+        }, dict_type=OrderedDict)
         parser.read(configfile)
 
         # Set config values
@@ -102,11 +102,11 @@ class Config(object):
             if tree != 'DXR':
                 self.trees.append(TreeConfig(self, self.configfile, tree))
         
-        # Sorted Tree Order Attribute for Switch Tree Menu
+        # Trees in alphabetical order for Switch Tree menu:
         self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
         
         # Make sure that default_tree is defined
-        if self.default_tree == "":
+        if not self.default_tree:
             self.default_tree = self.sorted_tree_order[0].name
 
 
