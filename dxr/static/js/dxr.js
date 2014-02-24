@@ -46,9 +46,12 @@ $(function() {
      * @param {string} id = The id of the highlighted table row
      */
     function scrollIntoView(id) {
-        var elementPos = document.getElementById(id).offsetTop;
+        var lineElement = document.getElementById(id);
 
-        if ((getMaxScrollY() - elementPos) > 100) {
+        if (lineElement === null)  // There is no line #1. Empty file.
+            return;
+
+        if ((getMaxScrollY() - lineElement.offsetTop) > 100) {
             window.scroll(0, window.scrollY - 150);
         }
     }
