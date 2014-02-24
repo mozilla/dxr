@@ -17,6 +17,16 @@ language_schema = dxr.schema.Schema({
         ("_key", "id"),
         ("_index", "path"),               # TODO: Make this a unique index
     ],
+    # I would rather be able to add a "file" column to the trg_index, but that
+    # would require a bunch of C coding and leave trilite less generalized.
+    # Let's see what the perf is like just hacking it on with a parallel table:
+    "lines" : [
+        ("id", "INTEGER", False),  # --> trg_index.td
+        ("number", "INTEGER", False),  # line number
+        ("file_id", "INTEGER", False),  # Can't think of a reason to index this atm.
+        ("_key", "id"),
+        ("_fkey", "id", "trg_index", "id"),  # I'd be surprised if this did anything.
+    ],
     "scopes": [
         ("id", "INTEGER", False),         # An ID for this scope
         ("name", "VARCHAR(256)", True),   # Name of the scope

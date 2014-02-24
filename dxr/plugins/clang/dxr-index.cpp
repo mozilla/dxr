@@ -389,6 +389,8 @@ public:
         nd = d;
       recordValue("name", nd->getNameAsString());
       recordValue("qualname", getQualifiedName(*nd));
+      // TODO: Quit emitting file-based extent offsets. Start emitting line-
+      // based offsets. The code to do it is all in locationToString().
       recordValue("loc", locationToString(d->getLocation()));
       recordValue("kind", d->getKindName());
       printScope(d);

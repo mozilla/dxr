@@ -1,5 +1,5 @@
 import cgi
-from itertools import chain, groupby
+from itertools import chain, count, groupby
 import re
 import struct
 import time
@@ -61,73 +61,8 @@ class Query(object):
             self._sql_profile[-1]["nrows"] = len(res)
         return res
 
-    # Fetch results using a query,
-    # See: queryparser.py for details in query specification
-    def results(self,
-                offset=0, limit=100,
-                markup='<b>', markdown='</b>'):
-        """Return search results as an iterable of these::
-
-            (icon,
-             path within tree,
-             (line_number, highlighted_line_of_code)), ...
-
-        """
-        sql = """
-            SELECT files.path, files.icon, files.encoding, trg_index.text, files.id,
-            extents(trg_index.contents)
-                FROM trg_index, files
-              WHERE %s ORDER BY files.path LIMIT ? OFFSET ?
-        """
-        conditions = " files.id = trg_index.id "
-        arguments = []
-
-        # Give each registered filter an opportunity to contribute to the
-        # query. This query narrows down the universe to a set of matching
-        # files:
-        has_extents = False
-        for f in filters:
-            for conds, args, exts in f.filter(self.terms):
-                has_extents = exts or has_extents
-                conditions += " AND " + conds
-                arguments += args
-
-        sql %= conditions
-        arguments += [limit, offset]
-
-        #TODO Actually do something with the has_extents, ie. don't fetch contents
-
-        cursor = self.execute_sql(sql, arguments)
-
-        # For each returned file (including, only in the case of the trilite
-        # filter, a set of extents)...
-        for path, icon, encoding, content, file_id, extents in cursor:
-            elist = []
-
-            # Special hack for TriLite extents
-            if extents:
-                matchExtents = []
-                for i in xrange(0, len(extents), 8):
-                    s, e = struct.unpack("II", extents[i:i+8])
-                    matchExtents.append((s, e, []))
-                elist.append(fix_extents_overlap(sorted(matchExtents)))
-
-            # Let each filter do one or more additional queries to find the
-            # extents to highlight:
-            for f in filters:
-                for e in f.extents(self.terms, self.execute_sql, file_id):
-                    elist.append(e)
-            offsets = list(merge_extents(*elist))
-
-            if self._should_explain:
-                continue
-
-            # Yield the file, metadata, and iterable of highlighted offsets:
-            yield icon, path, _highlit_lines(content, offsets, markup, markdown, encoding)
-
-
-        # TODO: Decouple and lexically evacuate this profiling stuff from
-        # results():
+    def _sql_report():
+        """Yield a report on how long the SQL I've run has taken."""
         def number_lines(arr):
             ret = []
             for i in range(len(arr)):
@@ -148,6 +83,153 @@ class Query(object):
             yield ("",
                           "explanation %d" % i,
                           number_lines(map(lambda row: row["detail"], profile["explanation"])))
+
+    @staticmethod
+    def _nested_results(cursor):
+        """Mash down results by file and line, unioning all extents on each
+        line and fixing overlapping ones.
+
+        Yield a single result for each line. Something else can nest them by
+        file.
+
+        """
+        def unpack_trilite_extents(trilite_extents):
+            if trilite_extents:
+                match_extents = []
+                for i in xrange(0, len(trilite_extents), 8):
+                    s, e = struct.unpack('II', trilite_extents[i:i+8])
+                    match_extents.append((s, e, []))
+                yield fix_extents_overlap(sorted(match_extents))
+
+
+    @staticmethod
+    def _homogenize_extents(cursor):
+        """Bundle trigram and structural extents into one same-formatted
+
+        Turn a cursor of format (path, icon, encoding, line_id, line_number,
+        content, trilite_extents, extent1_start, extent1_end, extent2_start,
+        ...) into an iterable of format (path, icon, encoding, line_id,
+        line_number, content, [(start, end), ...]).
+
+        """
+
+        for result in cursor:
+            path, icon, encoding, line_id, line_number, content, trilite_extents = result[:7]
+            other_extents = result[7:]
+            other_extents = izip(other_extents[::2],
+                                 other_extents[1::2])
+
+            # Build total list of extents from trigram and other ones:
+            extents = list(unpack_trilite_extents(trilite_extents))  # same format as elist on line 113 of original
+            extents.extend(other_extents)
+            offsets = list(merge_extents(*extents))  # I don't see how this can work with other_extents returning only 2-tuples, but that's what the old code seems to do.
+
+groupby(line, results) --> merge, uniquify, sort, and non-overlap extents --> grouby(file) --> highlight_lines
+
+    def union_extents(results):
+        """Return an iterable of (start, end) from an iterable of results.
+
+        Returned extents may be out of order and include duplicates.
+
+        """
+
+    def flatten_extents(cursor):
+        """Given a raw set of search results from the DB, merge the rows that
+        reference the same line of a file, and combine their extents, returning
+        (everything but extents, extents) for each line.
+
+        This handles the situation where there are, say, a var ref is searched
+        for, and 2 refs occur on the same line, yielding 2 rows.
+
+        """
+        # For each group of results representing a single line...
+        for line_id, results in groupby(cursor, lambda r: r['line_id']):
+            # Buffer all results for this line so unique_extents() and such
+            # don't have to complicate themselves by preserving things other
+            # than extents.
+            line_results = list(results)
+
+            extents = union_extents(line_results)
+            extents = list(set(extents))
+            extents.sort()
+            extents = fix_extents_overlap(extents)
+
+            yield line_results[0][:6], extents
+
+    def results(self,
+                offset=0, limit=100,
+                markup='<b>', markdown='</b>'):
+        """Return search results as an iterable of these::
+
+            (icon,
+             path within tree,
+             [(line_number, highlighted_line_of_code), ...])
+
+        """
+        sql = ('SELECT %s) '
+               'FROM trg_index '
+               'INNER JOIN lines ON lines.id=trg_index.id '
+               'INNER JOIN files ON files.id=lines.file_id '
+               '%s '
+               '%s ORDER BY files.path, lines.number LIMIT ? OFFSET ?')
+        # Filters can add additional fields, in pairs of {extent_start,
+        # extent_end}, to be used for highlighting.
+        fields = ['files.path', 'files.icon', 'files.encoding', 'files.id',
+                  'lines.id', 'lines.number', 'trg_index.text',
+                  'extents(trg_index.contents']
+        conditions = []
+        arguments = []
+
+        # Give each registered filter an opportunity to contribute to the
+        # query, narrowing it down to the set of matching lines:
+        # XXX: How do we do negative filters? WHERE NOT EXISTS (SELECT 1 from functions where %s AND functions.file_id=files.id AND functions.line_id=lines.number)
+        alias_iter = count()
+        for f in filters:
+            for fields, cond, args in f.filter(self.terms, alias_iter):
+                fields.extend(fields)
+                conditions.append(cond)
+                arguments.extend(args)
+
+        sql %= (', '.join(fields),
+                ' '.join(joins),
+                ((' WHERE ' + ' AND '.join(conditions)) if conditions else ''))
+        arguments += [limit, offset]
+        cursor = self.execute_sql(sql, arguments)
+
+        if self._should_explain:
+            return self._sql_report()
+
+        # Group lines into files:
+        for file_id, lines in \
+                groupby(flatten_extents(cursor),
+                        lambda fields, extents: fields['files.id']):
+            # For each line in each file, return metadata and a highlit line of
+            # code:
+            for fields, extents in lines:
+                yield (fields['icon'],
+                       fields['path'],
+                       _highlit_lines(fields['content'],
+                                      extents,
+                                      markup,
+                                      markdown,
+                                      fields['encoding']))
+
+
+        # For each returned line...
+        # NEXT: Merge results by line, then merge the extents of each line. Then group that by file to maintain the return signature, and yield that.
+        for key, group in groupby(cursor, key=lambda path, *args: path):  # NEXT, rig results() to conform to its existing return format. Maybe we can fetch the extents for structural filters without doing separate queries, by adding columns to the master search query. (Now that we're only talking about a line at a time, it is unlikely that there will be multiple highlit extents per filter per line, so any cartesian product of rows can be gracefully absorbed (and we should deal with and merge those, should they arise).) Boy, as I see what this is doing, I think how good a fit ES is: you fetch a line document, and everything you'd need to highlight is right there. # If var-ref returns 2 extents on one line, it'll just duplicate a line, and we'll merge stuff after the fact. Hey, does that mean I should gather and merge everything before I try to homogenize the extents?
+        # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
+        for path, icon, encoding, line_id, line_number, content, trilite_extents in cursor:
+            elist = []  # [(start, end<, keyset>), ...]
+
+            # Let each filter do one or more additional queries to find the
+            # extents to highlight:
+            for f in filters:
+                for e in f.extents(self.terms, self.execute_sql, line_id):
+                    elist.append(e)
+            offsets = list(merge_extents(*elist))
+
+            yield icon, path, _highlit_lines(content, offsets, markup, markdown, encoding)
 
 
     def direct_result(self):
@@ -270,7 +352,7 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
             chars_before = content.rindex('\n', 0, offsets[0][0]) + 1
         except ValueError:
             chars_before = None
-        for start, end in offsets:
+        for start, end in extents:
             yield cgi.escape(content[chars_before:start].decode(encoding,
                                                                 'replace'))
             yield markup
@@ -287,15 +369,15 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
     return ''.join(chunks()).lstrip()
 
 
-def _highlit_lines(content, offsets, markup, markdown, encoding):
+def _highlit_lines(content, extents, markup, markdown, encoding):
     """Return a list of (line number, highlit line) tuples.
 
-    :arg content: The contents of the file against which the offsets are
+    :arg content: The contents of the file against which the extents are
         reported, as a bytestring. (We need to operate in terms of bytestrings,
-        because those are the terms in which the C compiler gives us offsets.)
-    :arg offsets: A sequence of non-overlapping (start offset, end offset,
-        [keylist (presently unused)]) tuples describing each extent to
-        highlight. The sequence must be in order by start offset.
+        because those are the terms in which the C compiler gives us extents.)
+    :arg extents: A sequence of non-overlapping (start offset, end offset)
+        tuples describing each extent to highlight. The sequence must be in
+        order by start offset.
 
     Assumes no newlines are highlit.
 
@@ -303,7 +385,7 @@ def _highlit_lines(content, offsets, markup, markdown, encoding):
     line_extents = []  # [(line_number, (start, end)), ...]
     lines_before = 1
     chars_before = 0
-    for start, end, _ in offsets:
+    for start, end in extents:
         # How many lines we've skipped since we last knew what line we were on:
         lines_since = content.count('\n', chars_before, start)
 
@@ -379,20 +461,20 @@ def fix_extents_overlap(extents):
     # There must be two extents for there to be an overlap
     while len(extents) >= 2:
         # Take the two next extents
-        start1, end1, keys1 = extents[0]
-        start2, end2, keys2 = extents[1]
+        start1, end1 = extents[0]
+        start2, end2 = extents[1]
         # Check for overlap
         if end1 <= start2:
             # If no overlap, yield first extent
-            yield start1, end1, keys1
+            yield start1, end1
             extents = extents[1:]
             continue
         # If overlap, yield extent from start1 to start2
         if start1 != start2:
-            yield start1, start2, keys1
-        extents[0] = (start2, end1, keys1 + keys2)
-        extents[1] = (end1, end2, keys2)
-    if len(extents) > 0:
+            yield start1, start2
+        extents[0] = start2, end1
+        extents[1] = end1, end2
+    if extents:
         yield extents[0]
 
 
@@ -403,11 +485,12 @@ class SearchFilter(object):
     def __init__(self, description=''):
         self.description = description
 
-    def filter(self, terms):
-        """Yield tuples of (SQL conditions, list of arguments, and True) if
-        this filter offers extents for results.
+    def filter(self, terms, alias_iter):
+        """Yield tuples of (SQL fields, a SQL condition, list of arguments).
 
-        SQL conditions must be string and condition on files.id.
+        The SQL fields will be added to the SELECT clause and must come in a
+        pair taken to be (extent start, extent end). The condition will be
+        ANDed into the WHERE clause.
 
         :arg terms: A dictionary with keys for each filter name I handle (as
             well as others, possibly, which should be ignored). Example::
@@ -421,19 +504,9 @@ class SearchFilter(object):
                                 'case_sensitive': False,
                                 'qualified': True}],
                   ...}
-
-        """
-        return []
-
-    def extents(self, terms, execute_sql, file_id):
-        """Return an ordered iterable of extents to highlight. Or an iterable
-        of generators. It seems to vary.
-
-        :arg execute_sql: A callable that takes some SQL and an iterable of
-            params and executes it, returning the result
-        :arg file_id: The ID of the file from which to return extents
-        :arg kwargs: A dictionary with keys for each filter name I handle (as
-            well as others, possibly), as in filter()
+        :arg alias_iter: An iterable that returns numbers available for use in
+            table aliases, to keep them unique. Advancing the iterator reserves
+            the number it returns.
 
         """
         return []
@@ -450,7 +523,7 @@ class SearchFilter(object):
     def menu_item(self):
         """Return the item I contribute to the Filters menu.
 
-        Return a dicts with ``name`` and ``description`` keys.
+        Return a dict with ``name`` and ``description`` keys.
 
         """
         return dict(name=self.param, description=self.description)
@@ -459,7 +532,7 @@ class SearchFilter(object):
 class TriLiteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
 
-    def filter(self, terms):
+    def filter(self, terms, alias_iter):
         not_conds = []
         not_args  = []
         for term in terms.get('text', []):
@@ -470,29 +543,26 @@ class TriLiteSearchFilter(SearchFilter):
                                                else 'isubstr:') +
                                     term['arg'])
                 else:
-                    yield ("trg_index.contents MATCH ?",
+                    yield ([],
+                           "trg_index.contents MATCH ?",
                            [('substr-extents:' if term['case_sensitive']
                                                else 'isubstr-extents:') +
-                            term['arg']],
-                           True)
+                            term['arg']])
         for term in terms.get('re', []) + terms.get('regexp', []):
             if term['arg']:
                 if term['not']:
                     not_conds.append("trg_index.contents MATCH ?")
                     not_args.append("regexp:" + term['arg'])
                 else:
-                    yield ("trg_index.contents MATCH ?",
-                           ["regexp-extents:" + term['arg']],
-                           True)
+                    yield ([],
+                           "trg_index.contents MATCH ?",
+                           ["regexp-extents:" + term['arg']])
 
         if not_conds:
-            yield (""" files.id NOT IN (SELECT id FROM trg_index WHERE %s) """
-                       % " AND ".join(not_conds),
-                   not_args,
-                   False)
-
-    # Notice that extents is more efficiently handled in the search query
-    # Sorry to break the pattern, but it's significantly faster.
+            yield ([],
+                   ' lines.id NOT IN (SELECT id FROM trg_index WHERE %s) '
+                       % ' OR '.join(not_conds),  # Optimize: Use an EXISTS.
+                   not_args)
 
     def menu_item(self):
         return {'name': 'regexp',
@@ -518,7 +588,8 @@ class SimpleFilter(SearchFilter):
         self.ext_sql = ext_sql
         self.formatter = formatter
 
-    def filter(self, terms):
+    # XXX: Make filter() return fields, conds, args rather than conds, args, has_exts.
+    def filter(self, terms, alias_iter):
         for term in terms.get(self.param, []):
             arg = term['arg']
             if term['not']:
@@ -654,7 +725,7 @@ filters = [
                            WHERE functions.file_id = ?
                              AND %s
                            ORDER BY functions.extent_start
-                        """,
+                        """,  # XXX: We'll have to have the plugins framework or something translate the file offsets from the plugins into line offsets. It'll probably be of symmetric horribleness with the line-walking crap we'll delete from this file, but at least it'll happen at build time rather than for every request.
         like_name     = "functions.name",
         qual_name     = "functions.qualname"
     ),

@@ -7,11 +7,9 @@ from dxr.utils import search_url
 
 
 class ClangHtmlifier(object):
-    def __init__(self, tree, conn, path, text, file_id):
+    def __init__(self, tree, conn, file_id):
         self.tree    = tree
         self.conn    = conn
-        self.path    = path
-        self.text    = text
         self.file_id = file_id
 
     def regions(self):
@@ -512,7 +510,7 @@ def htmlify(path, text):
         sql = "SELECT files.id FROM files WHERE path = ? LIMIT 1"
         row = _conn.execute(sql, (path,)).fetchone()
         if row:
-            return ClangHtmlifier(_tree, _conn, path, text, row[0])
+            return ClangHtmlifier(_tree, _conn, row[0])
     return None
 
 

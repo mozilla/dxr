@@ -85,7 +85,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     # Find trees to make, fail if requested tree isn't available
     if tree:
         trees = [t for t in config.trees if t.name == tree]
-        if len(trees) == 0:
+        if not trees:
             print >> sys.stderr, "Tree '%s' is not defined in config file!" % tree
             sys.exit(1)
     else:
@@ -217,7 +217,8 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
 
 
 def index_files(tree, conn):
-    """Build the ``files`` table, the trigram index, and the HTML folder listings."""
+    """Build the ``files`` and ``lines`` tables, the trigram index, and the
+    HTML folder listings."""
     print "Indexing files from the '%s' tree" % tree.name
     start_time = datetime.now()
     cur = conn.cursor()
@@ -259,9 +260,13 @@ def index_files(tree, conn):
             # Insert this file
             cur.execute("INSERT INTO files (path, icon, encoding) VALUES (?, ?, ?)",
                         (path, icon, tree.source_encoding))
+            file_id = cur.lastrowid
             # Index this file
-            sql = "INSERT INTO trg_index (id, text) VALUES (?, ?)"
-            cur.execute(sql, (cur.lastrowid, data))
+            for line_number, line in enumerate(data.splitlines(True), 1):  # TODO: Maybe we can take away the True and save some bytes, but I'm being conservative for now. I'm afraid the rendering routines might depend on extents not going past the end of the line. I would like to remove the linebreaks, though, not just for space but because it makes it easier to implement plugins: they no longer have to deal with arbitrary linebreak formats. OTOH, it means you can't do regex searches for explicit sequences of newlines and CRs. That corner case is totally not worth serving.
+                cur.execute("INSERT INTO lines (number, file_id) VALUES (?, ?)",
+                            (line_number, file_id))
+                cur.execute("INSERT INTO trg_index (id, text) VALUES (?, ?)",
+                            (cur.lastrowid, line))
 
             # Okay to this file was indexed
             indexed_files.append(f)
@@ -477,7 +482,7 @@ def _build_html_for_file_ids(tree, start, end):
 
     """
     path = '(no file yet)'
-    id = -1
+    file_id = -1
     try:
         # We might as well have this write its log directly rather than returning
         # them to the master process, since it's already writing the built HTML
@@ -497,16 +502,22 @@ def _build_html_for_file_ids(tree, start, end):
             start_time = datetime.now()
 
             # Fetch and htmlify each document:
-            for num_files, (id, path, icon, text) in enumerate(
+            for num_files, (file_id, path, icon) in enumerate(
                     conn.execute("""
-                                 SELECT files.id, path, icon, trg_index.text
-                                 FROM trg_index, files
-                                 WHERE trg_index.id = files.id
-                                 AND trg_index.id >= ?
-                                 AND trg_index.id <= ?
+                                 SELECT id, path, icon
+                                 FROM files
+                                 WHERE id >= ?
+                                 AND id <= ?
                                  """,
                                  [start, end]),
                     1):
+                text = ''.join(  # Linebreaks are in the DB for now.
+                    line_content for (line_content,) in
+                    conn.execute('SELECT trg_index.text '
+                                 'FROM files '
+                                 'INNER JOIN lines ON files.id=lines.file_id '
+                                 'INNER JOIN trg_index ON trg_index.id=lines.id '
+                                 'ORDER BY lines.number))
                 dst_path = os.path.join(tree.target_folder, path + '.html')
                 log.write('Starting %s.\n' % path)
                 htmlify(tree, conn, icon, path, text, dst_path, plugins)
@@ -519,7 +530,7 @@ def _build_html_for_file_ids(tree, start, end):
             log.write('Finished %s files in %s.\n' % (num_files, time))
     except Exception as exc:
         type, value, traceback = exc_info()
-        return format_exc(), type, value, id, path
+        return format_exc(), type, value, file_id, path
 
 
 def htmlify(tree, conn, icon, path, text, dst_path, plugins):
