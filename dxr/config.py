@@ -1,5 +1,7 @@
 from ConfigParser import ConfigParser
 from datetime import datetime
+from ordereddict import OrderedDict
+from operator import attrgetter
 import os
 from os.path import isdir
 import sys
@@ -28,9 +30,10 @@ class Config(object):
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  "",
-            'skip_stages': ""
-        })
+            'disable_workers':  "",   
+            'skip_stages':      "",
+            'default_tree':     ""
+        }, dict_type=OrderedDict)
         parser.read(configfile)
 
         # Set config values
@@ -47,6 +50,7 @@ class Config(object):
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
+        self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
@@ -94,17 +98,17 @@ class Config(object):
             sys.exit(1)
 
         # Load trees
-        def section_cmp(a, b):
-            if parser.has_option(a, "order") and parser.has_option(b, "order"):
-                return cmp(parser.getint(a, "order"), parser.getint(b, "order"))
-            if (not parser.has_option(a, "order")) and (not parser.has_option(b, "order")):
-                return cmp(a, b)
-            return -1 if parser.has_option(a, "order") else 1
-
-        for tree in sorted(parser.sections(), section_cmp):
-            # Don't interpret legacy [Template] section as a tree:
-            if tree not in ('DXR', 'Template'):
+        for tree in parser.sections():
+            if tree != 'DXR':
                 self.trees.append(TreeConfig(self, self.configfile, tree))
+        
+        # Trees in alphabetical order for Switch Tree menu:
+        self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
+        
+        # Make sure that default_tree is defined
+        if not self.default_tree:
+            self.default_tree = self.sorted_tree_order[0].name
+
 
 
 class TreeConfig(object):

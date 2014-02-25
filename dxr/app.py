@@ -40,8 +40,8 @@ def make_app(instance_path):
 @dxr_blueprint.route('/')
 def index():
     config = current_app.config
-    wwwroot = config['WWW_ROOT']
-    tree = config['TREES'].keys()[0]
+    wwwroot = config['WWW_ROOT']    
+    tree = config['DEFAULT_TREE']
     return redirect('%s/%s/source/' % (wwwroot, tree))
 
 
