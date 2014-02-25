@@ -30,7 +30,7 @@ class Config(object):
             'disabled_plugins': " ",
             'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  "",   
+            'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     ""
         }, dict_type=OrderedDict)
@@ -101,10 +101,10 @@ class Config(object):
         for tree in parser.sections():
             if tree != 'DXR':
                 self.trees.append(TreeConfig(self, self.configfile, tree))
-        
+
         # Trees in alphabetical order for Switch Tree menu:
         self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
-        
+
         # Make sure that default_tree is defined
         if not self.default_tree:
             self.default_tree = self.sorted_tree_order[0].name
