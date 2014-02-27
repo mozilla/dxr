@@ -71,7 +71,8 @@ def search(tree):
         arguments['tree'] = tree
 
         # Connect to database
-        conn = connect_db(tree, current_app.instance_path)
+        dbDir = join(current_app.instance_path, 'trees', tree)
+        conn = connect_db(dbDir)
         if conn:
             # Parse the search query
             qtext = querystring.get('q', '')

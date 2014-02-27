@@ -21,21 +21,6 @@ from urllib import quote, quote_plus
 
 TEMPLATE_DIR = 'static/templates'
 
-
-def connect_database(tree):
-    """Connect to database ensuring that dependencies are built first"""
-    # Create connection
-    conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
-    # Configure connection
-    conn.execute("PRAGMA synchronous=off")  # TODO Test performance without this
-    conn.execute("PRAGMA page_size=32768")
-    # Optimal page should probably be tested, we get a hint from:
-    # http://www.sqlite.org/intern-v-extern-blob.html
-    conn.text_factory = str
-    conn.row_factory  = sqlite3.Row
-    return conn
-
-
 _template_env = None
 def load_template_env(temp_folder, dxr_root):
     """Load template environment (lazily)"""
