@@ -6,11 +6,8 @@ class dxr ($project_path){
          "git": ensure => installed;
          "mercurial": ensure => installed;
          "python-dev": ensure => installed;  # for MarkupSafe speedups
-    }
-
-    exec { "install-builddeps":
-        command => "/usr/bin/sudo /usr/bin/apt-get -y build-dep firefox",
-        timeout => 600,
+         "pkg-config": ensure => installed;  # for make clean to work
+         "sqlite3": ensure => installed;     # for libtrilite make test
     }
 
     exec { "install_llvm":
