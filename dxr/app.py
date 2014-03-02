@@ -71,68 +71,64 @@ def search(tree):
         arguments['tree'] = tree
 
         # Connect to database
-        dbDir = join(current_app.instance_path, 'trees', tree)
-        conn = connect_db(dbDir)
-        if conn:
-            # Parse the search query
-            qtext = querystring.get('q', '')
-            is_case_sensitive = querystring.get('case') == 'true'
-            q = Query(conn,
-                      qtext,
-                      should_explain='explain' in querystring,
-                      is_case_sensitive=is_case_sensitive)
+        conn = connect_db(join(current_app.instance_path, 'trees', tree))
+        # Parse the search query
+        qtext = querystring.get('q', '')
+        is_case_sensitive = querystring.get('case') == 'true'
+        q = Query(conn,
+                  qtext,
+                  should_explain='explain' in querystring,
+                  is_case_sensitive=is_case_sensitive)
 
-            # Try for a direct result:
-            if querystring.get('redirect') == 'true':
-                result = q.direct_result()
-                if result:
-                    path, line = result
-                    # TODO: Does this escape qtext properly?
-                    return redirect(
-                        '%s/%s/source/%s?from=%s%s#%i' %
-                        (www_root,
-                         tree,
-                         path,
-                         qtext,
-                         '&case=true' if is_case_sensitive else '', line))
+        # Try for a direct result:
+        if querystring.get('redirect') == 'true':
+            result = q.direct_result()
+            if result:
+                path, line = result
+                # TODO: Does this escape qtext properly?
+                return redirect(
+                    '%s/%s/source/%s?from=%s%s#%i' %
+                    (www_root,
+                     tree,
+                     path,
+                     qtext,
+                     '&case=true' if is_case_sensitive else '', line))
 
-            # Return multiple results:
-            template = 'search.html'
-            start = time()
-            try:
-                results = list(q.results(offset, limit))
-            except sqlite3.OperationalError as e:
-                if e.message.startswith('REGEXP:'):
-                    # Malformed regex
-                    warning = e.message[7:]
-                    results = []
-                elif e.message.startswith('QUERY:'):
-                    warning = e.message[6:]
-                    results = []
-                else:
-                    error = 'Database error: %s' % e.message
-            if not error:
-                # Search template variables:
-                arguments['time'] = time() - start
-                arguments['query'] = qtext
-                arguments['search_url'] = search_url(www_root,
-                                                     arguments['tree'],
-                                                     qtext,
-                                                     redirect=False)
-                arguments['results'] = results
-                arguments['offset'] = offset
-                arguments['limit'] = limit
-                arguments['is_case_sensitive'] = is_case_sensitive
-                arguments['tree_tuples'] = [
-                        (t,
-                         search_url(www_root,
-                                    t,
-                                    qtext,
-                                    case=True if is_case_sensitive else None),
-                         description)
-                        for t, description in trees.iteritems()]
-        else:
-            error = 'Failed to establish database connection.'
+        # Return multiple results:
+        template = 'search.html'
+        start = time()
+        try:
+            results = list(q.results(offset, limit))
+        except sqlite3.OperationalError as e:
+            if e.message.startswith('REGEXP:'):
+                # Malformed regex
+                warning = e.message[7:]
+                results = []
+            elif e.message.startswith('QUERY:'):
+                warning = e.message[6:]
+                results = []
+            else:
+                error = 'Database error: %s' % e.message
+        if not error:
+            # Search template variables:
+            arguments['time'] = time() - start
+            arguments['query'] = qtext
+            arguments['search_url'] = search_url(www_root,
+                                                 arguments['tree'],
+                                                 qtext,
+                                                 redirect=False)
+            arguments['results'] = results
+            arguments['offset'] = offset
+            arguments['limit'] = limit
+            arguments['is_case_sensitive'] = is_case_sensitive
+            arguments['tree_tuples'] = [
+                    (t,
+                     search_url(www_root,
+                                t,
+                                qtext,
+                                case=True if is_case_sensitive else None),
+                     description)
+                    for t, description in trees.iteritems()]
     else:
         arguments['tree'] = trees.keys()[0]
         error = "Tree '%s' is not a valid tree." % tree
