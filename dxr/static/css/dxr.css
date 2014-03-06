@@ -127,11 +127,36 @@ table.folder-content a {
 table td {
     padding: .5em;
 }
+td#line-numbers span {
+    display: block;
+    cursor: pointer;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+    -moz-user-select: none;
+    
+}
 td.code {
     padding: 0 0 0 .5em;
+    width: 100%;
+}
+td pre code {
+    width: 100%;
+    position: relative;
+    float: left;
+    clear: none;
+    padding: 0 0 0 1em;
 }
 code a {
     cursor: pointer;
+}
+code.highlighted {
+    background: rgba(0,255,255,0.2);
 }
 mark {
     position: relative;
