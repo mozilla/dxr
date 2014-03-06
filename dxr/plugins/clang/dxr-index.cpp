@@ -720,10 +720,22 @@ public:
   bool VisitDeclRefExpr(DeclRefExpr *e) {
     if (e->hasQualifier())
       visitNestedNameSpecifierLoc(e->getQualifierLoc());
+    SourceLocation start = e->getLocation();
+    SourceLocation end = e->getNameInfo().getEndLoc();
+    if (FunctionDecl *fd = dyn_cast<FunctionDecl>(e->getDecl())) {
+      /* We want to avoid overlapping refs for operator() or operator[]
+         at least until we have better support for overlapping refs.
+         Since the arguments can themselves be references we limit the
+         reference for the method itself to just the initial token,
+         not the entire range between '(' and ')' (or '[' and ']'). */
+      if (fd->getOverloadedOperator() == OO_Call ||     // operator()
+          fd->getOverloadedOperator() == OO_Subscript)  // operator[]
+       end = start;
+    }
     printReference(kindForDecl(e->getDecl()),
                    e->getDecl(),
-                   e->getLocation(),
-                   e->getNameInfo().getEndLoc());
+                   start,
+                   end);
     return true;
   }
 
