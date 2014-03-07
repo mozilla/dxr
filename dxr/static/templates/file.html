@@ -68,15 +68,15 @@
     </thead>
     <tbody>
       <tr>
-        <td>
+        <td id="line-numbers">
           {% for line in lines %}
-            <a id="{{ loop.index }}" href="#{{ loop.index }}">{{ loop.index }}</a>
+            <span id="{{ loop.index }}" class="line-number" unselectable="on" rel="#{{ loop.index }}">{{ loop.index }}</span>
           {% endfor %}
         </td>
         <td class="code">
 <pre>
 {% for line, annotations in lines -%}
-<code aria-labelledby="{{ loop.index }}">{{ line }}</code>
+<code id="line-{{ loop.index }}" aria-labelledby="{{ loop.index }}">{{ line }}</code>
 {% endfor -%}
 </pre>
         </td>
@@ -90,4 +90,5 @@
   {{ super() }}
   <script src="{{ wwwroot }}/static/js/panel.js"></script>
   <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+  <script src="{{ wwwroot }}/static/js/code-highlighter.js"></script>
 {% endblock %}

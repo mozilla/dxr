@@ -87,6 +87,9 @@ table {
     width: 100%;
     overflow: auto;
 }
+table#file {
+    width: 100%;
+}
 table.folder-content thead tr:first-child {
     color: #555;
     padding: .5em;
@@ -130,6 +133,45 @@ table td {
 td.code {
     padding: 0 0 0 .5em;
 }
+td#line-numbers {
+    position: fixed;
+    width: 95%;
+    z-index: 0;
+}
+td#line-numbers span {
+    display: block;
+    cursor: pointer;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    text-align: left;
+    padding: 0 0 0 5px;
+}
+td#line-numbers span.highlighted {
+    background: none repeat scroll 0 0 rgba(0, 255, 255, 0.2);
+}
+td.code {
+    padding: 0 0 0 .5em;
+    display: block;
+    left: 30px;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    z-index: 1;
+}
+td pre code {
+    position: relative;
+    float: left;
+    clear: none;
+    padding: 0 0 0 1em;
+    float: left;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
 code a {
     cursor: pointer;
 }
@@ -163,6 +205,9 @@ table.result_snippet tr,
     text-align: right;
     width: 4%;
 }
+td#line-numbers {
+    width: 100%;
+}
 .result_snippet td {
     padding: .1rem .5rem;
 }
@@ -192,7 +237,6 @@ table.result_snippet tr,
 .file pre {
     margin: 0;
 }
-
 .checkbox_case {
     margin: .5em;
 }
@@ -220,6 +264,7 @@ mark {
     border-top-left-radius: 0;
     width: auto;
     list-style: none;
+    z-index: 2;
 }
 .context-menu a {
     display: block;
@@ -364,6 +409,7 @@ mark {
     overflow-y: auto;
     overflow-x: hidden;
     max-height: calc(100% - 150px);
+    z-index: 2;
 }
 .panel button{
     display: inline-block;
