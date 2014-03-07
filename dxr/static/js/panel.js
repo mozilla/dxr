@@ -19,4 +19,10 @@ $(function() {
         panelContent.toggle();
         toggleAria(panelContent);
     });
+
+    $('#panel-content a.class').click(function (event) {
+        $(".highlighted").removeClass("highlighted");
+        var highlighted_line = $(this).attr('href').replace('#', '');
+        $("#" + highlighted_line).addClass("highlighted");
+    });
 });
