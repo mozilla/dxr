@@ -469,10 +469,10 @@ $(function() {
 
     // Reload the page when we go back or forward.
     function popStateHandler(event) {
-        //check for event state first to avoid nasty complete page reloads on #anchors
-	if (event.state != null) {
+        // Check for event state first to avoid nasty complete page reloads on #anchors:
+         if (event.state != null) {
             window.onpopstate = null;
             window.location.reload();
-	}
+         }
     }
 });
