@@ -20,9 +20,15 @@ $(function() {
         toggleAria(panelContent);
     });
 
-    $('#panel-content a.class').click(function (event) {
-        $(".highlighted").removeClass("highlighted");
-        var highlighted_line = $(this).attr('href').replace('#', '');
-        $("#" + highlighted_line).addClass("highlighted");
+    //highlight a single line when its correspondings panel anchor is clicked
+    $('.panel a').click(function(event) {
+        //unhighlight any highlighted lines
+        $(".highlighted").removeClass('highlighted');
+        var clickedLineId = this;
+        //find the span with corresponding line number to anchor
+        clickedLineId = clickedLineId.hash.replace('#', '');
+        var clickedLine = document.getElementById(clickedLineId);
+        //add highlighted class back to selected line only
+        clickedLine.classList.add('highlighted');
     });
 });

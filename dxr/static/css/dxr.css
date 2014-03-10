@@ -134,7 +134,7 @@ td.code {
     padding: 0 0 0 .5em;
 }
 td#line-numbers {
-    position: fixed;
+    position: absolute;
     width: 95%;
     z-index: 0;
 }
@@ -204,9 +204,6 @@ table.result_snippet tr,
     color: #aaa;
     text-align: right;
     width: 4%;
-}
-td#line-numbers {
-    width: 100%;
 }
 .result_snippet td {
     padding: .1rem .5rem;
