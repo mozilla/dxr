@@ -151,7 +151,7 @@ td#line-numbers span {
     padding: 0 0 0 5px;
 }
 td#line-numbers span.highlighted {
-    background: none repeat scroll 0 0 rgba(0, 255, 255, 0.2);
+    background: none repeat scroll 0 0 rgb(255, 255, 204);
 }
 td.code {
     padding: 0 0 0 .5em;

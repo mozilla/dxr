@@ -20,15 +20,11 @@ $(function() {
         toggleAria(panelContent);
     });
 
-    //highlight a single line when its correspondings panel anchor is clicked
+    //highlight a single line when its corresponding panel anchor is clicked
     $('.panel a').click(function(event) {
-        //unhighlight any highlighted lines
+        var highlightLine = $(this.hash);
         $(".highlighted").removeClass('highlighted');
-        var clickedLineId = this;
-        //find the span with corresponding line number to anchor
-        clickedLineId = clickedLineId.hash.replace('#', '');
-        var clickedLine = document.getElementById(clickedLineId);
         //add highlighted class back to selected line only
-        clickedLine.classList.add('highlighted');
+        $(highlightLine).addClass('highlighted');
     });
 });

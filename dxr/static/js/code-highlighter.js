@@ -43,11 +43,9 @@ $(function () {
                 line.addClass("clicked");
                 selected = $(".clicked").nextUntil(lastSelected);
             }
-            if (selected.length > 0) {
-                selected.each(function () {
-                    selected.addClass("highlighted");
-                });
-            }
+            selected.each(function () {
+                selected.addClass("highlighted");
+            });
 
             // since all highlighed items are stripped, add one back
             lastSelected.addClass("highlighted");
@@ -57,15 +55,17 @@ $(function () {
         //single non-shift modified click toggle here
         } else {
             var lastSelected = $(".last-selected");
+            var highlightedLines = $("highlighted");
             line = $("#" + clickedNum);
-
+            //Remove existing highlights. 
+            $(".highlighted").removeClass("last-selected highlighted");
+            //toggle highlighting on for any line that was not previously clicked
             if (parseInt(lastSelected.attr('id'), 10) !== clickedNum) {
-                $(".highlighted").removeClass("last-selected highlighted");
+                //With this we're one better than github, which doesn't allow toggling single lines
                 line.toggleClass("last-selected highlighted");
-                window.location.hash = line.attr('id');
+                setWindowHash(clickedNum, false);
             } else {
-                $(".highlighted").removeClass("last-selected highlighted");
-                window.location.hash = '';
+                history.replaceState(null, null, "#");
             }
         }
     });
@@ -73,30 +73,41 @@ $(function () {
     //set the window.location.hash to the highlighted lines
     function setWindowHash(clickedNum, lastSelectedNum) {
         var windowHighlightedLines = null;
-        //order of line numbers matters in the url, detect it here
-        if (clickedNum < lastSelectedNum) {
+        var hashPosition =  $("#" + parseInt(clickedNum)).offset();
+
+        //order of line numbers matters in the url so detect it here
+        if (lastSelectedNum === false) {
+            windowHighlightedLines = clickedNum;
+        } else if (clickedNum < lastSelectedNum) {
             windowHighlightedLines = clickedNum + "-" + lastSelectedNum;
         } else {
             windowHighlightedLines = lastSelectedNum + "-" + clickedNum;
         }
-        window.location.hash = windowHighlightedLines;
+        //window.location.hash causes scrolling, even with a method similar to dxr.js scrollIntoView.
+        //history.replaceState accomplishes the same thing without any scrolling whatsoever.
+        history.replaceState(null, null, "#" + windowHighlightedLines);
     }
 
     //highlight line(s) if someone visits a url directly with an #anchor
     $(document).ready(function () {
-        var hash = window.location.hash.replace("#", ""),
-            lines = hash.split("-");
+        var hash = window.location.hash.substring(1),
+            lines = hash.split("-"),
+            lineStart = "#" + lines[0],
+            lineEnd = "#" + lines[1],
+            jumpPosition = $(lineStart).offset();
 
         //handle multi-line highlights
         if (lines.length > 1) {
-            for (var i = lines[0]; i <= lines[1]; ++i) {
-                var line = document.getElementById(i);
-                line.classList.add('highlighted');
-            }
-        //handle a single line highlight, 'lines' is one line number here
+            $(lineStart).addClass('highlighted');
+            var selected = $(lineStart).nextUntil(lineEnd);
+            selected.addClass('highlighted');
+            $(lineEnd).addClass('highlighted');
+        //handle a single line highlight
         } else {        
-            document.getElementById(lines[0]).classList.add('highlighted');
+            $(lineStart).addClass('highlighted');
         }
+        //for directly linked line(s), scroll to the offset minus 150px for fixed search bar height
+        window.scrollTo(0, jumpPosition.top - 150);
     });
 
 });
