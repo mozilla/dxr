@@ -73,7 +73,7 @@ def search(tree):
         # Connect to database
         try:
             conn = connect_db(join(current_app.instance_path, 'trees', tree))
-        except:
+        except sqlite3.Error:
             error = 'Failed to establish database connection.'
         else:
             # Parse the search query
