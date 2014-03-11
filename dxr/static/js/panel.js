@@ -23,8 +23,8 @@ $(function() {
     //highlight a single line when its corresponding panel anchor is clicked
     $('.panel a').click(function(event) {
         var highlightLine = $(this.hash);
-        $(".highlighted").removeClass('highlighted');
+        $('.highlighted').removeClass('highlighted');
         //add highlighted class back to selected line only
-        $(highlightLine).addClass('highlighted');
+        $(highlightLine).addClass('last-selected highlighted');
     });
 });
