@@ -8,8 +8,7 @@ from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template)
 
 from dxr.query import Query, filter_menu_items
-from dxr.server_utils import connect_db
-from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, sqlite3  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
+from dxr.utils import connect_db, non_negative_int, search_url, TEMPLATE_DIR, sqlite3  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
 
 
 # Look in the 'dxr' package for static files, etc.:
@@ -71,8 +70,11 @@ def search(tree):
         arguments['tree'] = tree
 
         # Connect to database
-        conn = connect_db(tree, current_app.instance_path)
-        if conn:
+        try:
+            conn = connect_db(join(current_app.instance_path, 'trees', tree))
+        except sqlite3.Error:
+            error = 'Failed to establish database connection.'
+        else:
             # Parse the search query
             qtext = querystring.get('q', '')
             is_case_sensitive = querystring.get('case') == 'true'
@@ -130,8 +132,6 @@ def search(tree):
                                     case=True if is_case_sensitive else None),
                          description)
                         for t, description in trees.iteritems()]
-        else:
-            error = 'Failed to establish database connection.'
     else:
         arguments['tree'] = trees.keys()[0]
         error = "Tree '%s' is not a valid tree." % tree

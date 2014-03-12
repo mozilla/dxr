@@ -21,21 +21,6 @@ from urllib import quote, quote_plus
 
 TEMPLATE_DIR = 'static/templates'
 
-
-def connect_database(tree):
-    """Connect to database ensuring that dependencies are built first"""
-    # Create connection
-    conn = sqlite3.connect(os.path.join(tree.target_folder, ".dxr-xref.sqlite"))
-    # Configure connection
-    conn.execute("PRAGMA synchronous=off")  # TODO Test performance without this
-    conn.execute("PRAGMA page_size=32768")
-    # Optimal page should probably be tested, we get a hint from:
-    # http://www.sqlite.org/intern-v-extern-blob.html
-    conn.text_factory = str
-    conn.row_factory  = sqlite3.Row
-    return conn
-
-
 _template_env = None
 def load_template_env(temp_folder, dxr_root):
     """Load template environment (lazily)"""
@@ -116,3 +101,29 @@ def browse_url(tree, www_root, path):
     # TODO: Stop punting on path components that actually have '/' in them
     # once we define a consistent handling of escapes in build.py. Same for
     # search_url().
+
+
+# This makes results a lot more fun!
+def _collate_loc(str1, str2):
+    parts1 = str1.split(':')
+    parts2 = str2.split(':')
+    for i in range(1, len(parts1)):
+        parts1[i] = int(parts1[i])
+    for i in range(2, len(parts2)):
+        parts2[i] = int(parts2[i])
+    return cmp(parts1, parts2)
+
+
+def connect_db(dir):
+    """Return the database connection for a tree.
+
+    :arg dir: The directory containing the .dxr-xref.sqlite file
+
+    """
+    conn = sqlite3.connect(join(dir, ".dxr-xref.sqlite"))
+    conn.text_factory = str
+    conn.execute("PRAGMA synchronous=off")
+    conn.execute("PRAGMA page_size=32768")
+    conn.create_collation("loc", _collate_loc)
+    conn.row_factory = sqlite3.Row
+    return conn
