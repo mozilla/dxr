@@ -29,12 +29,6 @@ $(function() {
     var nunjucksEnv = nunjucks.configure('dxr/static/templates/',
                                          {autoescape: true});
     htmlEscape = nunjucksEnv.getFilter('escape');
-    /**
-     * Disable and enable pointer events on scroll begin and scroll end to
-     * avoid unnecessary paints and recalcs caused by hover effets.
-     * @see http://www.thecssninja.com/javascript/pointer-events-60fps
-     */
-    var docElem = document.documentElement;
 
     // Return the maximum number of pixels the document can be scrolled.
     function getMaxScrollY() {
