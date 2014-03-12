@@ -25,8 +25,7 @@ from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
 from dxr.query import filter_menu_items
-from dxr.utils import load_template_env, open_log, browse_url
-from dxr.server_utils import connect_db
+from dxr.utils import connect_db, load_template_env, open_log, browse_url
 
 try:
     from itertools import compress
