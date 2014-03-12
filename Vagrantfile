@@ -50,5 +50,16 @@ Vagrant::Config.run do |config|
 
     config.vm.share_folder("vagrant-root", MOUNT_POINT, ".")
 
+    config.vm.provision :puppet do |puppet|
+        puppet.manifests_path = "puppet/manifests"
+        puppet.manifest_file = "init.pp"
+        puppet.module_path = "puppet/modules"
+        # enable this to see verbose and debug puppet output
+        if CONF['debug_mode'] == true
+            puppet.options = "--verbose --debug"
+        end
+    end
+
     config.vm.provision "shell", path: "vagrant_provision.sh"
+
 end

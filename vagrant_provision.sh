@@ -4,15 +4,11 @@
 set -e
 set -x
 
-apt-get update
-
 # node and npm:
-apt-get install -y npm
 # Homogenize binary name with production RHEL:
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
 # Python:
-apt-get install -y libapache2-mod-wsgi python-pip
 pip install virtualenv virtualenvwrapper python-hglib nose
 cd ~vagrant/dxr
 # If it hangs here, you might have a mismatched version of the VirtualBox Guest
@@ -31,7 +27,6 @@ python setup.py develop &> setup-develop.log || echo "Done with setup.py develop
 cat setup-develop.log
 
 # Apache:
-apt-get install -y apache2-dev apache2
 mkdir -p /etc/apache2/sites-enabled
 if [ ! -e /etc/apache2/sites-enabled/dxr.conf ]; then
     cat >/etc/apache2/sites-enabled/dxr.conf <<THEEND
@@ -70,8 +65,7 @@ a2enmod proxy
 a2dissite 000-default
 
 # DXR itself:
-apt-get install -y libsqlite3-dev git mercurial llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config
-ln -sf /usr/bin/llvm-config-3.3 /usr/local/bin/llvm-config
+update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
 # Install libtrilite so Apache WSGI processes can see it:
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
 /sbin/ldconfig
