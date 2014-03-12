@@ -24,8 +24,7 @@ class MemberFunctionTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def direct_result_eq(self, query_text, line_num):
-        conn = connect_db(
-            'code', os.path.join(self._config_dir_path, 'target'))
+        conn = connect_db( os.path.join(self._config_dir_path, 'target', 'trees', 'code'))
         eq_(Query(conn, query_text).direct_result(), ('main.cpp', line_num))
 
     def test_qualified_function_name_prefix(self):

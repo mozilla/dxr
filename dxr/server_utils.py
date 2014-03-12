@@ -17,18 +17,14 @@ def _collate_loc(str1, str2):
     return cmp(parts1, parts2)
 
 # Get database connection for tree
-# TODO: Why do both this and connect_database() exist?
-def connect_db(tree, instance_path):
-    dbname = os.path.join(instance_path, 'trees', tree, '.dxr-xref.sqlite')
-    try:
-        conn = sqlite3.connect(dbname)
-        conn.text_factory = str
-        conn.execute("PRAGMA temp_store = MEMORY;")
-        conn.create_collation("loc", _collate_loc)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except:  # TODO: Die, bare except, die!
-        return None
+def connect_db(dir):
+    conn = sqlite3.connect(os.path.join(dir, ".dxr-xref.sqlite"))
+    conn.text_factory = str
+    conn.execute("PRAGMA synchronous=off")
+    conn.execute("PRAGMA page_size=32768")
+    conn.create_collation("loc", _collate_loc)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # Log message
 def log(msg):

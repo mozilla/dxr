@@ -25,7 +25,8 @@ from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
 from dxr.query import filter_menu_items
-from dxr.utils import load_template_env, connect_database, open_log, browse_url
+from dxr.utils import load_template_env, open_log, browse_url
+from dxr.server_utils import connect_db
 
 try:
     from itertools import compress
@@ -138,7 +139,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
             ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
 
         # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
-        conn = connect_database(tree)
+        conn = connect_db(tree.target_folder)
 
         if skip_indexing:
             print " - Skipping indexing (due to 'index' in 'skip_stages')"
@@ -483,7 +484,7 @@ def _build_html_for_file_ids(tree, start, end):
         # them to the master process, since it's already writing the built HTML
         # directly, since that probably yields better parallelism.
 
-        conn = connect_database(tree)
+        conn = connect_db(tree.target_folder)
         # TODO: Replace this ad hoc logging with the logging module (or something
         # more humane) so we can get some automatic timestamps. If we get
         # timestamps spit out in the parent process, we don't need any of the

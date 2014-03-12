@@ -71,8 +71,11 @@ def search(tree):
         arguments['tree'] = tree
 
         # Connect to database
-        conn = connect_db(tree, current_app.instance_path)
-        if conn:
+        try:
+            conn = connect_db(join(current_app.instance_path, 'trees', tree))
+        except sqlite3.Error:
+            error = 'Failed to establish database connection.'
+        else:
             # Parse the search query
             qtext = querystring.get('q', '')
             is_case_sensitive = querystring.get('case') == 'true'
@@ -130,8 +133,6 @@ def search(tree):
                                     case=True if is_case_sensitive else None),
                          description)
                         for t, description in trees.iteritems()]
-        else:
-            error = 'Failed to establish database connection.'
     else:
         arguments['tree'] = trees.keys()[0]
         error = "Tree '%s' is not a valid tree." % tree
