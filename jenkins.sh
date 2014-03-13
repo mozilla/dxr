@@ -4,10 +4,7 @@
 git submodule sync
 git submodule update --init --recursive
 
-/opt/vagrant/bin/vagrant plugin install vagrant-vbguest
-/opt/vagrant/bin/vagrant up --no-provision
-/opt/vagrant/bin/vagrant halt
-/opt/vagrant/bin/vagrant up --provision
+/opt/vagrant/bin/vagrant up
 echo "DONE PROVISIONING"
 /opt/vagrant/bin/vagrant ssh -c 'cd /home/vagrant/dxr && make clean && make test'
 RESULT=$?
