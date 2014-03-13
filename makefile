@@ -9,11 +9,17 @@ all: build
 test: build
 	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:`pwd`/trilite python2 setup.py test
 
-build: $(BUILD_PLUGINS) trilite
+build: $(BUILD_PLUGINS) trilite templates
 
 check: $(CHECK_PLUGINS) trilite
 
 clean: $(CLEAN_PLUGINS) trilite-clean
+
+node:
+	npm install
+
+templates: node
+	node_modules/.bin/grunt precompile
 
 trilite:
 	$(MAKE) -C trilite/ release
