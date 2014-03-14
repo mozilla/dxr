@@ -1,15 +1,8 @@
 # Overwritable config for Vagrant
 
-# Don't change this; use vagrantconfig_local.yaml to override these
-# settings instead.
+# Don't change this; copy this to vagrantconfig_local.yaml, and change that instead.
 
 #memory: 256
 
-# enable this to see verbose and debug puppet output
-#debug_mode: true
-
 # set this to "gui" if vagrant cannot connect
 #boot_mode: gui
-
-# disable/enable nfs
-#nfs: false
