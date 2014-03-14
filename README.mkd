@@ -111,14 +111,6 @@ _This is a short list of major things that could be done to improve DXR._
         - Use trilite for functions, types, macros, etc.
         - Store the transitive closure of indirect calls
      - Port search logic to new schema
-  * Write proper search query parser
-     - Space is a delimiter unless in dice `[ ]`, quotes `" "` or escaped `\ `
-     - Assume grep syntax for terms, `path:`, `type:`, etc. (ie. `*` is literal, `\*` is kleene star)
-     - Let quotes "text" be literal terms, `path:`, `function:`, etc.
-     - egrep syntax for `regexp:`, `regex:` and `egrep:` ie. `*` is kleene star, `\*` is literal)
-     - Prefix `+` implies case sensitivity (and fully qualified `type:`, `function:`, etc.)
-     - Prefix `-` implies negation (prefix `-+` and `+-` is case sensitive negation)
-     (Prefix `+`, `-`, `+-` and `-+` can be applied to terms, `path:`, `type:`, `egrep:`, etc.)
   * Minor refactoring of template interface to minimize size
      - Reuse annotations (i.e., don't store the same annotation for each line)
      - Reuse menus (i.e., don't store the same menu for each occurrence)
@@ -127,5 +119,3 @@ _This is a short list of major things that could be done to improve DXR._
      - Make the UI pretty
      - Add option in "Advanced" search to disable redirect (use cookies to remember setting)
      - Minimize template size (at 20 MiB for 20k lines, this is a real issue)
-  * Add tree format version number to generated trees
-    (Don't merge generated output with different formats, when configuring update cron job)
