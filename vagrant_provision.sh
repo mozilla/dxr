@@ -20,6 +20,16 @@ cd ~vagrant/dxr
 # "Insert Guest Additions CD" from the Devices menu. On the guest, mount
 # /dev/cdrom /mnt && cd /mnt && ./VBoxLinuxAdditions.run. Shut the guest back
 # down.
+#
+# Alternately, per
+# https://github.com/TryGhost/Ghost-Vagrant#updating-virtual-box-guest-additions,
+# from the host, run...
+# 1) vagrant plugin install vagrant-vbguest
+# 2) vagrant up --no-provision
+# 3) vagrant ssh -c 'sudo apt-get -y -q purge virtualbox-guest-dkms
+#    virtualbox-guest-utils virtualbox-guest-x11'
+# 4) vagrant halt
+# 5) vagrant up --provision
 ./peep.py install -r requirements.txt
 python setup.py develop
 
