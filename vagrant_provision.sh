@@ -34,9 +34,6 @@ if [ ! -e /etc/apache2/sites-enabled/dxr.conf ]; then
 #
 # This should be adaptable to serve at non-root positions in the URL hierarchy.
 
-# IF EDITING THIS ON YOUR HOST MACHINE, remember to "vagrant provision" so the
-# VM sees it.
-
 <VirtualHost *:80>
     # Serve static resources, like CSS and images, with plain Apache:
     Alias /static/ /home/vagrant/dxr/dxr/static/
