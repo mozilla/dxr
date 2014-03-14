@@ -63,7 +63,7 @@ a2dissite 000-default
 # sqlite3 is so trilite's make test works.
 # pkg-config is so make clean works.
 apt-get install -y libsqlite3-dev sqlite3 git mercurial llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config pkg-config
-ln -sf /usr/bin/llvm-config-3.3 /usr/local/bin/llvm-config
+update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
 # Install libtrilite so Apache WSGI processes can see it:
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
 /sbin/ldconfig
