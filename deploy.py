@@ -182,7 +182,7 @@ class Deployment(object):
                 run('{python} ./peep.py install -r requirements.txt',
                     python=python)
                 # Compile nunjucks templates:
-                run('make templates')
+                run('make templates &> /dev/null')
                 # Quiet the complaint about there being no matches for *.so:
                 run('{python} setup.py install 2>/dev/null', python=python)
 
