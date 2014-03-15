@@ -36,9 +36,11 @@ _Configuration keys for the `DXR` section of the configuration file._
  - `generated_date`     In RFC-822 format, also know as (RFC 2822),
                         You might want to overwrite this to get the same date
                         on all files! (defaults to time of execution)
- - 'skip_stages'        Build/indexing stages to skip (default ''). Can be zero
+ - `skip_stages`        Build/indexing stages to skip (default ''). Can be zero
                         or more of 'index', 'html' (space separated)
- - 'disable_workers'    If non-empty, do not use a worker pool for htmlification
+ - `disable_workers`    If non-empty, do not use a worker pool for htmlification
+                        (default '')
+ - `default_tree`       The default tree when there are several trees to be built. 
                         (default '')
 
 (Refer to the Plugin Configuration section for plugin keys available here).
