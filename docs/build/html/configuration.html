@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. DXR Configuration &mdash; DXR: Code Search and Cross-Reference Tool 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="DXR: Code Search and Cross-Reference Tool 1.0 documentation" href="index.html" />
+    <link rel="next" title="3. Deployment of DXR" href="deployment.html" />
+    <link rel="prev" title="1. DXR Application Architecture" href="architecture.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="deployment.html" title="3. Deployment of DXR"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="architecture.html" title="1. DXR Application Architecture"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">DXR: Code Search and Cross-Reference Tool 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="dxr-configuration">
+<h1>2. DXR Configuration<a class="headerlink" href="#dxr-configuration" title="Permalink to this headline">¶</a></h1>
+<p><em>This document describes how to configure your DXR builds, as well as
+fully documenting all configuration settings.</em></p>
+<div class="section" id="configuration-file-format">
+<h2>2.1. Configuration File Format<a class="headerlink" href="#configuration-file-format" title="Permalink to this headline">¶</a></h2>
+<p>The configuration file is split into different sections, sections
+<tt class="docutils literal"><span class="pre">DXR</span></tt> is special; all other sections describes a tree for indexing.
+Keys that must and can be specified for different sections are listed in
+relevant section below.</p>
+<p>The config file must be written in a format compatible with python&#8217;s
+built-in
+<a class="reference external" href="http://docs.python.org/library/configparser.html">ConfigParser</a>, see
+python documentation for details.</p>
+</div>
+<div class="section" id="id1">
+<h2>2.2. DXR Configuration<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p><em>Configuration keys for the</em> <tt class="docutils literal"><span class="pre">DXR</span></tt> <em>section of the configuration file.</em></p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">target_folder</span></tt> Output directory (<strong>required</strong>)</li>
+<li><tt class="docutils literal"><span class="pre">dxrroot</span></tt> Location of you DXR install (defaults to directory of the
+executable)</li>
+<li><tt class="docutils literal"><span class="pre">plugin_folder</span></tt> Plugin folder (default <tt class="docutils literal"><span class="pre">&lt;dxrroot&gt;/plugins</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">nb_jobs</span></tt> Number of jobs allowed (default <tt class="docutils literal"><span class="pre">1</span></tt>), note that this
+value can be overwritten by the <tt class="docutils literal"><span class="pre">-j</span></tt> argument when running
+<tt class="docutils literal"><span class="pre">dxr-build.py</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">temp_folder</span></tt> Temporary folder (default <tt class="docutils literal"><span class="pre">/tmp/dxr-temp</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">log_folder</span></tt> Log folder (default <tt class="docutils literal"><span class="pre">&lt;temp_folder&gt;/logs</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">wwwroot</span></tt> Virtual root on deployment server (default <tt class="docutils literal"><span class="pre">/</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">enabled_plugins</span></tt> Enabled plugins (default <tt class="docutils literal"><span class="pre">*</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">disabled_plugins</span></tt> Disabled plugins (default <tt class="docutils literal"><span class="pre">''</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">directory_index</span></tt> Filename for directory index files (default
+<tt class="docutils literal"><span class="pre">.dxr-directory-index.html</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">generated_date</span></tt> In RFC-822 format, also know as (RFC 2822), You
+might want to overwrite this to get the same date on all files!
+(defaults to time of execution)</li>
+<li><tt class="docutils literal"><span class="pre">skip\_stages</span></tt> Build/indexing stages to skip (default <tt class="docutils literal"><span class="pre">''</span></tt>). Can be
+zero or more of &#8216;index&#8217;, &#8216;html&#8217; (space separated)</li>
+<li><tt class="docutils literal"><span class="pre">disable\_workers</span></tt> If non-empty, do not use a worker pool for
+htmlification (default <tt class="docutils literal"><span class="pre">''</span></tt>)</li>
+</ul>
+<p>(Refer to the Plugin Configuration section for plugin keys available
+here).</p>
+<p>Notice, it&#8217;s strongly recommended that you provide a sane <strong>temporary
+folder</strong>, using <tt class="docutils literal"><span class="pre">/tmp</span></tt> (default) is not recommended. Creating a
+sub-directory under <tt class="docutils literal"><span class="pre">/tmp</span></tt> is better, but preferable you&#8217;d want
+something on the same file system as the <tt class="docutils literal"><span class="pre">target_folder</span></tt>.</p>
+<p>Please note that <tt class="docutils literal"><span class="pre">dxr-build.py</span></tt> assume the plugins in
+<tt class="docutils literal"><span class="pre">plugin_folder</span></tt> are already built and ready for use. If you specify
+your own plugin folder, the top-level makefile will not do this for you.
+This setting is mainly here for completion, it&#8217;s not recommended for
+normal operation.</p>
+<p>You might be tempted use <tt class="docutils literal"><span class="pre">index.html</span></tt> for <tt class="docutils literal"><span class="pre">directory_index</span></tt>,
+however, this is <strong>not</strong> recommened as any indexed files with that name
+would hide the directory index, which must be rather confusing to the
+users. (Note: this value will also be used in the generated
+<tt class="docutils literal"><span class="pre">.htaccess</span></tt> file.)</p>
+</div>
+<div class="section" id="tree-configuration">
+<h2>2.3. Tree Configuration<a class="headerlink" href="#tree-configuration" title="Permalink to this headline">¶</a></h2>
+<p><em>Configuration keys for tree sections of the configuration file.</em></p>
+<p>Any section that is not named <tt class="docutils literal"><span class="pre">DXR</span></tt> specifies a tree using the keys
+listed below.</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">source_folder</span></tt> Source folder (<strong>required</strong>)</li>
+<li><tt class="docutils literal"><span class="pre">build_command</span></tt> Command for building sources (defaults to
+<tt class="docutils literal"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">$jobs</span></tt>) Notice that <tt class="docutils literal"><span class="pre">$jobs</span></tt> will be replaced with
+<tt class="docutils literal"><span class="pre">nb_jobs</span></tt> as provided in the config file or defined at runtime
+using the <tt class="docutils literal"><span class="pre">-j</span></tt> argument.</li>
+<li><tt class="docutils literal"><span class="pre">object_folder</span></tt> Folder where object files will be stored
+(<strong>required</strong>)</li>
+<li><tt class="docutils literal"><span class="pre">log_folder</span></tt> Log folder (defaults <tt class="docutils literal"><span class="pre">&lt;config_log_folder&gt;/&lt;tree&gt;</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">temp_folder</span></tt> Tempoary folder for this tree, (defaults
+<tt class="docutils literal"><span class="pre">&lt;config_temp_folder&gt;/&lt;tree&gt;</span></tt>) It&#8217;s <strong>not</strong> recommend that this
+attribute is defined!</li>
+<li><tt class="docutils literal"><span class="pre">enabled_plugins</span></tt> Plugins enabled in this tree (defaults <tt class="docutils literal"><span class="pre">*</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">disabled_plugins</span></tt> Plugins disabled in this tree (default <tt class="docutils literal"><span class="pre">*</span></tt>),
+note that plugins disabled in the <tt class="docutils literal"><span class="pre">DXR</span></tt> section is also disabled.</li>
+<li><tt class="docutils literal"><span class="pre">ignore_patterns</span></tt> Space separated list of Unix shell-style file
+patterns to ignore, for information on the pattern style, see
+<a class="reference external" href="http://docs.python.org/library/fnmatch.html">fnmatch</a></li>
+</ul>
+<p>(Refer to the Plugin Configuration section for plugin keys available
+here).</p>
+<p>Notice that is strongly recommended that you don&#8217;t define
+<tt class="docutils literal"><span class="pre">temp_folder</span></tt>; this feature is just here for completeness. If you
+define a <tt class="docutils literal"><span class="pre">build_command</span></tt> without using <tt class="docutils literal"><span class="pre">$jobs</span></tt> somewhere in the
+command, you will be warned, but the build will continue.</p>
+</div>
+<div class="section" id="plugin-configuration">
+<h2>2.4. Plugin Configuration<a class="headerlink" href="#plugin-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Keys prefixed with <tt class="docutils literal"><span class="pre">plugin_</span></tt> in either a tree section or the DXR
+section will read and stored on the <tt class="docutils literal"><span class="pre">config</span></tt> and <tt class="docutils literal"><span class="pre">tree</span></tt> objects,
+available to plugins. These keys can be used to configure plugins, and
+some plugins might require these in order to work. Plugin developers are
+advised to name their configuration keys as
+<tt class="docutils literal"><span class="pre">plugin_&lt;plugin-name&gt;_&lt;key&gt;</span></tt>, refer to Plugins.mkd for more details on
+plugin development.</p>
+<p>Plugin keys listed below can be defined in the tree sections of the
+configuration file.</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">plugin_hg_hgweb</span></tt> Location of hg-web installation for this tree.
+(Assumed to have default url layout)</li>
+<li><tt class="docutils literal"><span class="pre">plugin_hg_section</span></tt> Section text (defaults to <tt class="docutils literal"><span class="pre">Mercurial</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">plugin_buglink_name</span></tt> Name of the projects bug tracker
+installation. (eg. <tt class="docutils literal"><span class="pre">bugzilla.mozilla.org</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">plugin_buglink_bugzilla</span></tt> URL pattern for buglinks, %s will be
+replaced with the bug number, this key must include <tt class="docutils literal"><span class="pre">http://</span></tt></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. DXR Configuration</a><ul>
+<li><a class="reference internal" href="#configuration-file-format">2.1. Configuration File Format</a></li>
+<li><a class="reference internal" href="#id1">2.2. DXR Configuration</a></li>
+<li><a class="reference internal" href="#tree-configuration">2.3. Tree Configuration</a></li>
+<li><a class="reference internal" href="#plugin-configuration">2.4. Plugin Configuration</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="architecture.html"
+                        title="previous chapter">1. DXR Application Architecture</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="deployment.html"
+                        title="next chapter">3. Deployment of DXR</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/configuration.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="deployment.html" title="3. Deployment of DXR"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="architecture.html" title="1. DXR Application Architecture"
+             >previous</a> |</li>
+        <li><a href="index.html">DXR: Code Search and Cross-Reference Tool 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, various.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>

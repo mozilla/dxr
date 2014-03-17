@@ -1,0 +1,76 @@
+Deployment of DXR
+=================
+
+*This document details how to deploy DXR for a project.*
+
+DXR is designed to generated a source code index for one more trees
+offline, preferably on a dedicated build server, the generated index is
+then uploaded to a webserver for hosting.
+
+Build DXR and Associated Plugins
+--------------------------------
+
+Before you can start generating source code indexes with DXR, you must
+build DXR. This is done using the top-level makefile, simply type
+``make build`` and you should be good to go. Notice that this make file
+also has a ``make check`` target.
+
+Generating a Source Code Index
+------------------------------
+
+To build a source code index, you will need a project configuration
+file. Notice that this configuration file may contain one or more source
+trees. The configuration file details one DXR deployment. For
+information on the configuration file, see configuration.mkd.
+
+When you have configured your DXR deployment, you can generate the
+source code index using ``dxr-build.py -f <config-file>``. This will
+generate a "DXR instance": a folder containing a source code index and
+HTML-formatted source for one or more trees.
+
+If you wish to build an instance for an individual source tree, use
+``dxr-build.py --file <config-file> --tree <tree>``. This can, for
+example, be used to build each source tree on its own server.
+
+DXR has the following dependencies on the build servers:
+
+-  sqlite (``>= 3.7.4``)
+-  trilite (pulled in as a git submodule)
+-  python (``>= 2.6``)
+-  jinja2 (``>= 2.4``)
+-  pygments (``>= 1.4``)
+-  clang (``>= 3.0``)
+-  python-hglib (``>= 0.2``)
+
+DXR relies on TriLite for string matching. TriLite is an Sqlite
+extension for accelerated substring and regular expression matching. You
+can fetch latest revision from
+`github <https://github.com/jonasfj/trilite>`__. Notice, that TriLite is
+under active development, and far from stable, so if you have problems
+with it, try another revision and file a bug.
+
+The Generated Instance
+----------------------
+
+The generated instance is stored in the folder named by the
+``target_folder`` key in configuration.mkd. It contains a minimal
+configuration file needed by the server, a SQLite database to support
+search, and HTML-formatted versions of all the files in the indexed
+source trees.
+
+Deployment of the Instance to a Web Server
+------------------------------------------
+
+Once you have generated an instance, move it onto your web server, and
+configure it to serve searches via ``dxr/dxr.wsgi``. An example
+configuration for Apache is provided in
+``puppet/files/etc/httpd/conf.d/dxr.conf``.
+
+DXR has the following dependencies on the webserver:
+
+-  sqlite (``>= 3.7.4``)
+-  trilite (pulled in as a git submodule)
+-  python (``>= 2.6``)
+-  jinja2 (``>= 2.4``)
+-  Apache with ``mod_rewrite`` and ``mod_wsgi`` (or equivalent)
+

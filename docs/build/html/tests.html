@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>7. Automated Testing of DXR &mdash; DXR: Code Search and Cross-Reference Tool 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="DXR: Code Search and Cross-Reference Tool 1.0 documentation" href="index.html" />
+    <link rel="prev" title="6. DXR Plugin Architecture" href="plugins.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="plugins.html" title="6. DXR Plugin Architecture"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">DXR: Code Search and Cross-Reference Tool 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="automated-testing-of-dxr">
+<h1>7. Automated Testing of DXR<a class="headerlink" href="#automated-testing-of-dxr" title="Permalink to this headline">¶</a></h1>
+<p><em>This document describes the automated testing framework for DXR.</em></p>
+<div class="section" id="writing-tests-for-dxr">
+<h2>7.1. Writing Tests for DXR<a class="headerlink" href="#writing-tests-for-dxr" title="Permalink to this headline">¶</a></h2>
+<p>DXR supports two kinds of tests:</p>
+<ol class="arabic simple">
+<li>A lightweight sort with a single file worth of C++ code. This kind
+stores the C++ source as a Python string within a subclass of
+<tt class="docutils literal"><span class="pre">SingleFileTestCase</span></tt>. At test time, it creates a DXR instance on
+disk in a temp folder, builds it, and makes assertions about it. If
+the <tt class="docutils literal"><span class="pre">should_delete_instance</span></tt> class variable is truthy, it then
+deletes the instance. If you want to examine the instance manually
+for troubleshooting, set this to <tt class="docutils literal"><span class="pre">False</span></tt>.</li>
+<li>A heavier sort of test which consists of a full DXR instance on disk.
+<tt class="docutils literal"><span class="pre">test_ignores</span></tt> is an example. Within these instances are one or
+more Python files containing subclasses of <tt class="docutils literal"><span class="pre">DxrInstanceTestCase</span></tt>
+which express the actual tests. These instances can be built like any
+other using <tt class="docutils literal"><span class="pre">dxr-build.py</span></tt>, in case you want to do manual
+exploration.</li>
+</ol>
+</div>
+<div class="section" id="running-the-tests">
+<h2>7.2. Running the Tests<a class="headerlink" href="#running-the-tests" title="Permalink to this headline">¶</a></h2>
+<p>To run all the tests run this from the root of the DXR repository:</p>
+<div class="highlight-python"><div class="highlight"><pre>make test
+</pre></div>
+</div>
+<p>To run just the tests in <tt class="docutils literal"><span class="pre">tests/test_functions.py</span></tt>, do this:</p>
+<div class="highlight-python"><div class="highlight"><pre># Make sure $LD_LIBRARY_PATH points to the trilite folder. Then...
+nosetests tests/test_functions.py
+</pre></div>
+</div>
+<p>To run just the tests from a single class, do this:</p>
+<div class="highlight-python"><div class="highlight"><pre># Make sure $LD_LIBRARY_PATH points to the trilite folder. Then...
+nosetests tests/test_functions.py:ReferenceTests
+</pre></div>
+</div>
+<p>To run a single test, do this:</p>
+<div class="highlight-python"><div class="highlight"><pre># Make sure $LD_LIBRARY_PATH points to the trilite folder. Then...
+nosetests tests/test_functions.py:ReferenceTests.test_functions
+</pre></div>
+</div>
+<p>If you have trouble, make sure you didn&#8217;t mistranscribe any colons or
+periods.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">7. Automated Testing of DXR</a><ul>
+<li><a class="reference internal" href="#writing-tests-for-dxr">7.1. Writing Tests for DXR</a></li>
+<li><a class="reference internal" href="#running-the-tests">7.2. Running the Tests</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="plugins.html"
+                        title="previous chapter">6. DXR Plugin Architecture</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/tests.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="plugins.html" title="6. DXR Plugin Architecture"
+             >previous</a> |</li>
+        <li><a href="index.html">DXR: Code Search and Cross-Reference Tool 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, various.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+    </div>
+  </body>
+</html>
