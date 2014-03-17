@@ -11,6 +11,9 @@ apt-get install -y npm
 # Homogenize binary name with production RHEL:
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
+# Docs build system:
+apt-get install -y sphinx-common
+
 # Python:
 apt-get install -y libapache2-mod-wsgi python-pip
 pip install virtualenv virtualenvwrapper python-hglib nose
@@ -72,7 +75,7 @@ a2dissite 000-default
 # DXR itself:
 # sqlite3 is so trilite's make test works.
 # pkg-config is so make clean works.
-apt-get install -y libsqlite3-dev sqlite3 git mercurial llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config pkg-config
+apt-get install -y libsqlite3-dev sqlite3 git mercurial llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config
 update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
 # Install libtrilite so Apache WSGI processes can see it:
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so

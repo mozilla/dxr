@@ -14,7 +14,7 @@ setup(
     name='dxr',
     version='0.1',
     description='Source code static analysis and browsing',
-    long_description=open('README.mkd').read(),
+    long_description=open('README.rst').read(),
     author='Erik Rose',
     author_email='erik@mozilla.com',
     license='MIT',
