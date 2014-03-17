@@ -12,7 +12,7 @@ apt-get install -y npm
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
 # Python:
-apt-get install -y libapache2-mod-wsgi python-pip
+apt-get install -y libapache2-mod-wsgi python-pip sphinx-common
 pip install virtualenv virtualenvwrapper python-hglib nose
 cd ~vagrant/dxr
 # If it hangs here, you might have a mismatched version of the VirtualBox Guest
