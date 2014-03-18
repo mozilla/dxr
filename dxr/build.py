@@ -1,6 +1,7 @@
 from codecs import getdecoder
 import cgi
 from datetime import datetime
+from errno import ENOENT
 from fnmatch import fnmatchcase
 from heapq import merge
 from itertools import chain, groupby, izip_longest
@@ -8,7 +9,7 @@ import json
 from operator import itemgetter
 import os
 from os import stat
-from os.path import dirname
+from os.path import dirname, islink
 import shutil
 import subprocess
 import sys
@@ -245,8 +246,16 @@ def index_files(tree, conn):
                 continue  # Ignore the file.
 
             # the file
-            with open(file_path, "r") as source_file:
-                data = source_file.read()
+            try:
+                with open(file_path, 'r') as source_file:
+                    data = source_file.read()
+            except IOError as exc:
+                if exc.errno == ENOENT and islink(file_path):
+                    # It's just a bad symlink (or a symlink that was swiped out
+                    # from under us--whatever):
+                    continue
+                else:
+                    raise
 
             # Discard non-text files
             if not dxr.mime.is_text(file_path, data):
