@@ -262,7 +262,7 @@ def index_files(tree, conn):
                         (path, icon, tree.source_encoding))
             file_id = cur.lastrowid
             # Index this file
-            for line_number, line in enumerate(data.splitlines(True), 1):  # TODO: Maybe we can take away the True and save some bytes, but I'm being conservative for now. I'm afraid the rendering routines might depend on extents not going past the end of the line. I would like to remove the linebreaks, though, not just for space but because it makes it easier to implement plugins: they no longer have to deal with arbitrary linebreak formats. OTOH, it means you can't do regex searches for explicit sequences of newlines and CRs. That corner case is totally not worth serving.
+            for line_number, line in enumerate(data.splitlines(), 1):  # Was a TODO: Maybe we can take away the True in splitlines() and save some bytes, but I'm being conservative for now. I'm afraid the rendering routines might depend on extents not going past the end of the line. I would like to remove the linebreaks, though, not just for space but because it makes it easier to implement plugins: they no longer have to deal with arbitrary linebreak formats. OTOH, it means you can't do regex searches for explicit sequences of newlines and CRs. That corner case is totally not worth serving.
                 cur.execute("INSERT INTO lines (number, file_id) VALUES (?, ?)",
                             (line_number, file_id))
                 cur.execute("INSERT INTO trg_index (id, text) VALUES (?, ?)",
@@ -517,7 +517,9 @@ def _build_html_for_file_ids(tree, start, end):
                                  'FROM files '
                                  'INNER JOIN lines ON files.id=lines.file_id '
                                  'INNER JOIN trg_index ON trg_index.id=lines.id '
-                                 'ORDER BY lines.number))
+                                 'WHERE files.id=? '
+                                 'ORDER BY lines.number',
+                                 [file_id]))
                 dst_path = os.path.join(tree.target_folder, path + '.html')
                 log.write('Starting %s.\n' % path)
                 htmlify(tree, conn, icon, path, text, dst_path, plugins)

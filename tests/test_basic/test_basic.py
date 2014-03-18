@@ -10,6 +10,13 @@ class BasicTests(DxrInstanceTestCase):
         """Assert that a plain text search works."""
         self.found_files_eq('main', ['main.c', 'makefile'])
 
+    def test_and(self):
+        """Finding 2 words should find only the lines that contain both."""
+        self.found_line_eq(
+            'main int',
+            '<b>int</b> <b>main</b>(<b>int</b> argc, char* argv[]){',
+            4)
+
     def test_case_sensitive(self):
         """Make sure case-sensitive searching is case-sensitive.
 
@@ -25,13 +32,21 @@ class BasicTests(DxrInstanceTestCase):
     def test_case_insensitive(self):
         """Test case-insensitive free-text searching without extents.
 
+        Also test negation of text queries.
+
         This tests trilite's isubstr query type.
 
         """
-        found_paths = self.found_files(
-            '-MAIN', is_case_sensitive=False)
-        ok_('main.c' not in found_paths)
-        ok_('makefile' not in found_paths)
+        results = self.search_results(
+            'path:makefile -CODE', is_case_sensitive=False)
+        eq_(results,
+            [{"path": "makefile",
+              "lines": [
+                {"line_number": 3,
+                  "line": "$(CXX) -o $@ $^"},
+                {"line_number": 4,
+                  "line": "clean:"}],
+              "icon": "mimetypes/unknown"}])
 
     def test_case_insensitive_extents(self):
         """Test case-insensitive free-text searching with extents.

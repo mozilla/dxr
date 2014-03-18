@@ -1,24 +1,20 @@
-import cgi
 from itertools import chain, count, groupby
 import re
-import struct
 import time
 
 from jinja2 import Markup
 from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
 
+from dxr.extents import flatten_extents, highlight_line
 
 # TODO: Some kind of UI feedback for bad regexes
-
-
-# TODO
-#   - Special argument files-only to just search for file names
-#   - If no plugin returns an extents query, don't fetch content
+# TODO: Special argument files-only to just search for file names
 
 
 # Pattern for matching a file and line number filename:n
 _line_number = re.compile("^.*:[0-9]+$")
+
 
 class Query(object):
     """Query object, constructor will parse any search query"""
@@ -43,8 +39,6 @@ class Query(object):
         if self.terms.keys() == ['text'] and len(self.terms['text']) == 1:
             return self.terms['text'][0]['arg']
 
-    #TODO Use named place holders in filters, this would make the filters easier to write
-
     def execute_sql(self, sql, *parameters):
         if self._should_explain:
             self._sql_profile.append({
@@ -61,7 +55,7 @@ class Query(object):
             self._sql_profile[-1]["nrows"] = len(res)
         return res
 
-    def _sql_report():
+    def _sql_report(self):
         """Yield a report on how long the SQL I've run has taken."""
         def number_lines(arr):
             ret = []
@@ -84,78 +78,6 @@ class Query(object):
                           "explanation %d" % i,
                           number_lines(map(lambda row: row["detail"], profile["explanation"])))
 
-    @staticmethod
-    def _nested_results(cursor):
-        """Mash down results by file and line, unioning all extents on each
-        line and fixing overlapping ones.
-
-        Yield a single result for each line. Something else can nest them by
-        file.
-
-        """
-        def unpack_trilite_extents(trilite_extents):
-            if trilite_extents:
-                match_extents = []
-                for i in xrange(0, len(trilite_extents), 8):
-                    s, e = struct.unpack('II', trilite_extents[i:i+8])
-                    match_extents.append((s, e, []))
-                yield fix_extents_overlap(sorted(match_extents))
-
-
-    @staticmethod
-    def _homogenize_extents(cursor):
-        """Bundle trigram and structural extents into one same-formatted
-
-        Turn a cursor of format (path, icon, encoding, line_id, line_number,
-        content, trilite_extents, extent1_start, extent1_end, extent2_start,
-        ...) into an iterable of format (path, icon, encoding, line_id,
-        line_number, content, [(start, end), ...]).
-
-        """
-
-        for result in cursor:
-            path, icon, encoding, line_id, line_number, content, trilite_extents = result[:7]
-            other_extents = result[7:]
-            other_extents = izip(other_extents[::2],
-                                 other_extents[1::2])
-
-            # Build total list of extents from trigram and other ones:
-            extents = list(unpack_trilite_extents(trilite_extents))  # same format as elist on line 113 of original
-            extents.extend(other_extents)
-            offsets = list(merge_extents(*extents))  # I don't see how this can work with other_extents returning only 2-tuples, but that's what the old code seems to do.
-
-groupby(line, results) --> merge, uniquify, sort, and non-overlap extents --> grouby(file) --> highlight_lines
-
-    def union_extents(results):
-        """Return an iterable of (start, end) from an iterable of results.
-
-        Returned extents may be out of order and include duplicates.
-
-        """
-
-    def flatten_extents(cursor):
-        """Given a raw set of search results from the DB, merge the rows that
-        reference the same line of a file, and combine their extents, returning
-        (everything but extents, extents) for each line.
-
-        This handles the situation where there are, say, a var ref is searched
-        for, and 2 refs occur on the same line, yielding 2 rows.
-
-        """
-        # For each group of results representing a single line...
-        for line_id, results in groupby(cursor, lambda r: r['line_id']):
-            # Buffer all results for this line so unique_extents() and such
-            # don't have to complicate themselves by preserving things other
-            # than extents.
-            line_results = list(results)
-
-            extents = union_extents(line_results)
-            extents = list(set(extents))
-            extents.sort()
-            extents = fix_extents_overlap(extents)
-
-            yield line_results[0][:6], extents
-
     def results(self,
                 offset=0, limit=100,
                 markup='<b>', markdown='</b>'):
@@ -166,71 +88,67 @@ groupby(line, results) --> merge, uniquify, sort, and non-overlap extents --> gr
              [(line_number, highlighted_line_of_code), ...])
 
         """
-        sql = ('SELECT %s) '
-               'FROM trg_index '
-               'INNER JOIN lines ON lines.id=trg_index.id '
-               'INNER JOIN files ON files.id=lines.file_id '
-               '%s '
+        sql = ('SELECT %s '
+               'FROM files, lines, trg_index '
+               'WHERE files.id=lines.file_id '
+               'AND lines.id=trg_index.id '
                '%s ORDER BY files.path, lines.number LIMIT ? OFFSET ?')
         # Filters can add additional fields, in pairs of {extent_start,
         # extent_end}, to be used for highlighting.
-        fields = ['files.path', 'files.icon', 'files.encoding', 'files.id',
-                  'lines.id', 'lines.number', 'trg_index.text',
-                  'extents(trg_index.contents']
+        fields = ['files.path', 'files.icon', 'files.encoding',
+                  'files.id as file_id', 'lines.id as line_id', 'lines.number',
+                  'trg_index.text', 'extents(trg_index.contents)']  # TODO: move extents() to TriliteSearchFilter
         conditions = []
         arguments = []
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
-        # XXX: How do we do negative filters? WHERE NOT EXISTS (SELECT 1 from functions where %s AND functions.file_id=files.id AND functions.line_id=lines.number)
         alias_iter = count()
-        for f in filters:
-            for fields, cond, args in f.filter(self.terms, alias_iter):
-                fields.extend(fields)
+        for f in [filters[0], filters[2]]: # XXX: filters:
+            for flds, cond, args in f.filter(self.terms, alias_iter):
+                # We fetch the extents for structural filters without doing
+                # separate queries, by adding columns to the master search
+                # query. Since we're only talking about a line at a time, it is
+                # unlikely that there will be multiple highlit extents per
+                # filter per line, so any cartesian product of rows can
+                # reasonably be absorbed and merged in the app.
+                fields.extend(flds)
+
                 conditions.append(cond)
                 arguments.extend(args)
 
         sql %= (', '.join(fields),
-                ' '.join(joins),
-                ((' WHERE ' + ' AND '.join(conditions)) if conditions else ''))
+                (('AND ' + ' AND '.join(conditions)) if conditions else ''))
         arguments += [limit, offset]
         cursor = self.execute_sql(sql, arguments)
 
         if self._should_explain:
-            return self._sql_report()
+            for r in self._sql_report():
+                yield r
 
         # Group lines into files:
-        for file_id, lines in \
+        for file_id, fields_and_extents_for_lines in \
                 groupby(flatten_extents(cursor),
-                        lambda fields, extents: fields['files.id']):
-            # For each line in each file, return metadata and a highlit line of
-            # code:
-            for fields, extents in lines:
-                yield (fields['icon'],
-                       fields['path'],
-                       _highlit_lines(fields['content'],
-                                      extents,
-                                      markup,
-                                      markdown,
-                                      fields['encoding']))
+                        lambda (fields, extents): fields['file_id']):
+            # fields_and_extents_for_lines is [(fields, extents) for one line,
+            #                                   ...] for a single file.
+            # XXX: Might have to cast it to a list.
+            fields_and_extents_for_lines = list(fields_and_extents_for_lines)
+            shared_fields = fields_and_extents_for_lines[0][0]  # same for each line in the file
 
+            yield (shared_fields['icon'],
+                   shared_fields['path'],
+                   [(fields['number'],
+                     highlight_line(
+                            fields['text'],
+                            extents,
+                            markup,
+                            markdown,
+                            shared_fields['encoding']))
+                    for fields, extents in fields_and_extents_for_lines])
 
-        # For each returned line...
-        # NEXT: Merge results by line, then merge the extents of each line. Then group that by file to maintain the return signature, and yield that.
-        for key, group in groupby(cursor, key=lambda path, *args: path):  # NEXT, rig results() to conform to its existing return format. Maybe we can fetch the extents for structural filters without doing separate queries, by adding columns to the master search query. (Now that we're only talking about a line at a time, it is unlikely that there will be multiple highlit extents per filter per line, so any cartesian product of rows can be gracefully absorbed (and we should deal with and merge those, should they arise).) Boy, as I see what this is doing, I think how good a fit ES is: you fetch a line document, and everything you'd need to highlight is right there. # If var-ref returns 2 extents on one line, it'll just duplicate a line, and we'll merge stuff after the fact. Hey, does that mean I should gather and merge everything before I try to homogenize the extents?
+        # Boy, as I see what this is doing, I think how good a fit ES is: you fetch a line document, and everything you'd need to highlight is right there. # If var-ref returns 2 extents on one line, it'll just duplicate a line, and we'll merge stuff after the fact. Hey, does that mean I should gather and merge everything before I try to homogenize the extents?
         # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
-        for path, icon, encoding, line_id, line_number, content, trilite_extents in cursor:
-            elist = []  # [(start, end<, keyset>), ...]
-
-            # Let each filter do one or more additional queries to find the
-            # extents to highlight:
-            for f in filters:
-                for e in f.extents(self.terms, self.execute_sql, line_id):
-                    elist.append(e)
-            offsets = list(merge_extents(*elist))
-
-            yield icon, path, _highlit_lines(content, offsets, markup, markdown, encoding)
-
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -338,73 +256,6 @@ groupby(line, results) --> merge, uniquify, sort, and non-overlap extents --> gr
         return None
 
 
-def _highlit_line(content, offsets, markup, markdown, encoding):
-    """Return a line of string ``content`` with the given ``offsets`` prefixed
-    by ``markup`` and suffixed by ``markdown``.
-
-    We assume that none of the offsets split a multibyte character. Leading
-    whitespace is stripped.
-
-    """
-    def chunks():
-        try:
-            # Start on the line the highlights are on:
-            chars_before = content.rindex('\n', 0, offsets[0][0]) + 1
-        except ValueError:
-            chars_before = None
-        for start, end in extents:
-            yield cgi.escape(content[chars_before:start].decode(encoding,
-                                                                'replace'))
-            yield markup
-            yield cgi.escape(content[start:end].decode(encoding, 'replace'))
-            yield markdown
-            chars_before = end
-        # Make sure to get the rest of the line after the last highlight:
-        try:
-            next_newline = content.index('\n', chars_before)
-        except ValueError:  # eof
-            next_newline = None
-        yield cgi.escape(content[chars_before:next_newline].decode(encoding,
-                                                                   'replace'))
-    return ''.join(chunks()).lstrip()
-
-
-def _highlit_lines(content, extents, markup, markdown, encoding):
-    """Return a list of (line number, highlit line) tuples.
-
-    :arg content: The contents of the file against which the extents are
-        reported, as a bytestring. (We need to operate in terms of bytestrings,
-        because those are the terms in which the C compiler gives us extents.)
-    :arg extents: A sequence of non-overlapping (start offset, end offset)
-        tuples describing each extent to highlight. The sequence must be in
-        order by start offset.
-
-    Assumes no newlines are highlit.
-
-    """
-    line_extents = []  # [(line_number, (start, end)), ...]
-    lines_before = 1
-    chars_before = 0
-    for start, end in extents:
-        # How many lines we've skipped since we last knew what line we were on:
-        lines_since = content.count('\n', chars_before, start)
-
-        # Figure out what line we're on, and throw this extent into its bucket:
-        line = lines_before + lines_since
-        line_extents.append((line, (start, end)))
-
-        lines_before = line
-        chars_before = end
-
-    # Bucket highlit ranges by line, and build up the marked up strings:
-    return [(line, _highlit_line(content,
-                                 [extent for line, extent in lines_and_extents],
-                                 markup,
-                                 markdown,
-                                 encoding)) for
-            line, lines_and_extents in groupby(line_extents, lambda (l, e): l)]
-
-
 def like_escape(val):
     """Escape for usage in as argument to the LIKE operator """
     return (val.replace("\\", "\\\\")
@@ -412,70 +263,6 @@ def like_escape(val):
                .replace("%", "\\%")
                .replace("?", "_")
                .replace("*", "%"))
-
-class genWrap(object):
-    """Auxiliary class for wrapping a generator and make it nicer"""
-    def __init__(self, gen):
-        self.gen = gen
-        self.value = None
-    def next(self):
-        try:
-            self.value = self.gen.next()
-            return True
-        except StopIteration:
-            self.value = None
-            return False
-
-
-def merge_extents(*elist):
-    """
-        Take a list of extents generators and merge them into one stream of extents
-        overlapping extents will be split in two, this means that they will start
-        and stop at same location.
-        Here we assume that each extent is a triple as follows:
-            (start, end, keyset)
-
-        Where keyset is a list of something that should be applied to the extent
-        between start and end.
-    """
-    elist = [genWrap(e) for e in elist]
-    elist = [e for e in elist if e.next()]
-    while len(elist) > 0:
-        start = min((e.value[0] for e in elist))
-        end = min((e.value[1] for e in elist if e.value[0] == start))
-        keylist = []
-        for e in (e for e in elist if e.value[0] == start):
-            for k in e.value[2]:
-                if k not in keylist:
-                    keylist.append(k)
-            e.value = (end, e.value[1], e.value[2])
-        yield start, end, keylist
-        elist = [e for e in elist if e.value[0] < e.value[1] or e.next()]
-
-
-def fix_extents_overlap(extents):
-    """
-        Take a sorted list of extents and yield the extents without overlapings.
-        Assumes extents are of similar format as in merge_extents
-    """
-    # There must be two extents for there to be an overlap
-    while len(extents) >= 2:
-        # Take the two next extents
-        start1, end1 = extents[0]
-        start2, end2 = extents[1]
-        # Check for overlap
-        if end1 <= start2:
-            # If no overlap, yield first extent
-            yield start1, end1
-            extents = extents[1:]
-            continue
-        # If overlap, yield extent from start1 to start2
-        if start1 != start2:
-            yield start1, start2
-        extents[0] = start2, end1
-        extents[1] = end1, end2
-    if extents:
-        yield extents[0]
 
 
 class SearchFilter(object):
@@ -529,7 +316,7 @@ class SearchFilter(object):
         return dict(name=self.param, description=self.description)
 
 
-class TriLiteSearchFilter(SearchFilter):
+class TriliteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
 
     def filter(self, terms, alias_iter):
@@ -560,8 +347,9 @@ class TriLiteSearchFilter(SearchFilter):
 
         if not_conds:
             yield ([],
-                   ' lines.id NOT IN (SELECT id FROM trg_index WHERE %s) '
-                       % ' OR '.join(not_conds),  # Optimize: Use an EXISTS.
+                   'NOT EXISTS (SELECT 1 FROM trg_index WHERE '
+                               'trg_index.id=lines.id AND (%s))' %
+                               ' OR '.join(not_conds),
                    not_args)
 
     def menu_item(self):
@@ -580,29 +368,20 @@ class SimpleFilter(SearchFilter):
                                                 (None if not applicable)
                 formatter       Function/lambda expression for formatting the argument
     """
-    def __init__(self, param, filter_sql, neg_filter_sql, ext_sql, formatter, **kwargs):
+    def __init__(self, param, filter_sql, neg_filter_sql, formatter, **kwargs):
         super(SimpleFilter, self).__init__(**kwargs)
         self.param = param
         self.filter_sql = filter_sql
         self.neg_filter_sql = neg_filter_sql
-        self.ext_sql = ext_sql
         self.formatter = formatter
 
-    # XXX: Make filter() return fields, conds, args rather than conds, args, has_exts.
     def filter(self, terms, alias_iter):
         for term in terms.get(self.param, []):
             arg = term['arg']
             if term['not']:
-                yield self.neg_filter_sql, self.formatter(arg), False
+                yield [], self.neg_filter_sql, self.formatter(arg)
             else:
-                yield self.filter_sql, self.formatter(arg), self.ext_sql is not None
-
-    def extents(self, terms, execute_sql, file_id):
-        if self.ext_sql:
-            for term in terms.get(self.param, []):
-                for start, end in execute_sql(self.ext_sql,
-                                              [file_id] + self.formatter(term['arg'])):
-                    yield start, end, []
+                yield [], self.filter_sql, self.formatter(arg)
 
 
 class ExistsLikeFilter(SearchFilter):
@@ -691,12 +470,14 @@ class UnionFilter(SearchFilter):
 # Register filters by adding them to this list:
 filters = [
     # path filter
+    # TODO: Don't show every line of every file we find if we're just using the
+    # path filter--or the path and ext filters--alone. Don't even join up the
+    # lines and trg_index tables...or something. ext_sql used to effectively act as a special flag for this; it was set to None in these 2 filters. We could add a show_lines=False to these (and a show_lines=True to the others) and only join up the other tables if there's a True one in the query.
     SimpleFilter(
         param             = "path",
         description       = Markup('File or directory sub-path to search within. <code>*</code> and <code>?</code> act as shell wildcards.'),
         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-        ext_sql           = None,
         formatter         = lambda arg: ['%' + like_escape(arg) + '%']
     ),
 
@@ -706,12 +487,11 @@ filters = [
         description       = Markup('Filename extension: <code>ext:cpp</code>'),
         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-        ext_sql           = None,
         formatter         = lambda arg: ['%' +
             like_escape(arg if arg.startswith(".") else "." + arg)]
     ),
 
-    TriLiteSearchFilter(),
+    TriliteSearchFilter(),
 
     # function filter
     ExistsLikeFilter(
