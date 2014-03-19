@@ -98,8 +98,7 @@ class Mercurial(VCS):
         if upstream.scheme == 'ssh':
             recomb[0] == 'http'
         recomb[1] = upstream.hostname # Eliminate any username stuff
-        if upstream.path.startswith('//'):
-            recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
+        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
         if not upstream.path.endswith('/'):
             recomb[2] += '/' # Make sure we have a '/' on the end
         recomb[3] = recomb[4] = recomb[5] = '' # Just those three
