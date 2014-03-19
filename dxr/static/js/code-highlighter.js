@@ -57,7 +57,7 @@ $(function () {
             var lastSelected = $('.last-selected'),
                 highlightedLines = $('highlighted');
             line = $('#' + clickedNum);
-            //Remove existing highlights. 
+            //Remove existing highlights.
             $('.highlighted').removeClass('last-selected highlighted');
             //toggle highlighting on for any line that was not previously clicked
             if (parseInt(lastSelected.attr('id'), 10) !== clickedNum) {
@@ -94,18 +94,21 @@ $(function () {
             lineEnd = '#' + lines[1],
             jumpPosition = $(lineStart).offset();
 
-        //handle multi-line highlights
-        if (lines.length > 1) {
-            $(lineStart).addClass('highlighted');
-            var selected = $(lineStart).nextUntil(lineEnd);
-            selected.addClass('highlighted');
-            $(lineEnd).addClass('highlighted');
-        //handle a single line highlight
-        } else {
-            $(lineStart).addClass('last-selected highlighted');
+        //check the anchor actually exists, otherwise do nothing
+        if ($(lineStart).length) {
+            //handle multi-line highlights
+            if (lines.length > 1) {
+                $(lineStart).addClass('highlighted');
+                var selected = $(lineStart).nextUntil(lineEnd);
+                selected.addClass('highlighted');
+                $(lineEnd).addClass('highlighted');
+            //handle a single line highlight
+            } else {
+                $(lineStart).addClass('last-selected highlighted');
+            }
+            //for directly linked line(s), scroll to the offset minus 150px for fixed search bar height
+            window.scrollTo(0, jumpPosition.top - 150);
         }
-        //for directly linked line(s), scroll to the offset minus 150px for fixed search bar height
-        window.scrollTo(0, jumpPosition.top - 150);
     });
 
 });
