@@ -58,7 +58,7 @@ $(function () {
                 highlightedLines = $('highlighted');
             line = $('#' + clickedNum);
             //Remove existing highlights.
-            $('.highlighted').removeClass('last-selected highlighted');
+            $('.highlighted').removeClass('last-selected highlighted clicked');
             //toggle highlighting on for any line that was not previously clicked
             if (parseInt(lastSelected.attr('id'), 10) !== clickedNum) {
                 //With this we're one better than github, which doesn't allow toggling single lines
