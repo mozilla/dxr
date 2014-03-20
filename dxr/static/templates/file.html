@@ -49,25 +49,25 @@
     </div>
   {% endif %}
 
-  <div id="annotations">
-    {% for line, annotations in lines %}
-      <div class="annotation-set" id="aset-{{ loop.index }}">
-        {%- for annotation in annotations -%}
-          <div {% for key, value in annotation.items() %}
-                {{ key }}="{{ value }}"
-               {% endfor %} ></div>
-        {%- endfor -%}
-      </div>
-    {%- endfor -%}
-  </div>
-
   <table id="file" class="file">
     <thead class="visually-hidden">
+        <th scope="col">Annotations</th>
         <th scope="col">Line</th>
         <th scope="col">Code</th>
     </thead>
     <tbody>
       <tr>
+        <td id="annotations">
+          {% for line, annotations in lines %}
+            <div class="annotation-set" id="aset-{{ loop.index }}">
+              {%- for annotation in annotations -%}
+                <div {% for key, value in annotation.items() %}
+                      {{ key }}="{{ value }}"
+                     {% endfor %} ></div>
+              {%- endfor -%}
+            </div>
+          {%- endfor -%}
+        </td>
         <td id="line-numbers">
           {% for line in lines %}
             <span id="{{ loop.index }}" class="line-number" unselectable="on" rel="#{{ loop.index }}">{{ loop.index }}</span>

@@ -133,6 +133,18 @@ table td {
 td.code {
     padding: 0 0 0 .5em;
 }
+.annotation-set:after {
+    content: "\a0";  /* non-breaking space */
+}
+.note {
+    float: left;
+    height: 16px;
+    width: 16px;
+    margin-bottom: -1px;
+}
+.note-warning {
+    background-image: url('/static/icons/warning.png');
+}
 td#line-numbers {
     position: absolute;
     width: 95%;
