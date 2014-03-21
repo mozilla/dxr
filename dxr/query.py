@@ -89,23 +89,42 @@ class Query(object):
 
         """
         sql = ('SELECT %s '
-               'FROM files, lines, trg_index '
-               'WHERE files.id=lines.file_id '
-               'AND lines.id=trg_index.id '
-               '%s ORDER BY files.path, lines.number LIMIT ? OFFSET ?')
+               'FROM %s '
+               '%s '
+               'ORDER BY %s LIMIT ? OFFSET ?')
         # Filters can add additional fields, in pairs of {extent_start,
         # extent_end}, to be used for highlighting.
-        fields = ['files.path', 'files.icon', 'files.encoding',
-                  'files.id as file_id', 'lines.id as line_id', 'lines.number',
-                  'trg_index.text', 'extents(trg_index.contents)']  # TODO: move extents() to TriliteSearchFilter
+        fields = ['files.path', 'files.icon']  # TODO: move extents() to TriliteSearchFilter
+        tables = ['files']
         conditions = []
+        orderings = ['files.path']
         arguments = []
+        has_lines = False
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
         alias_iter = count()
         for f in [filters[0], filters[2]]: # XXX: filters:
             for flds, cond, args in f.filter(self.terms, alias_iter):
+                if not has_lines and f.has_lines:
+                    has_lines = True
+                    # 2 types of query are possible: ones that return just
+                    # files and involve no other tables, and ones which join
+                    # the lines and trg_index tables and return lines and
+                    # extents. This switches from the former to the latter.
+                    #
+                    # The first time we hit a line-having filter, glom on the
+                    # line-based fields. That way, they're always at the
+                    # beginning (non-line-having filters never return fields),
+                    # so we can use our clever slicing later on to find the
+                    # extents fields.
+                    fields.extend(['files.encoding', 'files.id as file_id',
+                                   'lines.id as line_id', 'lines.number',
+                                   'trg_index.text', 'extents(trg_index.contents)'])
+                    tables.extend(['lines', 'trg_index'])
+                    conditions.extend(['files.id=lines.file_id', 'lines.id=trg_index.id'])
+                    orderings.append('lines.number')
+
                 # We fetch the extents for structural filters without doing
                 # separate queries, by adding columns to the master search
                 # query. Since we're only talking about a line at a time, it is
@@ -118,34 +137,41 @@ class Query(object):
                 arguments.extend(args)
 
         sql %= (', '.join(fields),
-                (('AND ' + ' AND '.join(conditions)) if conditions else ''))
-        arguments += [limit, offset]
+                ', '.join(tables),
+                ('WHERE ' + ' AND '.join(conditions)) if conditions else '',
+                ', '.join(orderings))
+        arguments.extend([limit, offset])
         cursor = self.execute_sql(sql, arguments)
 
         if self._should_explain:
             for r in self._sql_report():
                 yield r
 
-        # Group lines into files:
-        for file_id, fields_and_extents_for_lines in \
-                groupby(flatten_extents(cursor),
-                        lambda (fields, extents): fields['file_id']):
-            # fields_and_extents_for_lines is [(fields, extents) for one line,
-            #                                   ...] for a single file.
-            # XXX: Might have to cast it to a list.
-            fields_and_extents_for_lines = list(fields_and_extents_for_lines)
-            shared_fields = fields_and_extents_for_lines[0][0]  # same for each line in the file
+        if has_lines:
+            # Group lines into files:
+            for file_id, fields_and_extents_for_lines in \
+                    groupby(flatten_extents(cursor),
+                            lambda (fields, extents): fields['file_id']):
+                # fields_and_extents_for_lines is [(fields, extents) for one line,
+                #                                   ...] for a single file.
+                fields_and_extents_for_lines = list(fields_and_extents_for_lines)
+                shared_fields = fields_and_extents_for_lines[0][0]  # same for each line in the file
 
-            yield (shared_fields['icon'],
-                   shared_fields['path'],
-                   [(fields['number'],
-                     highlight_line(
-                            fields['text'],
-                            extents,
-                            markup,
-                            markdown,
-                            shared_fields['encoding']))
-                    for fields, extents in fields_and_extents_for_lines])
+                yield (shared_fields['icon'],
+                       shared_fields['path'],
+                       [(fields['number'],
+                         highlight_line(
+                                fields['text'],
+                                extents,
+                                markup,
+                                markdown,
+                                shared_fields['encoding']))
+                        for fields, extents in fields_and_extents_for_lines])
+        else:
+            for result in cursor:
+                yield (result['icon'],
+                       result['path'],
+                       [])
 
         # Boy, as I see what this is doing, I think how good a fit ES is: you fetch a line document, and everything you'd need to highlight is right there. # If var-ref returns 2 extents on one line, it'll just duplicate a line, and we'll merge stuff after the fact. Hey, does that mean I should gather and merge everything before I try to homogenize the extents?
         # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
@@ -269,6 +295,13 @@ class SearchFilter(object):
     """Base class for all search filters, plugins subclasses this class and
             registers an instance of them calling register_filter
     """
+    # True iff this filter asserts line-based restrictions, shows lines, and
+    # highlights text. False for filters that act only on file-level criteria
+    # and select no extra SQL fields. This is used to suppress showing all
+    # lines of all found files if you do a simple file- based query like
+    # ext:html.
+    has_lines = True
+
     def __init__(self, description=''):
         self.description = description
 
@@ -363,11 +396,10 @@ class SimpleFilter(SearchFilter):
                 param           Search parameter from query
                 filter_sql      Sql condition for limited using argument to param
                 neg_filter_sql  Sql condition for limited using argument to param negated.
-                ext_sql         Sql statement fetch an ordered list of extents, given
-                                                file-id and argument to param as parameters.
-                                                (None if not applicable)
                 formatter       Function/lambda expression for formatting the argument
     """
+    has_lines = False  # just happens to be so for all uses at the moment
+
     def __init__(self, param, filter_sql, neg_filter_sql, formatter, **kwargs):
         super(SimpleFilter, self).__init__(**kwargs)
         self.param = param

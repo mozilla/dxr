@@ -63,3 +63,14 @@ class BasicTests(DxrInstanceTestCase):
         response = self.client().get('/')
         eq_(response.status_code, 302)
         ok_(response.headers['Location'].endswith('/code/source/'))
+
+    def test_file_based_search(self):
+        """Make sure searches that return files and not lines work.
+
+        Specifically, test behavior when SearchFilter.has_lines is False.
+
+        """
+        eq_(self.search_results('path:makefile'),
+            [{"path": "makefile",
+              "lines": [],
+              "icon": "mimetypes/unknown"}])
