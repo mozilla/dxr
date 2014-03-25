@@ -161,7 +161,7 @@ def search(tree):
     if error:
         return render_template('error.html', **arguments), status_code or 500
     else:
-        arguments['filters'] = filter_menu_items(config['filter_lang'])
+        arguments['filters'] = filter_menu_items(config['filter_language'])
         return render_template('search.html', **arguments)
 
 

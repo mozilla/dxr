@@ -343,7 +343,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                          for t in tree.config.sorted_tree_order],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
-         'filters': filter_menu_items(tree.config.filter_lang),
+         'filters': filter_menu_items(tree.config.filter_language),
          # Autofocus only at the root of each tree:
          'should_autofocus_query': folder == '',
 
@@ -552,7 +552,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
                          t.description)
                         for t in tree.config.sorted_tree_order],
         'generated_date': tree.config.generated_date,
-        'filters': filter_menu_items(tree.config.filter_lang),
+        'filters': filter_menu_items(tree.config.filter_language),
 
         # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),

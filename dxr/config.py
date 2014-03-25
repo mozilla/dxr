@@ -33,7 +33,7 @@ class Config(object):
             'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     "",
-            'filter_lang':      "C"
+            'filter_language':  "C"
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -52,7 +52,7 @@ class Config(object):
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
-        self.filter_lang      = parser.get('DXR', 'filter_lang',      False, override)
+        self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
