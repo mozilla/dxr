@@ -112,7 +112,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
-             default_tree=repr(config.default_tree)))
+             default_tree=repr(config.default_tree),
+             filter_language=repr(config.filter_language)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
