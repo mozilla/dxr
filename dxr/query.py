@@ -400,8 +400,9 @@ class SearchFilter(object):
     """Base class for all search filters, plugins subclasses this class and
             registers an instance of them calling register_filter
     """
-    def __init__(self, description=''):
+    def __init__(self, description='', languages=None):
         self.description = description
+        self.languages = languages or []
 
     def filter(self, terms):
         """Yield tuples of (SQL conditions, list of arguments, and True) if
@@ -455,6 +456,9 @@ class SearchFilter(object):
         """
         return dict(name=self.param, description=self.description)
 
+    def valid_for_language(self, language):
+        return language in self.languages
+
 
 class TriLiteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
@@ -498,6 +502,8 @@ class TriLiteSearchFilter(SearchFilter):
         return {'name': 'regexp',
                 'description': Markup(r'Regular expression. Examples: <code>regexp:(?i)\bs?printf</code> <code>regexp:"(three|3) mice"</code>')}
 
+    def valid_for_language(self, language):
+        return True
 
 class SimpleFilter(SearchFilter):
     """Search filter for limited results.
@@ -626,7 +632,8 @@ filters = [
         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
         ext_sql           = None,
-        formatter         = lambda arg: ['%' + like_escape(arg) + '%']
+        formatter         = lambda arg: ['%' + like_escape(arg) + '%'],
+        languages          = ["C"]
     ),
 
     # ext filter
@@ -637,7 +644,8 @@ filters = [
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
         ext_sql           = None,
         formatter         = lambda arg: ['%' +
-            like_escape(arg if arg.startswith(".") else "." + arg)]
+            like_escape(arg if arg.startswith(".") else "." + arg)],
+        languages          = ["C"]
     ),
 
     TriLiteSearchFilter(),
@@ -656,7 +664,8 @@ filters = [
                            ORDER BY functions.extent_start
                         """,
         like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        qual_name     = "functions.qualname",
+        languages      = ["C"]
     ),
 
     # function-ref filter
@@ -675,7 +684,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        qual_name     = "functions.qualname",
+        languages      = ["C"]
     ),
 
     # function-decl filter
@@ -694,7 +704,8 @@ filters = [
                            ORDER BY decldef.extent_start
                         """,
         like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        qual_name     = "functions.qualname",
+        languages      = ["C"]
     ),
 
     UnionFilter([
@@ -747,7 +758,8 @@ filters = [
           like_name     = "target.name",
           qual_name     = "target.qualname")],
 
-      description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
+      description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'),
+      languages    = ["C"]
     ),
 
     UnionFilter([
@@ -801,7 +813,8 @@ filters = [
           qual_name     = "caller.qualname"
       )],
 
-      description = 'Functions or methods which are called by the given one'
+      description = 'Functions or methods which are called by the given one',
+      languages    = ["C"]
     ),
 
     # type filter
@@ -833,7 +846,8 @@ filters = [
                         """,
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
-      description=Markup('Type or class definition: <code>type:Stack</code>')
+      description=Markup('Type or class definition: <code>type:Stack</code>'),
+      languages   = ["C"]
     ),
 
     # type-ref filter
@@ -869,13 +883,15 @@ filters = [
                         """,
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
-      description='Type or class references, uses, or instantiations'
+      description='Type or class references, uses, or instantiations',
+      languages   = ["C"]
     ),
 
     # type-decl filter
     ExistsLikeFilter(
       description   = 'Type or class declaration',
       param         = "type-decl",
+      languages      = ["C"],
       filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
                          WHERE %s
                            AND types.id = decldef.defid AND decldef.file_id = files.id
@@ -905,7 +921,8 @@ filters = [
                            ORDER BY variables.extent_start
                         """,
         like_name     = "variables.name",
-        qual_name     = "variables.qualname"
+        qual_name     = "variables.qualname",
+        languages      = ["C"]
     ),
 
     # var-ref filter
@@ -924,7 +941,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "variables.name",
-        qual_name     = "variables.qualname"
+        qual_name     = "variables.qualname",
+        languages      = ["C"]
     ),
 
     # var-decl filter
@@ -943,7 +961,8 @@ filters = [
                            ORDER BY decldef.extent_start
                         """,
         like_name     = "variables.name",
-        qual_name     = "variables.qualname"
+        qual_name     = "variables.qualname",
+        languages      = ["C"]
     ),
 
     # macro filter
@@ -960,7 +979,8 @@ filters = [
                            ORDER BY macros.extent_start
                         """,
         like_name     = "macros.name",
-        qual_name     = "macros.name"
+        qual_name     = "macros.name",
+        languages      = ["C"]
     ),
 
     # macro-ref filter
@@ -979,7 +999,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "macros.name",
-        qual_name     = "macros.name"
+        qual_name     = "macros.name",
+        languages      = ["C"]
     ),
 
     # namespace filter
@@ -996,7 +1017,8 @@ filters = [
                            ORDER BY namespaces.extent_start
                         """,
         like_name     = "namespaces.name",
-        qual_name     = "namespaces.qualname"
+        qual_name     = "namespaces.qualname",
+        languages      = ["C"]
     ),
 
     # namespace-ref filter
@@ -1015,7 +1037,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "namespaces.name",
-        qual_name     = "namespaces.qualname"
+        qual_name     = "namespaces.qualname",
+        languages      = ["C"]
     ),
 
     # namespace-alias filter
@@ -1032,7 +1055,8 @@ filters = [
                            ORDER BY namespace_aliases.extent_start
                         """,
         like_name     = "namespace_aliases.name",
-        qual_name     = "namespace_aliases.qualname"
+        qual_name     = "namespace_aliases.qualname",
+        languages      = ["C"]
     ),
 
     # namespace-alias-ref filter
@@ -1051,7 +1075,8 @@ filters = [
                            ORDER BY refs.extent_start
                         """,
         like_name     = "namespace_aliases.name",
-        qual_name     = "namespace_aliases.qualname"
+        qual_name     = "namespace_aliases.qualname",
+        languages      = ["C"]
     ),
 
     # bases filter -- reorder these things so more frequent at top.
@@ -1073,7 +1098,8 @@ filters = [
                                         )
                         """,
         like_name     = "types.name",
-        qual_name     = "types.qualname"
+        qual_name     = "types.qualname",
+        languages      = ["C"]
     ),
 
     # derived filter
@@ -1095,8 +1121,9 @@ filters = [
                                         )
                         """,
         like_name     = "types.name",
-        qual_name     = "types.qualname"
-    ),
+        qual_name     = "types.qualname",
+        languages      = ["C"]
+   ),
 
     UnionFilter([
       # member filter for functions
@@ -1150,13 +1177,15 @@ filters = [
         like_name     = "type.name",
         qual_name     = "type.qualname")],
 
-      description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
+      description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>'),
+      languages    = ["C"]
     ),
 
     # overridden filter
     ExistsLikeFilter(
         description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
         param         = "overridden",
+        languages      = ["C"],
         filter_sql    = """SELECT 1
                              FROM functions as base, functions as derived, targets
                             WHERE %s
@@ -1204,7 +1233,8 @@ filters = [
                            ORDER BY functions.extent_start
                         """,
         like_name     = "base.name",
-        qual_name     = "base.qualname"
+        qual_name     = "base.qualname",
+        languages      = ["C"]
     ),
 
     #warning filter
@@ -1220,7 +1250,8 @@ filters = [
                               AND %s
                         """,
         like_name     = "warnings.msg",
-        qual_name     = "warnings.msg"
+        qual_name     = "warnings.msg",
+        languages      = ["C"]
     ),
 
     #warning-opt filter
@@ -1236,7 +1267,8 @@ filters = [
                               AND %s
                         """,
         like_name     = "warnings.opt",
-        qual_name     = "warnings.opt"
+        qual_name     = "warnings.opt",
+        languages      = ["C"]
     )
 ]
 
@@ -1356,6 +1388,6 @@ class QueryVisitor(NodeVisitor):
         return visited_children or node
 
 
-def filter_menu_items():
+def filter_menu_items(language):
     """Return the additional template variables needed to render filter.html."""
-    return (f.menu_item() for f in filters)
+    return (f.menu_item() for f in filters if f.valid_for_language(language))

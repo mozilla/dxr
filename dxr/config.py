@@ -10,7 +10,7 @@ import dxr
 
 
 # Please keep these config objects as simple as possible and in sync with
-# docs/configuration.mkd. I'm well aware that this is not the most compact way
+# docs/source/configuration.rst. I'm well aware that this is not the most compact way
 # of writing things, but it sure is doomed to fail when user forgets an important
 # key. It's also fairly easy to extract default values, and config keys from
 # this code, so enjoy.
@@ -32,7 +32,8 @@ class Config(object):
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
             'disable_workers':  "",
             'skip_stages':      "",
-            'default_tree':     ""
+            'default_tree':     "",
+            'filter_language':  "C"
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -51,6 +52,7 @@ class Config(object):
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
+        self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []

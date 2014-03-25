@@ -43,6 +43,8 @@ DXR Configuration
    zero or more of 'index', 'html' (space separated)
 -  ``disable\_workers`` If non-empty, do not use a worker pool for
    htmlification (default ``''``)
+-  ``filter\_lang`` The default (programming) language for this instance.
+   Only filters registered for this language will be used (default ``'C'``)
 
 (Refer to the Plugin Configuration section for plugin keys available
 here).
