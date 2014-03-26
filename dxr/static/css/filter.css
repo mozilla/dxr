@@ -8,6 +8,8 @@
 }
 .in-progress .search-filter {
     background: transparent url('/static/images/spinner-large.gif') 0 0 / contain no-repeat;
+    background-size: 18px 18px;
+    background-position: 10px;
 }
 .search-filter {
     display: inline-block;
