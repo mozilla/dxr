@@ -1248,6 +1248,7 @@ filters = [
                              FROM warnings
                             WHERE warnings.file_id = ?
                               AND %s
+                           ORDER BY warnings.extent_start
                         """,
         like_name     = "warnings.msg",
         qual_name     = "warnings.msg",
@@ -1265,6 +1266,7 @@ filters = [
                              FROM warnings
                             WHERE warnings.file_id = ?
                               AND %s
+                           ORDER BY warnings.extent_start
                         """,
         like_name     = "warnings.opt",
         qual_name     = "warnings.opt",
