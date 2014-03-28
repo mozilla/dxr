@@ -234,12 +234,6 @@ table.result_snippet tr,
 .file pre {
     margin: 0;
 }
-.checkbox_case {
-    margin: .5em;
-}
-.checkbox_label {
-    white-space: nowrap;
-}
 .access-key {
     text-decoration: underline;
 }
@@ -275,6 +269,7 @@ mark {
     border-bottom-right-radius: 6px;
     border-bottom-left-radius: 6px;
 }
+/* Search header */
 .search-box {
     position: fixed;
     top: 0;
@@ -287,20 +282,21 @@ mark {
     width: 100%;
     z-index: 100;
 }
-.header_nav_link {
-    position: absolute;
-    top: 0;
-    right: 0;
-    margin: 0 4% 0 0;
-    padding: 0.4rem 0 0;
-    text-align: right;
-    list-style: none;
+.flex-container {
+    display: flex;
+    flex-direction: row;
 }
-.header_nav_link li {
-    display: inline;
+.find {
+    flex: 6;
+    position: relative;
 }
-.header_nav_link a {
-    margin-left: 1rem;
+.case {
+    flex: 1;
+    /* Display table to enable align-self */
+    display: table;
+    padding: 0 1rem;
+    align-self: center;
+    font-size: .8rem;
 }
 .basic_search {
     position: absolute;
@@ -321,28 +317,6 @@ mark {
 }
 .expanded {
     transform: rotate3d(0, 0, 1, 270deg);
-}
-.form_elem_container {
-    margin: 0 0 .7rem 0;
-}
-.form_elem_container label {
-    display: inline-block;
-    padding: .3rem .5rem;
-    border: 0;
-    /*width: 17%; */
-    min-width: 125px;
-    text-align: right;
-}
-.form_elem_container input {
-    width: 70%;
-}
-/* AS top level input fields */
-.text_search label {
-    width: 11%;
-}
-.text_search input[type="checkbox"] {
-    width: 1rem;
-    height: 1rem;
 }
 .content {
     margin-top: 55px;
@@ -488,19 +462,8 @@ mark {
     width: 1px;
     overflow: hidden;
 }
-.text_search .query {
-    padding-right: 6.2rem;
-    transition: padding-right .2s;
-}
-.in-progress .text_search .query {
-    padding-right: 8rem;
-    transition: padding-right .2s;
-}
 
 @media only screen and (min-device-width: 320px) {
-    .text_search .query {
-        width: 62%;
-    }
     .bubble {
         margin-right: 38%;  /* 100% minus the above */
     }
@@ -532,9 +495,6 @@ mark {
     }
 }
 @media only screen and (min-width: 740px) {
-    .text_search .query {
-        width: 84%;
-    }
     .bubble {
         margin-right: 16%;  /* 100% minus the above */
     }
@@ -545,19 +505,6 @@ mark {
         right: 13%;
     }
 }
-
-.sf-select-options .selector-option-label {
-    display: inline-block;
-    vertical-align: top;
-    width: 10rem;
-}
-.sf-select-options .selector-option-description {
-    display: inline-block;
-    margin-right: 12rem;  /* Width of label plus padding */
-    vertical-align: top;
-    white-space: normal;
-}
-
 /* Message bubble */
 .bubble {
     border: 1px solid #ccc;
