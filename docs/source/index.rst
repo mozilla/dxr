@@ -20,6 +20,7 @@ Contents:
    icons.rst
    plugins.rst
    tests.rst
+   code-highlighter.rst
 
 Indices and tables
 ==================
