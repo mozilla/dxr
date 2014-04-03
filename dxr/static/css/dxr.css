@@ -283,20 +283,21 @@ mark {
     z-index: 100;
 }
 .flex-container {
+    display: -webkit-flex;
     display: flex;
+    -webkit-flex-direction: row;
     flex-direction: row;
 }
 .find {
-    flex: 6;
+    -webkit-flex: 6;
     position: relative;
 }
 .case {
-    flex: 1;
+    -webkit-flex: 1;
     /* Display table to enable align-self */
     display: table;
     padding: 0 1rem;
     align-self: center;
-    font-size: .8rem;
 }
 .basic_search {
     position: absolute;
@@ -462,49 +463,6 @@ mark {
     width: 1px;
     overflow: hidden;
 }
-
-@media only screen and (min-device-width: 320px) {
-    .bubble {
-        margin-right: 38%;  /* 100% minus the above */
-    }
-    input[type="submit"] {
-        margin-right: 14%;
-    }
-    label,
-    .form_elem_container label,
-    .text_search label {
-        padding: 0 0 .2rem 0;
-        width: auto;
-        text-align: left;
-    }
-    .query_label {
-        /*http://developer.yahoo.com/blogs/ydn/posts/2012/10/clip-your-hidden-content-for-better-accessibility/*/
-        position: absolute;
-        clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
-        clip: rect(1px, 1px, 1px, 1px);
-        padding: 0;
-        border: 0;
-        height: 1px;
-        width: 1px;
-        overflow: hidden;
-    }
-    .basic_search {
-        top: 11%;
-        left: 13px;
-        text-align: left;
-    }
-}
-@media only screen and (min-width: 740px) {
-    .bubble {
-        margin-right: 16%;  /* 100% minus the above */
-    }
-    input[type="submit"] {
-        margin-right: 16.3%;
-    }
-    .basic_search {
-        right: 13%;
-    }
-}
 /* Message bubble */
 .bubble {
     border: 1px solid #ccc;
@@ -561,4 +519,35 @@ mark {
     position: relative;
     height: 0;
     width: 100%;
+}
+@media only screen and (min-width: 740px) {
+    .bubble {
+        margin-right: 16%;  /* 100% minus the above */
+    }
+    input[type="submit"] {
+        margin-right: 16.3%;
+    }
+    .basic_search {
+        right: 13%;
+    }
+}
+
+@media only screen and (min-device-width: 320px) {
+    .bubble {
+        margin-right: 38%;  /* 100% minus the above */
+    }
+    input[type="submit"] {
+        margin-right: 14%;
+    }
+    label,
+    .form_elem_container label,
+    .text_search label {
+        padding: 0 0 .2rem 0;
+        text-align: left;
+    }
+    .basic_search {
+        top: 11%;
+        left: 13px;
+        text-align: left;
+    }
 }
