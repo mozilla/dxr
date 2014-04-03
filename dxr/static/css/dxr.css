@@ -133,6 +133,14 @@ table td {
 td.code {
     padding: 0 0 0 .5em;
 }
+#annotations {
+    width: 3%;
+    min-width: 45px;
+}
+.annotation-set {
+    height: 1.3em;
+    overflow: hidden;
+}
 .annotation-set:after {
     content: "\a0";  /* non-breaking space */
 }
@@ -211,7 +219,7 @@ table.result_snippet tr,
     vertical-align: baseline;
 }
 .result_snippet td:first-child,
-.file td:first-child {
+.file td#line-numbers {
     border-right: 1px solid #fff;
     color: #aaa;
     text-align: right;
@@ -239,7 +247,7 @@ table.result_snippet tr,
 .file td {
     padding: 0 .5em 0 .5em;
 }
-.file td:first-child a {
+.file td#line-numbers a {
     display: block;
     padding: 0 .5rem;
 }
