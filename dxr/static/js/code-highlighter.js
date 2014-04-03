@@ -1,11 +1,12 @@
-    /* jshint devel:true, esnext: true */
+/* jshint devel:true, esnext: true */
 /* globals nunjucks: true, $ */
 
 /**
- * This file consists of three major pieces of functionality for a file view:
- * 1) Multi-select highlight lines with shift key and set window.location.hash
- * 2) Toggle the .highlighted class for a single line and set window.location.hash
- * 3) Highlight lines when page loads, if a numbered window.location.hash exists
+ * This file consists of four major pieces of functionality for a file view:
+ * 0) Any combination of 1) and 2)
+ * 1) Multi-select highlight lines with shift key and update window.location.hash
+ * 2) Multi-select highlight lines with command/control key and update window.location.hash
+ * 3) Highlight lines when page loads, if window.location.hash exists
  */
 
 $(function () {
@@ -15,152 +16,54 @@ $(function () {
         singleLinesArray = [], //track single highlighted lines here
         rangesArray = []; // track ranges of highlighted lines here 
 
-    //populate the single click array with lines if they are not already in it
-    function populateSingleLinesArray(clickedNum, self) {
-        var inArray = singleLinesArray.indexOf(clickedNum);
-        console.log('Classes: ' + self.classList);
-
-        if (inArray === -1 && (self.classList.contains('highlighted') || self.classList.contains('multihighlight'))) {
-            //add the line to the array
-            singleLinesArray.push(clickedNum);
-        } else if (inArray === -1 && !(self.classList.contains('highlighted') || self.classList.contains('multihighlight'))) {
-            if (rangesArray.length) {
-                //check if the line splits up an existing range
-                splitRangesArray(clickedNum);
-            }
-        } else if (inArray !== -1) {
-            //this is a toggle, since the line is in the array, so remove it
-            singleLinesArray.splice(inArray, 1);
-        }        
-        singleLinesArray = singleLinesArray.sort(sortAsc);
-        console.log('Single lines: ' + singleLinesArray);
-    }
-
-    //split up a range if a single line exists in it at any point inside a range
-    function splitRangesArray(clickedNum) {
-        var rangeMin = null,
-            rangeMax = null,
-            inArray = singleLinesArray.indexOf(clickedNum);
-
-        //don't want the clickedNum in singleLinesArray since it is being deselected
-        //singleLinesArray.splice(inArray, 1);
-
-        for (var s = 0; s < rangesArray.length; s++) {
-            //get each pair of values from rangesArray
-            rangeMin = rangesArray[s][0];
-            rangeMax = rangesArray[s][1];
-
-            //should this be a switch/case?
-            //split something like 20-21 at 20 into 21
-            if (clickedNum === rangeMin && clickedNum === rangeMax-1) {
-                rangesArray.splice(s, 1);
-                singleLinesArray.push(rangeMax);
-                break;
-
-            //split something like 20-21 at 21 into 20
-            } else if (clickedNum === rangeMin+1 && clickedNum === rangeMax) {
-                rangesArray.splice(s, 1);
-                singleLinesArray.push(rangeMin);
-                break;
-
-            //split something like 20-22 at 20 into 21-22
-            } else if (clickedNum === rangeMin && clickedNum < rangeMax) {
-                rangesArray[s][0]++; // = clickedNum+1;
-                break;
-
-            //split something like 20-22 at 22 into 20-21
-            } else if (clickedNum > rangeMin && clickedNum === rangeMax) {
-                rangesArray[s][1] --; //clickedNum-1;
-                break;
-
-            //split something like 20-22 at 21 into 20, 22 single lines
-            } else if (clickedNum === rangeMin+1 && clickedNum === rangeMax-1) {
-                rangesArray.splice(s, 1);
-                singleLinesArray.push(rangeMin);
-                singleLinesArray.push(rangeMax);
-                break;
-
-            //split something like 20-23 at 21 into 20, 22-23
-            } else if (clickedNum === rangeMin+1 && clickedNum < rangeMax) {
-                rangesArray.splice(s, 1);
-                singleLinesArray.push(rangeMin);
-                rangesArray.push([clickedNum+1, rangeMax]);
-                break;
-
-            //split something like 20-23 at 22 into 20-21, 23
-            } else if (clickedNum > rangeMin && clickedNum === rangeMax-1) {
-                rangesArray.splice(s, 1);
-                singleLinesArray.push(rangeMax);
-                rangesArray.push([rangeMin, clickedNum-1]);
-                break;
-
-            //split something like 20-30 at 25 into 20-24, 26-30
-            //ensure that there are at least 2 lines on either side of clickedNum
-            } else if (clickedNum > rangeMin+1 && clickedNum < rangeMax-1) {
-                //if comparison, splice rangeArray
-                rangesArray.splice(s, 1);
-                //push two new arrays of ranges on each side of clickedNum
-                rangesArray.push([rangeMin, clickedNum-1]);
-                rangesArray.push([clickedNum+1, rangeMax]);
-                break;
-            }
-
-        }
-        //then remove singleLinesArray[s] since it is deselected?
-    }
-
-    //populate rangesArray with sets of highlighted lines
-    function populateRangesArray(clickedNum, lastSelectedNum) {
-        /* 1.  populate ranges
-         * 2.  for each range in ranges:
-         * 2a.   for each line in single line, check if in range
-         * 2b.   if line in range:           
-         * 3.      remove detected single lines from single lines array
-         */
-
-        var linesToRemove = [],
-            range = [];
-
-        //detect order of range and push to the rangesArray
-        if (clickedNum < lastSelectedNum) {
-            range = [clickedNum, lastSelectedNum];
-        } else if (clickedNum > lastSelectedNum){
-            range = [lastSelectedNum, clickedNum];
-        }
-        rangesArray.push(range);
-
-        //iterate over array of ranges to remove single lines if they
-        //are captured by any existing highlighted range
-        //this is important because it tidies the url and is less confusing
-        //e.g the same number does not show up twice: foo#1,4,4-8 cf. foo#1,4-8
-        for (var i = 0; i < rangesArray.length; i++) {
-            var rangeMin = rangesArray[i][0],
-                rangeMax = rangesArray[i][1];
-
-            //make a list of single lines to remove from singleLinesArray
-            //if they are part of a range of selected lines
-            for (var j = 0; j < singleLinesArray.length; j++) {
-                if (singleLinesArray[j] >= rangeMin && singleLinesArray[j] <= rangeMax) {
-                    linesToRemove.push(j);
-                }
-            }
-            //remove the corresponding single line from the linesToRemove list
-            //using the pop value as the splice position in singleLinesArray
-            linesToRemove = linesToRemove.sort(sortAsc);
-            while (linesToRemove.length > 0) {
-                singleLinesArray.splice(linesToRemove.pop(), 1);
-            }
-        }
-    }
-
     //sort a one dimensional array in Ascending order
     function sortAsc(a, b) {
         return a - b;
     }
 
-    //sort a one dimensional array in Descending order
-    function sortDesc(a, b) {
-        return b - a;
+    function generateSelectedArrays() {
+        var line = null,
+            rangeMax = null,
+            lines = [],
+            rangesArray = [],
+            singleLinesArray = [];
+        
+        var multiSelected = document.getElementsByClassName('multihighlight');
+        var singleSelected = document.getElementsByClassName('highlighted');
+
+        function generateLines(selected, lines) {
+            for (var i = 0; i < selected.length; i++ ) {
+                lines.push(parseInt(selected[i].id, 10));
+            }
+            return lines;
+        }
+
+        lines = generateLines(multiSelected, lines);
+        lines = generateLines(singleSelected, lines);
+
+        // strip all single lines, e.g. those without an adjacent line+1 == nextLine
+        for (var s = lines.length - 1; s >= 0; s--) {
+            line = lines[s];
+            // this presumes selected is sorted in asc order, if not it won't work
+            if (line !== lines[s + 1] - 1 && line !== lines[s - 1] + 1) {
+                singleLinesArray.push(line);
+                lines.splice(s, 1);
+            }
+        }
+
+        //this presumes selected is sorted in asc order after single lines have been removed
+        while (lines.length > 0) {
+            line = lines[0];
+            var pos = 1;
+            while (line === lines[pos] - pos) {
+                rangeMax = lines[pos];
+                pos++;
+            }
+            rangesArray.push([line, rangeMax]);
+            lines.splice(0, pos);
+        }
+
+        return [singleLinesArray.sort(sortAsc), rangesArray];
     }
 
     //generate the window.location.hash based on singleLinesArray and rangesArray
@@ -170,6 +73,7 @@ $(function () {
             windowHash = null,
             reCleanup = /(^#?,|,$)/;
 
+        [singleLinesArray, rangesArray] = generateSelectedArrays();
         for (var r = 0; r < rangesArray.length; r++) {
             ranges.push(rangesArray[r].join('-'));
         }
@@ -182,8 +86,11 @@ $(function () {
         } else if (singles === '' && ranges.length) {
             windowHash = '#' + ranges;
         }
-        windowHash = windowHash.replace(reCleanup, '');
-        history.replaceState(null, '', windowHash);
+
+        if (windowHash) {
+            windowHash = windowHash.replace(reCleanup, '');
+            history.replaceState(null, '', windowHash);
+        }
     }
 
     //parse windwow.location.hash on new requsts into two arrays
@@ -248,8 +155,7 @@ $(function () {
         } else {
             lineStart = null;
         }
-        //set the hash to a tidied version
-        setWindowHash();
+
         return {'lineStart':lineStart, 'highlights':highlights, 'ranges':ranges};
     }
 
@@ -264,14 +170,8 @@ $(function () {
             self = this;
 
         //multiselect on shiftkey modifier combined with click
-        if (event.shiftKey && lastModifierKey !== 'shift') {
-            var classToAdd = null,
-                classesToRemove = null;
-            if (lastModifierKey === 'shift' || lastModifierKey === null) {
-                classToAdd = 'highlighted';
-            } else if (lastModifierKey === 'singleSelectKey') {
-                classToAdd = 'multihighlight';
-            }
+        if (event.shiftKey) {
+            var classToAdd = 'multihighlight';
             // on shift, find last-selected code element
             // if lastSelectedNum less than clickedNum go back
             // else if lastSelectedNum greater than line id, go forward
@@ -285,19 +185,9 @@ $(function () {
                 line.addClass('clicked');
                 selected = $('.last-selected').nextUntil($('.clicked'));
                 $('.last-selected').removeClass('clicked');
-                // on last element add last-selected class
-                if (lastModifierKey === 'shift') {
-                    $('.line-number').removeClass('highlighted multihighlight');
-                }
             } else if (lastSelectedNum > clickedNum) {
                 //shiftclick ascending up the page
-                if (lastModifierKey === 'singleSelectKey') {
-                    //remove clicked so that the selector doesn't get confused later in this else if stanza
-                    classesToRemove = 'clicked';
-                } else if (lastModifierKey === 'shift') {
-                    classesToRemove = 'multihighlight highlighted clicked';
-                }
-                $('.line-number').removeClass(classesToRemove);
+                $('.line-number').removeClass('clicked');
                 line.addClass('clicked');
                 selected = $('.clicked').nextUntil($('.last-selected'));
             }
@@ -306,10 +196,11 @@ $(function () {
             });
             //set the last used modifier key
             lastModifierKey = 'shift';
-            // since all highlighed items are stripped, add one back
+            // since all highlighed items are stripped, add one back, mark new last-selected
             lastSelected.addClass(classToAdd);
+            lastSelected.removeClass('last-selected');
             line.addClass(classToAdd);
-            populateRangesArray(clickedNum, lastSelectedNum);
+            line.addClass('last-selected');
 
         } else if (event.shiftKey && lastModifierKey === 'singleSelectKey') {
             //if ctrl/command was last pressed, add multihighlight class to new lines
@@ -329,8 +220,6 @@ $(function () {
             $('.highlighted').addClass('multihighlight');
             $('.line-number').removeClass('last-selected clicked highlighted');
             line.toggleClass('clicked last-selected multihighlight');
-            //for every click, add the line to the singleLinesArray
-            populateSingleLinesArray(clickedNum, self);
 
         } else {
             //set lastModifierKey ranges and single lines to null, then clear all highlights
@@ -346,8 +235,6 @@ $(function () {
             if (parseInt(lastSelected.attr('id'), 10) !== clickedNum) {
                 //With this we're one better than github, which doesn't allow toggling single lines
                 line.toggleClass('last-selected highlighted');
-                //put a single line back into the array of single lines
-                populateSingleLinesArray(clickedNum, self);
             } else {
                 history.replaceState(null, '', '#');
             }
@@ -389,6 +276,8 @@ $(function () {
             } else {
                 window.scrollTo(0, 0);
             }
+            //tidy up an incoming url that might be typed in manually
+            setWindowHash();
         }
     });
 

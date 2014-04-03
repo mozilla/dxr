@@ -1,7 +1,8 @@
 DXR Multiline highlighter
 ==========================
 
-*This document details how to use the code highlighter.*
+*This document details how to use the code highlighter functionality
+found in the File view in DXR*
 
 The code highlighter attempts to emulate multiline highlighting
 functionality found in most operating system type file
@@ -23,7 +24,7 @@ regenerated when a page is bookmarked or shared for reuse in chat,
 bugzilla tickets, github etc.
 
 Single Click
--------------
+------------
 
 Single click on  line to select it. Click it again to deselect it.
 Simple. Single clicking a line will also deselect all other single
@@ -47,7 +48,7 @@ range will be split at the line in question.
 
 
 ``Ctrl/Command+click`` then ``Shift+click``
------------------------------------
+-------------------------------------------
 
 After selecting a line or range of lines, use ``Ctrl/Command+click`` to start
 highlight the first line in another range of lines. You can then use
