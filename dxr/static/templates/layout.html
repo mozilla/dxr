@@ -20,7 +20,7 @@
 
     <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="basic_search" class="search-box">
         <fieldset>
-            <div class="flex-container" role="group">
+            <div id="search-box" class="flex-container" role="group">
                 <div class="elem_container find">
                     <label for="query" class="query_label visually-hidden">Find</label>
                     <input type="text" name="q" {% if should_autofocus_query %}autofocus {% endif %}value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
