@@ -103,9 +103,9 @@ class Query(object):
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
-        alias_iter = count()
-        for f in [filters[0], filters[2]]: # XXX: filters:
-            for flds, cond, args in f.filter(self.terms, alias_iter):
+        alias_count = count()
+        for f in [filters[0], filters[2], filters[3]]: # XXX: filters:
+            for flds, tbls, cond, args in f.filter(self.terms, alias_count):
                 if not has_lines and f.has_lines:
                     has_lines = True
                     # 2 types of query are possible: ones that return just
@@ -133,6 +133,7 @@ class Query(object):
                 # reasonably be absorbed and merged in the app.
                 fields.extend(flds)
 
+                tables.extend(tbls)
                 conditions.append(cond)
                 arguments.extend(args)
 
@@ -305,12 +306,12 @@ class SearchFilter(object):
     def __init__(self, description=''):
         self.description = description
 
-    def filter(self, terms, alias_iter):
-        """Yield tuples of (SQL fields, a SQL condition, list of arguments).
+    def filter(self, terms, alias_count):
+        """Yield tuples of (fields, tables, a condition, list of arguments).
 
-        The SQL fields will be added to the SELECT clause and must come in a
-        pair taken to be (extent start, extent end). The condition will be
-        ANDed into the WHERE clause.
+        The SQL fields will be added to the SELECT clause and must either be
+        empty or come in a pair taken to be (extent start, extent end). The
+        condition will be ANDed into the WHERE clause.
 
         :arg terms: A dictionary with keys for each filter name I handle (as
             well as others, possibly, which should be ignored). Example::
@@ -324,7 +325,7 @@ class SearchFilter(object):
                                 'case_sensitive': False,
                                 'qualified': True}],
                   ...}
-        :arg alias_iter: An iterable that returns numbers available for use in
+        :arg alias_count: An iterable that returns numbers available for use in
             table aliases, to keep them unique. Advancing the iterator reserves
             the number it returns.
 
@@ -352,7 +353,7 @@ class SearchFilter(object):
 class TriliteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
 
-    def filter(self, terms, alias_iter):
+    def filter(self, terms, alias_count):
         not_conds = []
         not_args  = []
         for term in terms.get('text', []):
@@ -364,6 +365,7 @@ class TriliteSearchFilter(SearchFilter):
                                     term['arg'])
                 else:
                     yield ([],
+                           [],
                            "trg_index.contents MATCH ?",
                            [('substr-extents:' if term['case_sensitive']
                                                else 'isubstr-extents:') +
@@ -375,11 +377,13 @@ class TriliteSearchFilter(SearchFilter):
                     not_args.append("regexp:" + term['arg'])
                 else:
                     yield ([],
+                           [],
                            "trg_index.contents MATCH ?",
                            ["regexp-extents:" + term['arg']])
 
         if not_conds:
             yield ([],
+                   [],
                    'NOT EXISTS (SELECT 1 FROM trg_index WHERE '
                                'trg_index.id=lines.id AND (%s))' %
                                ' OR '.join(not_conds),
@@ -407,13 +411,13 @@ class SimpleFilter(SearchFilter):
         self.neg_filter_sql = neg_filter_sql
         self.formatter = formatter
 
-    def filter(self, terms, alias_iter):
+    def filter(self, terms, alias_count):
         for term in terms.get(self.param, []):
             arg = term['arg']
             if term['not']:
-                yield [], self.neg_filter_sql, self.formatter(arg)
+                yield [], [], self.neg_filter_sql, self.formatter(arg)
             else:
-                yield [], self.filter_sql, self.formatter(arg)
+                yield [], [], self.filter_sql, self.formatter(arg)
 
 
 class ExistsLikeFilter(SearchFilter):
@@ -430,7 +434,7 @@ class ExistsLikeFilter(SearchFilter):
             param. Again %s will be replaced with " = ?" or "LIKE %?%" depending on
             whether or not param is prefixed +
     """
-    def __init__(self, param, filter_sql, ext_sql, qual_name, like_name, **kwargs):
+    def __init__(self, param, filter_sql, qual_name, like_name, **kwargs):
         super(ExistsLikeFilter, self).__init__(**kwargs)
         self.param = param
         self.filter_sql = filter_sql
@@ -438,32 +442,32 @@ class ExistsLikeFilter(SearchFilter):
         self.qual_expr = " %s = ? " % qual_name
         self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
 
-    def filter(self, terms):
+    def filter(self, terms, alias_count):
         for term in terms.get(self.param, []):
             is_qualified = term['qualified']
             arg = term['arg']
-            filter_sql = (self.filter_sql % (self.qual_expr if is_qualified
-                                             else self.like_expr))
             sql_params = [arg if is_qualified else like_escape(arg)]
+            alias = 't%s' % next(alias_count)
+            join_and_find = (
+                '{a}.file_id=files.id AND {a}.file_line=lines.number AND ' +
+                (self.qual_expr if is_qualified
+                 else self.like_expr)).format(a=alias)
             if term['not']:
-                yield 'NOT EXISTS (%s)' % filter_sql, sql_params, False
+                yield ([],
+                       [],
+                       'NOT EXISTS (SELECT 1 FROM {t} AS {a} WHERE '
+                           '{condition})'.format(a=alias,
+                                                 t=self.table,
+                                                 condition=join_and_find),
+                       sql_params)
             else:
-                yield 'EXISTS (%s)' % filter_sql, sql_params, self.ext_sql is not None
-
-    def extents(self, terms, execute_sql, file_id):
-        def builder():
-            for term in terms.get(self.param, []):
-                arg = term['arg']
-                escaped_arg, sql_expr = (
-                    (arg, self.qual_expr) if term['qualified']
-                    else (like_escape(arg), self.like_expr))
-                for start, end in execute_sql(self.ext_sql % sql_expr,
-                                              [file_id, escaped_arg]):
-                    # Nones used to occur in the DB. Is this still true?
-                    if start and end:
-                        yield start, end, []
-        if self.ext_sql:
-            yield builder()
+                yield (
+                    ['{a}.file_col'.format(t=alias),
+                     '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(t=alias)],
+                     '{t} AS {a}'.format(t=self.table, a=alias),
+                     join_and_find,
+                     sql_params)
+        # NEXT: Make sure the above makes the function: tests work. Commit that. Then expand it to support 2-table instances like function-ref. The 2nd table (functions) is needed just to map from function name (given in query) to function ID.
 
 
 class UnionFilter(SearchFilter):
@@ -527,19 +531,19 @@ filters = [
 
     # function filter
     ExistsLikeFilter(
+    # select ... t1.file_col, t1.file_col+t1.extent_end-t1.extent_start
+    # inner join functions t1 on t1.file_id=files.id and lines.number=t1.file_line
+    # where ... %s LIKE ? ESCAPE "\\"
+    
+    # NOT:
+    # select ...
+    # ...
+    # where NOT EXISTS (select 1 from functions t1 where t1.file.id=files.id and t1.file_line=lines.number and %s LIKE ? ESCAPE "\\")
         description   = Markup('Function or method definition: <code>function:foo</code>'),
         param         = "function",
-        filter_sql    = """SELECT 1 FROM functions
-                           WHERE %s
-                             AND functions.file_id = files.id
-                        """,
-        ext_sql       = """SELECT functions.extent_start, functions.extent_end FROM functions
-                           WHERE functions.file_id = ?
-                             AND %s
-                           ORDER BY functions.extent_start
-                        """,  # XXX: We'll have to have the plugins framework or something translate the file offsets from the plugins into line offsets. It'll probably be of symmetric horribleness with the line-walking crap we'll delete from this file, but at least it'll happen at build time rather than for every request.
-        like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        tables        = ['functions'],
+        like_name     = "{a}.name",
+        qual_name     = "{a}.qualname"
     ),
 
     # function-ref filter

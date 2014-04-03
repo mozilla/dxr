@@ -49,6 +49,9 @@ def flatten_extents(cursor):
         # Grab a unified list of extents for all occurrences of this line:
         extents = union_extents((r[7], tuple(r)[8:]) for r in line_results)
 
+        # TODO: Nones used to occur in the DB. Is this still true? Filter them
+        # out if so.
+
         # Uniquify, sort, and fix overlaps:
         extents = list(set(extents))
         extents.sort()
