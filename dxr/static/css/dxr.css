@@ -289,14 +289,15 @@ mark {
     flex-direction: row;
 }
 .find {
-    -webkit-flex: 6;
+    -webkit-flex: 9;
+    flex: 9;
     position: relative;
 }
 .case {
     -webkit-flex: 1;
-    /* Display table to enable align-self */
-    display: table;
+    flex: 1;
     padding: 0 1rem;
+    min-width: 9rem;
     align-self: center;
 }
 .basic_search {
