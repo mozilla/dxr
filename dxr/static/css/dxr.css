@@ -223,6 +223,8 @@ table.result_snippet tr,
     border-right: 1px solid #fff;
     color: #aaa;
     text-align: right;
+}
+.result_snippet td:first-child {
     width: 4%;
 }
 .result_snippet td {
