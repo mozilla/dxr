@@ -93,7 +93,7 @@ $(function () {
         }
     }
 
-    //parse windwow.location.hash on new requsts into two arrays
+    //parse window.location.hash on new requsts into two arrays
     //one of single lines and one multilines
     //use with singleLinesArray and rangesArray for adding/changing new highlights
     function getSortedHashLines() {
@@ -198,7 +198,8 @@ $(function () {
             lastModifierKey = 'shift';
             // since all highlighed items are stripped, add one back, mark new last-selected
             lastSelected.addClass(classToAdd);
-            lastSelected.removeClass('last-selected');
+            lastSelected.removeClass('last-selected highlighted');
+            //line.removeClass('highlighted');
             line.addClass(classToAdd);
             line.addClass('last-selected');
 
@@ -210,6 +211,7 @@ $(function () {
             selected = $('.last-selected').nextUntil($('.clicked'));
             selected.each(function () {
                 selected.addClass('multihighlight');
+                selected.removeClass('highlighted');
             });
             line.addClass('multihighlight');
 
@@ -219,7 +221,12 @@ $(function () {
             line = $('#' + clickedNum);
             $('.highlighted').addClass('multihighlight');
             $('.line-number').removeClass('last-selected clicked highlighted');
-            line.toggleClass('clicked last-selected multihighlight');
+            if (parseInt(lastSelected.attr('id'), 10) !== clickedNum) {
+                line.toggleClass('clicked last-selected multihighlight');
+            } else {
+                line.toggleClass('multihighlight');
+                history.replaceState(null, '', '#');
+            }
 
         } else {
             //set lastModifierKey ranges and single lines to null, then clear all highlights

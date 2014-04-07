@@ -39,7 +39,7 @@ the first line to highlight the entire range of lines.
 ``Ctrl/Commnd+click``
 ---------------------
 
-Hold Ctrl/Command while selecting a line and the individual line will be added
+Hold ``Ctrl/Command`` while selecting a line and the individual line will be added
 to any other highlighted lines or ranges of lines. ``Ctrl/Command+click`` a
 selected line to deselect it.
 
@@ -52,5 +52,5 @@ range will be split at the line in question.
 
 After selecting a line or range of lines, use ``Ctrl/Command+click`` to start
 highlight the first line in another range of lines. You can then use
-Shift+click and the second range will be highlighted, in addition to
+``Shift+click`` and the second range will be highlighted, in addition to
 any others.
