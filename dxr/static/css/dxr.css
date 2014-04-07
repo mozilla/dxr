@@ -545,6 +545,7 @@ mark {
     .text_search label {
         padding: 0 0 .2rem 0;
         text-align: left;
+        white-space: nowrap;
     }
     .basic_search {
         top: 11%;
