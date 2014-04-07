@@ -1,0 +1,32 @@
+input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+}
+input[type="text"] {
+    width: 100%;
+}
+.form_elem_container {
+    margin: 0 0 .7rem 0;
+}
+.form_elem_container label {
+    display: inline-block;
+    padding: .3rem .5rem;
+    border: 0;
+    /*width: 17%; */
+    min-width: 125px;
+    text-align: right;
+}
+.form_elem_container input {
+    width: 70%;
+}
+.query {
+    padding-right: 6.2rem;
+    transition: padding-right .2s;
+}
+.in-progress .query {
+    padding-right: 8rem;
+    transition: padding-right .2s;
+}
+.checkbox_case {
+    margin: .5em;
+}

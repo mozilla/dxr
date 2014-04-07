@@ -11,24 +11,25 @@
 }
 .search-filter {
     display: inline-block;
-    padding-left: 2rem;
     position: absolute;
-    right: 45%;
-    top: 26%;
+    top: 15%;
+    right: 10px;
+    padding-left: 2rem;
     width: auto;
 }
 .sf-select-options {
     display: none;
     position: absolute;
-    right: 11.70%;
-    width: 86.50%;
+    top: 99%;
+    right: 0;
+    width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
 }
 .sf-select-trigger {
     background-color: white;
     border-radius: .4rem;
-    padding: .2rem;
+    padding: .1rem;
     border: 1px solid white;
     width: auto;
     min-width: 70px;
@@ -55,45 +56,26 @@
     border: 1px solid #d4d4d4;
     border-radius: 0 0 6px 6px;
 }
+.sf-select-options .selector-option-label {
+    display: inline-block;
+    vertical-align: top;
+    width: 10rem;
+}
+.sf-select-options .selector-option-description {
+    display: inline-block;
+    margin-right: 12rem;  /* Width of label plus padding */
+    vertical-align: top;
+    white-space: normal;
+}
 .sf-select-options li:first-child a {
     border-top-right-radius: 0;
     border-top-left-radius: 0;
 }
-
-@media only screen and (min-device-width: 320px) {
-    .search-filter {
-        top: 29%;
-        right: 39.5%;
-    }
-    .sf-select-options {
-        top: 76%;
-        right: 38.50%;
-        width: 59.70%;
+@media only screen and (max-width: 740px) {
+    .sf-select-options .selector-option-label {
+        display: block;
     }
 }
-@media only screen and (min-width: 740px) {
-    .search-filter {
-        top: 29%;
-        right: 17%;
-    }
-    .sf-select-options {
-        top: 76%;
-        right: 16.80%;
-        width: 82.10%;
-    }
-}
-@media only screen and (min-width: 1220px) {
-    .search-filter {
-        top: 29%;
-        right: 17%;
-    }
-    .sf-select-options {
-        top: 76%;
-        right: 16.50%;
-        width: 82.80%;
-    }
-}
-
 @media only screen and (max-height: 1200px) {
     .sf-select-options {
         max-height: 1024px;
