@@ -269,7 +269,7 @@ def load(tree_, conn):
     # Note: we want to make sure that we look up source repositories by deepest
     # directory first.
     lookup_order = source_repositories.keys()
-    lookup_order.sort(key=len)
+    lookup_order.sort(key=len, reverse=True)
 
 
 def find_vcs_for_file(path):
