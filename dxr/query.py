@@ -103,9 +103,9 @@ class Query(object):
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
-        alias_count = count()
+        aliases = ('t%s' % num for num in count())
         for f in [filters[0], filters[2], filters[3]]: # XXX: filters:
-            for flds, tbls, cond, args in f.filter(self.terms, alias_count):
+            for flds, tbls, cond, args in f.filter(self.terms, aliases):
                 if not has_lines and f.has_lines:
                     has_lines = True
                     # 2 types of query are possible: ones that return just

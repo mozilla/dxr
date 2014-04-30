@@ -15,7 +15,7 @@ class SearchFilter(object):
     def __init__(self, description=''):
         self.description = description
 
-    def filter(self, terms, alias_count):
+    def filter(self, terms, aliases):
         """Yield tuples of (fields, tables, a condition, list of arguments).
 
         The SQL fields will be added to the SELECT clause and must either be
@@ -34,9 +34,9 @@ class SearchFilter(object):
                                 'case_sensitive': False,
                                 'qualified': True}],
                   ...}
-        :arg alias_count: An iterable that returns numbers available for use in
-            table aliases, to keep them unique. Advancing the iterator reserves
-            the number it returns.
+        :arg aliases: An iterable of unique SQL names for use as table aliases,
+            to keep them unique. Advancing the iterator reserves the alias it
+            returns.
 
         """
         return []
@@ -62,7 +62,7 @@ class SearchFilter(object):
 class TriliteSearchFilter(SearchFilter):
     params = ['text', 'regexp']
 
-    def filter(self, terms, alias_count):
+    def filter(self, terms, aliases):
         not_conds = []
         not_args  = []
         for term in terms.get('text', []):
@@ -104,23 +104,24 @@ class TriliteSearchFilter(SearchFilter):
 
 
 class SimpleFilter(SearchFilter):
-    """Search filter for limited results.
-            This filter take 5 parameters, defined as follows:
-                param           Search parameter from query
-                filter_sql      Sql condition for limited using argument to param
-                neg_filter_sql  Sql condition for limited using argument to param negated.
-                formatter       Function/lambda expression for formatting the argument
-    """
     has_lines = False  # just happens to be so for all uses at the moment
 
     def __init__(self, param, filter_sql, neg_filter_sql, formatter, **kwargs):
+        """Construct.
+
+        :arg param: Search parameter from query
+        :arg filter_sql: Sql condition for limited using argument to param
+        :arg neg_filter_sql: Sql condition for limited using argument to param negated.
+        :arg formatter: Function/lambda expression for formatting the argument
+
+        """
         super(SimpleFilter, self).__init__(**kwargs)
         self.param = param
         self.filter_sql = filter_sql
         self.neg_filter_sql = neg_filter_sql
         self.formatter = formatter
 
-    def filter(self, terms, alias_count):
+    def filter(self, terms, aliases):
         for term in terms.get(self.param, []):
             arg = term['arg']
             if term['not']:
@@ -143,40 +144,50 @@ class ExistsLikeFilter(SearchFilter):
             param. Again %s will be replaced with " = ?" or "LIKE %?%" depending on
             whether or not param is prefixed +
     """
-    def __init__(self, param, filter_sql, qual_name, like_name, **kwargs):
+    def __init__(self, param, tables, wheres=None, qual_name, like_name, **kwargs):
+        """Construct.
+
+        :arg tables: A list of tables (with optional aliases) to include in the
+            SELECT clause. The one aliased to {a} gets implicitly joined to the
+            files table via its file_id and file_line fields and has extents
+            extracted from its file_col, extent_start, and extent_end columns.
+        :arg wheres: Additional WHERE clauses. Will be ANDed together with the
+            implicitly provided file-table joins and LIKE constraints.
+
+        """
         super(ExistsLikeFilter, self).__init__(**kwargs)
         self.param = param
-        self.filter_sql = filter_sql
-        self.ext_sql = ext_sql
+        self.tables = tables
+        self.wheres = wheres or []
         self.qual_expr = " %s = ? " % qual_name
         self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
 
-    def filter(self, terms, alias_count):
+    def filter(self, terms, aliases):
         for term in terms.get(self.param, []):
+            namer = LocalNamer(aliases)
             is_qualified = term['qualified']
             arg = term['arg']
             sql_params = [arg if is_qualified else like_escape(arg)]
-            alias = 't%s' % next(alias_count)
-            join_and_find = (
-                '{a}.file_id=files.id AND {a}.file_line=lines.number AND ' +
-                (self.qual_expr if is_qualified
-                 else self.like_expr)).format(a=alias)
+            constraints = [
+                    '{a}.file_id=files.id AND {a}.file_line=lines.number',
+                    self.qual_expr if is_qualified else self.like_expr
+                ] + self.wheres
+            join_and_find = ' AND '.join(constraints).format(namer)
+            formatted_tables = [table.format(namer) for table in self.tables]
             if term['not']:
                 yield ([],
                        [],
-                       'NOT EXISTS (SELECT 1 FROM {t} AS {a} WHERE '
-                           '{condition})'.format(a=alias,
-                                                 t=self.table,
+                       'NOT EXISTS (SELECT 1 FROM {tables} WHERE '
+                           '{condition})'.format(table=formatted_tables,
                                                  condition=join_and_find),
                        sql_params)
             else:
                 yield (
-                    ['{a}.file_col'.format(t=alias),
-                     '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(t=alias)],
-                     '{t} AS {a}'.format(t=self.table, a=alias),
-                     join_and_find,
-                     sql_params)
-        # NEXT: Make sure the above makes the function: tests work. Commit that. Then expand it to support 2-table instances like function-ref. The 2nd table (functions) is needed just to map from function name (given in query) to function ID.
+                    ['{a}.file_col'.format(namer),
+                     '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(namer)],
+                    formatted_tables,
+                    join_and_find,
+                    sql_params)
 
 
 class UnionFilter(SearchFilter):
@@ -210,6 +221,33 @@ class UnionFilter(SearchFilter):
             for hits in groupby(sorted(builder())):
                 yield hits[0]
         yield sorter()
+class LocalNamer(object):
+    """Hygiene provider for SQL aliases"""
+
+    def __init__(self, aliases):
+        """Construct.
+
+        :arg aliases: Iterable of unique SQL aliases
+
+        """
+        self.aliases = aliases
+        self.map = {}  # local name -> global name
+
+    def __getitem__(self, key):
+        """Map a one-char local alias placeholder into a global SQL alias.
+
+        Longer placeholders map to "{placeholder}" so they can be passed to a
+        second format() call.
+
+        """
+        if len(key) == 1:
+            try:
+                ret = self.map[key]
+            except KeyError:
+                ret = self.map[key] = next(self.aliases)
+        else:
+            ret = '{%s}' % key
+        return ret
 
 
 def like_escape(val):
@@ -224,9 +262,6 @@ def like_escape(val):
 # Register filters by adding them to this list:
 filters = [
     # path filter
-    # TODO: Don't show every line of every file we find if we're just using the
-    # path filter--or the path and ext filters--alone. Don't even join up the
-    # lines and trg_index tables...or something. ext_sql used to effectively act as a special flag for this; it was set to None in these 2 filters. We could add a show_lines=False to these (and a show_lines=True to the others) and only join up the other tables if there's a True one in the query.
     SimpleFilter(
         param             = "path",
         description       = Markup('File or directory sub-path to search within. <code>*</code> and <code>?</code> act as shell wildcards.'),
@@ -250,37 +285,46 @@ filters = [
     # function filter
     ExistsLikeFilter(
     # select ... t1.file_col, t1.file_col+t1.extent_end-t1.extent_start
-    # inner join functions t1 on t1.file_id=files.id and lines.number=t1.file_line
-    # where ... %s LIKE ? ESCAPE "\\"
-    
+    # from functions t1
+    # where ...
+    #   t1.file_id=files.id AND lines.number=t1.file_line AND
+    #   t1.name LIKE ? ESCAPE "\\"
+
     # NOT:
     # select ...
     # ...
-    # where NOT EXISTS (select 1 from functions t1 where t1.file.id=files.id and t1.file_line=lines.number and %s LIKE ? ESCAPE "\\")
+    # where NOT EXISTS (SELECT 1 FROM functions t1 WHERE
+    #   t1.file.id=files.id AND t1.file_line=lines.number AND
+    #   f.name LIKE ? ESCAPE "\\")
         description   = Markup('Function or method definition: <code>function:foo</code>'),
         param         = "function",
-        tables        = ['functions'],
+        tables        = ['functions AS {a}'],
         like_name     = "{a}.name",
         qual_name     = "{a}.qualname"
     ),
 
     # function-ref filter
     ExistsLikeFilter(
+    # select ... r.file_col, r.file_col+r.extent_end-r.extent_start
+    # from functions f, function_refs r
+    # where ...
+    #    r.file_id=files.id AND r.file_line=lines.number AND
+    #    functions.id=refs.refid AND
+    #    f.name LIKE ? ESCAPE "\\"
+
+    # NOT:
+    # select ...
+    # ...
+    # where NOT EXISTS (SELECT 1 FROM functions f, function_refs r WHERE
+    #    r.file_id=files.id and r.file_line=lines.number AND
+    #    functions.id=refs.refid AND
+    #    f.name LIKE ? ESCAPE "\\")
         description   = 'Function or method references',
         param         = "function-ref",
-        filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
-                           WHERE %s
-                             AND functions.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM functions
-                                         WHERE %s
-                                           AND functions.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        tables        = ['functions AS {f}', 'function_refs AS {a}'],
+        wheres        = '{f}.id={a}.refid',
+        like_name     = "{f}.name",
+        qual_name     = "{f}.qualname"
     ),
 
     # function-decl filter
@@ -408,6 +452,33 @@ filters = [
 
       description = 'Functions or methods which are called by the given one'
     ),
+
+# I don't see how I can do a UnionFilter with this query shape. Ah yes, we can:
+#
+# SELECT types.extent_start AS start1, whatever AS end1
+#        typedefs.extent_start AS start2, whatever AS end2
+# ...
+# LEFT JOIN types ON types.file_id=files.id AND types.file_line=lines.number
+# LEFT JOIN types ON typedefs.file_id=files.id AND typedefs.file_line=lines.number
+# ...
+# WHERE start1 IS NOT NULL OR start2 IS NOT NULL
+#
+## And then have the extent processing crap filter out any Nones.
+#
+
+#√ SELECT {extent_start1} AS start1, {extent_end1} AS end1  # UnionFilter will stick the ASes on so we know what names to use in the WHERE.
+#√        {extent_start2} AS start2, {extent_end2} AS end2
+# ...
+#√ LEFT JOIN {table1} ON {condition1}
+#√ LEFT JOIN {table2} ON {condition2}
+# ...
+#√ WHERE start1 IS NOT NULL OR start2 IS NOT NULL
+
+# Then how do we do a negative UnionFilter? WHERE ... IS NULL AND ... IS NULL, I suppose?
+# I think we'd want to pass positive things to the ExistsFilters in any case and then take care of the negativizing ourselves.
+
+#
+# Maybe I can take something like "blah {a} whatever {b}
 
     # type filter
     UnionFilter([
