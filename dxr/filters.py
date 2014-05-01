@@ -37,9 +37,22 @@ class SearchFilter(object):
         :arg aliases: An iterable of unique SQL names for use as table aliases,
             to keep them unique. Advancing the iterator reserves the alias it
             returns.
+        :arg filter_one_term: The callable used to return the filtration
+            specifiers for a single query term. Defaults to the filter_one_term
+            method on me.
 
         """
-        return []
+        for term in self.terms():
+            yield self.filter_one_term(term, aliases)
+
+    def terms(self):
+        """Return an iterable of terms I know how to filter on."""
+        return terms.get(self.param, [])
+
+    def filter_one_term(self, term, aliases):
+        """Yield a tuple of (fields, tables, a condition, list of arguments)
+        that express the filtration for a single query term."""
+        raise NotImplementedError
 
     def names(self):
         """Return a list of filter names this filter handles.
@@ -121,13 +134,12 @@ class SimpleFilter(SearchFilter):
         self.neg_filter_sql = neg_filter_sql
         self.formatter = formatter
 
-    def filter(self, terms, aliases):
-        for term in terms.get(self.param, []):
-            arg = term['arg']
-            if term['not']:
-                yield [], [], self.neg_filter_sql, self.formatter(arg)
-            else:
-                yield [], [], self.filter_sql, self.formatter(arg)
+    def filter_one_term(self, term, aliases):
+        arg = term['arg']
+        if term['not']:
+            yield [], [], self.neg_filter_sql, self.formatter(arg)
+        else:
+            yield [], [], self.filter_sql, self.formatter(arg)
 
 
 class ExistsLikeFilter(SearchFilter):
@@ -156,34 +168,33 @@ class ExistsLikeFilter(SearchFilter):
         self.qual_expr = '%s=?' % qual_name
         self.like_expr = '%s LIKE ? ESCAPE "\\"' % like_name
 
-    def filter(self, terms, aliases, force_positive=False):
+    def filter_one_term(self, term, aliases, force_positive=False):
         """Return a tuple for each query term that matches my param name."""
-        for term in terms.get(self.param, []):
-            namer = LocalNamer(aliases)
-            is_qualified = term['qualified']
-            arg = term['arg']
-            sql_params = [arg if is_qualified else like_escape(arg)]
-            constraints = [
-                    '{a}.file_id=files.id AND {a}.file_line=lines.number',
-                    self.qual_expr if is_qualified else self.like_expr
-                ] + self.wheres
-            join_and_find = ' AND '.join(constraints).format(namer)
-            named_tables = [table.format(namer) for table in self.tables]
-            if term['not'] and not force_positive:
-                yield ([],
-                       [],
-                       'NOT EXISTS (SELECT 1 FROM {tables} WHERE '
-                           '{condition})'.format(
-                                tables=', '.join(named_tables),
-                                condition=join_and_find),
-                       sql_params)
-            else:
-                yield (
-                    ['{a}.file_col'.format(namer),
-                     '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(namer)],
-                    named_tables,
-                    join_and_find,
-                    sql_params)
+        namer = LocalNamer(aliases)
+        is_qualified = term['qualified']
+        arg = term['arg']
+        sql_params = [arg if is_qualified else like_escape(arg)]
+        constraints = [
+                '{a}.file_id=files.id AND {a}.file_line=lines.number',
+                self.qual_expr if is_qualified else self.like_expr
+            ] + self.wheres
+        join_and_find = ' AND '.join(constraints).format(namer)
+        named_tables = [table.format(namer) for table in self.tables]
+        if term['not'] and not force_positive:
+            yield ([],
+                   [],
+                   'NOT EXISTS (SELECT 1 FROM {tables} WHERE '
+                       '{condition})'.format(
+                            tables=', '.join(named_tables),
+                            condition=join_and_find),
+                   sql_params)
+        else:
+            yield (
+                ['{a}.file_col'.format(namer),
+                 '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(namer)],
+                named_tables,
+                join_and_find,
+                sql_params)
 
 
 class UnionFilter(SearchFilter):
@@ -210,34 +221,36 @@ class UnionFilter(SearchFilter):
         self.filters = filters
 
     def filter(self, terms, aliases):
+        # Union all the terms together as if they were positive. Then, in the
+        # WHERE clause, make the positive terms look like (extents from
+        # filter A IS NOT NULL OR extents from filter B IS NOT NULL OR ...) and negative ones look
+        # like (extents from filter A IS NULL AND extents from filter B IS NULL AND
+        # ...).
         all_fields, all_tables, all_args = [], [], []
         for filter in self.filters:  # These get ORed together.
-            term_tuples = filter.filter(terms, aliases, force_positive=True)
             term_wheres = []
-
-            for fields, tables, join_condition, args in term_tuples:  # For each term. These get ANDed together.
+            for term in filter.terms(terms):  # These get ANDed together.
+                fields, tables, join_condition, args = filter.filter_one_term(term, force_positive=True)
                 if not fields or not tables or not condition:
                     raise ValueError('UnionFilter needs non-empty extents, tables, and a condition.')
                 namer = LocalNamer(aliases)
-                # Okay. Union all the terms together as if they were positive. (Add a force_positive=True arg to ExistsFilter.filter().) Then, in the WHERE clause, make the positive terms look like (condition from subfilter A OR condition from subfilter B OR ...) and negative ones look like (field from subfilter A IS NULL AND field from subfilter B IS NULL AND ...). The negative ones don't even need the parens, obviously; they can be yielded as separate conditions.
-                # TODO: Support negation.
                 start, end = fields
                 named_start = '{start_field} AS {s}'.format(namer).format(start_field=start)
-                all_fields.extend([named_start, end])
 
-                term_wheres.append('{s} IS NOT NULL'.format(namer))
+                all_fields.extend([named_start, end])
+                term_wheres.append(('{s} IS NULL' if term['not'] else '{s} IS NOT NULL').format(namer))
                 all_tables.extend(tables)
                 all_args.extend(args)
                 all_joins.append(
                     'LEFT JOIN {tables} ON {join_condition}'.format(
                         tables=tables,
                         join_condition=join_condition))
-            all_wheres.append(' AND '.join(term_wheres))
+            all_wheres.append((' AND ' if term['not'] else ' OR ').join(term_wheres))
         return {
             'fields': all_fields,
             'tables': all_tables,
-            'joins': all_joins,
-            'wheres': '((' + ') OR ('.join(all_wheres) + '))',
+            'joins': all_joins,  # TODO: Make results() understand this.
+            'wheres': '((' + ') AND ('.join(all_wheres) + '))'
         }
 
 
@@ -504,6 +517,27 @@ filters = [
 # LEFT JOIN the typedef2 thing on whatever
 #
 # WHERE ((start1 IS NOT NULL AND start2 IS NOT NULL) OR (start3 IS NOT NULL AND start4 IS NOT NULL)).
+
+# -type:foo type:bar
+# start1: foo is a class on some line
+# start2: foo is a type on some line
+# start3: bar is a class on some line
+# start4: bar is a type on some line
+# ...
+# WHERE ((start1 IS NULL AND start2 IS NULL) AND
+#        (start3 IS NOT NULL OR start4 IS NOT NULL))
+
+# -type:foo type:bar -type:qux
+# start1: foo is a class on some line
+# start2: foo is a type on some line
+# start3: bar is a class on some line
+# start4: bar is a type on some line
+# start5: qux is a class on some line
+# start6: qux is a type on some line
+# ...
+# WHERE ((start1 IS NULL AND start2 IS NULL) AND
+#        (start3 IS NOT NULL OR start4 IS NOT NULL) AND
+#        (start5 IS NULL AND start6 IS NULL))
 
     # type filter
     UnionFilter([
