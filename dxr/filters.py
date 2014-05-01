@@ -131,26 +131,20 @@ class SimpleFilter(SearchFilter):
 
 
 class ExistsLikeFilter(SearchFilter):
-    """Search filter for asking of something LIKE this EXISTS,
-            This filter takes 5 parameters, param is the search query parameter,
-            "-" + param is a assumed to be the negated search filter.
-            The filter_sql must be an (SELECT 1 FROM ... WHERE ... %s ...), sql condition on files.id,
-            s.t. replacing %s with "qual_name = ?" or "like_name LIKE %?%" where ? is arg given to param
-            in search query, and prefixing with EXISTS or NOT EXISTS will yield search
-            results as desired :)
-            (BTW, did I mention that 'as desired' is awesome way of writing correct specifications)
-            ext_sql, must be an sql statement for a list of extent start and end,
-            given arguments (file_id, %arg%), where arg is the argument given to
-            param. Again %s will be replaced with " = ?" or "LIKE %?%" depending on
-            whether or not param is prefixed +
-    """
-    def __init__(self, param, tables, wheres=None, qual_name, like_name, **kwargs):
+    """Search filter for asking of something LIKE this exists"""
+
+    def __init__(self, param, tables, qual_name, like_name, wheres=None, **kwargs):
         """Construct.
 
+        :arg param: The filter name the user types before the colon
         :arg tables: A list of tables (with optional aliases) to include in the
             SELECT clause. The one aliased to {a} gets implicitly joined to the
             files table via its file_id and file_line fields and has extents
             extracted from its file_col, extent_start, and extent_end columns.
+        :arg qual_name: The column to compare the filter argument to when doing
+            a fully qualified match
+        :arg like_name: The column to compare the filter argument to when doing
+            a normal match
         :arg wheres: Additional WHERE clauses. Will be ANDed together with the
             implicitly provided file-table joins and LIKE constraints.
 
@@ -159,10 +153,11 @@ class ExistsLikeFilter(SearchFilter):
         self.param = param
         self.tables = tables
         self.wheres = wheres or []
-        self.qual_expr = " %s = ? " % qual_name
-        self.like_expr = """ %s LIKE ? ESCAPE "\\" """ % like_name
+        self.qual_expr = '%s=?' % qual_name
+        self.like_expr = '%s LIKE ? ESCAPE "\\"' % like_name
 
-    def filter(self, terms, aliases):
+    def filter(self, terms, aliases, force_positive=False):
+        """Return a tuple for each query term that matches my param name."""
         for term in terms.get(self.param, []):
             namer = LocalNamer(aliases)
             is_qualified = term['qualified']
@@ -173,29 +168,38 @@ class ExistsLikeFilter(SearchFilter):
                     self.qual_expr if is_qualified else self.like_expr
                 ] + self.wheres
             join_and_find = ' AND '.join(constraints).format(namer)
-            formatted_tables = [table.format(namer) for table in self.tables]
-            if term['not']:
+            named_tables = [table.format(namer) for table in self.tables]
+            if term['not'] and not force_positive:
                 yield ([],
                        [],
                        'NOT EXISTS (SELECT 1 FROM {tables} WHERE '
-                           '{condition})'.format(table=formatted_tables,
-                                                 condition=join_and_find),
+                           '{condition})'.format(
+                                tables=', '.join(named_tables),
+                                condition=join_and_find),
                        sql_params)
             else:
                 yield (
                     ['{a}.file_col'.format(namer),
                      '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(namer)],
-                    formatted_tables,
+                    named_tables,
                     join_and_find,
                     sql_params)
 
 
 class UnionFilter(SearchFilter):
-    """Provides a filter matching the union of the given filters.
+    """A (possibly negated) ORing of ExistsLikeFilters.
 
-            For when you want OR instead of AND.
+    Other filters probably work, too, but I haven't coded with them in mind.
+
     """
     def __init__(self, filters, **kwargs):
+        """Construct.
+
+        :arg filters: A list of filters to union together. Each one's filter()
+            method must yield tuples which give extents, tables, and conditions.
+            In other words, none of those can be empty.
+
+        """
         super(UnionFilter, self).__init__(**kwargs)
         # For the moment, UnionFilter supports only single-param filters. There
         # is no reason this can't change.
@@ -205,25 +209,45 @@ class UnionFilter(SearchFilter):
         self.param = unique_params.pop()  # for consistency with other filters
         self.filters = filters
 
-    def filter(self, terms):
-        for res in zip(*(filt.filter(terms) for filt in self.filters)):
-            yield ('(' + ' OR '.join(conds for (conds, args, exts) in res) + ')',
-                   [arg for (conds, args, exts) in res for arg in args],
-                   any(exts for (conds, args, exts) in res))
+    def filter(self, terms, aliases):
+        all_fields, all_tables, all_args = [], [], []
+        for filter in self.filters:  # These get ORed together.
+            term_tuples = filter.filter(terms, aliases, force_positive=True)
+            term_wheres = []
 
-    def extents(self, terms, execute_sql, file_id):
-        def builder():
-            for filt in self.filters:
-                for hits in filt.extents(terms, execute_sql, file_id):
-                    for hit in hits:
-                        yield hit
-        def sorter():
-            for hits in groupby(sorted(builder())):
-                yield hits[0]
-        yield sorter()
+            for fields, tables, join_condition, args in term_tuples:  # For each term. These get ANDed together.
+                if not fields or not tables or not condition:
+                    raise ValueError('UnionFilter needs non-empty extents, tables, and a condition.')
+                namer = LocalNamer(aliases)
+                # Okay. Union all the terms together as if they were positive. (Add a force_positive=True arg to ExistsFilter.filter().) Then, in the WHERE clause, make the positive terms look like (condition from subfilter A OR condition from subfilter B OR ...) and negative ones look like (field from subfilter A IS NULL AND field from subfilter B IS NULL AND ...). The negative ones don't even need the parens, obviously; they can be yielded as separate conditions.
+                # TODO: Support negation.
+                start, end = fields
+                named_start = '{start_field} AS {s}'.format(namer).format(start_field=start)
+                all_fields.extend([named_start, end])
+
+                term_wheres.append('{s} IS NOT NULL'.format(namer))
+                all_tables.extend(tables)
+                all_args.extend(args)
+                all_joins.append(
+                    'LEFT JOIN {tables} ON {join_condition}'.format(
+                        tables=tables,
+                        join_condition=join_condition))
+            all_wheres.append(' AND '.join(term_wheres))
+        return {
+            'fields': all_fields,
+            'tables': all_tables,
+            'joins': all_joins,
+            'wheres': '((' + ') OR ('.join(all_wheres) + '))',
+        }
+
+
 class LocalNamer(object):
-    """Hygiene provider for SQL aliases"""
+    """Hygiene provider for SQL aliases
 
+    Maps all single-char placeholders to consistent made-up names. Leaves all
+    longer ones along.
+
+    """
     def __init__(self, aliases):
         """Construct.
 
@@ -321,8 +345,8 @@ filters = [
     #    f.name LIKE ? ESCAPE "\\")
         description   = 'Function or method references',
         param         = "function-ref",
-        tables        = ['functions AS {f}', 'function_refs AS {a}'],
-        wheres        = '{f}.id={a}.refid',
+        tables        = ['function_refs AS {a}', 'functions AS {f}'],
+        wheres        = ['{f}.id={a}.refid'],
         like_name     = "{f}.name",
         qual_name     = "{f}.qualname"
     ),
@@ -331,19 +355,10 @@ filters = [
     ExistsLikeFilter(
         description   = 'Function or method declaration',
         param         = "function-decl",
-        filter_sql    = """SELECT 1 FROM functions, function_decldef as decldef
-                           WHERE %s
-                             AND functions.id = decldef.defid AND decldef.file_id = files.id
-                        """,
-        ext_sql       = """SELECT decldef.extent_start, decldef.extent_end FROM function_decldef AS decldef
-                           WHERE decldef.file_id = ?
-                             AND EXISTS (SELECT 1 FROM functions
-                                         WHERE %s
-                                           AND functions.id = decldef.defid)
-                           ORDER BY decldef.extent_start
-                        """,
-        like_name     = "functions.name",
-        qual_name     = "functions.qualname"
+        tables        = ['function_decldef AS {a}', 'functions AS {f}'],
+        wheres        = ['{f}.id={a}.defid'],
+        like_name     = "{f}.name",
+        qual_name     = "{f}.qualname"
     ),
 
     UnionFilter([
@@ -466,19 +481,29 @@ filters = [
 ## And then have the extent processing crap filter out any Nones.
 #
 
-#√ SELECT {extent_start1} AS start1, {extent_end1} AS end1  # UnionFilter will stick the ASes on so we know what names to use in the WHERE.
-#√        {extent_start2} AS start2, {extent_end2} AS end2
+#v SELECT {extent_start1} AS start1, {extent_end1} AS end1  # UnionFilter will stick the ASes on so we know what names to use in the WHERE.
+#v        {extent_start2} AS start2, {extent_end2} AS end2
 # ...
-#√ LEFT JOIN {table1} ON {condition1}
-#√ LEFT JOIN {table2} ON {condition2}
+#v LEFT JOIN {table1} ON {condition1}
+#v LEFT JOIN {table2} ON {condition2}
 # ...
-#√ WHERE start1 IS NOT NULL OR start2 IS NOT NULL
+#v WHERE start1 IS NOT NULL OR start2 IS NOT NULL
 
 # Then how do we do a negative UnionFilter? WHERE ... IS NULL AND ... IS NULL, I suppose?
 # I think we'd want to pass positive things to the ExistsFilters in any case and then take care of the negativizing ourselves.
 
+# type:foo type:bar -->  # Find type:foo and type:bar on the same line, either classes or typedefs.
+# SELECT {extent_start1} AS start1, {extent_end1} AS end1  # filter 1, term 1
+#        {extent_start2} AS start2, {extent_end2} AS end2  # filter 1, term 2
+#        {extent_start3} AS start3, {extent_end3} AS end3  # filter 2, term 1
+#        {extent_start4} AS start4, {extent_end4} AS end4  # All 4 of the "subqueries" have to be in here, or we can't get extents for them all in the case that they all do turn up something.
+# So we want the first 2 ANDed together, the second 2 ANDed together, and then the 2 pairs ORed.
+# LEFT JOIN the class1 thing ON whatever
+# LEFT JOIN the typedef1 thing ON whatever
+# LEFT JOIN the class2 thing ON whatever
+# LEFT JOIN the typedef2 thing on whatever
 #
-# Maybe I can take something like "blah {a} whatever {b}
+# WHERE ((start1 IS NOT NULL AND start2 IS NOT NULL) OR (start3 IS NOT NULL AND start4 IS NOT NULL)).
 
     # type filter
     UnionFilter([
@@ -643,19 +668,10 @@ filters = [
     ExistsLikeFilter(
         description   = 'Macro uses',
         param         = "macro-ref",
-        filter_sql    = """SELECT 1 FROM macros, macro_refs AS refs
-                           WHERE %s
-                             AND macros.id = refs.refid AND refs.file_id = files.id
-                        """,
-        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM macro_refs AS refs
-                           WHERE refs.file_id = ?
-                             AND EXISTS (SELECT 1 FROM macros
-                                         WHERE %s
-                                           AND macros.id = refs.refid)
-                           ORDER BY refs.extent_start
-                        """,
-        like_name     = "macros.name",
-        qual_name     = "macros.name"
+        tables        = ['macro_refs AS {a}', 'macros AS {m}'],
+        wheres        = ['{m}.id={a}.refid'],
+        like_name     = "{m}.name",
+        qual_name     = "{m}.name"
     ),
 
     # namespace filter
