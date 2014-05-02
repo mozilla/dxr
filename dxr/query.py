@@ -25,8 +25,7 @@ class Query(object):
         self._sql_profile = []
         self.is_case_sensitive = is_case_sensitive
 
-        # A dict with a key for each filter type (like "regexp") in the query.
-        # There is also a special "text" key where free text ends up.
+        # A list of dicts describing query terms:
         self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(query_grammar.parse(querystr))
 
     def single_term(self):
@@ -91,21 +90,22 @@ class Query(object):
         sql = ('SELECT %s '
                'FROM %s '
                '%s '
+               '%s '
                'ORDER BY %s LIMIT ? OFFSET ?')
         # Filters can add additional fields, in pairs of {extent_start,
         # extent_end}, to be used for highlighting.
         fields = ['files.path', 'files.icon']  # TODO: move extents() to TriliteSearchFilter
         tables = ['files']
-        conditions = []
+        conditions, arguments, joins = [], [], []
         orderings = ['files.path']
-        arguments = []
         has_lines = False
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
         aliases = ('t%s' % num for num in count())
-        for f in [filters[0], filters[2], filters[3]]: # XXX: filters:
-            for flds, tbls, cond, args in f.filter(self.terms, aliases):
+        for term in self.terms:
+            filter = filters[term['type']]
+            flds, tbls, cond, jns, args = filter.filter(term, aliases)
                 if not has_lines and f.has_lines:
                     has_lines = True
                     # 2 types of query are possible: ones that return just
@@ -134,11 +134,13 @@ class Query(object):
                 fields.extend(flds)
 
                 tables.extend(tbls)
+                joins.extend(jns)
                 conditions.append(cond)
                 arguments.extend(args)
 
         sql %= (', '.join(fields),
                 ', '.join(tables),
+                ' '.join(joins),
                 ('WHERE ' + ' AND '.join(conditions)) if conditions else '',
                 ', '.join(orderings))
         arguments.extend([limit, offset])
@@ -298,7 +300,10 @@ query_grammar = Grammar(ur'''
     filter = ~r"''' +
         # regexp, function, etc. No filter is a prefix of a later one. This
         # avoids premature matches.
-        '|'.join(sorted(chain.from_iterable(map(re.escape, f.names()) for f in filters),
+        '|'.join(sorted(chain.from_iterable(map(re.escape, filter_type) for
+                                            filter_type, filter in
+                                            filters.iteritems() if
+                                            filter.description),
                         key=len,
                         reverse=True)) + ur'''"
 
@@ -342,39 +347,36 @@ class QueryVisitor(NodeVisitor):
         self.is_case_sensitive = is_case_sensitive
 
     def visit_query(self, query, (_, terms)):
-        """Group terms into a dict of lists by filter type, and return it."""
-        d = {}
-        for filter_name, subdict in terms:
-            d.setdefault(filter_name, []).append(subdict)
-        return d
+        """Return a list of query term term_dicts."""
+        return terms
 
-    def visit_term(self, term, ((filter_name, subdict),)):
+    def visit_term(self, term, (term_dict,)):
         """Set the case-sensitive bit and, if not already set, a default not
         bit."""
-        subdict['case_sensitive'] = self.is_case_sensitive
-        subdict.setdefault('not', False)
-        subdict.setdefault('qualified', False)
-        return filter_name, subdict
+        term_dict['case_sensitive'] = self.is_case_sensitive
+        term_dict.setdefault('not', False)
+        term_dict.setdefault('qualified', False)
+        return term_dict
 
-    def visit_not_term(self, not_term, (not_, (filter_name, subdict))):
-        """Add "not" bit to the subdict."""
-        subdict['not'] = True
-        return filter_name, subdict
+    def visit_not_term(self, not_term, (not_, term_dict)):
+        """Add "not" bit to the term_dict."""
+        term_dict['not'] = True
+        return term_dict
 
-    def visit_filtered_term(self, filtered_term, (plus, filter, colon, (text_type, subdict))):
-        """Add fully-qualified indicator to the term subdict, and return it and
-        the filter name."""
-        subdict['qualified'] = plus.text == '+'
-        return filter.text, subdict
+    def visit_filtered_term(self, filtered_term, (plus, filter, colon, term_dict)):
+        """Add fully-qualified indicator and the filter name to the term_dict."""
+        term_dict['qualified'] = plus.text == '+'
+        term_dict['type'] = filter.text
+        return term_dict
 
     def visit_text(self, text, ((some_text,), _)):
-        """Create the subdictionary that lives in Query.terms. Return it and
-        'text', indicating that this is a bare or quoted run of text. If it is
-        actually an argument to a filter, ``visit_filtered_term`` will
-        overrule us later.
+        """Create the dictionary that lives in Query.terms. Return it with a
+        filter type of 'text', indicating that this is a bare or quoted run of
+        text. If it is actually an argument to a filter,
+        ``visit_filtered_term`` will overrule us later.
 
         """
-        return 'text', {'arg': some_text}
+        return {'type': 'text', 'arg': some_text}
 
     def visit_maybe_plus(self, plus, wtf):
         """Keep the plus from turning into a list half the time. That makes it
@@ -400,4 +402,5 @@ class QueryVisitor(NodeVisitor):
 
 def filter_menu_items():
     """Return the additional template variables needed to render filter.html."""
-    return (f.menu_item() for f in filters)
+    return (dict(name=type, description=filter.description) for type, filter in
+            filters.iteritems() if filter.description)
