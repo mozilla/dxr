@@ -266,17 +266,17 @@ def like_escape(val):
 filters = OrderedDict([
     ('path',
      SimpleFilter(
-         description       = Markup('File or directory sub-path to search within. <code>*</code> and <code>?</code> act as shell wildcards.'),
-         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
-         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-         formatter         = lambda arg: ['%' + like_escape(arg) + '%'])),
+         description = Markup('File or directory sub-path to search within. <code>*</code> and <code>?</code> act as shell wildcards.'),
+         filter_sql = """files.path LIKE ? ESCAPE "\\" """,
+         neg_filter_sql = """files.path NOT LIKE ? ESCAPE "\\" """,
+         formatter = lambda arg: ['%' + like_escape(arg) + '%'])),
 
     ('ext':
      SimpleFilter(
-         description       = Markup('Filename extension: <code>ext:cpp</code>'),
-         filter_sql        = """files.path LIKE ? ESCAPE "\\" """,
-         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
-         formatter         = lambda arg: ['%' +
+         description = Markup('Filename extension: <code>ext:cpp</code>'),
+         filter_sql = """files.path LIKE ? ESCAPE "\\" """,
+         neg_filter_sql = """files.path NOT LIKE ? ESCAPE "\\" """,
+         formatter = lambda arg: ['%' +
              like_escape(arg if arg.startswith(".") else "." + arg)])),
 
     ('regexp',
@@ -299,10 +299,10 @@ filters = OrderedDict([
      # where NOT EXISTS (SELECT 1 FROM functions t1 WHERE
      #   t1.file.id=files.id AND t1.file_line=lines.number AND
      #   f.name LIKE ? ESCAPE "\\")
-         description   = Markup('Function or method definition: <code>function:foo</code>'),
-         tables        = ['functions AS {a}'],
-         like_name     = "{a}.name",
-         qual_name     = "{a}.qualname")),
+         description = Markup('Function or method definition: <code>function:foo</code>'),
+         tables = ['functions AS {a}'],
+         like_name = "{a}.name",
+         qual_name = "{a}.qualname")),
 
     ('function-ref',
      ExistsLikeFilter(
@@ -320,19 +320,19 @@ filters = OrderedDict([
      #    r.file_id=files.id and r.file_line=lines.number AND
      #    functions.id=refs.refid AND
      #    f.name LIKE ? ESCAPE "\\")
-         description   = 'Function or method references',
-         tables        = ['function_refs AS {a}', 'functions AS {f}'],
-         wheres        = ['{f}.id={a}.refid'],
-         like_name     = "{f}.name",
-         qual_name     = "{f}.qualname")),
+         description = 'Function or method references',
+         tables = ['function_refs AS {a}', 'functions AS {f}'],
+         wheres = ['{f}.id={a}.refid'],
+         like_name = "{f}.name",
+         qual_name = "{f}.qualname")),
 
     ('function-decl',
      ExistsLikeFilter(
-         description   = 'Function or method declaration',
-         tables        = ['function_decldef AS {a}', 'functions AS {f}'],
-         wheres        = ['{f}.id={a}.defid'],
-         like_name     = "{f}.name",
-         qual_name     = "{f}.qualname")),
+         description = 'Function or method declaration',
+         tables = ['function_decldef AS {a}', 'functions AS {f}'],
+         wheres = ['{f}.id={a}.defid'],
+         like_name = "{f}.name",
+         qual_name = "{f}.qualname")),
 
     ('callers', UnionFilter([
       # direct calls
@@ -354,8 +354,8 @@ filters = OrderedDict([
                                           )
                              ORDER BY functions.extent_start
                           """,
-          like_name     = "target.name",
-          qual_name     = "target.qualname"),
+          like_name = "target.name",
+          qual_name = "target.qualname"),
 
       # indirect calls
       ExistsLikeFilter(
@@ -378,8 +378,8 @@ filters = OrderedDict([
                                           )
                              ORDER BY functions.extent_start
                           """,
-          like_name     = "target.name",
-          qual_name     = "target.qualname")],
+          like_name = "target.name",
+          qual_name = "target.qualname")],
 
       description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'))),
 
@@ -403,8 +403,8 @@ filters = OrderedDict([
                                           )
                              ORDER BY functions.extent_start
                           """,
-          like_name     = "caller.name",
-          qual_name     = "caller.qualname"
+          like_name = "caller.name",
+          qual_name = "caller.qualname"
       ),
 
       # indirect calls
@@ -428,8 +428,8 @@ filters = OrderedDict([
                                           )
                              ORDER BY functions.extent_start
                           """,
-          like_name     = "caller.name",
-          qual_name     = "caller.qualname"
+          like_name = "caller.name",
+          qual_name = "caller.qualname"
       )],
 
       description = 'Functions or methods which are called by the given one')),
@@ -483,7 +483,7 @@ filters = OrderedDict([
 
     ('type', UnionFilter([
       ExistsLikeFilter(
-        filter_sql    = """SELECT 1 FROM types
+        filter_sql = """SELECT 1 FROM types
                            WHERE %s
                              AND types.file_id = files.id
                         """,
@@ -492,8 +492,8 @@ filters = OrderedDict([
                              AND %s
                            ORDER BY types.extent_start
                         """,
-        like_name     = "types.name",
-        qual_name     = "types.qualname"
+        like_name = "types.name",
+        qual_name = "types.qualname"
       ),
       ExistsLikeFilter(
         filter_sql    = """SELECT 1 FROM typedefs
@@ -505,8 +505,8 @@ filters = OrderedDict([
                              AND %s
                            ORDER BY typedefs.extent_start
                         """,
-        like_name     = "typedefs.name",
-        qual_name     = "typedefs.qualname")],
+        like_name = "typedefs.name",
+        qual_name = "typedefs.qualname")],
       description=Markup('Type or class definition: <code>type:Stack</code>'))),
 
     ('type-ref', UnionFilter([
@@ -522,8 +522,8 @@ filters = OrderedDict([
                                            AND types.id = refs.refid)
                            ORDER BY refs.extent_start
                         """,
-        like_name     = "types.name",
-        qual_name     = "types.qualname"
+        like_name = "types.name",
+        qual_name = "types.qualname"
       ),
       ExistsLikeFilter(
         filter_sql    = """SELECT 1 FROM typedefs, typedef_refs AS refs
@@ -537,13 +537,13 @@ filters = OrderedDict([
                                            AND typedefs.id = refs.refid)
                            ORDER BY refs.extent_start
                         """,
-        like_name     = "typedefs.name",
-        qual_name     = "typedefs.qualname")],
+        like_name = "typedefs.name",
+        qual_name = "typedefs.qualname")],
       description='Type or class references, uses, or instantiations')),
 
     ('type-decl',
      ExistsLikeFilter(
-       description   = 'Type or class declaration',
+       description = 'Type or class declaration',
        filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
                           WHERE %s
                             AND types.id = decldef.defid AND decldef.file_id = files.id
@@ -555,12 +555,12 @@ filters = OrderedDict([
                                           AND types.id = decldef.defid)
                           ORDER BY decldef.extent_start
                        """,
-       like_name     = "types.name",
-       qual_name     = "types.qualname")),
+       like_name = "types.name",
+       qual_name = "types.qualname")),
 
     ('var',
      ExistsLikeFilter(
-         description   = 'Variable definition',
+         description = 'Variable definition',
          filter_sql    = """SELECT 1 FROM variables
                             WHERE %s
                               AND variables.file_id = files.id
@@ -570,12 +570,12 @@ filters = OrderedDict([
                               AND %s
                             ORDER BY variables.extent_start
                          """,
-         like_name     = "variables.name",
-         qual_name     = "variables.qualname")),
+         like_name = "variables.name",
+         qual_name = "variables.qualname")),
 
     ('var-ref',
      ExistsLikeFilter(
-         description   = 'Variable uses (lvalue, rvalue, dereference, etc.)',
+         description = 'Variable uses (lvalue, rvalue, dereference, etc.)',
          filter_sql    = """SELECT 1 FROM variables, variable_refs AS refs
                             WHERE %s
                               AND variables.id = refs.refid AND refs.file_id = files.id
@@ -587,12 +587,12 @@ filters = OrderedDict([
                                             AND variables.id = refs.refid)
                             ORDER BY refs.extent_start
                          """,
-         like_name     = "variables.name",
-         qual_name     = "variables.qualname")),
+         like_name = "variables.name",
+         qual_name = "variables.qualname")),
 
     ('var-decl',
      ExistsLikeFilter(
-         description   = 'Variable declaration',
+         description = 'Variable declaration',
          filter_sql    = """SELECT 1 FROM variables, variable_decldef AS decldef
                             WHERE %s
                               AND variables.id = decldef.defid AND decldef.file_id = files.id
@@ -604,12 +604,12 @@ filters = OrderedDict([
                                             AND variables.id = decldef.defid)
                             ORDER BY decldef.extent_start
                          """,
-         like_name     = "variables.name",
-         qual_name     = "variables.qualname")),
+         like_name = "variables.name",
+         qual_name = "variables.qualname")),
 
     ('macro',
      ExistsLikeFilter(
-         description   = 'Macro definition',
+         description = 'Macro definition',
          filter_sql    = """SELECT 1 FROM macros
                             WHERE %s
                               AND macros.file_id = files.id
@@ -619,20 +619,20 @@ filters = OrderedDict([
                               AND %s
                             ORDER BY macros.extent_start
                          """,
-         like_name     = "macros.name",
-         qual_name     = "macros.name")),
+         like_name = "macros.name",
+         qual_name = "macros.name")),
 
     ('macro-ref',
      ExistsLikeFilter(
-         description   = 'Macro uses',
-         tables        = ['macro_refs AS {a}', 'macros AS {m}'],
-         wheres        = ['{m}.id={a}.refid'],
-         like_name     = "{m}.name",
-         qual_name     = "{m}.name")),
+         description = 'Macro uses',
+         tables = ['macro_refs AS {a}', 'macros AS {m}'],
+         wheres = ['{m}.id={a}.refid'],
+         like_name = "{m}.name",
+         qual_name = "{m}.name")),
 
     ('namespace',
      ExistsLikeFilter(
-         description   = 'Namespace definition',
+         description = 'Namespace definition',
          filter_sql    = """SELECT 1 FROM namespaces
                             WHERE %s
                               AND namespaces.file_id = files.id
@@ -642,12 +642,12 @@ filters = OrderedDict([
                               AND %s
                             ORDER BY namespaces.extent_start
                          """,
-         like_name     = "namespaces.name",
-         qual_name     = "namespaces.qualname")),
+         like_name = "namespaces.name",
+         qual_name = "namespaces.qualname")),
 
     ('namespace-ref',
      ExistsLikeFilter(
-         description   = 'Namespace references',
+         description = 'Namespace references',
          filter_sql    = """SELECT 1 FROM namespaces, namespace_refs AS refs
                             WHERE %s
                               AND namespaces.id = refs.refid AND refs.file_id = files.id
@@ -659,12 +659,12 @@ filters = OrderedDict([
                                             AND namespaces.id = refs.refid)
                             ORDER BY refs.extent_start
                          """,
-         like_name     = "namespaces.name",
-         qual_name     = "namespaces.qualname")),
+         like_name = "namespaces.name",
+         qual_name = "namespaces.qualname")),
 
     ('namespace-alias',
      ExistsLikeFilter(
-         description   = 'Namespace alias',
+         description = 'Namespace alias',
          filter_sql    = """SELECT 1 FROM namespace_aliases
                             WHERE %s
                               AND namespace_aliases.file_id = files.id
@@ -674,12 +674,12 @@ filters = OrderedDict([
                               AND %s
                             ORDER BY namespace_aliases.extent_start
                          """,
-         like_name     = "namespace_aliases.name",
-         qual_name     = "namespace_aliases.qualname")),
+         like_name = "namespace_aliases.name",
+         qual_name = "namespace_aliases.qualname")),
 
     ('namespace-alias-ref',
      ExistsLikeFilter(
-         description   = 'Namespace alias references',
+         description = 'Namespace alias references',
          filter_sql    = """SELECT 1 FROM namespace_aliases, namespace_alias_refs AS refs
                             WHERE %s
                               AND namespace_aliases.id = refs.refid AND refs.file_id = files.id
@@ -691,12 +691,12 @@ filters = OrderedDict([
                                             AND namespace_aliases.id = refs.refid)
                             ORDER BY refs.extent_start
                          """,
-         like_name     = "namespace_aliases.name",
-         qual_name     = "namespace_aliases.qualname")),
+         like_name = "namespace_aliases.name",
+         qual_name = "namespace_aliases.qualname")),
 
     ('bases',  # reorder these things so more frequent at top.
      ExistsLikeFilter(
-         description   = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'),
+         description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'),
          filter_sql    = """SELECT 1 FROM types as base, impl, types
                              WHERE %s
                                AND impl.tbase = base.id
@@ -711,12 +711,12 @@ filters = OrderedDict([
                                             AND %s
                                          )
                          """,
-         like_name     = "types.name",
-         qual_name     = "types.qualname")),
+         like_name = "types.name",
+         qual_name = "types.qualname")),
 
     ('derived',
      ExistsLikeFilter(
-         description   = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>'),
+         description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>'),
          filter_sql    = """SELECT 1 FROM types as sub, impl, types
                              WHERE %s
                                AND impl.tbase = types.id
@@ -731,8 +731,8 @@ filters = OrderedDict([
                                             AND %s
                                          )
                          """,
-         like_name     = "types.name",
-         qual_name     = "types.qualname")),
+         like_name = "types.name",
+         qual_name = "types.qualname")),
 
     ('member', UnionFilter([
       # member filter for functions
@@ -748,8 +748,8 @@ filters = OrderedDict([
                                                       AND type.id = mem.scopeid)
                            ORDER BY mem.extent_start
                         """,
-        like_name     = "type.name",
-        qual_name     = "type.qualname"
+        like_name = "type.name",
+        qual_name = "type.qualname"
       ),
       # member filter for types
       ExistsLikeFilter(
@@ -764,8 +764,8 @@ filters = OrderedDict([
                                                       AND type.id = mem.scopeid)
                            ORDER BY mem.extent_start
                         """,
-        like_name     = "type.name",
-        qual_name     = "type.qualname"
+        like_name = "type.name",
+        qual_name = "type.qualname"
       ),
       # member filter for variables
       ExistsLikeFilter(
@@ -780,14 +780,14 @@ filters = OrderedDict([
                                                       AND type.id = mem.scopeid)
                            ORDER BY mem.extent_start
                         """,
-        like_name     = "type.name",
-        qual_name     = "type.qualname")],
+        like_name = "type.name",
+        qual_name = "type.qualname")],
 
       description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>'))),
 
     ('overridden',
      ExistsLikeFilter(
-         description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
+         description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
          filter_sql    = """SELECT 1
                               FROM functions as base, functions as derived, targets
                              WHERE %s
@@ -807,12 +807,12 @@ filters = OrderedDict([
                                          )
                             ORDER BY functions.extent_start
                          """,
-         like_name     = "derived.name",
-         qual_name     = "derived.qualname")),
+         like_name = "derived.name",
+         qual_name = "derived.qualname")),
 
     ('overrides',
      ExistsLikeFilter(
-         description   = Markup('Methods which override the given one: <code>overrides:someMethod</code>'),
+         description = Markup('Methods which override the given one: <code>overrides:someMethod</code>'),
          filter_sql    = """SELECT 1
                               FROM functions as base, functions as derived, targets
                              WHERE %s
@@ -832,12 +832,12 @@ filters = OrderedDict([
                                          )
                             ORDER BY functions.extent_start
                          """,
-         like_name     = "base.name",
-         qual_name     = "base.qualname")),
+         like_name = "base.name",
+         qual_name = "base.qualname")),
 
     ('warning',
      ExistsLikeFilter(
-         description   = 'Compiler warning messages',
+         description = 'Compiler warning messages',
          filter_sql    = """SELECT 1 FROM warnings
                              WHERE %s
                                AND warnings.file_id = files.id """,
@@ -846,12 +846,12 @@ filters = OrderedDict([
                              WHERE warnings.file_id = ?
                                AND %s
                          """,
-         like_name     = "warnings.msg",
-         qual_name     = "warnings.msg")),
+         like_name = "warnings.msg",
+         qual_name = "warnings.msg")),
 
     ('warning-opt',
      ExistsLikeFilter(
-         description   = 'More (less severe?) warning messages',
+         description = 'More (less severe?) warning messages',
          filter_sql    = """SELECT 1 FROM warnings
                              WHERE %s
                                AND warnings.file_id = files.id """,
@@ -860,7 +860,7 @@ filters = OrderedDict([
                              WHERE warnings.file_id = ?
                                AND %s
                          """,
-         like_name     = "warnings.opt",
-         qual_name     = "warnings.opt"
+         like_name = "warnings.opt",
+         qual_name = "warnings.opt"
      ))
 ])
