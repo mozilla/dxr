@@ -15,7 +15,7 @@ ln -sf /usr/bin/nodejs /usr/local/bin/node
 apt-get install -y sphinx-common
 
 # Python:
-apt-get install -y libapache2-mod-wsgi python-pip
+apt-get install -y libapache2-mod-wsgi python-pip python-dev
 pip install virtualenv virtualenvwrapper python-hglib nose
 cd ~vagrant/dxr
 # If it hangs here, you might have a mismatched version of the VirtualBox Guest

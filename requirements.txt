@@ -1,3 +1,12 @@
+# sha256: QdFMwEVuA_NNE68oT2WCHQfQXCDmIbyuvTj5q1CV1dE
+async==0.6.1
+
+# sha256: 3l0trA2uxKnNe7GuHNQtU1ENz1lzl8YIwSoVS2mtN4M
+gitdb==0.5.4
+
+# sha256: _WeGaEoNDdfruWHadU4zEvr-DI6I9VzrCYWKoK9glOA
+GitPython==0.3.2.RC1
+
 # sha256: L9XU_-gfdi3So-WEctaQoNu6N2Z3ZQYAOu4-16qor-8
 Flask==0.9
 
@@ -18,6 +27,9 @@ parsimonious==0.5
 
 # sha256: eZ7Uyvd1FuVEQIBtjZzYKnYH399OT7ZDgVFxpLXJIcA
 Pygments==1.6
+
+# sha256: 3qKVXMBF7FUn2mt2L36Vpb5_ZFxoO1TMzlLVa01-LW8
+smmap==0.8.2
 
 # sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
 Werkzeug==0.8.3

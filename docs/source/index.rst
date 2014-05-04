@@ -21,6 +21,8 @@ Contents:
    plugins.rst
    tests.rst
    code-highlighter.rst
+   permalink.rst
+   errata.rst
 
 Indices and tables
 ==================

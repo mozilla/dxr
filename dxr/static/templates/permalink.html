@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% from "partial/switch_tree.html" import tree_menu %}
+
+{% block title %}{{ name }} - DXR{% endblock %}
+
+{% block head %}
+  <link rel="shortcut icon" href="{{ wwwroot }}/static/icons/{{ icon }}.png"/>
+{% endblock %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+<div id="content" class="content" data-no-results="No results returned for current query.">
+<div id="notice">
+    <p>Note that these results are <strong>NOT</strong> indexed. Normal contextual selections and search will return the results of HEAD/TIP indexed code and highlighting will work.</p>
+</div>
+  <table id="file" class="file">
+    <thead class="visually-hidden">
+        <th scope="col">Line</th>
+        <th scope="col">Code</th>
+    </thead>
+    <tbody>
+      <tr>
+        <td id="line-numbers">
+          {% for line in lines %}
+          <span id="{{ loop.index }}" class="line-number" unselectable="on" rel="#{{ loop.index }}">{{ loop.index }} </span>
+          {% endfor %}
+        </td>
+        <td class="code">
+          <pre>
+            {% for line in lines -%}
+            <code id="line-{{ loop.index }}" aria-labelledby="{{ loop.index }}">{{ line|safe }}</code>
+            {% endfor -%}
+          </pre>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ wwwroot }}/static/js/panel.js"></script>
+  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+  <script src="{{ wwwroot }}/static/js/code-highlighter.js"></script>
+  <script src="{{ wwwroot }}/static/js/annotation-icons.js"></script>
+{% endblock %}

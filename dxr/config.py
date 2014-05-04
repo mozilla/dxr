@@ -1,13 +1,11 @@
-from ConfigParser import ConfigParser
-from datetime import datetime
-from ordereddict import OrderedDict
-from operator import attrgetter
+import dxr
 import os
-from os.path import isdir
 import sys
 
-import dxr
-
+from ConfigParser import ConfigParser
+from datetime import datetime
+from operator import attrgetter
+from ordereddict import OrderedDict
 
 # Please keep these config objects as simple as possible and in sync with
 # docs/source/configuration.rst. I'm well aware that this is not the most compact way
@@ -21,19 +19,19 @@ class Config(object):
         # Create parser with sane defaults
         parser = ConfigParser({
             'dxrroot':          os.path.dirname(dxr.__file__),
-            'plugin_folder':    "%(dxrroot)s/plugins",
-            'nb_jobs':          "1",
-            'temp_folder':      "/tmp/dxr-temp",
-            'log_folder':       "%(temp_folder)s/logs",
-            'wwwroot':          "/",
-            'enabled_plugins':  "*",
-            'disabled_plugins': " ",
-            'directory_index':  ".dxr-directory-index.html",
+            'plugin_folder':    '%(dxrroot)s/plugins',
+            'nb_jobs':          '1',
+            'temp_folder':      '/tmp/dxr-temp',
+            'log_folder':       '%(temp_folder)s/logs',
+            'wwwroot':          '/',
+            'enabled_plugins':  '*',
+            'disabled_plugins': '',
+            'directory_index':  '.dxr-directory-index.html',
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'disable_workers':  "",
-            'skip_stages':      "",
-            'default_tree':     "",
-            'filter_language':  "C"
+            'disable_workers':  '',
+            'skip_stages':      '',
+            'default_tree':     '',
+            'filter_language':  'C',
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -53,6 +51,7 @@ class Config(object):
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
         self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
+
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
@@ -86,7 +85,7 @@ class Config(object):
         if self.enabled_plugins == "*":
             self.enabled_plugins = [
                 p for p in os.listdir(self.plugin_folder) if
-                isdir(os.path.join(self.plugin_folder, p)) and
+                os.isdir(os.path.join(self.plugin_folder, p)) and
                 p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
@@ -118,14 +117,16 @@ class TreeConfig(object):
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
         parser = ConfigParser({
-            'enabled_plugins':  "*",
-            'disabled_plugins': "",
+            'enabled_plugins':  '*',
+            'disabled_plugins': '',
             'temp_folder':      os.path.join(config.temp_folder, name),
             'log_folder':       os.path.join(config.log_folder, name),
-            'ignore_patterns':  ".hg .git CVS .svn .bzr .deps .libs",
-            'build_command':    "make -j $jobs",
+            'ignore_patterns':  '.hg .git CVS .svn .bzr .deps .libs',
+            'build_command':    'make -j $jobs',
             'source_encoding':  'utf-8',
-            'description':  ''
+            'description':      '',
+            'vcs_folder':       '',
+            'vcs_type':         '',
         })
         parser.read(configfile)
 
@@ -140,6 +141,8 @@ class TreeConfig(object):
         self.ignore_patterns  = parser.get(name, 'ignore_patterns')
         self.source_encoding  = parser.get(name, 'source_encoding')
         self.description      = parser.get(name, 'description')
+        self.vcs_folder       = parser.get(name, 'vcs_folder')
+        self.vcs_type         = parser.get(name, 'vcs_type')
 
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
