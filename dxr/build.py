@@ -511,7 +511,7 @@ def _build_html_for_file_ids(tree, start, end):
                                  """,
                                  [start, end]),
                     1):
-                text = ''.join(  # Linebreaks are in the DB for now.
+                text = '\n'.join(
                     line_content for (line_content,) in
                     conn.execute('SELECT trg_index.text '
                                  'FROM files '
