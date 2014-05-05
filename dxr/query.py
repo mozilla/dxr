@@ -106,37 +106,37 @@ class Query(object):
         for term in self.terms:
             filter = filters[term['type']]
             flds, tbls, cond, jns, args = filter.filter(term, aliases)
-                if not has_lines and f.has_lines:
-                    has_lines = True
-                    # 2 types of query are possible: ones that return just
-                    # files and involve no other tables, and ones which join
-                    # the lines and trg_index tables and return lines and
-                    # extents. This switches from the former to the latter.
-                    #
-                    # The first time we hit a line-having filter, glom on the
-                    # line-based fields. That way, they're always at the
-                    # beginning (non-line-having filters never return fields),
-                    # so we can use our clever slicing later on to find the
-                    # extents fields.
-                    fields.extend(['files.encoding', 'files.id as file_id',
-                                   'lines.id as line_id', 'lines.number',
-                                   'trg_index.text', 'extents(trg_index.contents)'])
-                    tables.extend(['lines', 'trg_index'])
-                    conditions.extend(['files.id=lines.file_id', 'lines.id=trg_index.id'])
-                    orderings.append('lines.number')
+            if not has_lines and filter.has_lines:
+                has_lines = True
+                # 2 types of query are possible: ones that return just
+                # files and involve no other tables, and ones which join
+                # the lines and trg_index tables and return lines and
+                # extents. This switches from the former to the latter.
+                #
+                # The first time we hit a line-having filter, glom on the
+                # line-based fields. That way, they're always at the
+                # beginning (non-line-having filters never return fields),
+                # so we can use our clever slicing later on to find the
+                # extents fields.
+                fields.extend(['files.encoding', 'files.id as file_id',
+                               'lines.id as line_id', 'lines.number',
+                               'trg_index.text', 'extents(trg_index.contents)'])
+                tables.extend(['lines', 'trg_index'])
+                conditions.extend(['files.id=lines.file_id', 'lines.id=trg_index.id'])
+                orderings.append('lines.number')
 
-                # We fetch the extents for structural filters without doing
-                # separate queries, by adding columns to the master search
-                # query. Since we're only talking about a line at a time, it is
-                # unlikely that there will be multiple highlit extents per
-                # filter per line, so any cartesian product of rows can
-                # reasonably be absorbed and merged in the app.
-                fields.extend(flds)
+            # We fetch the extents for structural filters without doing
+            # separate queries, by adding columns to the master search
+            # query. Since we're only talking about a line at a time, it is
+            # unlikely that there will be multiple highlit extents per
+            # filter per line, so any cartesian product of rows can
+            # reasonably be absorbed and merged in the app.
+            fields.extend(flds)
 
-                tables.extend(tbls)
-                joins.extend(jns)
-                conditions.append(cond)
-                arguments.extend(args)
+            tables.extend(tbls)
+            joins.extend(jns)
+            conditions.append(cond)
+            arguments.extend(args)
 
         sql %= (', '.join(fields),
                 ', '.join(tables),
