@@ -102,7 +102,7 @@ class Query(object):
 
         # Give each registered filter an opportunity to contribute to the
         # query, narrowing it down to the set of matching lines:
-        aliases = ('t%s' % num for num in count())
+        aliases = alias_counter()
         for term in self.terms:
             filter = filters[term['type']]
             flds, tbls, cond, jns, args = filter.filter(term, aliases)
@@ -404,3 +404,8 @@ def filter_menu_items():
     """Return the additional template variables needed to render filter.html."""
     return (dict(name=type, description=filter.description) for type, filter in
             filters.iteritems() if filter.description)
+
+
+def alias_counter():
+    """Return an infinite iterable of unique, valid SQL alias names."""
+    return ('t%s' % num for num in count())

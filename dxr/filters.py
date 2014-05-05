@@ -1,3 +1,6 @@
+from collections import defaultdict
+from string import Formatter
+
 from ordereddict import OrderedDict
 from jinja2 import Markup
 
@@ -150,8 +153,8 @@ class ExistsLikeFilter(SearchFilter):
                 '{a}.file_id=files.id AND {a}.file_line=lines.number',
                 self.qual_expr if is_qualified else self.like_expr
             ] + self.wheres
-        join_and_find = ' AND '.join(constraints).format(namer)
-        named_tables = [table.format(namer) for table in self.tables]
+        join_and_find = namer.format(' AND '.join(constraints))
+        named_tables = [namer.format(table) for table in self.tables]
         if term['not'] and not force_positive:
             return ([],
                     [],
@@ -163,8 +166,8 @@ class ExistsLikeFilter(SearchFilter):
                     sql_params)
         else:
             return (
-                ['{a}.file_col'.format(namer),
-                 '{a}.file_col + {a}.extent_end - {a}.extent_start'.format(namer)],
+                [namer.format('{a}.file_col'),
+                 namer.format('{a}.file_col + {a}.extent_end - {a}.extent_start')],
                 named_tables,
                 join_and_find,
                 [],
@@ -214,7 +217,8 @@ class UnionFilter(SearchFilter):
                 raise ValueError('UnionFilter needs non-empty extents, tables, and a condition.')
             namer = LocalNamer(aliases)
             start, end = fields
-            named_start = '{start_field} AS {s}'.format(namer).format(start_field=start)
+            named_start = namer.format('{start_field} AS {s}',
+                                      start_field=start)
 
             term_fields.extend([named_start, end])
             term_tables.extend(tables)
@@ -222,7 +226,8 @@ class UnionFilter(SearchFilter):
                 'LEFT JOIN {tables} ON {join_condition}'.format(
                     tables=tables,
                     join_condition=join_condition))
-            term_wheres.append(('{s} IS NULL' if term['not'] else '{s} IS NOT NULL').format(namer))
+            term_wheres.append(namer.format('{s} IS NULL' if term['not']
+                               else '{s} IS NOT NULL'))
             term_args.extend(args)
         return (term_fields,
                 term_tables,
@@ -231,11 +236,11 @@ class UnionFilter(SearchFilter):
                 term_args)
 
 
-class LocalNamer(object):
+class LocalNamer(Formatter):
     """Hygiene provider for SQL aliases
 
-    Maps all single-char placeholders to consistent made-up names. Leaves all
-    longer ones along.
+    Maps all single-char placeholders to consistent made-up names. Fills in
+    others from kwargs.
 
     """
     def __init__(self, aliases):
@@ -244,24 +249,20 @@ class LocalNamer(object):
         :arg aliases: Iterable of unique SQL aliases
 
         """
-        self.aliases = aliases
-        self.map = {}  # local name -> global name
+        super(LocalNamer, self).__init__()
+        self.map = defaultdict(lambda: next(aliases))
 
-    def __getitem__(self, key):
+    def get_value(self, key, args, kwargs):
         """Map a one-char local alias placeholder into a global SQL alias.
 
-        Longer placeholders map to "{placeholder}" so they can be passed to a
-        second format() call.
+        Other placeholders are treated in accordance with format()'s usual
+        behavior.
 
         """
-        if len(key) == 1:
-            try:
-                ret = self.map[key]
-            except KeyError:
-                ret = self.map[key] = next(self.aliases)
+        if len(key) == 1:  # Supports only string keys at the moment
+            return self.map[key]
         else:
-            ret = '{%s}' % key
-        return ret
+            return super(LocalNamer, self).get_value(key, args, kwargs)
 
 
 def like_escape(val):
