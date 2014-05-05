@@ -35,8 +35,8 @@ class Query(object):
         non-textual one, return None.
 
         """
-        if self.terms.keys() == ['text'] and len(self.terms['text']) == 1:
-            return self.terms['text'][0]['arg']
+        if len(self.terms) == 1 and self.terms[0]['type'] == ['text']:
+            return self.terms[0]['arg']
 
     def execute_sql(self, sql, *parameters):
         if self._should_explain:
@@ -300,10 +300,10 @@ query_grammar = Grammar(ur'''
     filter = ~r"''' +
         # regexp, function, etc. No filter is a prefix of a later one. This
         # avoids premature matches.
-        '|'.join(sorted(chain.from_iterable(map(re.escape, filter_type) for
-                                            filter_type, filter in
-                                            filters.iteritems() if
-                                            filter.description),
+        '|'.join(sorted((re.escape(filter_type) for
+                                filter_type, filter in
+                                filters.iteritems() if
+                                filter.description),
                         key=len,
                         reverse=True)) + ur'''"
 
