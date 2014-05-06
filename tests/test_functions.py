@@ -3,8 +3,8 @@
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
-class ReferenceTests(SingleFileTestCase):
-    """Tests for finding out where functions are referenced or declared"""
+class DefinitionTests(SingleFileTestCase):
+    """Tests for finding where functions are defined"""
 
     source = r"""
         #include <stdio.h>
@@ -19,7 +19,7 @@ class ReferenceTests(SingleFileTestCase):
         }
         """
 
-    def test_functions(self):
+    def test_definition(self):
         """Try searching for function declarations."""
         self.found_line_eq(
             'function:main', 'int <b>main</b>(int argc, char* argv[]) {')

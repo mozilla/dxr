@@ -19,16 +19,18 @@ def union_extents(tuples):
     """Return an iterable of (start, end) from an iterable of (packed
     trg_extents, [extent1_start, extent1_end, extent2_start, ...]).
 
+    Normalize all extents to be 0-based. (Non-trilite ones are 1-based in the
+    DB because that's how clang reckons them. We should fix that.)
+
     Returned extents may be out of order and include duplicates.
 
     """
     for trg_extents, other_extents in tuples:
-        for e in unpack_trilite_extents(trg_extents or ()):
-            yield e
+        for extent in unpack_trilite_extents(trg_extents or ()):
+            yield extent
         # Turn other extents into an iterable of (start, end) tuples:
-        for e in izip(other_extents[::2], other_extents[1::2]):
-            yield e
-
+        for (s, e) in izip(other_extents[::2], other_extents[1::2]):
+            yield (s - 1), (e - 1)
 
 def flatten_extents(cursor):
     """Given a raw set of search results from the DB, merge the rows that
