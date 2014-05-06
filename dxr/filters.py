@@ -54,8 +54,8 @@ class TextFilter(SearchFilter):
                         'NOT EXISTS (SELECT 1 FROM trg_index WHERE '
                             'trg_index.id=lines.id AND trg_index.contents MATCH ?)',
                         [],
-                        ('substr:' if term['case_sensitive'] else 'isubstr:') +
-                            term['arg'])
+                        [('substr:' if term['case_sensitive'] else 'isubstr:') +
+                            term['arg']])
             else:
                 return ([],
                         [],
