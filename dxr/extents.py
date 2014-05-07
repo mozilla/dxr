@@ -22,6 +22,8 @@ def union_extents(tuples):
     Normalize all extents to be 0-based. (Non-trilite ones are 1-based in the
     DB because that's how clang reckons them. We should fix that.)
 
+    Omit extents whose starts are None.
+
     Returned extents may be out of order and include duplicates.
 
     """
@@ -30,7 +32,8 @@ def union_extents(tuples):
             yield extent
         # Turn other extents into an iterable of (start, end) tuples:
         for (s, e) in izip(other_extents[::2], other_extents[1::2]):
-            yield (s - 1), (e - 1)
+            if s is not None:
+                yield (s - 1), (e - 1)
 
 def flatten_extents(cursor):
     """Given a raw set of search results from the DB, merge the rows that
