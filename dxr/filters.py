@@ -20,8 +20,9 @@ class SearchFilter(object):
         self.description = description
 
     def filter(self, term, aliases):
-        """Yield a tuple of (fields, tables, a condition, a join clause, list
-        of arguments) that expresses the filtration for a single query term.
+        """Yield a tuple of (fields, tables, a WHERE condition, list of
+        arguments for the WHERE condition, join clauses, list of arguments for
+        the join clauses) that expresses the filtration for a single query term.
 
         The SQL fields will be added to the SELECT clause and must either be
         empty or come in a pair taken to be (extent start, extent end). The
@@ -53,17 +54,19 @@ class TextFilter(SearchFilter):
                         [],
                         'NOT EXISTS (SELECT 1 FROM trg_index WHERE '
                             'trg_index.id=lines.id AND trg_index.contents MATCH ?)',
-                        [],
                         [('substr:' if term['case_sensitive'] else 'isubstr:') +
-                            term['arg']])
+                            term['arg']],
+                        [],
+                        [])
             else:
                 return ([],
                         [],
                         "trg_index.contents MATCH ?",
-                        [],
                         [('substr-extents:' if term['case_sensitive']
                                             else 'isubstr-extents:') +
-                         term['arg']])
+                         term['arg']],
+                        [],
+                        [])
 
 
 class RegexpFilter(SearchFilter):
@@ -74,14 +77,16 @@ class RegexpFilter(SearchFilter):
                         [],
                         'NOT EXISTS (SELECT 1 FROM trg_index WHERE '
                             'trg_index.id=lines.id AND trg_index.contents MATCH ?)',
+                        ['regexp:' + term['arg']],
                         [],
-                        'regexp:' + term['arg'])
+                        [])
             else:
                 return ([],
                         [],
                         "trg_index.contents MATCH ?",
+                        ["regexp-extents:" + term['arg']],
                         [],
-                        ["regexp-extents:" + term['arg']])
+                        [])
 
 
 class SimpleFilter(SearchFilter):
@@ -103,12 +108,35 @@ class SimpleFilter(SearchFilter):
     def filter(self, term, aliases):
         arg = term['arg']
         if term['not']:
-            return [], [], self.neg_filter_sql, [], self.formatter(arg)
+            return [], [], self.neg_filter_sql, self.formatter(arg), [], []
         else:
-            return [], [], self.filter_sql, [], self.formatter(arg)
+            return [], [], self.filter_sql, self.formatter(arg), [], []
 
 
-class ExistsLikeFilter(SearchFilter):
+class ArgLikeComparator(object):
+    """Mixin for things that test whether an argument is LIKE something
+
+    The class you mix this into must have qual_name and like_name fields
+    describing what to compare against in the cases of fully-qualified terms
+    and other terms, respectively.
+
+    """
+    def _arg_constraint(self, term):
+        """Return the appropriate SQL clause and params to constrain a field
+        based on the value of the term's argument, sensitive to whether or not
+        the term is fully-qualified."""
+        arg = term['arg']
+        if term['qualified']:
+            return ('%s=?' % self.qual_name), [arg]
+        return (r'%s LIKE ? ESCAPE "\"' % self.like_name), [like_escape(arg)]
+
+
+FILE_AND_LINE_CONSTRAINTS = '{a}.file_id=files.id AND {a}.file_line=lines.number'
+START_EXTENT = '{a}.file_col'
+END_EXTENT = '{a}.file_col + {a}.extent_end - {a}.extent_start'
+
+
+class ExistsLikeFilter(SearchFilter, ArgLikeComparator):
     """Search filter for asking of something LIKE this exists"""
 
     def __init__(self, tables, qual_name, like_name, wheres=None, **kwargs):
@@ -129,15 +157,24 @@ class ExistsLikeFilter(SearchFilter):
         super(ExistsLikeFilter, self).__init__(**kwargs)
         self.tables = tables
         self.wheres = wheres or []
-        self.qual_expr = '%s=?' % qual_name
-        self.like_expr = '%s LIKE ? ESCAPE "\\"' % like_name
+        self.qual_name = qual_name
+        self.like_name = like_name
 
-    def filter(self, term, aliases, force_positive=False):
+    def filter(self, term, aliases):
         # select ... t1.file_col, t1.file_col+t1.extent_end-t1.extent_start
         # from functions t1
         # where ...
         #   t1.file_id=files.id AND lines.number=t1.file_line AND
         #   t1.name LIKE ? ESCAPE "\\"
+
+        # Multi-table:
+        # select ... r.file_col, r.file_col+r.extent_end-r.extent_start
+        # from types t, type_refs r
+        # where ...
+        #   r.refid=t.id
+        #   ...
+        #   r.file_id=files.id AND r.file_line=lines.number AND
+        #   t.name LIKE ? ESCAPE "\\"
 
         # negated:
         # select ...
@@ -146,16 +183,14 @@ class ExistsLikeFilter(SearchFilter):
         #   t1.file.id=files.id AND t1.file_line=lines.number AND
         #   f.name LIKE ? ESCAPE "\\")
         namer = LocalNamer(aliases)
-        is_qualified = term['qualified']
-        arg = term['arg']
-        sql_params = [arg if is_qualified else like_escape(arg)]
+        arg_constraint, sql_params = self._arg_constraint(term)
         constraints = [
-                '{a}.file_id=files.id AND {a}.file_line=lines.number',
-                self.qual_expr if is_qualified else self.like_expr
+                FILE_AND_LINE_CONSTRAINTS,
+                arg_constraint
             ] + self.wheres
         join_and_find = namer.format(' AND '.join(constraints))
         named_tables = [namer.format(table) for table in self.tables]
-        if term['not'] and not force_positive:
+        if term['not']:
             return ([],
                     [],
                     'NOT EXISTS (SELECT 1 FROM {tables} WHERE '
@@ -166,12 +201,77 @@ class ExistsLikeFilter(SearchFilter):
                     sql_params)
         else:
             return (
-                [namer.format('{a}.file_col'),
-                 namer.format('{a}.file_col + {a}.extent_end - {a}.extent_start')],
+                [namer.format(START_EXTENT),
+                 namer.format(END_EXTENT)],
                 named_tables,
                 join_and_find,
+                sql_params,
                 [],
+                [])
+
+
+class OneTableClause(ArgLikeComparator):
+    """Component of a UnionFilter that describes a single, static comparison
+    against a table joined onto the files and lines tables"""
+
+    def __init__(self, extents_table, like_name, qual_name):
+        """Construct.
+
+        :arg extent_table: The table from which extents will be drawn and which
+            will be joined with the files and lines tables. Uses {a}
+            placeholder for its alias.
+        :arg like_name: Column to LIKE against for unqualified arguments
+        :arg qual_name: Column to compare against for fully qualified arguments
+
+        """
+        self.extents_table = extents_table
+        self.qual_name = qual_name
+        self.like_name = like_name
+
+    def _further_constraint(self, arg_constraint):
+        """Return the expression that further constrains the left join after
+        the file and line constraints are applied."""
+        return arg_constraint
+
+    def pieces(self, term, aliases):
+        """Return (start extent, end extent, left join clause, SQL params)."""
+        namer = LocalNamer(aliases)
+        arg_constraint, sql_params = self._arg_constraint(term)
+        return (namer.format(START_EXTENT),  # UnionFilter will add an alias.
+                namer.format(END_EXTENT),
+                namer.format(
+                    'LEFT JOIN {extents_table} '
+                    'ON {file_and_line_constraints} AND {constraint}'.format(
+                        extents_table=self.extents_table,
+                        file_and_line_constraints=FILE_AND_LINE_CONSTRAINTS,
+                        constraint=self._further_constraint(arg_constraint))),
                 sql_params)
+
+
+class MultiTableClause(OneTableClause):
+    """Component of a UnionFilter that describes a single, static comparison
+    and an arbitrary number of joins, all wrapped into a single left join"""
+
+    def __init__(self, extents_table, like_name, qual_name, other_tables=None,
+                 wheres=None):
+        """Construct.
+
+        :arg other_tables: A list of other tables which must be joined with the
+            extents table to restrict the results. (The files and lines tables
+            are implied.)
+        :arg wheres: Restrictive expressions to limit how other_tables are
+            joined
+
+        """
+        super(MultiTableClause, self).__init__(extents_table, like_name, qual_name)
+        self.other_tables = other_tables
+        self.wheres = wheres
+
+    def _further_constraint(self, arg_constraint):
+        return ('EXISTS (SELECT 1 FROM {other_tables} WHERE '
+                '{constraints})'.format(
+                    other_tables=', '.join(self.other_tables),
+                    constraints=' AND '.join(self.wheres + [arg_constraint])))
 
 
 class UnionFilter(SearchFilter):
@@ -180,16 +280,14 @@ class UnionFilter(SearchFilter):
     Other filters probably work, too, but I haven't coded with them in mind.
 
     """
-    def __init__(self, filters, **kwargs):
+    def __init__(self, clauses, **kwargs):
         """Construct.
 
-        :arg filters: A list of filters to union together. Each one's filter()
-            method must yield tuples which give extents, tables, and conditions.
-            In other words, none of those can be empty.
+        :arg clauses: A list of Clauses to union together.
 
         """
         super(UnionFilter, self).__init__(**kwargs)
-        self.filters = filters
+        self.clauses = clauses
 
     def filter(self, term, aliases):
         # Union all the terms together as if they were positive. Then, in the
@@ -210,30 +308,40 @@ class UnionFilter(SearchFilter):
         # WHERE (start1 IS NULL AND start2 IS NULL) AND  -- -foo
         #       (start3 IS NOT NULL OR start4 IS NOT NULL) AND  -- bar
         #       (start5 IS NULL AND start6 IS NULL)  -- -qux
-        term_fields, term_tables, term_args, term_joins, term_wheres = [], [], [], [], []
-        for filter in self.filters:
-            fields, tables, join_condition, _, args = filter.filter(term, aliases, force_positive=True)
-            if not fields or not tables or not join_condition:
-                raise ValueError('UnionFilter needs non-empty extents, tables, and a condition.')
-            namer = LocalNamer(aliases)
-            start, end = fields
-            named_start = namer.format('{start_field} AS {s}',
-                                      start_field=start)
 
-            term_fields.extend([named_start, end])
-            term_tables.extend(tables)
-            term_joins.append(
-                'LEFT JOIN {tables} ON {join_condition}'.format(
-                    tables=tables,
-                    join_condition=join_condition))
-            term_wheres.append(namer.format('{s} IS NULL' if term['not']
-                               else '{s} IS NOT NULL'))
-            term_args.extend(args)
-        return (term_fields,
-                term_tables,
-                '(' + (' AND ' if term['not'] else ' OR ').join(term_wheres) + ')',
-                term_joins,
-                term_args)
+        # An entire query looks like this:
+        # SELECT ..., t0.file_col AS t2,
+        #             t0.file_col + t0.extent_end - t0.extent_start
+        # FROM files, lines, trg_index
+        # LEFT JOIN functions AS t0  -- A left join for every Clause
+        # ON t0.file_id=files.id AND
+        #    t0.file_line=lines.number AND
+        #    EXISTS (SELECT 1 FROM functions c, callers d, targets t
+        #            WHERE t0.id=t.funcid AND t.targetid=d.targetid AND
+        #            d.callerid=c.id AND c.name LIKE 'c1')
+        # -- Or, if there's only one table (OneTableClause), it uses a simple
+        # -- comparison in place of the EXISTS clause.
+        # WHERE files.id=lines.file_id AND lines.id=trg_index.id AND
+        #       (t2 IS NOT NULL);
+
+        all_fields, all_joins, all_wheres, all_params = [], [], [], []
+        for clause in self.clauses:
+            start, end, left, params = clause.pieces(term, aliases)
+            namer = LocalNamer(aliases)
+            named_start = namer.format('{start} AS {s}', start=start)
+
+            all_fields.append(named_start)
+            all_fields.append(end)
+            all_joins.append(left)
+            all_wheres.append(namer.format('{s} IS NULL' if term['not']
+                                           else '{s} IS NOT NULL'))
+            all_params.extend(params)
+        return (all_fields,
+                [],
+                '(' + (' AND ' if term['not'] else ' OR ').join(all_wheres) + ')',
+                [],
+                all_joins,
+                all_params)
 
 
 class LocalNamer(Formatter):
@@ -322,31 +430,35 @@ filters = OrderedDict([
 
     ('callers', UnionFilter([
       # direct calls
-      ExistsLikeFilter(
-          tables = ['functions AS {a}', 'functions AS {t}', 'callers AS {c}'],
+      MultiTableClause(
+          extents_table = 'functions AS {a}',
+          other_tables = ['functions AS {t}', 'callers AS {c}'],
           wheres = ['{c}.targetid={t}.id', '{c}.callerid={a}.id'],
           like_name = "{t}.name",
           qual_name = "{t}.qualname"),
       # indirect calls
-      ExistsLikeFilter(
-          tables = ['functions AS {a}', 'functions AS {t}', 'callers AS {c}', 'targets AS {s}'],
+      MultiTableClause(
+          extents_table = 'functions AS {a}',
+          other_tables = ['functions AS {t}', 'callers AS {c}', 'targets AS {s}'],
           wheres = ['{s}.funcid={t}.id', '{s}.targetid={c}.targetid', '{c}.callerid={a}.id'],
-          like_name = "target.name",
-          qual_name = "target.qualname")],
+          like_name = "{t}.name",
+          qual_name = "{t}.qualname")],
       description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'))),
 
-    ('called-by', UnionFilter([
+    ('called-by', UnionFilter([  # i.e. callees of X
       # direct calls
-      ExistsLikeFilter(
-          tables = ['functions AS {a}', 'functions AS {c}', 'callers AS {s}'],
+      MultiTableClause(
+          extents_table = 'functions AS {a}',
+          other_tables = ['functions AS {c}', 'callers AS {s}'],
           wheres = ['{s}.callerid={c}.id', '{s}.targetid={a}.id'],
           like_name = "{c}.name",
           qual_name = "{c}.qualname"
       ),
       # indirect calls
-      ExistsLikeFilter(
-          tables = ['functions AS {a}', 'functions AS {c}', 'callers AS {d}', 'targets AS {t}'],
-          # {c} is caller, {a} is target
+      MultiTableClause(
+          extents_table = 'functions AS {a}',
+          other_tables = ['functions AS {c}', 'callers AS {d}', 'targets AS {t}'],
+          # {c} is caller, {a} is callee
           wheres = ['{d}.callerid={c}.id', '{t}.funcid={a}.id', '{t}.targetid={d}.targetid'],
           like_name = "{c}.name",
           qual_name = "{c}.qualname"
@@ -354,26 +466,28 @@ filters = OrderedDict([
       description = 'Functions or methods which are called by the given one')),
 
     ('type', UnionFilter([
-      ExistsLikeFilter(
-        tables = ['types AS {a}'],
+      OneTableClause(
+        extents_table = 'types AS {a}',
         like_name = "{a}.name",
         qual_name = "{a}.qualname"
       ),
-      ExistsLikeFilter(
-        tables = ['typedefs AS {a}'],
+      OneTableClause(
+        extents_table = 'typedefs AS {a}',
         like_name = "{a}.name",
         qual_name = "{a}.qualname")],
       description = Markup('Type or class definition: <code>type:Stack</code>'))),
 
     ('type-ref', UnionFilter([
-      ExistsLikeFilter(
-        tables = ['type_refs AS {a}', 'types AS {t}'],
+      MultiTableClause(
+        extents_table = 'type_refs AS {a}',
+        other_tables = ['types AS {t}'],
         wheres = ['{a}.refid={t}.id'],
         like_name = "{t}.name",
         qual_name = "{t}.qualname"
       ),
-      ExistsLikeFilter(
-        tables = ['typedef_refs AS {a}', 'typedefs AS {d}'],
+      MultiTableClause(
+        extents_table = 'typedef_refs AS {a}',
+        other_tables = ['typedefs AS {d}'],
         wheres = ['{a}.refid={d}.id'],
         like_name = "{d}.name",
         qual_name = "{d}.qualname")],
@@ -475,22 +589,25 @@ filters = OrderedDict([
 
     ('member', UnionFilter([
       # member filter for functions
-      ExistsLikeFilter(
-        tables = ['functions AS {a}', 'types AS {t}'],
+      MultiTableClause(
+        extents_table = 'functions AS {a}',
+        other_tables = ['types AS {t}'],
         wheres = ['{a}.scopeid={t}.id'],
         like_name = "{t}.name",
         qual_name = "{t}.qualname"
       ),
       # member filter for types
-      ExistsLikeFilter(
-        tables = ['types AS {a}', 'types AS {t}'],
+      MultiTableClause(
+        extents_table = 'types AS {a}',
+        other_tables = ['types AS {t}'],
         wheres = ['{a}.scopeid={t}.id'],
         like_name = "{t}.name",
         qual_name = "{t}.qualname"
       ),
       # member filter for variables
-      ExistsLikeFilter(
-        tables = ['variables AS {a}', 'types AS {t}'],
+      MultiTableClause(
+        extents_table = 'variables AS {a}',
+        other_tables = ['types AS {t}'],
         wheres = ['{a}.scopeid={t}.id'],
         like_name = "{t}.name",
         qual_name = "{t}.qualname")],

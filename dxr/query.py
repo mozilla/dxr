@@ -96,7 +96,7 @@ class Query(object):
         # extent_end}, to be used for highlighting.
         fields = ['files.path', 'files.icon']  # TODO: move extents() to TriliteSearchFilter
         tables = ['files']
-        conditions, arguments, joins = [], [], []
+        conditions, arguments, joins, join_arguments = [], [], [], []
         orderings = ['files.path']
         has_lines = False
 
@@ -105,7 +105,7 @@ class Query(object):
         aliases = alias_counter()
         for term in self.terms:
             filter = filters[term['type']]
-            flds, tbls, cond, jns, args = filter.filter(term, aliases)
+            flds, tbls, cond, args, jns, jargs = filter.filter(term, aliases)
             if not has_lines and filter.has_lines:
                 has_lines = True
                 # 2 types of query are possible: ones that return just
@@ -137,14 +137,15 @@ class Query(object):
             joins.extend(jns)
             conditions.append(cond)
             arguments.extend(args)
+            join_arguments.extend(jargs)
 
         sql %= (', '.join(fields),
                 ', '.join(tables),
                 ' '.join(joins),
                 ('WHERE ' + ' AND '.join(conditions)) if conditions else '',
                 ', '.join(orderings))
-        arguments.extend([limit, offset])
-        cursor = self.execute_sql(sql, arguments)
+        cursor = self.execute_sql(sql,
+                                  join_arguments + arguments + [limit, offset])
 
         if self._should_explain:
             for r in self._sql_report():
