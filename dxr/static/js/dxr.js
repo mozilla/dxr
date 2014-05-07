@@ -402,7 +402,7 @@ $(function() {
                 return;
 
             if (error)
-                errorMessage += '(' + error + ')';
+                errorMessage += ' (' + error + ')';
             showBubble('error', errorMessage);
         });
     }
