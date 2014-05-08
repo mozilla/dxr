@@ -20,9 +20,11 @@ class SearchFilter(object):
         self.description = description
 
     def filter(self, term, aliases):
-        """Yield a tuple of (fields, tables, a WHERE condition, list of
+        """Return a tuple of (fields, tables, a WHERE condition, list of
         arguments for the WHERE condition, join clauses, list of arguments for
         the join clauses) that expresses the filtration for a single query term.
+
+        Return None to opt out of filtering on this term.
 
         The SQL fields will be added to the SELECT clause and must either be
         empty or come in a pair taken to be (extent start, extent end). The
@@ -70,7 +72,7 @@ class TextFilter(SearchFilter):
 
 
 class RegexpFilter(SearchFilter):
-    def filter(self, terms, aliases):
+    def filter(self, term, aliases):
         if term['arg']:
             if term['not']:
                 return ([],

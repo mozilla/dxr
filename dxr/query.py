@@ -105,7 +105,10 @@ class Query(object):
         aliases = alias_counter()
         for term in self.terms:
             filter = filters[term['type']]
-            flds, tbls, cond, args, jns, jargs = filter.filter(term, aliases)
+            pieces = filter.filter(term, aliases)
+            if not pieces:
+                continue
+            flds, tbls, cond, args, jns, jargs = pieces
             if not has_lines and filter.has_lines:
                 has_lines = True
                 # 2 types of query are possible: ones that return just
