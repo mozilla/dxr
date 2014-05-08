@@ -17,6 +17,13 @@ class BasicTests(DxrInstanceTestCase):
             '<b>int</b> <b>main</b>(<b>int</b> argc, char* argv[]){',
             4)
 
+    def test_structural_and(self):
+        """Try ANDing a structural with a text filter."""
+        self.found_line_eq(
+            'function:main int',
+            '<b>int</b> <b>main</b>(<b>int</b> argc, char* argv[]){',
+            4)
+
     def test_case_sensitive(self):
         """Make sure case-sensitive searching is case-sensitive.
 
