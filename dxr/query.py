@@ -35,7 +35,7 @@ class Query(object):
         non-textual one, return None.
 
         """
-        if len(self.terms) == 1 and self.terms[0]['type'] == ['text']:
+        if len(self.terms) == 1 and self.terms[0]['type'] == 'text':
             return self.terms[0]['arg']
 
     def execute_sql(self, sql, *parameters):
