@@ -618,7 +618,7 @@ filters = OrderedDict([
     ('overridden',
      ExistsLikeFilter(
          description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
-         tables = ['base AS {a}', 'functions AS {d}', 'targets AS {t}'],
+         tables = ['functions AS {a}', 'functions AS {d}', 'targets AS {t}'],
          wheres = ['{a}.id=-{t}.targetid', '{d}.id={t}.funcid', '{a}.id<>{d}.id'],
          like_name = "{d}.name",
          qual_name = "{d}.qualname")),
