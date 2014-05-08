@@ -290,7 +290,8 @@ class Query(object):
 
 
 query_grammar = Grammar(ur'''
-    query = _ term*
+    query = _ terms
+    terms = term*
     term = not_term / positive_term
     not_term = not positive_term
     positive_term = filtered_term / text
@@ -353,6 +354,9 @@ class QueryVisitor(NodeVisitor):
     def visit_query(self, query, (_, terms)):
         """Return a list of query term term_dicts."""
         return terms
+
+    def visit_terms(self, terms, the_terms):
+        return the_terms
 
     def visit_term(self, term, (term_dict,)):
         """Set the case-sensitive bit and, if not already set, a default not
