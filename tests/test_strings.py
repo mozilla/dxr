@@ -2,7 +2,7 @@
 
 from nose.tools import eq_
 
-from dxr.query import _highlit_lines
+from dxr.extents import highlight_line
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
@@ -18,7 +18,7 @@ class StringTests(SingleFileTestCase):
 
     def test_negated_phrase(self):
         """Make sure a negated phrase search doesn't crash."""
-        self.found_nothing('void -"int"')
+        self.found_line_eq('void -"int"', '<b>void</b> main_idea() {')
 
     def test_empty_quotes(self):
         """An effectively empty query should not filter the results at all.
@@ -45,8 +45,8 @@ class RepeatedResultTests(SingleFileTestCase):
                            '<b>int</b> main(<b>int</b> argc, char* argv[]) {')
 
 
-def test_highlit_lines():
-    """A unit test for _highlit_lines() that I found handy while rewriting it
+def test_highlight_line():
+    """A unit test for highlight_line() that I found handy while rewriting it
 
     Redundant with most of the rest of these tests but runs fast, so let's keep
     it.
@@ -56,5 +56,5 @@ def test_highlit_lines():
             return 0;
         }
         """
-    eq_(_highlit_lines(source, [(0, 3, []), (9, 12, [])], '<b>', '</b>', 'utf-8'),
-        [(1, '<b>int</b> main(<b>int</b> argc, char* argv[]) {')])
+    eq_(highlight_line(source.splitlines()[0], [(0, 3), (9, 12)], '<b>', '</b>', 'utf-8'),
+        '<b>int</b> main(<b>int</b> argc, char* argv[]) {')
