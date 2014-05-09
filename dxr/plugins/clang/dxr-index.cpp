@@ -185,13 +185,28 @@ public:
     return f->interesting;
   }
 
+  // Return the file name (path?), line, and column of a source location, or ''
+  // if the location is invalid.
   std::string locationToString(SourceLocation loc) {
-    PresumedLoc fixed = sm.getPresumedLoc(loc);
-    std::string buffer = getFileInfo(fixed.getFilename())->realname;
-    buffer += ":";
-    buffer += fixed.getLine();
-    buffer += ":";
-    buffer += fixed.getColumn();
+    std::string buffer;
+    bool isInvalid;
+    unsigned column = sm.getSpellingColumnNumber(loc, &isInvalid);
+    // If you run into surprises here, consider using the routines for "immediate" spellings.
+
+    if (!isInvalid) {
+      unsigned line = sm.getSpellingLineNumber(loc, &isInvalid);
+      if (!isInvalid) {
+        PresumedLoc presumed = sm.getPresumedLoc(loc);
+        // TODO: See if this returns the correct file even if the spelling loc
+        // differs from the presumed loc:
+        buffer = getFileInfo(presumed.getFilename())->realname;
+
+        buffer += ":";
+        buffer += line;
+        buffer += ":";
+        buffer += column;
+      }
+    }
     return buffer;
   }
 

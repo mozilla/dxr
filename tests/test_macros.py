@@ -117,4 +117,3 @@ class MacroArgumentDeclareTests(SingleFileTestCase):
         self.found_line_eq('+var:foo()::b', 'DECLARE(<b>b</b>);')
         self.found_line_eq('+var:foo()::c', 'DECLARE2(<b>c</b>, d);')
         self.found_line_eq('+var:foo()::d', 'DECLARE2(c, <b>d</b>);')
-
