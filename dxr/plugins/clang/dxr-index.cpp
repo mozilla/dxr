@@ -953,17 +953,19 @@ public:
     info.FormatDiagnostic(message);
 
     beginRecord("warning", info.getLocation());
-    recordValue("loc", locationToString(info.getLocation()));
     recordValue("msg", message.c_str(), true);
     StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
     if (!opt.empty())
       recordValue("opt", ("-W" + opt).str());
     if (info.getNumRanges() > 0) {
       const CharSourceRange &range = info.getRange(0);
-      printExtent(getWarningExtentLocation(range.getBegin()),
+      SourceLocation warningBeginning = getWarningExtentLocation(range.getBegin());
+      recordValue("loc", locationToString(warningBeginning));
+      printExtent(warningBeginning,
                   getWarningExtentLocation(range.getEnd()));
     } else {
       SourceLocation loc = getWarningExtentLocation(info.getLocation());
+      recordValue("loc", locationToString(loc));
       printExtent(loc, loc);
     }
     *out << std::endl;
