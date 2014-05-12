@@ -1,6 +1,7 @@
 from codecs import getdecoder
 import cgi
 from datetime import datetime
+from errno import ENOENT
 from fnmatch import fnmatchcase
 from heapq import merge
 from itertools import chain, groupby, izip_longest
@@ -8,7 +9,7 @@ import json
 from operator import itemgetter
 import os
 from os import stat
-from os.path import dirname
+from os.path import dirname, islink
 import shutil
 import subprocess
 import sys
@@ -111,7 +112,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
-             default_tree=repr(config.default_tree)))
+             default_tree=repr(config.default_tree),
+             filter_language=repr(config.filter_language)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
@@ -246,8 +248,16 @@ def index_files(tree, conn):
                 continue  # Ignore the file.
 
             # the file
-            with open(file_path, "r") as source_file:
-                data = source_file.read()
+            try:
+                with open(file_path, 'r') as source_file:
+                    data = source_file.read()
+            except IOError as exc:
+                if exc.errno == ENOENT and islink(file_path):
+                    # It's just a bad symlink (or a symlink that was swiped out
+                    # from under us--whatever):
+                    continue
+                else:
+                    raise
 
             # Discard non-text files
             if not dxr.mime.is_text(file_path, data):
@@ -339,7 +349,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                          for t in tree.config.sorted_tree_order],
          'generated_date': tree.config.generated_date,
          'paths_and_names': linked_pathname(folder, tree.name),
-         'filters': filter_menu_items(),
+         'filters': filter_menu_items(tree.config.filter_language),
          # Autofocus only at the root of each tree:
          'should_autofocus_query': folder == '',
 
@@ -556,7 +566,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
                          t.description)
                         for t in tree.config.sorted_tree_order],
         'generated_date': tree.config.generated_date,
-        'filters': filter_menu_items(),
+        'filters': filter_menu_items(tree.config.filter_language),
 
         # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),

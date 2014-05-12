@@ -16,8 +16,9 @@ class SearchFilter(object):
     # ext:html.
     has_lines = True
 
-    def __init__(self, description=''):
+    def __init__(self, description='', languages=None):
         self.description = description
+        self.languages = languages or []
 
     def filter(self, term, aliases):
         """Return a tuple of (fields, tables, a WHERE condition, list of
@@ -45,6 +46,9 @@ class SearchFilter(object):
         """
         raise NotImplementedError
 
+    def valid_for_language(self, language):
+        return language in self.languages
+
 
 class TextFilter(SearchFilter):
     """Filter for matching static text using trilite"""
@@ -70,6 +74,9 @@ class TextFilter(SearchFilter):
                         [],
                         [])
 
+    def valid_for_language(self, language):
+        return True
+
 
 class RegexpFilter(SearchFilter):
     def filter(self, term, aliases):
@@ -89,6 +96,9 @@ class RegexpFilter(SearchFilter):
                         ["regexp-extents:" + term['arg']],
                         [],
                         [])
+
+    def valid_for_language(self, language):
+        return True
 
 
 class SimpleFilter(SearchFilter):
@@ -391,7 +401,8 @@ filters = OrderedDict([
          description = Markup('File or directory sub-path to search within. <code>*</code> and <code>?</code> act as shell wildcards.'),
          filter_sql = """files.path LIKE ? ESCAPE "\\" """,
          neg_filter_sql = """files.path NOT LIKE ? ESCAPE "\\" """,
-         formatter = lambda arg: ['%' + like_escape(arg) + '%'])),
+         formatter = lambda arg: ['%' + like_escape(arg) + '%'],
+         languages = ['C'])),
 
     ('ext',
      SimpleFilter(
@@ -399,7 +410,8 @@ filters = OrderedDict([
          filter_sql = """files.path LIKE ? ESCAPE "\\" """,
          neg_filter_sql = """files.path NOT LIKE ? ESCAPE "\\" """,
          formatter = lambda arg: ['%' +
-             like_escape(arg if arg.startswith(".") else "." + arg)])),
+             like_escape(arg if arg.startswith(".") else "." + arg)],
+         languages = ['C'])),
 
     ('regexp',
      RegexpFilter(Markup(r'Regular expression. Examples: <code>regexp:(?i)\bs?printf</code> <code>regexp:"(three|3) mice"</code>'))),
@@ -412,7 +424,8 @@ filters = OrderedDict([
          description = Markup('Function or method definition: <code>function:foo</code>'),
          tables = ['functions AS {a}'],
          like_name = "{a}.name",
-         qual_name = "{a}.qualname")),
+         qual_name = "{a}.qualname",
+         languages = ['C'])),
 
     ('function-ref',
      ExistsLikeFilter(
@@ -420,7 +433,8 @@ filters = OrderedDict([
          tables = ['function_refs AS {a}', 'functions AS {f}'],
          wheres = ['{f}.id={a}.refid'],
          like_name = "{f}.name",
-         qual_name = "{f}.qualname")),
+         qual_name = "{f}.qualname",
+         languages = ['C'])),
 
     ('function-decl',
      ExistsLikeFilter(
@@ -428,7 +442,8 @@ filters = OrderedDict([
          tables = ['function_decldef AS {a}', 'functions AS {f}'],
          wheres = ['{f}.id={a}.defid'],
          like_name = "{f}.name",
-         qual_name = "{f}.qualname")),
+         qual_name = "{f}.qualname",
+         languages = ['C'])),
 
     ('callers', UnionFilter([
       # direct calls
@@ -445,7 +460,8 @@ filters = OrderedDict([
           wheres = ['{s}.funcid={t}.id', '{s}.targetid={c}.targetid', '{c}.callerid={a}.id'],
           like_name = "{t}.name",
           qual_name = "{t}.qualname")],
-      description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'))),
+      description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'),
+      languages = ['C'])),
 
     ('called-by', UnionFilter([  # i.e. callees of X
       # direct calls
@@ -465,7 +481,8 @@ filters = OrderedDict([
           like_name = "{c}.name",
           qual_name = "{c}.qualname"
       )],
-      description = 'Functions or methods which are called by the given one')),
+      description = 'Functions or methods which are called by the given one',
+      languages = ['C'])),
 
     ('type', UnionFilter([
       OneTableClause(
@@ -477,7 +494,8 @@ filters = OrderedDict([
         extents_table = 'typedefs AS {a}',
         like_name = "{a}.name",
         qual_name = "{a}.qualname")],
-      description = Markup('Type or class definition: <code>type:Stack</code>'))),
+      description = Markup('Type or class definition: <code>type:Stack</code>'),
+      languages = ['C'])),
 
     ('type-ref', UnionFilter([
       MultiTableClause(
@@ -493,7 +511,8 @@ filters = OrderedDict([
         wheres = ['{a}.refid={d}.id'],
         like_name = "{d}.name",
         qual_name = "{d}.qualname")],
-      description = 'Type or class references, uses, or instantiations')),
+      description = 'Type or class references, uses, or instantiations',
+      languages = ['C'])),
 
     ('type-decl',
      ExistsLikeFilter(
@@ -501,14 +520,16 @@ filters = OrderedDict([
        tables = ['type_decldef AS {a}', 'types AS {t}'],
        wheres = ['{a}.defid={t}.id'],
        like_name = "{t}.name",
-       qual_name = "{t}.qualname")),
+       qual_name = "{t}.qualname",
+       languages = ['C'])),
 
     ('var',
      ExistsLikeFilter(
        description = 'Variable definition',
        tables = ['variables AS {a}'],
        like_name = "{a}.name",
-       qual_name = "{a}.qualname")),
+       qual_name = "{a}.qualname",
+       languages = ['C'])),
 
     ('var-ref',
      ExistsLikeFilter(
@@ -516,7 +537,8 @@ filters = OrderedDict([
          tables = ['variable_refs AS {a}', 'variables AS {v}'],
          wheres = ['{a}.refid={v}.id'],
          like_name = "{v}.name",
-         qual_name = "{v}.qualname")),
+         qual_name = "{v}.qualname",
+         languages = ['C'])),
 
     ('var-decl',
      ExistsLikeFilter(
@@ -524,14 +546,16 @@ filters = OrderedDict([
          tables = ['variable_decldef AS {a}', 'variables AS {v}'],
          wheres = ['{a}.defid={v}.id'],
          like_name = "{v}.name",
-         qual_name = "{v}.qualname")),
+         qual_name = "{v}.qualname",
+         languages = ['C'])),
 
     ('macro',
      ExistsLikeFilter(
          description = 'Macro definition',
          tables = ['macros AS {a}'],
          like_name = "{a}.name",
-         qual_name = "{a}.name")),
+         qual_name = "{a}.name",
+         languages = ['C'])),
 
     ('macro-ref',
      ExistsLikeFilter(
@@ -539,14 +563,16 @@ filters = OrderedDict([
          tables = ['macro_refs AS {a}', 'macros AS {m}'],
          wheres = ['{m}.id={a}.refid'],
          like_name = "{m}.name",
-         qual_name = "{m}.name")),
+         qual_name = "{m}.name",
+         languages = ['C'])),
 
     ('namespace',
      ExistsLikeFilter(
          description = 'Namespace definition',
          tables = ['namespaces AS {a}'],
          like_name = "{a}.name",
-         qual_name = "{a}.qualname")),
+         qual_name = "{a}.qualname",
+         languages = ['C'])),
 
     ('namespace-ref',
      ExistsLikeFilter(
@@ -554,14 +580,16 @@ filters = OrderedDict([
          tables = ['namespace_refs AS {a}', 'namespaces AS {n}'],
          wheres = ['{a}.refid={n}.id'],
          like_name = "{n}.name",
-         qual_name = "{n}.qualname")),
+         qual_name = "{n}.qualname",
+         languages = ['C'])),
 
     ('namespace-alias',
      ExistsLikeFilter(
          description = 'Namespace alias',
          tables = ['namespace_aliases AS {a}'],
          like_name = "{a}.name",
-         qual_name = "{a}.qualname")),
+         qual_name = "{a}.qualname",
+         languages = ['C'])),
 
     ('namespace-alias-ref',
      ExistsLikeFilter(
@@ -569,7 +597,8 @@ filters = OrderedDict([
          tables = ['namespace_alias_refs AS {a}', 'namespace_aliases AS {n}'],
          wheres = ['{a}.refid={n}.id'],
          like_name = "{n}.name",
-         qual_name = "{n}.qualname")),
+         qual_name = "{n}.qualname",
+         languages = ['C'])),
 
     ('bases',
      ExistsLikeFilter(
@@ -578,7 +607,8 @@ filters = OrderedDict([
          # [a} is base type, {t} is derived type
          wheres = ['{i}.tbase={a}.id', '{i}.tderived={t}.id'],
          like_name = "{t}.name",
-         qual_name = "{t}.qualname")),
+         qual_name = "{t}.qualname",
+         languages = ['C'])),
 
     ('derived',
      ExistsLikeFilter(
@@ -587,7 +617,8 @@ filters = OrderedDict([
          # [a} is subtype
          wheres = ['{i}.tbase={t}.id', '{i}.tderived={a}.id'],
          like_name = "{t}.name",
-         qual_name = "{t}.qualname")),
+         qual_name = "{t}.qualname",
+         languages = ['C'])),
 
     ('member', UnionFilter([
       # member filter for functions
@@ -613,7 +644,8 @@ filters = OrderedDict([
         wheres = ['{a}.scopeid={t}.id'],
         like_name = "{t}.name",
         qual_name = "{t}.qualname")],
-      description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>'))),
+      description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>'),
+      languages = ['C'])),
 
     ('overridden',
      ExistsLikeFilter(
@@ -621,7 +653,8 @@ filters = OrderedDict([
          tables = ['functions AS {a}', 'functions AS {d}', 'targets AS {t}'],
          wheres = ['{a}.id=-{t}.targetid', '{d}.id={t}.funcid', '{a}.id<>{d}.id'],
          like_name = "{d}.name",
-         qual_name = "{d}.qualname")),
+         qual_name = "{d}.qualname",
+         languages = ['C'])),
 
     ('overrides',
      ExistsLikeFilter(
@@ -630,20 +663,22 @@ filters = OrderedDict([
          # {b} is base, {a} is derived
          wheres = ['{b}.id =-{t}.targetid', '{a}.id={t}.funcid', '{b}.id<>{a}.id'],
          like_name = "{b}.name",
-         qual_name = "{b}.qualname")),
+         qual_name = "{b}.qualname",
+         languages = ['C'])),
 
     ('warning',
      ExistsLikeFilter(
          description = 'Compiler warning messages',
          tables = ['warnings AS {a}'],
          like_name = "{a}.msg",
-         qual_name = "{a}.msg")),
+         qual_name = "{a}.msg",
+         languages = ['C'])),
 
     ('warning-opt',
      ExistsLikeFilter(
          description = 'Warning messages brought on by a given compiler command-line option',
          tables = ['warnings AS {a}'],
          like_name = "{a}.opt",
-         qual_name = "{a}.opt"
-     ))
+         qual_name = "{a}.opt",
+         languages = ['C']))
 ])

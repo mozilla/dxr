@@ -98,6 +98,7 @@ class Mercurial(VCS):
         if upstream.scheme == 'ssh':
             recomb[0] == 'http'
         recomb[1] = upstream.hostname # Eliminate any username stuff
+        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
         if not upstream.path.endswith('/'):
             recomb[2] += '/' # Make sure we have a '/' on the end
         recomb[3] = recomb[4] = recomb[5] = '' # Just those three
@@ -268,7 +269,7 @@ def load(tree_, conn):
     # Note: we want to make sure that we look up source repositories by deepest
     # directory first.
     lookup_order = source_repositories.keys()
-    lookup_order.sort(key=len)
+    lookup_order.sort(key=len, reverse=True)
 
 
 def find_vcs_for_file(path):

@@ -16,3 +16,4 @@
 /node_modules/.bin/nunjucks-precompile
 /node_modules/grunt*
 /node_modules/nunjucks
+/docs/build

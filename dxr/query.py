@@ -408,10 +408,11 @@ class QueryVisitor(NodeVisitor):
         return visited_children or node
 
 
-def filter_menu_items():
+def filter_menu_items(language):
     """Return the additional template variables needed to render filter.html."""
     return (dict(name=type, description=filter.description) for type, filter in
-            filters.iteritems() if filter.description)
+            filters.iteritems() if filter.description and
+            filter.valid_for_language(language))
 
 
 def alias_counter():

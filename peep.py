@@ -48,7 +48,7 @@ from pip.log import logger
 from pip.req import parse_requirements
 
 
-__version__ = 0, 9, 0
+__version__ = 1, 0, 0
 
 
 ITS_FINE_ITS_FINE = 0
@@ -156,6 +156,17 @@ def version_of_archive(filename, package_name):
     """Deduce the version number of a downloaded package from its filename."""
     # Since we know the project_name, we can strip that off the left, strip any
     # archive extensions off the right, and take the rest as the version.
+    # And for Wheel files (http://legacy.python.org/dev/peps/pep-0427/#file-name-convention)
+    # we know the format bits are '-' separated.
+    if filename.endswith('.whl'):
+        whl_package_name, version, _rest = filename.split('-', 2)
+        # Do the alteration to package_name from PEP 427:
+        our_package_name = re.sub(r'[^\w\d.]+', '_', package_name, re.UNICODE)
+        if whl_package_name != our_package_name:
+            raise RuntimeError("The archive '%s' didn't start with the package name '%s', so I couldn't figure out the version number. My bad; improve me." %
+                               (filename, whl_package_name))
+        return version
+
     extensions = ['.tar.gz', '.tgz', '.tar', '.zip']
     for ext in extensions:
         if filename.endswith(ext):
@@ -163,7 +174,8 @@ def version_of_archive(filename, package_name):
             break
     if not filename.startswith(package_name):
         # TODO: What about safe/unsafe names?
-        raise RuntimeError("The archive '%s' didn't start with the package name '%s', so I couldn't figure out the version number. My bad; improve me.")
+        raise RuntimeError("The archive '%s' didn't start with the package name '%s', so I couldn't figure out the version number. My bad; improve me." %
+                           (filename, package_name))
     return filename[len(package_name) + 1:]  # Strip off '-' before version.
 
 
@@ -312,6 +324,10 @@ def peep_install(argv):
 
         expected_hashes, missing_hashes = hashes_of_requirements(requirements)
         mismatches = list(hash_mismatches(expected_hashes, downloaded_hashes))
+
+        # Remove satisfied_reqs from missing_hashes, preserving order:
+        satisfied_req_names = set(req.name for req in satisfied_reqs)
+        missing_hashes = [m for m in missing_hashes if m not in satisfied_req_names]
 
         # Skip a line after pip's "Cleaning up..." so the important stuff
         # stands out:
