@@ -26,6 +26,7 @@ language_schema = dxr.schema.Schema({
         ("file_id", "INTEGER", False),  # Can't think of a reason to index this atm.
         ("_key", "id"),
         ("_fkey", "id", "trg_index", "id"),  # I'd be surprised if this did anything.
+        ("_fkey", "file_id", "files", "id"),
     ],
     "scopes": [
         ("id", "INTEGER", False),         # An ID for this scope
