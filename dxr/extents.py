@@ -32,7 +32,7 @@ def union_extents(tuples):
             yield extent
         # Turn other extents into an iterable of (start, end) tuples:
         for (s, e) in izip(other_extents[::2], other_extents[1::2]):
-            if s is not None:
+            if s is not None and e is not None:
                 yield (s - 1), (e - 1)
 
 def flatten_extents(cursor):
