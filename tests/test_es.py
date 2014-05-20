@@ -3,8 +3,7 @@
 from time import localtime, strftime
 from unittest import TestCase
 
-from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk
+from pyelasticsearch import ElasticSearch
 from nose.tools import eq_
 
 from dxr.utils import connect_db
@@ -22,9 +21,7 @@ def index_lines(lines):
     for path, line_id, number, text in lines:
         text = unicode(text, encoding='utf-8', errors='ignore')
         yield dict(
-            _index=TEST_INDEX,
-            _type=LINE,
-            _id=line_id,
+           id=line_id,
            path=path,
            path_trg=path,
            number=number,
@@ -34,9 +31,9 @@ def index_lines(lines):
 
 class ElasticSearchTests(TestCase):
     def setUp(self):
-        es = self.es = Elasticsearch([{'host': '10.0.2.2', 'port': 9200}])
-        es.indices.delete(TEST_INDEX)
-        es.indices.create(TEST_INDEX, {
+        es = self.es = ElasticSearch('http://10.0.2.2:9200')
+        es.delete_index(TEST_INDEX)
+        es.create_index(TEST_INDEX, settings={
             'settings': {
                 'index': {
                     'number_of_shards': 5,
@@ -113,7 +110,8 @@ class ElasticSearchTests(TestCase):
         for start in xrange(1, max_id, CHUNK_SIZE):
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
             lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
-            bulk(es, index_lines(lines))
+            es.bulk_index(TEST_INDEX, LINE, index_lines(lines))
+            break
 
         # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
         # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
