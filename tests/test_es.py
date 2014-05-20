@@ -1,21 +1,42 @@
 """Just some screwing around with ES to find a doc shape that works"""
 
+from time import localtime, strftime
 from unittest import TestCase
 
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
 from nose.tools import eq_
 
+from dxr.utils import connect_db
 
-INDEX = 'dxr_test'
+
+TEST_INDEX = 'dxr_test'
+LINE = 'line'
 
 
-def ElasticSearchTests(TestCase):
+# 1. Index just lines.
+# 2. Delete the index, and then index lines + functions. Compare sizes.
+
+
+def index_lines(lines):
+    for path, line_id, number, text in lines:
+        text = unicode(text, encoding='utf-8', errors='ignore')
+        yield dict(
+            _index=TEST_INDEX,
+            _type=LINE,
+            _id=line_id,
+           path=path,
+           path_trg=path,
+           number=number,
+           content=text,
+           content_trg=text)
+
+
+class ElasticSearchTests(TestCase):
     def setUp(self):
-        es = self.es = ElasticSearch()
-        select files.path, lines.id, trg_index.content, types.name from big join
-
-        # Index left-ngrams of names of structural things. Then we can do as-you-type matches.
-        es.indices.create(INDEX, {
+        es = self.es = Elasticsearch([{'host': '10.0.2.2', 'port': 9200}])
+        es.indices.delete(TEST_INDEX)
+        es.indices.create(TEST_INDEX, {
             'settings': {
                 'index': {
                     'number_of_shards': 5,
@@ -23,10 +44,6 @@ def ElasticSearchTests(TestCase):
                 },
                 'analysis': {
                     'analyzer': {
-                        # Index prefixes of strings at least 3 chars long.
-                        'prefix': {
-                            'tokenizer': 'edge_ngrammer'
-                        },
                         # A lowercase trigram analyzer. This is probably good
                         # enough for accelerating regexes; we probably don't
                         # need to keep a separate case-senitive index.
@@ -36,12 +53,6 @@ def ElasticSearchTests(TestCase):
                         }
                     },
                     'tokenizer': {
-                        'edge_ngrammer': {
-                            'type': 'edgeNGram',
-                            'min_gram': 3,
-                            'max_gram': 400  # ouch? Consider the path hierarchy tokenizer if this gets out of hand.
-                            # Keeps all kinds of chars by default.
-                        },
                         'trigram_tokenizer': {
                             'type': 'nGram',
                             'min_gram': 3,
@@ -52,19 +63,31 @@ def ElasticSearchTests(TestCase):
                 }
             },
             'mappings': {
-                'line': {
+                LINE: {
                     '_all': {
                         'enabled': False
                     },
                     'properties': {
                         'path': {
                             'type': 'string',
-                            'analyzer': 'prefix'  # TODO: Remove. Use prefix queries instead.
+                            'index': 'not_analyzed'  # TODO: What about case-insensitive?
                         },
+                        'path_trg': {
+                            'type': 'string',
+                            'analyzer': 'trigramalyzer'
+                        },
+                        # TODO: Use match_phrase_prefix queries on non-globbed paths, analyzing them with the path analyzer, for max perf. Perfect! Otherwise, fall back to trigram-accelerated substring or wildcard matching.
+                        # TODO: Use multi-fields so we don't have to pass the text in twice on indexing.
+
                         'number': {
-                            'type': 'int'
+                            'type': 'integer'
                         },
+
                         'content': {
+                            'type': 'string',
+                            'index': 'not_analyzed'
+                        },
+                        'content_trg': {
                             'type': 'string',
                             'analyzer': 'trigramalyzer'
                         },
@@ -72,7 +95,7 @@ def ElasticSearchTests(TestCase):
                         # Short name (not fully qualified)
                         'type': {
                             'type': 'string',
-                            'analyzer': 'prefix'
+                            'index': 'not_analyzed'  # case-sensitive atm. Good?
                         },
                         'type_fq': {
                             'type': 'string',
@@ -82,14 +105,19 @@ def ElasticSearchTests(TestCase):
                 }
             }
         })
-        es.bulk_index(dict(
-            _id=id,
-            path=path,
-            content=content,
-            types
-        # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position.
-        # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side.
-        # Let's see how big this DB gets with the trigram index.
+
+        # Maybe the clang plugin leaves everything about one file in a single temp file, and we don't need SQLite as an intermediary to avoid running out of RAM.
+        conn = connect_db('/home/vagrant/moz-central/target/trees/mozilla-central')
+        max_id = int(next(conn.execute('select max(id) from lines'))[0])
+        CHUNK_SIZE = 10000
+        for start in xrange(1, max_id, CHUNK_SIZE):
+            print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
+            lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
+            bulk(es, index_lines(lines))
+
+        # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
+        # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
+        # Let's see how big this DB gets with the trigram index. NOT THAT BIG.
 
 # To test:
 # * Search for just file names based on a path prefix.
@@ -99,8 +127,17 @@ def ElasticSearchTests(TestCase):
 # * Search for regexes, accelerated by trigrams. (Also, time unaccelerated regexes for comparison.)
 # * Do case-sensitive and insensitive queries for both text and structural elements.
 
+# Highlighting: does it work?
+# V Phrase matching of trigrams: does it really work? YES.
+# Do I want to keep a separate case-sensitive trigram index around for case-sensitive substring searching so I can avoid scanning through the candidate docs at all?
+# Does trigram filtering accelerate wildcard queries? Not obviously on 1M docs. If this persists, consider trying post_filter to force the wildcard query to run last.
+# Regex queries?
+
     def test_path_prefix(self):
-        eq_(self.es.search(index=INDEX, doc_type='lines', body={
-        
-        },
-        {'foo': 'bar'})
+        pass
+        # eq_(self.es.search(index=TEST_INDEX, doc_type=LINE, body={
+        #
+        # },
+        # {'foo': 'bar'})
+
+# I get about 10K docs/s indexed, even over HTTP. That'll get us to 15M in 30 minutes. So ES indexing won't be the bottleneck.
