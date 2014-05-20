@@ -107,11 +107,10 @@ class ElasticSearchTests(TestCase):
         conn = connect_db('/home/vagrant/moz-central/target/trees/mozilla-central')
         max_id = int(next(conn.execute('select max(id) from lines'))[0])
         CHUNK_SIZE = 10000
-        for start in xrange(1, max_id, CHUNK_SIZE):
+        for start in xrange(1, CHUNK_SIZE*3, CHUNK_SIZE):
             print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
             lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
             es.bulk_index(TEST_INDEX, LINE, index_lines(lines))
-            break
 
         # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
         # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
