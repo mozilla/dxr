@@ -31,94 +31,7 @@ def index_lines(lines):
 
 class ElasticSearchTests(TestCase):
     def setUp(self):
-        es = self.es = ElasticSearch('http://10.0.2.2:9200')
-        try:
-            es.delete_index(TEST_INDEX)
-        except ElasticHttpNotFoundError:
-            pass
-        es.create_index(TEST_INDEX, settings={
-            'settings': {
-                'index': {
-                    'number_of_shards': 5,
-                    'number_of_replicas': 0
-                },
-                'analysis': {
-                    'analyzer': {
-                        # A lowercase trigram analyzer. This is probably good
-                        # enough for accelerating regexes; we probably don't
-                        # need to keep a separate case-senitive index.
-                        'trigramalyzer': {
-                            'filter': ['lowercase'],
-                            'tokenizer': 'trigram_tokenizer'
-                        }
-                    },
-                    'tokenizer': {
-                        'trigram_tokenizer': {
-                            'type': 'nGram',
-                            'min_gram': 3,
-                            'max_gram': 3
-                            # Keeps all kinds of chars by default.
-                        }
-                    }
-                }
-            },
-            'mappings': {
-                LINE: {
-                    '_all': {
-                        'enabled': False
-                    },
-                    'properties': {
-                        'path': {
-                            'type': 'string',
-                            'index': 'not_analyzed'  # TODO: What about case-insensitive?
-                        },
-                        'path_trg': {
-                            'type': 'string',
-                            'analyzer': 'trigramalyzer'
-                        },
-                        # TODO: Use match_phrase_prefix queries on non-globbed paths, analyzing them with the path analyzer, for max perf. Perfect! Otherwise, fall back to trigram-accelerated substring or wildcard matching.
-                        # TODO: Use multi-fields so we don't have to pass the text in twice on indexing.
-
-                        'number': {
-                            'type': 'integer'
-                        },
-
-                        'content': {
-                            'type': 'string',
-                            'index': 'not_analyzed'
-                        },
-                        'content_trg': {
-                            'type': 'string',
-                            'analyzer': 'trigramalyzer'
-                        },
-                        # Type definitions
-                        # Short name (not fully qualified)
-                        'type': {
-                            'type': 'string',
-                            'index': 'not_analyzed'  # case-sensitive atm. Good?
-                        },
-                        'type_fq': {
-                            'type': 'string',
-                            'index': 'not_analyzed'  # case-sensitive atm. Good?
-                        }
-                    }
-                }
-            }
-        })
-
-        # Maybe the clang plugin leaves everything about one file in a single temp file, and we don't need SQLite as an intermediary to avoid running out of RAM.
-        conn = connect_db('/home/vagrant/moz-central/target/trees/mozilla-central')
-        max_id = int(next(conn.execute('select max(id) from lines'))[0])
-        CHUNK_SIZE = 10000
-        for start in xrange(1, max_id, CHUNK_SIZE):
-            print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
-            lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
-            es.bulk_index(TEST_INDEX, LINE, index_lines(lines))
-
-        # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
-        # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
-        # Let's see how big this DB gets with the trigram index. NOT THAT BIG.
-
+        pass
 # To test:
 # * Search for just file names based on a path prefix.
 # * Search for just file names using arbitrary globs. That's no worse than what SQLite did if there's a static prefix, and it's more parallelizable. (Translate to regexes. Use trigram filter optionally.)
@@ -141,3 +54,93 @@ class ElasticSearchTests(TestCase):
         # {'foo': 'bar'})
 
 # I get about 10K docs/s indexed, even over HTTP. That'll get us to 15M in 30 minutes. So ES indexing won't be the bottleneck.
+
+
+if __name__ == '__main__':
+    es = ElasticSearch('http://10.0.2.2:9200')
+    try:
+        es.delete_index(TEST_INDEX)
+    except ElasticHttpNotFoundError:
+        pass
+    es.create_index(TEST_INDEX, settings={
+        'settings': {
+            'index': {
+                'number_of_shards': 5,
+                'number_of_replicas': 0
+            },
+            'analysis': {
+                'analyzer': {
+                    # A lowercase trigram analyzer. This is probably good
+                    # enough for accelerating regexes; we probably don't
+                    # need to keep a separate case-senitive index.
+                    'trigramalyzer': {
+                        'filter': ['lowercase'],
+                        'tokenizer': 'trigram_tokenizer'
+                    }
+                },
+                'tokenizer': {
+                    'trigram_tokenizer': {
+                        'type': 'nGram',
+                        'min_gram': 3,
+                        'max_gram': 3
+                        # Keeps all kinds of chars by default.
+                    }
+                }
+            }
+        },
+        'mappings': {
+            LINE: {
+                '_all': {
+                    'enabled': False
+                },
+                'properties': {
+                    'path': {
+                        'type': 'string',
+                        'index': 'not_analyzed'  # TODO: What about case-insensitive?
+                    },
+                    'path_trg': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
+                    },
+                    # TODO: Use match_phrase_prefix queries on non-globbed paths, analyzing them with the path analyzer, for max perf. Perfect! Otherwise, fall back to trigram-accelerated substring or wildcard matching.
+                    # TODO: Use multi-fields so we don't have to pass the text in twice on indexing.
+
+                    'number': {
+                        'type': 'integer'
+                    },
+
+                    'content': {
+                        'type': 'string',
+                        'index': 'not_analyzed'
+                    },
+                    'content_trg': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
+                    },
+                    # Type definitions
+                    # Short name (not fully qualified)
+                    'type': {
+                        'type': 'string',
+                        'index': 'not_analyzed'  # case-sensitive atm. Good?
+                    },
+                    'type_fq': {
+                        'type': 'string',
+                        'index': 'not_analyzed'  # case-sensitive atm. Good?
+                    }
+                }
+            }
+        }
+    })
+
+    # Maybe the clang plugin leaves everything about one file in a single temp file, and we don't need SQLite as an intermediary to avoid running out of RAM.
+    conn = connect_db('/home/vagrant/moz-central/target/trees/mozilla-central')
+    max_id = int(next(conn.execute('select max(id) from lines'))[0])
+    CHUNK_SIZE = 1000
+    for start in xrange(1, max_id, CHUNK_SIZE):
+        print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
+        lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
+        es.bulk_index(TEST_INDEX, LINE, index_lines(lines))
+
+    # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
+    # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
+    # Let's see how big this DB gets with the trigram index. NOT THAT BIG.
