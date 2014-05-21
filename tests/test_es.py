@@ -4,6 +4,7 @@ from time import localtime, strftime
 from unittest import TestCase
 
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
+from more_itertools import chunked
 from nose.tools import eq_
 
 from dxr.utils import connect_db
@@ -135,11 +136,12 @@ if __name__ == '__main__':
     # Maybe the clang plugin leaves everything about one file in a single temp file, and we don't need SQLite as an intermediary to avoid running out of RAM.
     conn = connect_db('/home/vagrant/moz-central/target/trees/mozilla-central')
     max_id = int(next(conn.execute('select max(id) from lines'))[0])
-    CHUNK_SIZE = 1000
+    CHUNK_SIZE = 10000
     for start in xrange(1, max_id, CHUNK_SIZE):
         print strftime("%a, %d %b %Y %H:%M:%S", localtime()), 'Starting chunk beginning at', start
         lines = conn.execute('select files.path, lines.id, lines.number, trg_index.text from lines inner join files on lines.file_id=files.id inner join trg_index on lines.id=trg_index.id where lines.id>=? and lines.id<?', [start, start + CHUNK_SIZE])
-        es.bulk_index(TEST_INDEX, LINE, index_lines(lines))
+        for piece in chunked(index_lines(lines), 500):
+            es.bulk_index(TEST_INDEX, LINE, piece)
 
     # Arrays sound like the perfect fit for structural elements. They map to Lucene multi-values, which I bet are like text fields except that nothing has any position. And we don't care about position. Make sure array searches act like we hope.
     # See if ES will highlight the region matched by a regex. That would be nice. Otherwise, we'll do it app-side. NOPE, it won't.
