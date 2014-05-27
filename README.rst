@@ -75,7 +75,7 @@ Installing on a Real Machine
 
 To install DXR on a machine of your choice, do the following
 
-1. Install the dependencies in ``docs/deployment.mkd``.
+1. Install the dependencies in ``docs/source/deployment.rst``.
 
 2. You can either install dxr at the system level (requires root) or
    inside a `virtualenv <http://www.virtualenv.org/en/latest/>`__ which
