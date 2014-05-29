@@ -71,7 +71,6 @@ class DxrPlugin(object):
         magic rules you *do* find useful.
 
         """
-
         return DxrPlugin(filters=[v for k, v in namespace.iteritems() if
                                   isclass(v) and
                                   not k.startswith('_') and

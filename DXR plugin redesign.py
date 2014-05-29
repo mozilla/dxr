@@ -46,17 +46,18 @@ class TreeIndexer(dxr.plugins.TreeIndexer):
 
     """
     def __init__(self, tree):
-        """The constructor is called before the tree's build command is run.
-
-        You can use it as a pre-build hook. This is where environment variables
-        are commonly twiddled to activate and parametrize compiler plugins
-        which dump analysis data. This is also a good place to make a temp
-        folder if needed. You can stash away a reference to it on the object so
-        later methods can find it.
-
-        """
         # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_patterns out of the tree.
+
+    def pre_build(self):
+        """Call this before the tree's build command is run.
+
+        This is where environment variables are commonly twiddled to activate
+        and parametrize compiler plugins which dump analysis data. This is also
+        a good place to make a temp folder to dump said data in. You can stash
+        away a reference to it on the object so later methods can find it.
+
+        """
 
     def mappings(self):
         """Return a map of {doctype: list of mapping excerpts, ...}."""
