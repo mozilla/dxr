@@ -2,18 +2,10 @@
 
 The build command is responsible for laying down whatever data the indexing
 plugins need to do their jobs--possibly nothing if no compiler is involved. The
-pre_build hooks of the indexing plugins can help with that: for example, by
+constructors of the indexing plugins can help with that: for example, by
 setting environment variables.
 
 """
-# Domain constants
-# Move up to plugins.py
-FILES = 'file'  # A FILES query will be promoted to a LINES query if any other query
-           # term triggers a line-based query. Thus, it's important to keep
-           # field names and semantics the same between lines and files.
-LINES = 'line'
-
-
 class PathFilter(object):
     """One of these is created for each path: query term and persists through
     the querying and highlighting phases."""
@@ -41,6 +33,10 @@ class PathFilter(object):
             whether a file or a line
 
         """
+
+    # A filter can eventually grow a "kind" attr that says "structural" or
+    # "text" or whatever, and we can vary the highlight color or whatever based
+    # on that to make identifiers easy to pick out visually.
 
 
 class TreeIndexer(dxr.plugins.TreeIndexer):
@@ -84,8 +80,8 @@ class FileIndexer(dxr.plugins.FileIndexer)
         # it up.
 
     # TODO: Have default implementations in a superclass that return nothing.
-    def properties(self):
-        """Return an iterable of key-value pairs of data about a file.
+    def morsels(self):
+        """Return an iterable of key-value pairs of search data about the file.
 
         If a list value is returned, it will be merged with lists returned from
         other plugins under equal keys.
@@ -96,8 +92,8 @@ class FileIndexer(dxr.plugins.FileIndexer)
 
     def links(self):
 
-    def line_properties(self):
-        """Return per-line data for one file.
+    def line_morsels(self):
+        """Return per-line search data for one file.
 
         Yield an iterable of key-value pairs for each of a file's lines, in
         order by line. The data might be data to search on or data stowed away
@@ -148,29 +144,15 @@ class FileSkimmer(dxr.plugins.FileSkimmer):
     def regions(self):
         """Yield an ordered list of extents for each line."""
 
+    def links(self):
+        """You could slap together a quick and dirty list of functions here if
+        the file wasn't indexed.."""
+
+
 # Use cases:
 # Show a file from ES
 # Show a line from ES
 # Show a file from VCS
 
 
-
 plugin = DxrPlugin.from_namespace(globals())
-
-
-# A filter can eventually grow a "kind" attr that says "structural" or "text" or whatever, and we can vary the highlight color or whatever based on that to make identifiers easy to pick out visually.
-
-Index-time:
-def mappings()
-def properties_of_file(path)  # for search
-def properties_of_lines(path)  # for search
-def refs_of_lines(path)
-def regions_of_lines(path)
-def annotations_of_lines(path)
-def links(path)
-
-Realtime:
-def refs(path, text)
-#def refs_of_line(path, line)
-def regions(path, text)
-#def regions_of_line(path, line)

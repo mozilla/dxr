@@ -40,7 +40,12 @@ def load_htmlifiers(tree):
     return plugins
 
 
-# For each package in the plugins folder, go in there and
+
+# Domain constants:
+FILES = 'file'  # A FILES query will be promoted to a LINES query if any other query
+           # term triggers a line-based query. Thus, it's important to keep
+           # field names and semantics the same between lines and files.
+LINES = 'line'
 
 
 class DxrPlugin(object):
