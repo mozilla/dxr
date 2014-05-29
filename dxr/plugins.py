@@ -44,16 +44,16 @@ def load_htmlifiers(tree):
 
 
 class DxrPlugin(object):
-    def __init__(self, filters=None, indexer=None, htmlifier=None):
+    def __init__(self, filters=None, tree_indexer=None, file_skimmer=None):
         self.filters = filters or []
-        self.indexer = indexer
-        self.htmlifier = htmlifier
+        self.tree_indexer = tree_indexer
+        self.file_skimmer = file_skimmer
 
     @classmethod
     def from_namespace(namespace):
         """Construct a DxrPlugin whose attrs are populated by typical naming
         and subclassing conventions.
-        
+
         :arg namespace: A namespace from which to pick components
 
         Filters are taken to be any class whose name ends in "Filter" and
@@ -66,13 +66,10 @@ class DxrPlugin(object):
         magic rules you *do* find useful.
 
         """
-        ...
+
         return DxrPlugin(filters=[v for k, v in namespace.iteritems() if
                                   isclass(v) and
                                   not k.startswith('_') and
                                   k.endswith('Filter')],
-                         indexer=namespace.get('Indexer'),
-                     
-        )
-
-
+                         tree_indexer=namespace.get('TreeIndexer'),
+                         file_skimmer=namespace.get('FileSkimmer'))

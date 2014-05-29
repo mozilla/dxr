@@ -43,7 +43,7 @@ class PathFilter(object):
         """
 
 
-class Indexer(dxr.plugins.Indexer):
+class TreeIndexer(dxr.plugins.TreeIndexer):
     """Manager of data extraction that happens at index time
 
     A single instance of this is used for the entire build process of a tree.
@@ -59,11 +59,32 @@ class Indexer(dxr.plugins.Indexer):
         later methods can find it.
 
         """
-        # We need source_folder, object_folder, temp_folder, and eventually
+        # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_patterns out of the tree.
 
+    def mappings(self):
+        """Return a map of {doctype: list of mapping excerpts, ...}."""
+
+    def file_indexer(self, path):
+        """Return an object that's in charge of indexing the given file."""
+        return FileIndexer(path, self.the_temp_stash_or_whatever)
+
+
+class FileIndexer(dxr.plugins.FileIndexer)
+    """A representation of a file that can spit out the indexed bits a plugin
+    wants."""
+
+    def __init__(self, path):
+        """Analyze a file or digest an analysis that happened at compile time.
+
+        Sock it away on an instance var.
+
+        """
+        # Or you could do this later with caching, but this way you can't screw
+        # it up.
+
     # TODO: Have default implementations in a superclass that return nothing.
-    def properties_of_file(self, path):
+    def properties(self):
         """Return an iterable of key-value pairs of data about a file.
 
         If a list value is returned, it will be merged with lists returned from
@@ -73,7 +94,9 @@ class Indexer(dxr.plugins.Indexer):
         # We go with pairs rather than a map so we can just chain all these
         # together and pass them to a dict constructor: fewer temp vars.
 
-    def properties_of_lines(self, path):
+    def links(self):
+
+    def line_properties(self):
         """Return per-line data for one file.
 
         Yield an iterable of key-value pairs for each of a file's lines, in
@@ -85,6 +108,14 @@ class Indexer(dxr.plugins.Indexer):
 
         """
 
+    def line_refs(self):
+        """Yield an ordered list of extents for each line."""
+
+    def line_regions(self):
+        """Yield an ordered list of extents for each line."""
+
+    def line_annotations(self):
+
     # This is probably the place to add property extractors for other kinds of
     # things, like modules, if we ever wanted to support some other view of
     # search results than files or lines, like a D3 diagram of an inheritance
@@ -93,24 +124,34 @@ class Indexer(dxr.plugins.Indexer):
     # introduce another kind of plugin: an enumerator.
 
 
-class Htmlifier(object):  # a class? It could be a good place to cache things like where the temp folder is between method invocations (while we're still doing static rendering) and the fetched ES document (when we aren't).
-    def __init__(self, tree):
+class FileSkimmer(dxr.plugins.FileSkimmer):
+    """An opportunity for a shared cache among methods which quickly analyze a
+    file at request time"""
 
+    def __init__(self, path, text, doc_properties=None, line_properties=None):
+        """Construct.
 
-    def htmlify_whole_file(path, text)
+        :arg path: The conceptual path to the file, relative to the tree. Such
+            a file might not exist on disk. This is useful mostly as a hint for
+            syntax coloring.
+        :arg text: The full text of the file
+        :arg doc_properties: Document-wide properties emitted by the indexer,
+            if the document is indexed
+        :arg doc_properties: A list of per-line properties emitted by the
+            indexer, if the document is indexed
 
-    def htmlify_line(precomputed_properties)
+        """
 
-    # If htmlify_line exists and this file is indexed, call htmlify_line once for each line.
-    # Otherwise, call htmlify_whole_file.
+    def refs(self):
+        """Yield an ordered list of extents for each line."""
 
-    # Use cases:
-    # Show a file from ES
-    # Show a line from ES
-    # Show a file from VCS
+    def regions(self):
+        """Yield an ordered list of extents for each line."""
 
-    def htmlify(lines, tags_of_lines)
-        """Intertwingle """
+# Use cases:
+# Show a file from ES
+# Show a line from ES
+# Show a file from VCS
 
 
 
@@ -121,7 +162,6 @@ plugin = DxrPlugin.from_namespace(globals())
 
 Index-time:
 def mappings()
-    """Return a map of {doctype: list of mapping excerpts, ...}."""
 def properties_of_file(path)  # for search
 def properties_of_lines(path)  # for search
 def refs_of_lines(path)
@@ -131,6 +171,6 @@ def links(path)
 
 Realtime:
 def refs(path, text)
-def refs_of_line(path, line)
+#def refs_of_line(path, line)
 def regions(path, text)
-def regions_of_line(path, line)
+#def regions_of_line(path, line)
