@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
                     'content': {
                         'type': 'string',
-                        'index': 'not_analyzed'
+                        'index': 'no'
                     },
                     'content_trg': {
                         'type': 'string',

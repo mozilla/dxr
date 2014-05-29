@@ -38,3 +38,39 @@ def load_htmlifiers(tree):
         f.close()
         plugins.append(plugin)
     return plugins
+
+
+# For each package in the plugins folder, go in there and
+
+
+class DxrPlugin(object):
+    def __init__(self, filters=None, indexer=None, htmlifier=None):
+        self.filters = filters or []
+        self.indexer = indexer
+        self.htmlifier = htmlifier
+
+    @classmethod
+    def from_namespace(namespace):
+        """Construct a DxrPlugin whose attrs are populated by typical naming
+        and subclassing conventions.
+        
+        :arg namespace: A namespace from which to pick components
+
+        Filters are taken to be any class whose name ends in "Filter" and
+        doesn't start with "_".
+
+        The indexer is assumed to be called "Indexer".
+
+        If these rules don't suit you, you can always instantiate a DxrPlugin
+        yourself (and think about refactoring this so separately expose the
+        magic rules you *do* find useful.
+
+        """
+        ...
+        return DxrPlugin(filters=[v for k, v in namespace.iteritems() if
+                                  isclass(v) and
+                                  not k.startswith('_') and
+                                  k.endswith('Filter')],
+                         indexer=namespace.get('Indexer'),
+                     
+        )
