@@ -1,0 +1,147 @@
+===============
+Getting Started
+===============
+
+The fastest path to a working DXR instance is fourfold:
+
+1. Get the source code you want to index.
+2. Tell DXR how to build it.
+3. Run :program:`dxr-index.py` to build and index your code.
+4. Run :program:`dxr-serve.py` to present a web-based search interface.
+
+But first, we have some installation to do.
+
+
+Downloading DXR
+===============
+
+Using git, clone the DXR repository::
+
+   $ git clone --recursive https://github.com/mozilla/dxr.git
+
+Remember the :option:`--recursive` option; DXR depends on the `TriLite SQLite
+extension`_, which is included in the repository as a git submodule.
+
+
+Setting Up With Vagrant
+=======================
+
+The easiest way to get things set up is to use the included, preconfigured
+Vagrant_ VM.
+
+First, run the following commands in DXR's top-level directory::
+
+   $ vagrant up
+   $ vagrant ssh
+
+Then, run this inside the VM::
+
+   $ cd ~/dxr
+   $ make
+
+.. note::
+
+   The Vagrant image is built for VirtualBox 4.2.0.  If your version is older,
+   the image might not work as expected.
+
+
+Configuration
+=============
+
+Before DXR can index your code, we need to tell it where it is and, if you want
+to be able to do structural queries like find-all-the-callers, how to kick off
+a build. (Currently, DXR support structural queries only for C and C++.) If you
+have a simple build process powered by :command:`make`, a configuration like
+this might suffice. Place this in a file called
+:file:`dxr.config`::
+
+    [DXR]
+    target_folder       = /path/for/the/output
+
+    [code]
+    source_folder       = /path/to/your/code
+    object_folder       = /path/to/your/code
+    build_command       = make clean; make -j $jobs
+
+.. note::
+
+   Be sure to replace the placeholder paths in the above config.
+
+If you have a non-C++ project and simply want a text index, the
+``build_command`` can be set to :file:`/bin/true` or some other do-nothing
+command.
+
+The location of the config file doesn't matter; the usual place is adjacent to
+your source directory.
+
+Though you shouldn't need any of them now, further config directives are
+described in :doc:`configuration`.
+
+
+Indexing
+========
+
+Now that you've told DXR about your codebase, it's time to build an index,
+sometimes also called an :term:`instance`::
+
+    $ dxr-build.py dxr.config
+
+.. note::
+
+    If you have a large codebase, the VM might run out of RAM. If that happens,
+    make a copy of the
+    :file:`vagrantconfig_local.yaml-dist` file in the top-level :file:`dxr`
+    directory, rename it :file:`vagrantconfig_local.yaml`, and edit it to
+    increase the VM's RAM::
+
+        $ cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
+        $ vi vagrantconfig_local.yaml
+
+    Then restart the VM. Within the VM... ::
+
+        $ sudo shutdown -h now
+
+    Then, from the host machine... ::
+
+        $ vagrant up
+        $ vagrant ssh
+
+.. note::
+
+    If you have trouble getting your own code to index, step back and see if
+    you can get one of the included test cases to work::
+
+        $ cd ~/dxr/tests/test_basic
+        $ make
+
+    If that works, it's just a matter of getting your configuration right. Pop
+    into #static on irc.mozilla.org if you need a hand.
+
+
+Serving Your Index
+==================
+
+Congratulations; your index is built! Now, spin up DXR's development server,
+and see what you've wrought::
+
+    $ dxr-serve.py --all /path/to/the/output
+
+Surf to http://33.33.33.77:8000/ from the host machine, and poke around
+your fancy new searchable codebase.
+
+.. note::
+
+    Seeing this error? ::
+
+       Server Error
+       Database error: no such module: trilite
+
+    Run :command:`ldconfig` inside the virtual machine to sort out the shared
+    library linking problem. Then, re-run :program:`dxr-serve.py`, and all
+    should work as expected.
+
+
+
+.. _TriLite SQLite extension: https://github.com/jonasfj/trilite
+
+.. _Vagrant: http://www.vagrantup.com/
