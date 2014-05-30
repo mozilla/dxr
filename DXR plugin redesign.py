@@ -59,6 +59,10 @@ class TreeIndexer(dxr.plugins.TreeIndexer):
 
         """
 
+    # def post_build? What if there's whole-program stuff to do after the
+    # build? One could fire it off the first time file_indexer() is called, but
+    # that's mysterious.
+
     def mappings(self):
         """Return a map of {doctype: list of mapping excerpts, ...}."""
 
@@ -74,7 +78,8 @@ class FileIndexer(dxr.plugins.FileIndexer)
     def __init__(self, path):
         """Analyze a file or digest an analysis that happened at compile time.
 
-        Sock it away on an instance var.
+        Sock it away on an instance var. You can think of this as a per-file
+        post-build step.
 
         """
         # Or you could do this later with caching, but this way you can't screw
