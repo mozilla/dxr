@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DXR: Code Search and Cross-Reference Tool documentation build configuration file, created by
+# DXR documentation build configuration file, created by
 # sphinx-quickstart on Fri Mar 14 18:40:04 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -53,7 +53,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'DXR: Code Search and Cross-Reference Tool'
+project = u'DXR'
 copyright = u'2014, various'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -186,7 +186,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'DXRCodeSearchandCross-ReferenceTooldoc'
+htmlhelp_basename = 'DXRdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -206,7 +206,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'DXRCodeSearchandCross-ReferenceTool.tex', u'DXR: Code Search and Cross-Reference Tool Documentation',
+  ('index', 'DXR.tex', u'DXR Documentation',
    u'various', 'manual'),
 ]
 
@@ -236,7 +236,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'dxrcodesearchandcross-referencetool', u'DXR: Code Search and Cross-Reference Tool Documentation',
+    ('index', 'dxr', u'DXR Documentation',
      [u'various'], 1)
 ]
 
@@ -250,8 +250,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'DXRCodeSearchandCross-ReferenceTool', u'DXR: Code Search and Cross-Reference Tool Documentation',
-   u'various', 'DXRCodeSearchandCross-ReferenceTool', 'One line description of project.',
+  ('index', 'DXR', u'DXR Documentation',
+   u'various', 'DXR', 'Code search and cross-reference tool',
    'Miscellaneous'),
 ]
 
@@ -271,13 +271,13 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'DXR: Code Search and Cross-Reference Tool'
+epub_title = u'DXR'
 epub_author = u'various'
 epub_publisher = u'various'
 epub_copyright = u'2014, various'
 
 # The basename for the epub file. It defaults to the project name.
-#epub_basename = u'DXR: Code Search and Cross-Reference Tool'
+#epub_basename = u'DXR'
 
 # The HTML theme for the epub output. Since the default themes are not optimized
 # for small screen space, using the same theme for HTML and epub output is
