@@ -67,6 +67,10 @@ this might suffice. Place this in a file called
 
    Be sure to replace the placeholder paths in the above config.
 
+By building your project with clang and under the control of
+:program:`dxr-index.py`, DXR gets a chance to interpose a custom compiler
+plugin that emits analysis data. We then process that into an index.
+
 If you have a non-C++ project and simply want a text index, the
 ``build_command`` can be set to :file:`/bin/true` or some other do-nothing
 command.
@@ -74,15 +78,15 @@ command.
 The location of the config file doesn't matter; the usual place is adjacent to
 your source directory.
 
-Though you shouldn't need any of them now, further config directives are
+Though you shouldn't need any of them yet, further config directives are
 described in :doc:`configuration`.
 
 
 Indexing
 ========
 
-Now that you've told DXR about your codebase, it's time to build an index,
-sometimes also called an :term:`instance`::
+Now that you've told DXR about your codebase, it's time to build an
+:term:`index` (sometimes also called an :term:`instance`)::
 
     $ dxr-build.py dxr.config
 
