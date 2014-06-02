@@ -1,5 +1,5 @@
-DXR Development
-===============
+Development
+===========
 
 *This document details how to get started with DXR development.*
 
@@ -54,3 +54,15 @@ vagrant config file in the project root:
 as necessary. The .gitignore file will safely keep your changes out of
 version control. This is particularly useful for boosting the amount of
 RAM allocated to the virtual machine or debugging puppet changes.
+
+
+Icons
+-----
+
+DXR uses third-party icons from a variety of sources: :doc:`icons`.
+
+If your plugin needs an icon not already present in the :file:`icons` folder,
+please add it, and document its origin in this document. Feel free to use
+existing icons, but keep in mind that they use semantic naming. So don't use
+the ``search`` icon for zoom, because we may later change the search icon from
+a magnifying glass to binoculars.

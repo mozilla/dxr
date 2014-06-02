@@ -10,8 +10,7 @@ handle multi-user traffic volumes.
 
 DXR generates an :term:`index` for one or more source trees offline. This is
 well suited to a dedicated build server. The generated index is then
-transferred to one or more web servers for hosting. First, we'll set up the
-build server.
+transferred to one or more web servers for hosting.
 
 .. [#] DXR might also work with other UNIX-like operating systems, but we make no promises.
 
@@ -22,9 +21,9 @@ OS Packages
 -----------
 
 Since you're no longer using the Vagrant VM, you'll need to install several
-packages on your build and web servers. These are the Ubuntu package names, but
-most of them are named clearly enough to make obvious the equivalents on other
-distributions:
+packages on both your build and web servers. These are the Ubuntu package
+names, but most of them are named clearly enough to make obvious the
+equivalents on other distributions:
 
 *  make
 *  build-essential
@@ -41,8 +40,8 @@ though you'd then need to build DXR on a different machine and transfer it over.
 .. note::
 
    On some systems (for example Debian and Ubuntu) the Node.js interpreter is
-   named nodejs but DXR depends on it and expects it to be named node.
-   One simple solution is to add a symlink on your system::
+   named :program:`nodejs`, but DXR expects it to be named :program:`node`. One
+   simple solution is to add a symlink::
 
       $ sudo ln -s /usr/bin/nodejs /usr/bin/node
 
@@ -60,8 +59,8 @@ You'll also need several third-party Python packages. In order to isolate the
 specific versions we need from the rest of the system, use
 Virtualenv_::
 
-   $ virtualenv VENV_DIR  # Create a new virtual environment.
-   $ source VENV_DIR/bin/activate
+   $ virtualenv dxr_venv  # Create a new virtual environment.
+   $ source dxr_venv/bin/activate
 
 You'll need to repeat that :command:`activate` command each time you want to
 use DXR from a new shell.
@@ -126,26 +125,25 @@ kick off the indexing process::
 
     $ dxr-build.py dxr.config
 
-(You can omit the argument if there is a file called :file:`dxr.config` in the
-current working directory.)
+.. note::
 
-You can also pass the :option:`--tree TREE` option to generate the index for
-just one source tree. This is useful for building each source tree on a
-different machine, though it does leave you with the task of stitching the
-resulting single-tree indexes together, a matter of moving some directories
-around and tweaking the :file:`config.py` file.
+    You can also pass the :option:`--tree TREE` option to generate the index
+    for just one source tree. This is useful for building each tree on a
+    different machine, though it does leave you with the task of stitching the
+    resulting single-tree indexes together, a matter of moving some directories
+    around and tweaking the :file:`config.py` file.
 
-At any rate, the index is generated in the directory specified by the
-``target_folder`` directive. It contains a minimal configuration file, a SQLite
-database to support search, and static HTML versions of all of the files in the
-source trees.
+The index is generated in the directory specified by the ``target_folder``
+directive. It contains a minimal configuration file, a SQLite database to
+support search, and static HTML versions of all of the files in the source
+trees.
 
 Generally, you use something like cron to repeat indexing on a schedule or in
 response to source tree changes. After an indexing run, the index has to be
-made available to the web servers. One common approach is to share it on a
-common NFS volume (and use an atomic :command:`mv` to swap the new one into
-place). Alternatively, you could simply copy the index to the web server. (Of
-course, an atomic :command:`mv` remains advisable.)
+made available to the web servers. One approach is to share it on a common NFS
+volume (and use an atomic :command:`mv` to swap the new one into place).
+Alternatively, you can simply copy the index to the web server. (Of course, an
+atomic :command:`mv` remains advisable.)
 
 
 Serving Your Index
@@ -177,8 +175,8 @@ DXR is also a WSGI application and can be deployed on Apache with mod_wsgi_, on
 uWSGI_, or on any other web server that supports the WSGI protocol.
 
 The main mod_wsgi directive is WSGIScriptAlias_, and the DXR WSGI application
-is defined in :file:`dxr/wsgi.py`, so, for example, add something like this to
-your Apache configuration::
+is defined in :file:`dxr/wsgi.py`, so an example Apache directive might look
+something like this::
 
    WSGIScriptAlias / /path/to/dxr/dxr/wsgi.py
 
@@ -200,13 +198,13 @@ configuration has no effect. Instead, add the following to
 Because we used virtualenv to install DXR's runtime dependencies, add the path
 to the virtualenv to your Apache configuration::
 
-   WSGIPythonHome /path/to/VENV_DIR
+   WSGIPythonHome /path/to/dxr_venv
 
 Note that the WSGIPythonHome_ directive is allowed only in the server config
 context, not in the virtual host context. It's analogous to running virtualenv's
 :program:`activate` command.
 
-Finally, make sure mod_wsgi is installed and enabled, and restart Apache::
+Finally, make sure mod_wsgi is installed and enabled. Then, restart Apache::
 
     sudo apache2ctl stop
     sudo apache2ctl start
@@ -228,6 +226,7 @@ Apache configuration::
 
 Here is a complete example config, for reference::
 
+    WSGIPythonHome /home/vagrant/dxr_venv
     <VirtualHost *:80>
         # Serve static resources, like CSS and images, with plain Apache:
         Alias /static/ /home/vagrant/dxr/dxr/static/
@@ -248,6 +247,27 @@ uWSGI
 -----
 
 Please write me!
+
+
+Upgrading
+=========
+
+To update to a new version of DXR...
+
+1. Update your DXR clone::
+
+    git pull origin master
+    git submodule update
+
+2. Delete your old virtual env::
+
+    rm -rf /path/to/dxr_venv
+
+3. Repeat these parts of the installation:
+
+   a. `Python Packages`_
+   b. `Building`_
+   c. `Installation`_
 
 
 .. _Virtualenv: https://virtualenv.pypa.io/en/latest/

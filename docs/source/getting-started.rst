@@ -23,8 +23,8 @@ Remember the :option:`--recursive` option; DXR depends on the `TriLite SQLite
 extension`_, which is included in the repository as a git submodule.
 
 
-Setting Up With Vagrant
-=======================
+Booting And Building
+====================
 
 The easiest way to get things set up is to use the included, preconfigured
 Vagrant_ VM.
@@ -50,15 +50,16 @@ Configuration
 
 Before DXR can index your code, we need to tell it where it is and, if you want
 to be able to do structural queries like find-all-the-callers, how to kick off
-a build. (Currently, DXR support structural queries only for C and C++.) If you
-have a simple build process powered by :command:`make`, a configuration like
-this might suffice. Place this in a file called
-:file:`dxr.config`::
+a build. (Currently, DXR supports structural queries only for C and C++.) If
+you have a simple build process powered by :command:`make`, a configuration
+like this might suffice. Place the following in a file called
+:file:`dxr.config`. The location of the file doesn't matter; the usual
+place is adjacent to your source directory. ::
 
     [DXR]
     target_folder       = /path/for/the/output
 
-    [code]
+    [yourproject]
     source_folder       = /path/to/your/code
     object_folder       = /path/to/your/code
     build_command       = make clean; make -j $jobs
@@ -69,14 +70,11 @@ this might suffice. Place this in a file called
 
 By building your project with clang and under the control of
 :program:`dxr-index.py`, DXR gets a chance to interpose a custom compiler
-plugin that emits analysis data. We then process that into an index.
+plugin that emits analysis data. It then processes that into an index.
 
-If you have a non-C++ project and simply want a text index, the
+If you have a non-C++ project and simply want to index it as text, the
 ``build_command`` can be set to :file:`/bin/true` or some other do-nothing
 command.
-
-The location of the config file doesn't matter; the usual place is adjacent to
-your source directory.
 
 Though you shouldn't need any of them yet, further config directives are
 described in :doc:`configuration`.
