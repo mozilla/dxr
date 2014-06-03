@@ -129,7 +129,7 @@ class TreeIndexer(object):
     # introduce another kind of plugin: an enumerator.
 
 
-class FileIndexer(object)
+class FileIndexer(object):
     """A source of search and rendering data about one source file"""
 
     def __init__(self, path):
@@ -168,12 +168,14 @@ class FileIndexer(object)
         """
 
     def line_refs(self):
-        """Yield an ordered list of extents for each line."""
+        """Yield an ordered list of extents and menus for each line."""
 
     def line_regions(self):
         """Yield an ordered list of extents for each line."""
 
     def line_annotations(self):
+        # TODO: Why are these just per line? Shouldn't they return extents like
+        # everybody else? We can still show them per line if we want.
 
 
 class FileSkimmer(dxr.plugins.FileSkimmer):
@@ -189,13 +191,13 @@ class FileSkimmer(dxr.plugins.FileSkimmer):
         :arg text: The full text of the file
         :arg doc_properties: Document-wide properties emitted by the indexer,
             if the document is indexed
-        :arg doc_properties: A list of per-line properties emitted by the
+        :arg line_properties: A list of per-line properties emitted by the
             indexer, if the document is indexed
 
         """
 
     def refs(self):
-        """Yield an ordered list of extents for each line."""
+        """Yield an ordered list of extents and menus for each line."""
 
     def regions(self):
         """Yield an ordered list of extents for each line."""
