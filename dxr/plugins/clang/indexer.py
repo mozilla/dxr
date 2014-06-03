@@ -595,7 +595,9 @@ def build_inherits(base, child, direct):
     return db
 
 def _chunked_fetchall(cursor, chunk_size=100):
-    """drop in replacment for fetchall designed to be tuned by 'chunking'"""
+    """Drop in replacement for fetchall designed to be tuned by 'chunking'.
+
+    Returns a generator yielding lists of chunk_size rows."""
     rows = cursor.fetchmany(chunk_size)
     while rows:
         for row in rows:
@@ -623,7 +625,7 @@ def generate_inheritance(conn):
             child = types[canonicalize_decl(info['tcname'], child_loc[0], child_loc[1], child_loc[2])]
         except KeyError:
             continue
-
+p
         conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, ?)",
                                   (base, child, info.get('access', '')))
 
