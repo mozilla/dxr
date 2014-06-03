@@ -594,20 +594,22 @@ def build_inherits(base, child, direct):
         db['inhtype'] = direct
     return db
 
+def _chunked_fetchall(cursor, chunk_size=100):
+    """drop in replacment for fetchall designed to be tuned by 'chunking'"""
+    rows = cursor.fetchmany(chunk_size)
+    while rows:
+        for row in rows:
+            yield row
+        rows = cursor.fetchmany(chunk_size)
+
+
 def generate_inheritance(conn):
     childMap, parentMap = {}, {}
     types = {}
 
-    print "\t* Before fetchall types"
-    cursor = conn.cursor()
-    conn.execute("SELECT qualname, file_id, file_line, file_col, id from types")
-    rows = cursor.fetchmany(100)
-    while rows:
-        for row in rows:
-            types[(row[0], row[1], row[2], row[3])] = row[4]
-        rows = cursor.fetchmany(100)
-    print "\t* After fetchall types"
-
+    cursor = conn.execute("SELECT qualname, file_id, file_line, file_col, id from types")
+    for row in _chunked_fetchall(cursor):
+        types[(row[0], row[1], row[2], row[3])] = row[4]
 
     for infoKey in inheritance:
         info = inheritance[infoKey]
@@ -653,25 +655,13 @@ def generate_callgraph(conn):
     variables = {}
     callgraph = []
 
-    print "\t* Inside generate_callgraph"
-
-    print "\t* Before fetchall functions"
-    cursor = conn.cursor()
-    cursor.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions")
-    rows = cursor.fetchmany(100)
-    while rows:
-        for row in rows:
-            functions[(row[0], row[1], row[2], row[3])] = row[4]
-        rows = cursor.fetchmany(100)
-
-    print "\t* Before fetchall variables"
-    cursor = conn.cursor()
-    conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables")
-    rows = cursor.fetchmany(100)
-    while rows:
-        for row in rows:
-            variables[(row[0], row[1], row[2], row[3])] = row[4]
-        rows = cursor.fetchmany(100)
+    cursor = conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions")
+    for row in _chunked_fetchall(cursor):
+        functions[(row[0], row[1], row[2], row[3])] = row[4]
+    
+    cursor = conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables")
+    for row in _chunked_fetchall(cursor):
+        variables[(row[0], row[1], row[2], row[3])] = row[4]
 
     # Generate callers table
     for call in calls.values():
