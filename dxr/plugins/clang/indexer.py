@@ -597,7 +597,9 @@ def build_inherits(base, child, direct):
 def _chunked_fetchall(cursor, chunk_size=100):
     """Drop in replacement for fetchall designed to be tuned by 'chunking'.
 
-    Returns a generator yielding lists of chunk_size rows."""
+    Return a generator yielding lists of chunk_size rows.
+
+    """
     rows = cursor.fetchmany(chunk_size)
     while rows:
         for row in rows:
