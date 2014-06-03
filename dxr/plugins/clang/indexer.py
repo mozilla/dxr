@@ -625,7 +625,7 @@ def generate_inheritance(conn):
             child = types[canonicalize_decl(info['tcname'], child_loc[0], child_loc[1], child_loc[2])]
         except KeyError:
             continue
-p
+
         conn.execute("INSERT OR IGNORE INTO impl(tbase, tderived, inhtype) VALUES (?, ?, ?)",
                                   (base, child, info.get('access', '')))
 
