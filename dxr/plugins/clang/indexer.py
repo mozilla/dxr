@@ -598,8 +598,16 @@ def generate_inheritance(conn):
     childMap, parentMap = {}, {}
     types = {}
 
-    for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id from types").fetchall():
-        types[(row[0], row[1], row[2], row[3])] = row[4]
+    print "\t* Before fetchall types"
+    cursor = conn.cursor()
+    conn.execute("SELECT qualname, file_id, file_line, file_col, id from types")
+    rows = cursor.fetchmany(100)
+    while rows:
+        for row in rows:
+            types[(row[0], row[1], row[2], row[3])] = row[4]
+        rows = cursor.fetchmany(100)
+    print "\t* After fetchall types"
+
 
     for infoKey in inheritance:
         info = inheritance[infoKey]
@@ -645,11 +653,25 @@ def generate_callgraph(conn):
     variables = {}
     callgraph = []
 
-    for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions").fetchall():
-        functions[(row[0], row[1], row[2], row[3])] = row[4]
+    print "\t* Inside generate_callgraph"
 
-    for row in conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables").fetchall():
-        variables[(row[0], row[1], row[2], row[3])] = row[4]
+    print "\t* Before fetchall functions"
+    cursor = conn.cursor()
+    cursor.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions")
+    rows = cursor.fetchmany(100)
+    while rows:
+        for row in rows:
+            functions[(row[0], row[1], row[2], row[3])] = row[4]
+        rows = cursor.fetchmany(100)
+
+    print "\t* Before fetchall variables"
+    cursor = conn.cursor()
+    conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables")
+    rows = cursor.fetchmany(100)
+    while rows:
+        for row in rows:
+            variables[(row[0], row[1], row[2], row[3])] = row[4]
+        rows = cursor.fetchmany(100)
 
     # Generate callers table
     for call in calls.values():
