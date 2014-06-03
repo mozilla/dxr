@@ -1,11 +1,14 @@
-DXR Configuration
-=================
+=============
+Configuration
+=============
 
-*This document describes how to configure your DXR builds, as well as
-fully documenting all configuration settings.*
+DXR learns how to index your source trees by means of an ini-formatted
+configuration file. It gets passed to :program:`dxr-build.py` at indexing time::
+
+    dxr-build.py my_config_file.config
 
 Configuration File Format
--------------------------
+=========================
 
 The configuration file is split into different sections, sections
 ``DXR`` is special; all other sections describes a tree for indexing.
@@ -18,7 +21,7 @@ built-in
 python documentation for details.
 
 DXR Configuration
------------------
+=================
 
 *Configuration keys for the* ``DXR`` *section of the configuration file.*
 
@@ -67,7 +70,7 @@ users. (Note: this value will also be used in the generated
 ``.htaccess`` file.)
 
 Tree Configuration
-------------------
+==================
 
 *Configuration keys for tree sections of the configuration file.*
 
@@ -101,7 +104,7 @@ define a ``build_command`` without using ``$jobs`` somewhere in the
 command, you will be warned, but the build will continue.
 
 Plugin Configuration
---------------------
+====================
 
 Keys prefixed with ``plugin_`` in either a tree section or the DXR
 section will read and stored on the ``config`` and ``tree`` objects,
