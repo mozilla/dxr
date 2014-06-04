@@ -7,121 +7,145 @@ configuration file. It gets passed to :program:`dxr-build.py` at indexing time::
 
     dxr-build.py my_config_file.config
 
-Configuration File Format
-=========================
+Sections
+========
 
-The configuration file is split into different sections, sections
-``DXR`` is special; all other sections describes a tree for indexing.
-Keys that must and can be specified for different sections are listed in
-relevant section below.
+The configuration file is divided into sections. The ``DXR`` section holds global
+options; other sections describe trees to be indexed.
 
-The config file must be written in a format compatible with python's
-built-in
-`ConfigParser <http://docs.python.org/library/configparser.html>`__, see
-python documentation for details.
+You can use all the fancy interpolation features of Python's
+`ConfigParser <http://docs.python.org/library/configparser.html>`__ class to
+save repetition.
 
-DXR Configuration
-=================
+DXR Section
+-----------
 
-*Configuration keys for the* ``DXR`` *section of the configuration file.*
+Here are the options that can live in the ``DXR`` section:
 
--  ``target_folder`` Output directory (**required**)
--  ``dxrroot`` Location of you DXR install (defaults to directory of the
-   executable)
--  ``plugin_folder`` Plugin folder (default ``<dxrroot>/plugins``)
--  ``nb_jobs`` Number of jobs allowed (default ``1``), note that this
-   value can be overwritten by the ``-j`` argument when running
-   ``dxr-build.py``
--  ``temp_folder`` Temporary folder (default ``/tmp/dxr-temp``)
--  ``log_folder`` Log folder (default ``<temp_folder>/logs``)
--  ``wwwroot`` Virtual root on deployment server (default ``/``)
--  ``enabled_plugins`` Enabled plugins (default ``*``)
--  ``disabled_plugins`` Disabled plugins (default ``''``)
--  ``directory_index`` Filename for directory index files (default
-   ``.dxr-directory-index.html``)
--  ``generated_date`` In RFC-822 format, also know as (RFC 2822), You
-   might want to overwrite this to get the same date on all files!
-   (defaults to time of execution)
--  ``skip\_stages`` Build/indexing stages to skip (default ``''``). Can be
-   zero or more of 'index', 'html' (space separated)
--  ``disable\_workers`` If non-empty, do not use a worker pool for
-   htmlification (default ``''``)
--  ``filter\_lang`` The default (programming) language for this instance.
-   Only filters registered for this language will be used (default ``'C'``)
+``target_folder``
+    Where to put the built :term:`index`. **Required.**
 
-(Refer to the Plugin Configuration section for plugin keys available
-here).
+``temp_folder``
+    Folder for temporary items during indexing. Default: ``/tmp/dxr-temp``.
+    **Recommended** to avoid exceeding the size of the :file:`/tmp` volume
+    and to avoid collisions between concurrent indexing runs
 
-Notice, it's strongly recommended that you provide a sane **temporary
-folder**, using ``/tmp`` (default) is not recommended. Creating a
-sub-directory under ``/tmp`` is better, but preferable you'd want
-something on the same file system as the ``target_folder``.
+``directory_index``
+    Filename for directory index files in the generated static HTML. Default:
+    ``.dxr-directory-index.html``
 
-Please note that ``dxr-build.py`` assume the plugins in
-``plugin_folder`` are already built and ready for use. If you specify
-your own plugin folder, the top-level makefile will not do this for you.
-This setting is mainly here for completion, it's not recommended for
-normal operation.
+    Resist the temptation to use ``index.html`` for ``directory_index``. Any
+    indexed file with the same name would then shadow the directory index,
+    confusing users.
 
-You might be tempted use ``index.html`` for ``directory_index``,
-however, this is **not** recommened as any indexed files with that name
-would hide the directory index, which must be rather confusing to the
-users. (Note: this value will also be used in the generated
-``.htaccess`` file.)
+``disabled_plugins``
+    Names of plugins to disable. Default: empty
 
-Tree Configuration
-==================
+``disable_workers``
+    If non-empty, do not use a worker pool for building the static HTML.
+    Default: empty
 
-*Configuration keys for tree sections of the configuration file.*
+``enabled_plugins``
+    Names of plugins to enable. Default: ``*``
 
-Any section that is not named ``DXR`` specifies a tree using the keys
-listed below.
+``filter_lang``
+    The default programming language for this instance. Only filters registered
+    for this language will be used. Default: ``C``
 
--  ``source_folder`` Source folder (**required**)
--  ``build_command`` Command for building sources (defaults to
-   ``make -j $jobs``) Notice that ``$jobs`` will be replaced with
-   ``nb_jobs`` as provided in the config file or defined at runtime
-   using the ``-j`` argument.
--  ``object_folder`` Folder where object files will be stored
-   (**required**)
--  ``log_folder`` Log folder (defaults ``<config_log_folder>/<tree>``)
--  ``temp_folder`` Tempoary folder for this tree, (defaults
-   ``<config_temp_folder>/<tree>``) It's **not** recommend that this
-   attribute is defined!
--  ``enabled_plugins`` Plugins enabled in this tree (defaults ``*``)
--  ``disabled_plugins`` Plugins disabled in this tree (default ``*``),
-   note that plugins disabled in the ``DXR`` section is also disabled.
--  ``ignore_patterns`` Space separated list of Unix shell-style file
-   patterns to ignore, for information on the pattern style, see
-   `fnmatch <http://docs.python.org/library/fnmatch.html>`__
+``generated_date``
+    The "generated on" date stamped at the bottom of every DXR web page, in
+    RFC-822 (also known as RFC 2822) format. Default: the time the indexing run
+    started
+
+``log_folder``
+    Folder for log files generated during indexing. Default:
+    ``<temp_folder>/logs``.
+
+``nb_jobs``
+    Number of processes allowed in worker pools. Default: ``1``. This value can
+    be overwritten by the :option:`-j` argument to :program:`dxr-build.py`.
+
+``plugin_folder``
+    Folder to search for plugins. Default: ``<dxr_root>/plugins``. This will
+    soon be deprecated in favor of a new plugin discovery model.
+
+    Please note that :program:`dxr-build.py` assumes the plugins in
+    ``plugin_folder`` are already built and ready for use. If you specify your
+    own plugin folder, the top-level makefile will not take care of this for
+    you.
+
+``skip_stages``
+    Build/indexing stages to skip: zero or more of ``index`` and ``html``,
+    space-separated. Default: none
+
+``wwwroot``
+    URL path prefix to the root of DXR's web app. Default: ``/``
 
 (Refer to the Plugin Configuration section for plugin keys available
 here).
 
-Notice that is strongly recommended that you don't define
-``temp_folder``; this feature is just here for completeness. If you
-define a ``build_command`` without using ``$jobs`` somewhere in the
-command, you will be warned, but the build will continue.
 
-Plugin Configuration
-====================
+Tree Sections
+-------------
 
-Keys prefixed with ``plugin_`` in either a tree section or the DXR
-section will read and stored on the ``config`` and ``tree`` objects,
-available to plugins. These keys can be used to configure plugins, and
-some plugins might require these in order to work. Plugin developers are
-advised to name their configuration keys as
-``plugin_<plugin-name>_<key>``, refer to Plugins.mkd for more details on
-plugin development.
+Any section that is not named ``DXR`` represents a tree to be indexed. Here are
+the options describing a tree:
 
-Plugin keys listed below can be defined in the tree sections of the
-configuration file.
+``build_command``
+    Command for building your source code. Default:
+   ``make -j $jobs``. Note that ``$jobs`` will be replaced with ``nb_jobs``
+   from the config file or the value of the :option:`-j` option from the
+   :program:`dxr-build.py` command line. If you
+    define a ``build_command`` not containing ``$jobs``, you will be warned,
+    but indexing will continue.
 
--  ``plugin_hg_hgweb`` Location of hg-web installation for this tree.
-   (Assumed to have default url layout)
--  ``plugin_hg_section`` Section text (defaults to ``Mercurial``)
--  ``plugin_buglink_name`` Name of the projects bug tracker
-   installation. (eg. ``bugzilla.mozilla.org``)
--  ``plugin_buglink_bugzilla`` URL pattern for buglinks, %s will be
-   replaced with the bug number, this key must include ``http://``
+``disabled_plugins``
+   Plugins disabled in this tree, in addition to ones already disabled in the
+   ``DXR`` section. Default: ``*``
 
+``enabled_plugins``
+    Plugins enabled in this tree. Default: ``*``. It is impossible to enable a
+    plugin not already enabled in the ``DXR`` section.
+
+``ignore_patterns``
+    Space-separated list of Unix `shell-style
+    <http://docs.python.org/library/fnmatch.html>`__ file patterns to ignore.
+
+``log_folder``
+    Folder for indexing logs. Default: ``<global log_folder>/<tree>``
+
+``object_folder``
+    Folder where object files will be stored. **Required.**
+
+``source_folder``
+    The folder containing the source code to index. **Required.**
+
+``temp_folder``
+    Temporary folder for this tree. Default: ``<global temp_folder>/<tree>``.
+    You generally shouldn't set this.
+
+
+Plugin-Specific Options
+=======================
+
+Options prefixed with ``plugin_`` (except ``plugin_folder``) are reserved for
+use by plugins. These options can appear in the global ``DXR`` section or in
+tree sections. Plugin developers should name their config options like
+``plugin_<plugin name>_<option>``. (See :doc:`plugins` for more details on
+plugin development.)
+
+At the moment, all the existing plugin options are valid only in tree sections:
+
+``plugin_buglink_name``
+    Name of the tree's bug tracker installation, e.g. ``Mozilla's Bugzilla``
+    
+``plugin_buglink_regex``
+    Regex for finding bug references to link in the source code. Default:
+    ``(?i)bug\s+#?([0-9]+)``
+
+``plugin_buglink_url``
+    URL pattern for building links to tickets. ``%s`` will be replaced with the
+    ticket number. The option should include the URL scheme.
+
+``plugin_omniglot_p4web``
+    The URL to the root of a p4web installation. Default: ``http://p4web/``
