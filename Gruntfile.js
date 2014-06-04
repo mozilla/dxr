@@ -6,7 +6,7 @@ module.exports = function(grunt) {
                 files: {
                     'dxr/static/css/dist/dxr.css': [
                         'dxr/templates/*.html',
-                        'dxr/templates/partial/*.html'
+                        'dxr/templates/*.html'
                     ]
                 },
                 options: {
@@ -21,20 +21,14 @@ module.exports = function(grunt) {
             precompile: {
                 baseDir: 'dxr/static/templates/',
                 src: [
-                    'dxr/static/templates/partial/results.html',
-                    'dxr/static/templates/partial/switch_tree.html',
+                    'dxr/static/templates/results.html',
+                    'dxr/static/templates/switch_tree.html',
                     'dxr/static/templates/context_menu.html',
                     'dxr/static/templates/path_line.html',
                     'dxr/static/templates/results_container.html'
                 ],
                 dest: 'dxr/static/js/templates.js',
-                options: {
-                    name: function(filename) {
-                        var re = /(partial\/)?(|\w+.\w{4})$/g;
-                        return re.exec(filename)[0];
-                    }
                 }
-            }
         },
         jshint: {
             all: ['Gruntfile.js', 'dxr/static/js/*.js']
@@ -42,8 +36,8 @@ module.exports = function(grunt) {
         watch: {
             nunjucks: {
                 files: [
-                    'dxr/static/templates/partial/results.html',
-                    'dxr/static/templates/partial/switch_tree.html',
+                    'dxr/static/templates/results.html',
+                    'dxr/static/templates/switch_tree.html',
                     'dxr/static/templates/context_menu.html',
                     'dxr/static/templates/path_line.html',
                     'dxr/static/templates/results_container.html'
