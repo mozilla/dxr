@@ -27,7 +27,7 @@ Booting And Building
 ====================
 
 The easiest way to get things set up is to use the included, preconfigured
-Vagrant_ VM.
+Vagrant_ VM. You'll need Vagrant and a provider for it. We recommend VirtualBox.
 
 First, run the following commands in DXR's top-level directory::
 
