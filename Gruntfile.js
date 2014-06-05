@@ -23,6 +23,8 @@ module.exports = function(grunt) {
                 src: [
                     'dxr/static/templates/partial/results.html',
                     'dxr/static/templates/partial/switch_tree.html',
+                    'dxr/static/templates/partial/breadcrumbs.html',
+                    'dxr/static/templates/partial/data_no_results.html',
                     'dxr/static/templates/context_menu.html',
                     'dxr/static/templates/path_line.html',
                     'dxr/static/templates/results_container.html'
@@ -44,6 +46,8 @@ module.exports = function(grunt) {
                 files: [
                     'dxr/static/templates/partial/results.html',
                     'dxr/static/templates/partial/switch_tree.html',
+                    'dxr/static/templates/partial/breadcrumbs.html',
+                    'dxr/static/templates/partial/data_no_results.html',
                     'dxr/static/templates/context_menu.html',
                     'dxr/static/templates/path_line.html',
                     'dxr/static/templates/results_container.html'

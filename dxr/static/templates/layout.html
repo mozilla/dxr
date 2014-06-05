@@ -67,7 +67,7 @@
     </form>
 
     {% block content %}
-      {% call data_no_results() %}{% endcall %}
+      {{ data_no_results() }}
     {% endblock %}
 
     {% block footer %}

@@ -4,7 +4,7 @@
   {% call data_no_results() %}
     <div class="breadcrumbs">
       {%- for path, name in paths_and_names -%}
-        {%- if not loop.first or loop.last -%}
+        {%- if not loop.first or loop.last and loop.length != 1 -%}
           <span class="path-separator">/</span><a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
         {%- else -%}
           <a href="{{ wwwroot }}{{ path }}">{{ name }}</a>
