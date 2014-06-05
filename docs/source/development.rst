@@ -1,5 +1,46 @@
+===========
 Development
 ===========
+
+Here's the quickest way to start hacking on DXR.
+
+.. include:: download-boot-and-build.rst
+
+Making And Serving An Example Index
+===================================
+
+The folder-based test cases make decent scratch deployments when developing,
+suitable for manually playing with your changes. ``test_basic`` is a good one
+to start with. To get it running... ::
+
+    cd ~/dxr/tests/test_basic
+    make
+    dxr-serve.py -a target
+
+You can then surf to http://33.33.33.77:8000/ from the host machine and play around.
+
+After Making Changes
+====================
+
+After you make changes to the code, you may have to rebuild various bits of the system:
+
+``make`` (at the root level of the project)
+    Rebuild the C-based compiler plugins, TriLite, and the JS templates.
+
+``make templates``
+    Just recompile the JS the template files used on the client side. Run this
+    after changing any of the templates listed in :file:`Gruntfile.js`. You can
+    also leave ``grunt watch`` running, and it will take care of this for you.
+
+``make`` inside :file:`tests/test_basic`
+    Re-render the HTML and regenerate the SQLite DB in :file:`test_basic`. Run 
+
+architecture
+tests
+plugins
+
+
+
 
 *This document details how to get started with DXR development.*
 
@@ -66,3 +107,12 @@ please add it, and document its origin in this document. Feel free to use
 existing icons, but keep in mind that they use semantic naming. So don't use
 the ``search`` icon for zoom, because we may later change the search icon from
 a magnifying glass to binoculars.
+
+
+Troubleshooting
+===============
+
+Why is my copy of DXR acting errating, failing at searches, making requests for JS templates that shouldn't exist, and just generally not appearing to be in sync with my changes?
+    Have you run ``python setup.py install`` for DXR at some point? Never, ever do that in development; use ``python setup.py develop`` instead. Otherwise, you will confuse yourself.  ever under any circumstances do ``python setup.py install`` when developing.
+
+format version

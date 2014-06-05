@@ -12,37 +12,7 @@ The fastest path to a working DXR instance is fourfold:
 But first, we have some installation to do.
 
 
-Downloading DXR
-===============
-
-Using git, clone the DXR repository::
-
-   $ git clone --recursive https://github.com/mozilla/dxr.git
-
-Remember the :option:`--recursive` option; DXR depends on the `TriLite SQLite
-extension`_, which is included in the repository as a git submodule.
-
-
-Booting And Building
-====================
-
-The easiest way to get things set up is to use the included, preconfigured
-Vagrant_ VM. You'll need Vagrant and a provider for it. We recommend VirtualBox.
-
-First, run the following commands in DXR's top-level directory::
-
-   $ vagrant up
-   $ vagrant ssh
-
-Then, run this inside the VM::
-
-   $ cd ~/dxr
-   $ make
-
-.. note::
-
-   The Vagrant image is built for VirtualBox 4.2.0.  If your version is older,
-   the image might not work as expected.
+.. include:: download-boot-and-build.rst
 
 
 Configuration
@@ -86,7 +56,7 @@ Indexing
 Now that you've told DXR about your codebase, it's time to build an
 :term:`index` (sometimes also called an :term:`instance`)::
 
-    $ dxr-build.py dxr.config
+    dxr-build.py dxr.config
 
 .. note::
 
@@ -96,25 +66,25 @@ Now that you've told DXR about your codebase, it's time to build an
     directory, rename it :file:`vagrantconfig_local.yaml`, and edit it to
     increase the VM's RAM::
 
-        $ cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
-        $ vi vagrantconfig_local.yaml
+        cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
+        vi vagrantconfig_local.yaml
 
     Then restart the VM. Within the VM... ::
 
-        $ sudo shutdown -h now
+        sudo shutdown -h now
 
     Then, from the host machine... ::
 
-        $ vagrant up
-        $ vagrant ssh
+        vagrant up
+        vagrant ssh
 
 .. note::
 
     If you have trouble getting your own code to index, step back and see if
     you can get one of the included test cases to work::
 
-        $ cd ~/dxr/tests/test_basic
-        $ make
+        cd ~/dxr/tests/test_basic
+        make
 
     If that works, it's just a matter of getting your configuration right. Pop
     into #static on irc.mozilla.org if you need a hand.
@@ -126,7 +96,7 @@ Serving Your Index
 Congratulations; your index is built! Now, spin up DXR's development server,
 and see what you've wrought::
 
-    $ dxr-serve.py --all /path/to/the/output
+    dxr-serve.py --all /path/to/the/output
 
 Surf to http://33.33.33.77:8000/ from the host machine, and poke around
 your fancy new searchable codebase.
@@ -141,9 +111,3 @@ your fancy new searchable codebase.
     Run :command:`ldconfig` inside the virtual machine to sort out the shared
     library linking problem. Then, re-run :program:`dxr-serve.py`, and all
     should work as expected.
-
-
-
-.. _TriLite SQLite extension: https://github.com/jonasfj/trilite
-
-.. _Vagrant: http://www.vagrantup.com/
