@@ -2,6 +2,7 @@
 Development
 ===========
 
+
 Architecture
 ------------
 
@@ -74,8 +75,9 @@ Changes to server-side HTML templates or the DB schema:
     Run ``make`` inside :file:`tests/test_basic`.
 
 Stop :program:`dxr-serve.py`, run the build step, and then fire up the server
-again. If you're changing Python code that runs only at request time, the
-server should notice and restart itself a few seconds after you save.
+again. If you're changing Python code that runs only at request time, you
+shouldn't need to do anything; :program:`dxr-serve.py` should notice and
+restart itself a few seconds after you save.
 
 
 Testing
@@ -99,7 +101,7 @@ DXR supports two kinds of tests:
    deletes the instance. If you want to examine the instance manually
    for troubleshooting, set this to ``False``.
 
-2. A heavier sort of test which consists of a full DXR instance on disk.
+2. A heavier sort which consists of a full DXR instance on disk.
    ``test_ignores`` is an example. Within these instances are one or
    more Python files containing subclasses of ``DxrInstanceTestCase``
    which express the actual tests. These instances can be built like any
@@ -145,7 +147,7 @@ instance, of the new format, has been built before deploying the change.
 
 If you aren't sure whether to bump the format version, you can always build an
 instance using the old code, then check out the new code and try to serve the
-old instance with it. If it works, you're probably safe not bumping the format.
+old instance with it. If it works, you're probably safe not bumping the version.
 
 
 Coding Conventions
@@ -156,6 +158,8 @@ Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
 .. _PEP 8: http://www.python.org/dev/peps/pep-0008/
 
 
+.. _writing-plugins:
+
 Writing Plugins
 ---------------
 
@@ -164,7 +168,7 @@ Writing Plugins
     DXR is in the middle of a plugin system redesign that will move much of
     DXR's core functionality to plugins, eliminate singletons and custom
     loading tricks, and increase the capabilities of the plugin API. This
-    chapter documents the old system.
+    section documents the old system.
 
 Structure and API
 =================
@@ -246,8 +250,8 @@ A plugin folder must contain these 3 files:
 Crash Early, Crash Often
 ========================
 
-Since DXR's indexer generally runs without manual supervision, it's best to err
-on the side of crashing rather than risk incorrectness. Any error that could
+Since DXR's indexer generally runs without manual supervision, it's better to
+err on the side of crashing than to risk incorrectness. Any error that could
 make a plugin emit inaccurate output should be fatal. This keeps DXR's
 structural queries trustworthy.
 
@@ -265,8 +269,8 @@ that plugins document their keys in the plugin section of
 :doc:`configuration`.
 
 
-FAQ
----
+Troubleshooting
+---------------
 
 Why is my copy of DXR acting erratic, failing at searches, making requests for JS templates that shouldn't exist, and just generally not appearing to be in sync with my changes?
     Did you run ``python setup.py install`` for DXR at some point? Never, ever

@@ -3,10 +3,10 @@ Deployment
 ==========
 
 Once you decide to put DXR into production for use by multiple people, it's
-time to move beyond the :doc:`getting-started` instructions. You need real
-machines—not Vagrant VMs—and a real web server like Apache. This chapter helps
-you deploy DXR on the Linux machines [#]_ of your choice and configure them to
-handle multi-user traffic volumes.
+time to move beyond the :doc:`getting-started` instructions. You likely need
+real machines—not Vagrant VMs—and you definitely need a robust web server like
+Apache. This chapter helps you deploy DXR on the Linux machines [#]_ of your
+choice and configure them to handle multi-user traffic volumes.
 
 DXR generates an :term:`index` for one or more source trees offline. This is
 well suited to a dedicated build server. The generated index is then
@@ -22,8 +22,8 @@ OS Packages
 
 Since you're no longer using the Vagrant VM, you'll need to install several
 packages on both your build and web servers. These are the Ubuntu package
-names, but most of them are named clearly enough to make obvious the
-equivalents on other distributions:
+names, but they should be clear enough to map to their equivalents on other
+distributions:
 
 *  make
 *  build-essential
@@ -50,7 +50,7 @@ though you'd then need to build DXR on a different machine and transfer it over.
     The list of packages above is maintained by hand and might fall behind,
     despite our best efforts. If you suspect something is missing, look at
     :file:`vagrant_provision.sh` in the DXR source tree, which does the actual
-    setup of the VM, which is itself automatically tested.
+    setup of the VM and is automatically tested.
 
 Python Packages
 ---------------
@@ -107,7 +107,9 @@ the env is activated. ::
 It's also convenient to install the TriLite library globally. Otherwise,
 :program:`dxr-build.py` will complain that it can't find the TriLite SQLite
 extension unless you prepend ``LD_LIBRARY_PATH=dxr/trilite`` at every
-invocation. To install TriLite... ::
+invocation. It's also a challenge to get a web server to see the lib, since you
+don't have a ready opportunity to interpose an environment variable. To install
+TriLite... ::
 
     cp dxr/trilite/libtrilite.so /usr/local/lib/
     sudo ldconfig
@@ -131,7 +133,7 @@ kick off the indexing process::
     for just one source tree. This is useful for building each tree on a
     different machine, though it does leave you with the task of stitching the
     resulting single-tree indexes together, a matter of moving some directories
-    around and tweaking the :file:`config.py` file.
+    around and tweaking the generated :file:`config.py` file.
 
 The index is generated in the directory specified by the ``target_folder``
 directive. It contains a minimal configuration file, a SQLite database to
@@ -142,8 +144,8 @@ Generally, you use something like cron to repeat indexing on a schedule or in
 response to source tree changes. After an indexing run, the index has to be
 made available to the web servers. One approach is to share it on a common NFS
 volume (and use an atomic :command:`mv` to swap the new one into place).
-Alternatively, you can simply copy the index to the web server. (Of course, an
-atomic :command:`mv` remains advisable.)
+Alternatively, you can simply copy the index to the web server (in which case
+an atomic :command:`mv` remains advisable, of course).
 
 
 Serving Your Index
@@ -168,8 +170,8 @@ are unable to install the TriLite library globally on your system::
 
     LD_LIBRARY_PATH=dxr/trilite dxr-serve.py target
 
-mod_wsgi
---------
+Apache and mod_wsgi
+-------------------
 
 DXR is also a WSGI application and can be deployed on Apache with mod_wsgi_, on
 uWSGI_, or on any other web server that supports the WSGI protocol.
@@ -209,9 +211,11 @@ Finally, make sure mod_wsgi is installed and enabled. Then, restart Apache::
     sudo apache2ctl stop
     sudo apache2ctl start
 
-Changes to
-:file:`/etc/apache2/envvars` don't take effect if you only run :command:`sudo
-apache2ctl restart`.
+
+.. note::
+
+    Changes to :file:`/etc/apache2/envvars` don't take effect if you run only
+    :command:`sudo apache2ctl restart`.
 
 Additional configuration might be required, depending on your version
 of Apache, your other Apache configuration, and where DXR is
@@ -246,8 +250,8 @@ Here is a complete example config, for reference::
 uWSGI
 -----
 
-uWSGI is the new hotness and well worth considering. The first person to deploy
-DXR under uWSGI should document it here.
+uWSGI_ is the new hotness and well worth considering. The first person to
+deploy DXR under uWSGI should document it here.
 
 
 Upgrading

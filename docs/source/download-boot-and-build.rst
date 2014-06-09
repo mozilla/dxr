@@ -14,10 +14,11 @@ Booting And Building
 
 DXR runs only on Linux at the moment (and possibly other UNIX-like operating
 systems). The easiest way to get things set up is to use the included,
-preconfigured Vagrant_ VM. You'll need Vagrant and a provider for it. We
-recommend VirtualBox.
+preconfigured Vagrant_ VM. You'll need Vagrant and a virtualization provider
+for it. We recommend VirtualBox.
 
-First, run these commands in DXR's top-level directory::
+Once you've installed VirtualBox and Vagrant, run these commands in DXR's
+top-level directory::
 
    vagrant up
    vagrant ssh

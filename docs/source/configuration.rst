@@ -3,24 +3,28 @@ Configuration
 =============
 
 DXR learns how to index your source trees by means of an ini-formatted
-configuration file. It gets passed to :program:`dxr-build.py` at indexing time::
+configuration file:
+
+.. include:: example-configuration.rst
+
+It gets passed to :program:`dxr-build.py` at indexing time::
 
     dxr-build.py my_config_file.config
 
 Sections
 ========
 
-The configuration file is divided into sections. The ``DXR`` section holds global
-options; other sections describe trees to be indexed.
+The configuration file is divided into sections. The ``[DXR]`` section holds
+global options; other sections describe trees to be indexed.
 
 You can use all the fancy interpolation features of Python's
 `ConfigParser <http://docs.python.org/library/configparser.html>`__ class to
 save repetition.
 
-DXR Section
------------
+[DXR] Section
+-------------
 
-Here are the options that can live in the ``DXR`` section:
+Here are the options that can live in the ``[DXR]`` section:
 
 ``target_folder``
     Where to put the built :term:`index`. **Required.**
@@ -88,8 +92,8 @@ here).
 Tree Sections
 -------------
 
-Any section that is not named ``DXR`` represents a tree to be indexed. Here are
-the options describing a tree:
+Any section that is not named ``[DXR]`` represents a tree to be indexed. Here
+are the options describing a tree:
 
 ``build_command``
     Command for building your source code. Default:
@@ -101,11 +105,11 @@ the options describing a tree:
 
 ``disabled_plugins``
    Plugins disabled in this tree, in addition to ones already disabled in the
-   ``DXR`` section. Default: ``*``
+   ``[DXR]`` section. Default: ``*``
 
 ``enabled_plugins``
     Plugins enabled in this tree. Default: ``*``. It is impossible to enable a
-    plugin not already enabled in the ``DXR`` section.
+    plugin not already enabled in the ``[DXR]`` section.
 
 ``ignore_patterns``
     Space-separated list of Unix `shell-style
@@ -129,10 +133,10 @@ Plugin-Specific Options
 =======================
 
 Options prefixed with ``plugin_`` (except ``plugin_folder``) are reserved for
-use by plugins. These options can appear in the global ``DXR`` section or in
+use by plugins. These options can appear in the global ``[DXR]`` section or in
 tree sections. Plugin developers should name their config options like
-``plugin_<plugin name>_<option>``. (See :doc:`plugins` for more details on
-plugin development.)
+``plugin_<plugin name>_<option>``. (See :ref:`writing-plugins` for more details
+on plugin development.)
 
 At the moment, all the existing plugin options are valid only in tree sections:
 
