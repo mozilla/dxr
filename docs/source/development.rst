@@ -166,6 +166,7 @@ FAQ
 ---
 
 Why is my copy of DXR acting erratic, failing at searches, making requests for JS templates that shouldn't exist, and just generally not appearing to be in sync with my changes?
-    Have you run ``python setup.py install`` for DXR at some point? Never, ever
+    Did you run ``python setup.py install`` for DXR at some point? Never, ever
     do that in development; use ``python setup.py develop`` instead. Otherwise,
-    you will end up with various files copied into your virtualenv, and your edits to the originals will have no effect.
+    you will end up with various files copied into your virtualenv, and your
+    edits to the originals will have no effect.

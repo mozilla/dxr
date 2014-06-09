@@ -108,6 +108,6 @@ your fancy new searchable codebase.
        Server Error
        Database error: no such module: trilite
 
-    Run :command:`ldconfig` inside the virtual machine to sort out the shared
-    library linking problem. Then, re-run :program:`dxr-serve.py`, and all
-    should work as expected.
+    Run :command:`sudo ldconfig` inside the virtual machine to sort out the
+    shared library linking problem. Then, re-run :program:`dxr-serve.py`, and
+    all should work as expected.
