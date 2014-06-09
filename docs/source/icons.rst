@@ -1,10 +1,17 @@
+============
 Icon Credits
 ============
 
-DXR's icons come from many different sources. Credit is given here.
+DXR uses third-party icons from a variety of sources.
+
+If you add an icon, please document its origin in this document. Feel free to
+use existing icons, but keep in mind that they use semantic naming. So don't
+use the ``search`` icon for zoom, as we may later change the search icon from a
+magnifying glass to, for example, binoculars.
+
 
 From Silk
----------
+=========
 
 Following icons originates from
 `Silk <http://www.famfamfam.com/lab/icons/silk/>`__ by Mark James,
@@ -44,14 +51,14 @@ licensed under Creative Commons Attribution 2.5 License.
 -  ``mimetypes/mm`` (Remixed by DXR developers)
 
 From FatCow Hosting
--------------------
+===================
 
 Following icons originates from
 `FatCow <http://www.fatcow.com/free-icons>`__ by FatCow hosting,
 licensed under Creative Commons Attribution 3.0 License.
 
 From Fugue
-----------
+==========
 
 Following icons originates from
 `Fugue <http://p.yusukekamiyamane.com/>`__ by Yusuke Kamiyamane,
@@ -68,7 +75,7 @@ licensed under Creative Commons Attribution 3.0 License.
 -  ``mimetypes/tex``
 
 From SharpDevelop
------------------
+=================
 
 Following icons originates from
 `SharpDevelop <http://www.icsharpcode.net/OpenSource/SD/>`__ a mix of
@@ -89,7 +96,7 @@ licensed under GNU LGPL.
 -  ``enum``
 
 From Tango Project
-------------------
+==================
 
 Following icons originates from
 `Tango <http://tango.freedesktop.org/>`__ by the Tango desktop project,
