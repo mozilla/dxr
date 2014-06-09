@@ -23,18 +23,24 @@ Contents
     :maxdepth: 2
     :numbered:
 
-    getting-started.rst
-    configuration.rst
-    deployment.rst
-    use.rst
-    development.rst
-    icons.rst
-    glossary.rst
+    getting-started
+    configuration
+    deployment
+    use
+    development
 
 
-Indices and tables
-==================
+Back Matter
+===========
 
+.. toctree::
+   :hidden:
+
+   glossary
+   icons
+
+* :doc:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+* :doc:`icons`
