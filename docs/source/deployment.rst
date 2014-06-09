@@ -43,7 +43,7 @@ though you'd then need to build DXR on a different machine and transfer it over.
    named :program:`nodejs`, but DXR expects it to be named :program:`node`. One
    simple solution is to add a symlink::
 
-      $ sudo ln -s /usr/bin/nodejs /usr/bin/node
+      sudo ln -s /usr/bin/nodejs /usr/bin/node
 
 .. note::
 
@@ -59,16 +59,16 @@ You'll also need several third-party Python packages. In order to isolate the
 specific versions we need from the rest of the system, use
 Virtualenv_::
 
-   $ virtualenv dxr_venv  # Create a new virtual environment.
-   $ source dxr_venv/bin/activate
+   virtualenv dxr_venv  # Create a new virtual environment.
+   source dxr_venv/bin/activate
 
 You'll need to repeat that :command:`activate` command each time you want to
 use DXR from a new shell.
 
 Now, with your new virtualenv active, you can install the requisite packages::
 
-    $ cd dxr
-    $ ./peep.py install -r requirements.txt
+    cd dxr
+    ./peep.py install -r requirements.txt
 
 
 Building
@@ -82,7 +82,7 @@ paths to the right ones.
 
 Then, build DXR from its top-level directory::
 
-    $ make
+    make
 
 It will build the :file:`libtrilite.so` library in the :file:`trilite`
 directory and
@@ -91,7 +91,7 @@ compiling the JavaScript-based templates.
 
 To assure yourself that everything has built correctly, you can run the tests::
 
-    $ make test
+    make test
 
 
 Installation
@@ -102,15 +102,15 @@ optional step, but it lets you call the :program:`dxr-index.py` and
 :program:`dxr-build.py` commands without specifying their full paths, as long as
 the env is activated. ::
 
-    $ python setup.py install
+    python setup.py install
 
 It's also convenient to install the TriLite library globally. Otherwise,
 :program:`dxr-build.py` will complain that it can't find the TriLite SQLite
 extension unless you prepend ``LD_LIBRARY_PATH=dxr/trilite`` at every
 invocation. To install TriLite... ::
 
-    $ cp dxr/trilite/libtrilite.so /usr/local/lib/
-    $ sudo ldconfig
+    cp dxr/trilite/libtrilite.so /usr/local/lib/
+    sudo ldconfig
 
 
 Indexing
@@ -123,7 +123,7 @@ As in :doc:`getting-started`, copy your projects' source trees to the build
 server, and create a config file. (See :doc:`configuration` for details.) Then,
 kick off the indexing process::
 
-    $ dxr-build.py dxr.config
+    dxr-build.py dxr.config
 
 .. note::
 
@@ -158,7 +158,7 @@ The :program:`dxr-serve.py` script is a tiny web server for publishing an
 index. Though it is underpowered for production use, it can come in handy for
 testing that the index arrived undamaged and DXR's dependencies are installed::
 
-    $ dxr-serve.py target
+    dxr-serve.py target
 
 Then visit http://localhost:8000/.
 
@@ -166,7 +166,7 @@ As with :program:`dxr-build.py` above, you can pass an
 :envvar:`LD_LIBRARY_PATH` environment variable to :program:`dxr-serve.py` if you
 are unable to install the TriLite library globally on your system::
 
-   $ LD_LIBRARY_PATH=dxr/trilite dxr-serve.py target
+    LD_LIBRARY_PATH=dxr/trilite dxr-serve.py target
 
 mod_wsgi
 --------
