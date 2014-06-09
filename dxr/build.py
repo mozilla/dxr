@@ -28,6 +28,9 @@ import dxr.mime
 from dxr.query import filter_menu_items
 from dxr.utils import connect_db, load_template_env, open_log, browse_url
 
+import hglib
+import git
+
 try:
     from itertools import compress
 except ImportError:
@@ -107,8 +110,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         jinja_env,
         'config.py.jinja',
         os.path.join(config.target_folder, 'config.py'),
-        dict(trees=repr(OrderedDict((t.name, t.description)
-                                    for t in config.trees)),
+        dict(trees={t.name: {'description': t.description, 'vcs_folder': t.vcs_folder, 'vcs_type': t.vcs_type} for t in config.trees},
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
@@ -177,11 +179,62 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         conn.commit()
         conn.close()
 
+        
+        if _verify_tree_vcs(tree) == True:
+            print "Copying vcs_folder:"
+            _cp_vcs_directory(os.getcwd(), tree.vcs_folder, tree.vcs_type)
+        else:
+            print "Skipping VCS folder preservation"
+
         # Save the tree finish time
         delta = datetime.now() - start_time
         print "(finished building '%s' in %s)" % (tree.name, delta)
-
+        
     # Print a neat summary
+
+
+def _cp_vcs_directory(src, dst, vcs_type):
+    """ Move a vcs directory to a target directory.
+
+    :arg src: source directory
+    :arg dst: destination directory
+    :arg vcs_type: hg or git so far
+    """
+
+    try:
+        # Note that the .%s prepends a . to the vcs_type
+        shutil.copytree(src + '/.%s' %(vcs_type), dst + '/.%s' %(vcs_type))
+        print " - From: %s/.%s" % (src, vcs_type)
+        print " - To:   %s/.%s" % (dst, vcs_type)
+    except OSError as exc:
+        print "%s./%s already exists. make clean or rm will remove it" %(dst, vcs_type)
+        raise exc
+
+
+def _verify_tree_vcs(tree):
+    """Open a VCS directory in a code tree and check its type.
+
+    :arg folder: the current working directory
+    :arg tree: the TreeConfig object with vcs_folder and vcs_type attributes
+
+    """
+
+    cwd = os.getcwd()
+    if tree.vcs_type == 'git':
+        try:
+            git.Repo(cwd)
+            return True
+        except: # Any and all git.Repo errors result in no repo
+            return False
+    if tree.vcs_type == 'hg':
+        try:
+            hglib.open(cwd)
+            return True
+        except: # Any and all hglib errors result in no repo
+            return False
+    else:
+        # Neither git nor hg? then no VCS for you!
+        return False
 
 
 def ensure_folder(folder, clean=False):

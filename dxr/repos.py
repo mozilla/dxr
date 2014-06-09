@@ -1,31 +1,9 @@
+import git
+import hglib
 import marshal
 import os
 import subprocess
 import urlparse
-
-import dxr.plugins
-
-"""Omniglot - Speaking all commonly-used version control systems.
-At present, this plugin is still under development, so not all features are
-fully implemented.
-
-Omniglot first scans the project directory looking for the hallmarks of a VCS
-(such as the .hg or .git directory). It also looks for these in parent
-directories in case DXR is only parsing a fraction of the repository. Once this
-information is found, it attempts to extract upstream information about the
-repository. From this information, it builds the necessary information to
-reproduce the links.
-
-Currently supported VCSes and upstream views:
-- git (github)
-- mercurial (hgweb)
-
-Todos:
-- add gitweb support for git
-- add cvs, svn, bzr support
-- produce in-DXR blame information using VCSs
-- check if the mercurial paths are specific to Mozilla's customization or not.
-"""
 
 # Global variables
 tree = None
@@ -48,6 +26,10 @@ class VCS(object):
     def get_vcs_name(self):
         """Return a recognizable name for the VCS."""
         return type(self).__name__
+
+    def get_repo_name(self):
+        """Return the directory name of the VCS."""
+        raise NotImplemented
 
     def invoke_vcs(self, args):
         """Return the result of invoking said command on the repository, with
@@ -93,8 +75,18 @@ class Mercurial(VCS):
             self.revision = self.revision[:-1]
 
         # Make and normalize the upstream URL
-        remote = self.invoke_vcs(['hg', 'paths', 'default']).strip("\n")
-        self.upstream, self.upstream_name = synth_web_url(remote)
+        upstream = urlparse.urlparse(self.invoke_vcs(['hg', 'paths', 'default']).strip())
+        recomb = list(upstream)
+        if upstream.scheme == 'ssh':
+            recomb[0] == 'http'
+        recomb[1] = upstream.hostname # Eliminate any username stuff
+        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
+        if not upstream.path.endswith('/'):
+            recomb[2] += '/' # Make sure we have a '/' on the end
+        recomb[3] = recomb[4] = recomb[5] = '' # Just those three
+        # want this for permalink names and url root
+        self.upstream_name = recomb[2]
+        self.upstream = urlparse.urlunparse(recomb)
 
         # Find all untracked files
         self.untracked_files = set(line.split()[1] for line in
@@ -106,6 +98,17 @@ class Mercurial(VCS):
             dirs.remove('.hg')
             return Mercurial(path)
         return None
+
+    def get_file_revision(self, args):
+        # parse the incoming args into revision and file names
+        revision = args[0]
+        file = args[1]
+        # open hg repo
+        repo = hglib.open(self.root)
+        # extract file contents at given revision
+        # hglib.cat requires a list as an argument even for a single file
+        code = repo.cat([self.root + '/' + file], revision)
+        return code 
 
     def get_rev(self, path):
         return self.revision
@@ -129,14 +132,11 @@ class Git(VCS):
         self.untracked_files = set(line for line in
             self.invoke_vcs(['git', 'ls-files', '-o']).split('\n')[:-1])
         self.revision = self.invoke_vcs(['git', 'rev-parse', 'HEAD'])
-        remote = self.invoke_vcs(['git', 'config', '--get-regex', '^remote\..+\.url$']).strip("\n")
-        try:
-            name, url = remote.split()
-            # this should apply to any upstream git repo, not just github
-            self.upstream, self.upstream_name = synth_web_url(url)
-            print ('self upstreadm', self.upstream_name)
-        except ValueError as exc:
-            raise exc
+        source_urls = self.invoke_vcs(['git', 'remote', '-v']).split('\n')
+        for src_url in source_urls:
+            name, url, _ = src_url.split()
+            self.upstream = self.synth_web_url(url)
+            break
 
     @staticmethod
     def claim_vcs_source(path, dirs):
@@ -144,6 +144,16 @@ class Git(VCS):
             dirs.remove('.git')
             return Git(path)
         return None
+
+    def get_file_revision(self, args):
+        # parse the incoming args into revision and file names
+        revision = args[0]
+        file = args[1]
+        # open the underlying git repo
+        repo = git.Repo(self.root)
+        # call git show on the file
+        code = repo.git.execute(['git','show', '%s:%s' % (revision, file) ])
+        return code
 
     def get_rev(self, path):
         return self.revision[:10]
@@ -161,6 +171,19 @@ class Git(VCS):
 
     def generate_raw(self, path):
         return self.upstream + "/raw/" + self.revision + "/" + path
+
+    def synth_web_url(self, repo):
+        if repo.startswith("git@github.com:"):
+            self._is_github = True
+            return "https://github.com/" + repo[len("git@github.com:"):]
+        elif repo.startswith("git://github.com/"):
+            self._is_github = True
+            if repo.endswith(".git"):
+                repo = repo[:-len(".git")]
+            return "https" + repo[len("git"):]
+        else:
+            return repo
+        raise Exception("I don't know what's going on")
 
 
 class Perforce(VCS):
@@ -180,6 +203,9 @@ class Perforce(VCS):
         if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
             return Perforce(path)
         return None
+
+    def get_file_revision(self, args):
+        raise NotImplemented
 
     def _p4run(self, args):
         ret = []
@@ -229,30 +255,18 @@ every_vcs = [Mercurial, Git, Perforce]
 
 
 # Load global variables
-def load(tree_, conn):
+def load(tree_, conn=None):
+    # conn looks to be unused?
     global tree, lookup_order
     tree = tree_
     # Find all of the VCS's in the source directory
-    for cwd, dirs, files in os.walk(tree.source_folder):
+    for cwd, dirs, files in os.walk(tree.get_root_dir()):
         for vcs in every_vcs:
             attempt = vcs.claim_vcs_source(cwd, dirs)
             if attempt is not None:
                 source_repositories[attempt.root] = attempt
-
-    # It's possible that the root of the tree is not a VCS by itself, so walk up
-    # the hierarchy until we find a parent folder that is a VCS. If we can't
-    # find any, than no VCSs exist for the top-level of this repository.
-    directory = tree.source_folder
-    while directory != '/' and directory not in source_repositories:
-        directory = os.path.dirname(directory)
-        for vcs in every_vcs:
-            attempt = vcs.claim_vcs_source(directory, os.listdir(directory))
-            if attempt is not None:
-                source_repositories[directory] = attempt
-    # Note: we want to make sure that we look up source repositories by deepest
-    # directory first.
-    lookup_order = source_repositories.keys()
-    lookup_order.sort(key=len, reverse=True)
+    # for functions that need it, return the source_repositories, e.g. permalink route in flask
+    return source_repositories
 
 
 def find_vcs_for_file(path):
@@ -268,76 +282,3 @@ def find_vcs_for_file(path):
         if vcs.is_tracked(os.path.relpath(path, vcs.get_root_dir())):
             return vcs
     return None
-
-
-def synth_web_url(repo):
-    """Parse a VCS remote URL into usable names and paths.
-    This function handles both Mercurial and Git remotes, but no Perforce or SVN (yet)
-    """
-
-    # do some special checks for github to cover most git urls folks might use
-    if repo.startswith("git@github.com:"):
-        upstream = "https://github.com/" + repo[len("git@github.com:"):]
-        upstream_name = repo[len("git@github.com:"):].strip(".git").split("/")
-        upstream_name = upstream_name[len(upstream_name)-1] # take the last element of the url
-    elif repo.startswith("git://github.com/"):
-        if repo.endswith(".git"):
-            repo = repo.strip(".git")
-        upstream = "https" + repo[len("git"):]
-        upstream_name = repo[len("git"):].split("/")
-        upstream_name = upstream_name[len(upstream_name)-1] # take the last element of the url
-    # handle all other git remotes and Mecurial here
-    else:
-        upstream = urlparse.urlparse(repo)
-        recomb = list(upstream)
-        if upstream.scheme == 'ssh':
-            recomb[0] == 'http'
-        recomb[1] = upstream.hostname # Eliminate any username stuff
-        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
-        recomb[3] = recomb[4] = recomb[5] = '' # Just those three
-        # want this for permalink names and url root
-        upstream_name = recomb[2].split("/")
-         # take the last element of the path and clean it in case it's a git repo
-        upstream_name = upstream_name[len(upstream_name)-1].strip(".git")
-        upstream = urlparse.urlunparse(recomb)
-    return upstream, upstream_name
-
-
-class LinksHtmlifier(object):
-    """Htmlifier which adds blame and external links to VCS web utilities."""
-    def __init__(self, path):
-        if not os.path.isabs(path):
-            path = os.path.join(tree.source_folder, path)
-        self.vcs = find_vcs_for_file(path)
-        if self.vcs is not None:
-            self.path = os.path.relpath(path, self.vcs.get_root_dir())
-            self.name = self.vcs.get_vcs_name()
-
-    def refs(self):
-        return []
-
-    def regions(self):
-        return []
-
-    def annotations(self):
-        return []
-
-    def links(self):
-        if self.vcs is None:
-            yield 5, 'Untracked file', []
-            return
-        def items():
-            if self.vcs.upstream_name is not None: # only return a permalink to a named repo
-                yield 'permalink', 'Permalink', '/%s/rev/%s/%s' % (self.vcs.upstream_name, self.vcs.revision, self.path)            
-            yield 'log', 'Log', self.vcs.generate_log(self.path)
-            yield 'blame', 'Blame', self.vcs.generate_blame(self.path)
-            yield 'diff',  'Diff', self.vcs.generate_diff(self.path)
-            yield 'raw', 'Raw', self.vcs.generate_raw(self.path)
-        yield 5, '%s (%s)' % (self.name, self.vcs.get_rev(self.path)), items()
-
-
-def htmlify(path, text):
-    return LinksHtmlifier(path)
-
-
-__all__ = dxr.plugins.htmlifier_exports()
