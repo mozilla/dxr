@@ -246,7 +246,8 @@ Here is a complete example config, for reference::
 uWSGI
 -----
 
-Please write me!
+uWSGI is the new hotness and well worth considering. The first person to deploy
+DXR under uWSGI should document it here.
 
 
 Upgrading
