@@ -9,8 +9,8 @@ Architecture
 
 DXR divides into 2 halves:
 
-1. The :term:`indexer`, :program:`dxr-serve.py`, is a batch job which analyzes
-   code and builds on-disk indices.
+1. The indexer, :program:`dxr-serve.py`, is a batch job which analyzes code and
+   builds on-disk indices.
 
    The indexer hosts various plugins which handle everything from syntax
    coloring to static analysis. The clang plugin, for example, which handles
@@ -127,7 +127,7 @@ To run a single test... ::
 
 If you have trouble, make sure you didn't mistranscribe any colons or
 periods. Also, if you did not install :file:`libtrilite.so` globally, you'll
-need to make sure ``$LD_LIBRARY_PATH`` in your environment points to the
+need to make sure :envvar:`LD_LIBRARY_PATH` in your environment points to the
 :file:`trilite` folder.
 
 
