@@ -2,22 +2,19 @@
 Use
 ===
 
-This chapter holds DXR's end-user documentation.
-
-
 Querying
 ========
 
-A DXR query is a series of space-delimited terms:
+A DXR query is a series of space-delimited :term:`terms<term>`:
 
-* :term:`Filtered terms` are structured as ``<filter name>:<argument>``:
+* :term:`Filtered terms<filtered term>` are structured as ``<filter name>:<argument>``:
 
   * ``callers:frobulate``
   * ``var:num_caribou``
 
   Everything but plain text search is done using filtered terms.
 
-* :term:`Text terms` are just bare text and do simple substring matching:
+* :term:`Text terms<text term>` are just bare text and do simple substring matching:
 
   * ``hello``
   * ``three independent words``
