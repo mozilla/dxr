@@ -23,6 +23,7 @@ Contents
     :maxdepth: 2
     :numbered:
 
+    community
     getting-started
     configuration
     deployment
