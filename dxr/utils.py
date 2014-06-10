@@ -11,18 +11,20 @@ ctypes.CDLL('libtrilite.so').load_trilite_extension()
 
 import os
 from os import dup
-from os.path import join
+from os.path import join, dirname
 import jinja2
 import sqlite3
 import string
 from sys import stdout
 from urllib import quote, quote_plus
 
+import dxr
+
 
 TEMPLATE_DIR = 'static/templates'
 
 _template_env = None
-def load_template_env(temp_folder, dxr_root):
+def load_template_env(temp_folder):
     """Load template environment (lazily)"""
     global _template_env
     if not _template_env:
@@ -33,7 +35,7 @@ def load_template_env(temp_folder, dxr_root):
         # Create jinja2 environment
         _template_env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(
-                        join(dxr_root, TEMPLATE_DIR)),
+                        join(dirname(dxr.__file__), TEMPLATE_DIR)),
                 auto_reload=False,
                 bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache),
                 autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
