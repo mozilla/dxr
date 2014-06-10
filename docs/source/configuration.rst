@@ -96,10 +96,10 @@ Any section that is not named ``[DXR]`` represents a tree to be indexed. Here
 are the options describing a tree:
 
 ``build_command``
-    Command for building your source code. Default:
-   ``make -j $jobs``. Note that ``$jobs`` will be replaced with ``nb_jobs``
-   from the config file or the value of the :option:`-j` option from the
-   :program:`dxr-build.py` command line. If you
+    Command for building your source code. Default: ``make -j $jobs``. Note
+    that ``$jobs`` will be replaced with ``nb_jobs`` from the config file or
+    the value of the :option:`-j` option from the
+    :program:`dxr-build.py` command line. If you
     define a ``build_command`` not containing ``$jobs``, you will be warned,
     but indexing will continue.
 
