@@ -796,7 +796,9 @@ def tag_boundaries(htmlifiers):
                 # Also filter out None starts and ends. I don't know where they
                 # come from. That shouldn't happen and should be fixed in the
                 # plugins.
-                if start is not None and end is not None and start < end:
+                if (start is not None and start != -1 and
+                        end is not None and end != -1 and
+                        start < end):
                     yield start, True, tag
                     yield end, False, tag
 

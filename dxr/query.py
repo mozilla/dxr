@@ -287,6 +287,12 @@ def _highlit_line(content, offsets, markup, markdown, encoding):
     return ''.join(chunks()).lstrip()
 
 
+def _valid_extent(ext):
+    return ext is not None and ext != -1
+
+def _valid_extents(start, end):
+    return _valid_extent(start) and _valid_extent(end)
+
 def _highlit_lines(content, offsets, markup, markdown, encoding):
     """Return a list of (line number, highlit line) tuples.
 
@@ -537,7 +543,8 @@ class SimpleFilter(SearchFilter):
             for term in terms.get(self.param, []):
                 for start, end in execute_sql(self.ext_sql,
                                               [file_id] + self.formatter(term['arg'])):
-                    yield start, end, []
+                    if _valid_extents(start, end):
+                        yield start, end, []
 
 
 class ExistsLikeFilter(SearchFilter):
@@ -583,8 +590,7 @@ class ExistsLikeFilter(SearchFilter):
                     else (like_escape(arg), self.like_expr))
                 for start, end in execute_sql(self.ext_sql % sql_expr,
                                               [file_id, escaped_arg]):
-                    # Nones used to occur in the DB. Is this still true?
-                    if start and end:
+                    if _valid_extents(start, end):
                         yield start, end, []
         if self.ext_sql:
             yield builder()

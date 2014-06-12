@@ -299,6 +299,8 @@ def fixupEntryPath(args, file_key, conn, prefix=None):
 
 def fixupExtent(args, extents_key='extent'):
     if extents_key not in args:
+        args['extent_start'] = -1
+        args['extent_end'] = -1
         return
 
     value = args[extents_key]
