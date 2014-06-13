@@ -129,7 +129,28 @@ class TreeIndexer(object):
     # introduce another kind of plugin: an enumerator.
 
 
-class FileIndexer(object):
+class FileRenderDataSource(object):
+    """A source of data needed to render a file-view page. Abstract."""
+
+    def links(self):
+        """Return an iterable of intra-page nav links."""
+        return []
+
+    def line_refs(self):
+        """Yield an ordered list of extents and menus for each line."""
+        return []
+
+    def line_regions(self):
+        """Yield an ordered list of extents for each line."""
+        return []
+
+    def line_annotations(self):
+        # TODO: Why are these just per line? Shouldn't they return extents like
+        # everybody else? We can still show them per line if we want.
+        return []
+
+
+class FileIndexer(FileRenderDataSource):
     """A source of search and rendering data about one source file"""
 
     def __init__(self, path):
@@ -153,8 +174,6 @@ class FileIndexer(object):
         # We go with pairs rather than a map so we can just chain all these
         # together and pass them to a dict constructor: fewer temp vars.
 
-    def links(self):
-
     def line_morsels(self):
         """Return per-line search data for one file.
 
@@ -167,49 +186,49 @@ class FileIndexer(object):
 
         """
 
-    def line_refs(self):
-        """Yield an ordered list of extents and menus for each line."""
 
-    def line_regions(self):
-        """Yield an ordered list of extents for each line."""
+class FileSkimmer(FileRenderDataSource):
+    """A source of rendering data for a source file generated at request time
 
-    def line_annotations(self):
-        # TODO: Why are these just per line? Shouldn't they return extents like
-        # everybody else? We can still show them per line if we want.
+    This is appropriate for unindexed files (such as old revisions pulled out
+    of a VCS) or for data so large or cheap to produce that it's a bad tradeoff
+    to store it in the index. An instance of me is mostly an opportunity for a
+    shared cache among my methods.
 
-
-class FileSkimmer(dxr.plugins.FileSkimmer):
-    """An opportunity for a shared cache among methods which quickly analyze a
-    file at request time"""
-
-    def __init__(self, path, text, doc_properties=None, line_properties=None):
+    """
+    def __init__(self, conceptual_path, text, file_properties=None, line_properties=None):
         """Construct.
 
-        :arg path: The conceptual path to the file, relative to the tree. Such
-            a file might not exist on disk. This is useful mostly as a hint for
-            syntax coloring.
+        :arg conceptual_path: The conceptual path to the file, relative to the
+            tree. Such a file might not exist on disk. This is useful mostly as
+            a hint for syntax coloring.
         :arg text: The full text of the file
-        :arg doc_properties: Document-wide properties emitted by the indexer,
-            if the document is indexed
-        :arg line_properties: A list of per-line properties emitted by the
-            indexer, if the document is indexed
+
+        If the file is indexed, there will also be...
+
+        :arg file_properties: Dict of file-wide morsels emitted by the indexer
+        :arg line_properties: List of per-line morsel dicts emitted by the
+            indexer
 
         """
 
-    def refs(self):
-        """Yield an ordered list of extents and menus for each line."""
 
-    def regions(self):
-        """Yield an ordered list of extents for each line."""
+class Plugin(object):
+    """A DXR plugin is an indexer, skimmer, and filter set meant to be used
+    together.
 
-    def links(self):
-        """You could slap together a quick and dirty list of functions here if
-        the file wasn't indexed.."""
+    In other words, there is no user-accessible way to subdivide a plugin via
+    configuration; there would be no sense running a plugin's filters if the
+    indexer that was supposed to extract the requisite data never ran.
 
+    If the user should be able to independently enable parts of your plugin,
+    consider splitting those out as separate plugins.
 
-class DxrPlugin(object):
+    """
     def __init__(self, filters=None, tree_indexer=None, file_skimmer=None):
         self.filters = filters or []
+        # Someday, these might become lists of indexers or skimmers, and then
+        # we can parallelize even better:
         self.tree_indexer = tree_indexer
         self.file_skimmer = file_skimmer
 
