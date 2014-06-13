@@ -299,6 +299,9 @@ def fixupEntryPath(args, file_key, conn, prefix=None):
 
 def fixupExtent(args, extents_key='extent'):
     if extents_key not in args:
+        # We use -1 instead of NULL because in UNIQUE constraints SQLite
+        # treats NULLs as distinct from all other values including other
+        # NULLs and this would lead to duplicate rows
         args['extent_start'] = -1
         args['extent_end'] = -1
         return
