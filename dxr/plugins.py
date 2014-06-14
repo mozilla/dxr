@@ -94,6 +94,7 @@ class TreeIndexer(object):
     def __init__(self, tree):
         # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_patterns out of the tree.
+        pass
 
     def pre_build(self):
         """Call this before the tree's build command is run.
@@ -173,6 +174,7 @@ class FileIndexer(FileRenderDataSource):
         """
         # We go with pairs rather than a map so we can just chain all these
         # together and pass them to a dict constructor: fewer temp vars.
+        return []
 
     def line_morsels(self):
         """Return per-line search data for one file.
@@ -185,6 +187,7 @@ class FileIndexer(FileRenderDataSource):
         other plugins under equal keys.
 
         """
+        return []
 
 
 class FileSkimmer(FileRenderDataSource):
@@ -257,7 +260,3 @@ class Plugin(object):
                          file_skimmer=namespace.get('FileSkimmer'))
 
 
-# Use cases:
-# Show a file from ES
-# Show a line from ES
-# Show a file from VCS
