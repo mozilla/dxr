@@ -1,5 +1,10 @@
+"""The DXR plugin architecture"""
+
 import os, sys
 import imp
+from inspect import isclass
+
+from pkg_resources import iter_entry_points
 
 
 def indexer_exports():
@@ -88,7 +93,8 @@ class PathFilter(object):
 class TreeIndexer(object):
     """Manager of data extraction that happens at index time
 
-    A single instance of this is used for the entire build process of a tree.
+    A single instance of each plugin's TreeIndexer is used for the entire build
+    process of a tree.
 
     """
     def __init__(self, tree):
@@ -112,15 +118,24 @@ class TreeIndexer(object):
 
     def mappings(self):
         """Return a map of {doctype: list of mapping excerpts, ...}."""
+        return {}
 
-    def file_indexer(self, path):
-        """Return a FileIndexer for the conceptual path ``path`` in the tree.
+    def file_indexer(self, path, text):
+        """Return a FileIndexer for a conceptual path in the tree.
+
+        :arg path: A tree-relative path to the file to index
 
         Being a method on TreeIndexer, this can easily pass the FileIndexer a
         ref to our temp directory or what-have-you.
 
         """
-        return FileIndexer(path, self.the_temp_stash_or_whatever)
+        # TODO: Consider that someday FileIndexers may be run in parallel, in
+        # separate processes. This architecture, with computationally heavy
+        # methods like line_refs() being instance methods (and thus
+        # unpickleable) might make that tricky. Worst case, we might re-spec
+        # this method to return a class to construct and the (pickleable) args
+        # to construct it with.
+        return FileIndexer(path)
 
     # This is probably the place to add whatever_indexer()s for other kinds of
     # things, like modules, if we ever wanted to support some other view of
@@ -142,7 +157,12 @@ class FileRenderDataSource(object):
         return []
 
     def line_regions(self):
-        """Yield an ordered list of extents for each line."""
+        """Yield an ordered list of extents for each line.
+
+        We'll probably store them in ES as a list of explicit objects, like
+        {start: 5, end: 18, class: k}.
+
+        """
         return []
 
     def line_annotations(self):
@@ -154,17 +174,32 @@ class FileRenderDataSource(object):
 class FileIndexer(FileRenderDataSource):
     """A source of search and rendering data about one source file"""
 
-    def __init__(self, path):
+    def __init__(self, path, text='', ):
         """Analyze a file or digest an analysis that happened at compile time.
 
         Sock it away on an instance var. You can think of this as a per-file
-        post-build step.
+        post-build step. You could do this in a different method, using
+        memoization, but this way there's less code and less opportunity for
+        mistakes.
+
+        FileIndexers of plugins may take whatever constructor args they like;
+        it is the responsibility of their TreeIndexers' ``file_indexer()``
+        methods to supply them.
+
+        Note that we do not receive the text of the file as an argument. DXR doesn't know whether to read individual files as bytestrings or unicode or what their encodings (if the latter) may be. And the OS file cache should buffer us against really reading the file from disk multiple times. Call the as_unicode() helper method if you want the contents.
+
+    Let's see which of the above and below paragraphs I prefer in the morning.
+
+        :arg contents: The contents of the file as unicode or string. DXR uses
+            the tree's ``source_encoding`` hint along with MIME type guessing
+            to identify which files are text and decode them appropriately. If
+            it succeeds, you get unicode. If not, you get a string, which you
+            can interpret as a bytestring to be safe or try to decode yourself
+            if you think you know better.
 
         """
-        # Or you could do this later with caching, but this way you can't screw
-        # it up.
+        self.contents = contents
 
-    # TODO: Have default implementation return nothing.
     def morsels(self):
         """Return an iterable of key-value pairs of search data about the file.
 
@@ -236,7 +271,7 @@ class Plugin(object):
         self.file_skimmer = file_skimmer
 
     @classmethod
-    def from_namespace(namespace):
+    def from_namespace(cls, namespace):
         """Construct a DxrPlugin whose attrs are populated by typical naming
         and subclassing conventions.
 
@@ -252,11 +287,30 @@ class Plugin(object):
         magic rules you *do* find useful.
 
         """
-        return DxrPlugin(filters=[v for k, v in namespace.iteritems() if
-                                  isclass(v) and
-                                  not k.startswith('_') and
-                                  k.endswith('Filter')],
-                         tree_indexer=namespace.get('TreeIndexer'),
-                         file_skimmer=namespace.get('FileSkimmer'))
+        return cls(filters=[v for k, v in namespace.iteritems() if
+                            isclass(v) and
+                            not k.startswith('_') and
+                            k.endswith('Filter')],
+                   tree_indexer=namespace.get('TreeIndexer'),
+                   file_skimmer=namespace.get('FileSkimmer'))
 
 
+def all_plugins():
+    """Return a dict of plugin name -> Plugin for all registered plugins.
+
+    Plugins are registered via the ``dxr.plugins`` setuptools entry point,
+    which may point to either a module (in which case a Plugin will be
+    constructed based on the contents of the module namespace) or a Plugin
+    object (which will be returned directly). The entry point name is what the
+    user types into the config file under ``enabled_plugins``.
+
+    """
+    def name_and_plugin(entry_point):
+        """Return the name of an entry point and the Plugin it points to."""
+        object = entry_point.load()
+        plugin = (object if isinstance(object, Plugin) else
+                  Plugin.from_namespace(object.__dict__))
+        return entry_point.name, plugin
+
+    return dict(name_and_plugin(point) for point in
+                iter_entry_points('dxr.plugins'))

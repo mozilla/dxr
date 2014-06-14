@@ -173,12 +173,17 @@ class TreeConfig(object):
                 if p not in self.disabled_plugins:
                     self.disabled_plugins.append(p)
 
-        # Convert enabled plugins to a list
+        # enabled_plugins, unlike in Config, is a dict of name -> Plugin. TODO:
+        # Clean this up when we refactor the whole config system.
         if self.enabled_plugins == "*":
-            self.enabled_plugins = [p for p in config.enabled_plugins
-                                    if p not in self.disabled_plugins]
+            self.enabled_plugins = dict(
+                (name, plug) for name, plug in all_plugins().iteritems() if
+                name in config.enabled_plugins and
+                name not in self.disabled_plugins)
         else:
-            self.enabled_plugins = self.enabled_plugins.split()
+            self.enabled_plugins = dict(
+                (name, plug) for name, plug in all_plugins().iteritems() if
+                name in self.enabled_plugins.split())
 
         # Test for conflicting plugins settings
         conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
