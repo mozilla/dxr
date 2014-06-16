@@ -19,5 +19,5 @@ def test_construction():
     a Plugin via recognition of symbol naming conventions."""
     plugin = all_plugins()['urllink']
     mocked_tree = None  # This will probably have to improve at some point.
-    ok_(isinstance(plugin.tree_indexer(mocked_tree).file_indexer('/foo/bar', ''),
-        urllink.FileIndexer))
+    ok_(isinstance(plugin.tree_to_index(mocked_tree).file_to_index('/foo/bar', ''),
+                   urllink.FileToIndex))

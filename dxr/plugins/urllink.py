@@ -9,8 +9,8 @@ url_re = re.compile("\[(https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-
        "|(https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+)")
 
 
-class FileIndexer(dxr.plugins.FileIndexer):
-    def line_refs(self):
+class FileToIndex(dxr.plugins.FileToIndex):
+    def refs_by_line(self):
         if isinstance(self.contents, unicode):
             for line in self.contents.splitlines():
                 for m in url_re.finditer(line):

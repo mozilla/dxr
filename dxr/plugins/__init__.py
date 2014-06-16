@@ -90,11 +90,11 @@ class PathFilter(object):
     # on that to make identifiers easy to pick out visually.
 
 
-class TreeIndexer(object):
-    """Manager of data extraction that happens at index time
+class TreeToIndex(object):
+    """Manager of data extraction from a tree at index time
 
-    A single instance of each plugin's TreeIndexer is used for the entire build
-    process of a tree.
+    A single TreeToIndex (for each plugin) is used for the entire build process
+    of a tree.
 
     """
     def __init__(self, tree):
@@ -113,23 +113,25 @@ class TreeIndexer(object):
         """
 
     # def post_build? What if there's whole-program stuff to do after the
-    # build? One could fire it off the first time file_indexer() is called, but
-    # that's mysterious.
+    # build? One could fire it off the first time file_to_index() is called,
+    # but that's mysterious.
 
     def mappings(self):
         """Return a map of {doctype: list of mapping excerpts, ...}."""
         return {}
 
-    def file_indexer(self, path, text):
-        """Return a FileIndexer for a conceptual path in the tree or None.
+    def file_to_index(self, path, text):
+        """Return a FileToIndex representing a conceptual path in the tree.
 
         :arg path: A tree-relative path to the file to index
 
-        Being a method on TreeIndexer, this can easily pass the FileIndexer a
+        Return None if there is no indexing to be done on the file.
+
+        Being a method on TreeToIndex, this can easily pass the FileToIndex a
         ref to our temp directory or what-have-you.
 
         """
-        # Consider that someday FileIndexers may be run in parallel, in
+        # Consider that someday FileToIndex instances may run in parallel, in
         # separate processes. This architecture, with computationally heavy
         # methods like line_refs() being instance methods (and thus
         # unpickleable) might make that tricky. Worst case, we can pass
@@ -146,18 +148,18 @@ class TreeIndexer(object):
     # introduce another kind of plugin: an enumerator.
 
 
-class FileRenderDataSource(object):
-    """A source of data needed to render a file-view page. Abstract."""
+class FileViewData(object):
+    """Data needed to render a file-view page. Abstract."""
 
     def links(self):
         """Return an iterable of intra-page nav links."""
         return []
 
-    def line_refs(self):
+    def refs_by_line(self):
         """Yield an ordered list of extents and menus for each line."""
         return []
 
-    def line_regions(self):
+    def regions_by_line(self):
         """Yield an ordered list of extents for each line.
 
         We'll probably store them in ES as a list of explicit objects, like
@@ -166,13 +168,13 @@ class FileRenderDataSource(object):
         """
         return []
 
-    def line_annotations(self):
+    def annotations_by_line(self):
         # TODO: Why are these just per line? Shouldn't they return extents like
         # everybody else? We can still show them per line if we want.
         return []
 
 
-class FileIndexer(FileRenderDataSource):
+class FileToIndex(FileViewData):
     """A source of search and rendering data about one source file"""
 
     def __init__(self, path, text='', ):
@@ -183,8 +185,8 @@ class FileIndexer(FileRenderDataSource):
         memoization, but this way there's less code and less opportunity for
         mistakes.
 
-        FileIndexers of plugins may take whatever constructor args they like;
-        it is the responsibility of their TreeIndexers' ``file_indexer()``
+        FileToIndex classes of plugins may take whatever constructor args they
+        like; it is the responsibility of their ``TreeToIndex.file_to_index()``
         methods to supply them.
 
         Note that we do not receive the text of the file as an argument. DXR doesn't know whether to read individual files as bytestrings or unicode or what their encodings (if the latter) may be. And the OS file cache should buffer us against really reading the file from disk multiple times. Call the as_unicode() helper method if you want the contents.
@@ -202,7 +204,7 @@ class FileIndexer(FileRenderDataSource):
         self.path = path
         self.text = text
 
-    def morsels(self):
+    def needles(self):
         """Return an iterable of key-value pairs of search data about the file.
 
         If a list value is returned, it will be merged with lists returned from
@@ -213,7 +215,7 @@ class FileIndexer(FileRenderDataSource):
         # together and pass them to a dict constructor: fewer temp vars.
         return []
 
-    def line_morsels(self):
+    def needles_by_line(self):
         """Return per-line search data for one file.
 
         Yield an iterable of key-value pairs for each of a file's lines, in
@@ -227,7 +229,7 @@ class FileIndexer(FileRenderDataSource):
         return []
 
 
-class FileSkimmer(FileRenderDataSource):
+class FileToSkim(FileViewData):
     """A source of rendering data for a source file generated at request time
 
     This is appropriate for unindexed files (such as old revisions pulled out
@@ -246,8 +248,8 @@ class FileSkimmer(FileRenderDataSource):
 
         If the file is indexed, there will also be...
 
-        :arg file_properties: Dict of file-wide morsels emitted by the indexer
-        :arg line_properties: List of per-line morsel dicts emitted by the
+        :arg file_properties: Dict of file-wide needles emitted by the indexer
+        :arg line_properties: List of per-line needle dicts emitted by the
             indexer
 
         """
@@ -265,14 +267,14 @@ class Plugin(object):
     consider splitting those out as separate plugins.
 
     """
-    def __init__(self, filters=None, tree_indexer=None, file_skimmer=None):
+    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None):
         self.filters = filters or []
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
         # effective and easier way to parallelize.
-        self.tree_indexer = tree_indexer
-        self.file_skimmer = file_skimmer
+        self.tree_to_index = tree_to_index
+        self.file_to_skim = file_to_skim
 
     @classmethod
     def from_namespace(cls, namespace):
@@ -283,12 +285,12 @@ class Plugin(object):
         Filters are taken to be any class whose name ends in "Filter" and
         doesn't start with "_".
 
-        The tree indexer is assumed to be called "TreeIndexer". If there isn't
+        The tree indexer is assumed to be called "TreeToIndex". If there isn't
         one, one will be constructed which does nothing but delegate to the
-        class called ``FileIndexer`` (if there is one) when ``file_indexer()``
+        class called ``FileToIndex`` (if there is one) when ``file_to_index()``
         is called on it.
 
-        The file skimmer is assumed to be called "FileSkimmer".
+        The file skimmer is assumed to be called "FileToSkim".
 
         If these rules don't suit you, you can always instantiate a Plugin
         yourself (and think about refactoring this so separately expose the
@@ -296,23 +298,23 @@ class Plugin(object):
 
         """
         # Grab a tree indexer by name, or make one up:
-        tree_indexer = namespace.get('TreeIndexer')
-        if not tree_indexer:
-            file_indexer_class = namespace.get('FileIndexer')
-            class tree_indexer(TreeIndexer):
+        tree_to_index = namespace.get('TreeToIndex')
+        if not tree_to_index:
+            file_to_index_class = namespace.get('FileToIndex')
+            class tree_to_index(TreeToIndex):
                 """A default tree indexer created because none was provided by
                 the plugin"""
 
-                if file_indexer_class:
-                    def file_indexer(self, *args, **kwargs):
-                        return file_indexer_class(*args, **kwargs)
+                if file_to_index_class:
+                    def file_to_index(self, *args, **kwargs):
+                        return file_to_index_class(*args, **kwargs)
 
         return cls(filters=[v for k, v in namespace.iteritems() if
                             isclass(v) and
                             not k.startswith('_') and
                             k.endswith('Filter')],
-                   tree_indexer=tree_indexer,
-                   file_skimmer=namespace.get('FileSkimmer'))
+                   tree_to_index=tree_to_index,
+                   file_to_skim=namespace.get('FileToSkim'))
 
 
 def all_plugins():
