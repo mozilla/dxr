@@ -9,7 +9,6 @@ url_re = re.compile("\[(https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-
        "|(https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+)")
 
 
-# TODO: I'm considering having Plugin automatically substitute a default TreeIndexer if none is provided. Then we don't have to boilerplate one here if no pre-build, custom mappings, or shared cache is necessary.
 class FileIndexer(dxr.plugins.FileIndexer):
     def line_refs(self):
         if isinstance(self.contents, unicode):

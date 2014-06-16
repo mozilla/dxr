@@ -121,7 +121,7 @@ class TreeIndexer(object):
         return {}
 
     def file_indexer(self, path, text):
-        """Return a FileIndexer for a conceptual path in the tree.
+        """Return a FileIndexer for a conceptual path in the tree or None.
 
         :arg path: A tree-relative path to the file to index
 
@@ -129,13 +129,14 @@ class TreeIndexer(object):
         ref to our temp directory or what-have-you.
 
         """
-        # TODO: Consider that someday FileIndexers may be run in parallel, in
+        # Consider that someday FileIndexers may be run in parallel, in
         # separate processes. This architecture, with computationally heavy
         # methods like line_refs() being instance methods (and thus
-        # unpickleable) might make that tricky. Worst case, we might re-spec
-        # this method to return a class to construct and the (pickleable) args
-        # to construct it with.
-        return FileIndexer(path)
+        # unpickleable) might make that tricky. Worst case, we can pass
+        # pool.submit() {the (pickleable) instance and the name of the method
+        # to call on it} as args to a (pickleable) top-level function that
+        # calls that method on that instance.
+        return None
 
     # This is probably the place to add whatever_indexer()s for other kinds of
     # things, like modules, if we ever wanted to support some other view of
@@ -198,7 +199,8 @@ class FileIndexer(FileRenderDataSource):
             if you think you know better.
 
         """
-        self.contents = contents
+        self.path = path
+        self.text = text
 
     def morsels(self):
         """Return an iterable of key-value pairs of search data about the file.
@@ -266,32 +268,50 @@ class Plugin(object):
     def __init__(self, filters=None, tree_indexer=None, file_skimmer=None):
         self.filters = filters or []
         # Someday, these might become lists of indexers or skimmers, and then
-        # we can parallelize even better:
+        # we can parallelize even better. OTOH, there are probably a LOT of
+        # files in any time-consuming tree, so we already have a perfectly
+        # effective and easier way to parallelize.
         self.tree_indexer = tree_indexer
         self.file_skimmer = file_skimmer
 
     @classmethod
     def from_namespace(cls, namespace):
-        """Construct a DxrPlugin whose attrs are populated by typical naming
-        and subclassing conventions.
+        """Construct a Plugin whose attrs are populated by naming conventions.
 
         :arg namespace: A namespace from which to pick components
 
         Filters are taken to be any class whose name ends in "Filter" and
         doesn't start with "_".
 
-        The indexer is assumed to be called "Indexer".
+        The tree indexer is assumed to be called "TreeIndexer". If there isn't
+        one, one will be constructed which does nothing but delegate to the
+        class called ``FileIndexer`` (if there is one) when ``file_indexer()``
+        is called on it.
 
-        If these rules don't suit you, you can always instantiate a DxrPlugin
+        The file skimmer is assumed to be called "FileSkimmer".
+
+        If these rules don't suit you, you can always instantiate a Plugin
         yourself (and think about refactoring this so separately expose the
-        magic rules you *do* find useful.
+        magic rules you *do* find useful).
 
         """
+        # Grab a tree indexer by name, or make one up:
+        tree_indexer = namespace.get('TreeIndexer')
+        if not tree_indexer:
+            file_indexer_class = namespace.get('FileIndexer')
+            class tree_indexer(TreeIndexer):
+                """A default tree indexer created because none was provided by
+                the plugin"""
+
+                if file_indexer_class:
+                    def file_indexer(self, *args, **kwargs):
+                        return file_indexer_class(*args, **kwargs)
+
         return cls(filters=[v for k, v in namespace.iteritems() if
                             isclass(v) and
                             not k.startswith('_') and
                             k.endswith('Filter')],
-                   tree_indexer=namespace.get('TreeIndexer'),
+                   tree_indexer=tree_indexer,
                    file_skimmer=namespace.get('FileSkimmer'))
 
 

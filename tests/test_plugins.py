@@ -6,6 +6,7 @@ from nose.tools import ok_
 
 import dxr
 from dxr.plugins import all_plugins
+import dxr.plugins.urllink as urllink
 
 
 def test_registration():
@@ -17,4 +18,6 @@ def test_construction():
     """If a plugin is a plain module, make sure it is automatically promoted to
     a Plugin via recognition of symbol naming conventions."""
     plugin = all_plugins()['urllink']
-    ok_(plugin.tree_indexer is dxr.plugins.urllink.TreeIndexer)
+    mocked_tree = None  # This will probably have to improve at some point.
+    ok_(isinstance(plugin.tree_indexer(mocked_tree).file_indexer('/foo/bar', ''),
+        urllink.FileIndexer))
