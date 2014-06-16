@@ -256,15 +256,15 @@ class FileToSkim(FileViewData):
 
 
 class Plugin(object):
-    """A DXR plugin is an indexer, skimmer, and filter set meant to be used
-    together.
+    """The deployer-visible unit of pluggability
 
+    A Plugin is an indexer, skimmer, and filter set meant to be used together.
     In other words, there is no user-accessible way to subdivide a plugin via
     configuration; there would be no sense running a plugin's filters if the
     indexer that was supposed to extract the requisite data never ran.
 
-    If the user should be able to independently enable parts of your plugin,
-    consider splitting those out as separate plugins.
+    If the deployer should be able to independently enable parts of your
+    plugin, consider exposing those as separate plugins.
 
     """
     def __init__(self, filters=None, tree_to_index=None, file_to_skim=None):
@@ -293,8 +293,7 @@ class Plugin(object):
         The file skimmer is assumed to be called "FileToSkim".
 
         If these rules don't suit you, you can always instantiate a Plugin
-        yourself (and think about refactoring this so separately expose the
-        magic rules you *do* find useful).
+        yourself.
 
         """
         # Grab a tree indexer by name, or make one up:
@@ -302,19 +301,28 @@ class Plugin(object):
         if not tree_to_index:
             file_to_index_class = namespace.get('FileToIndex')
             class tree_to_index(TreeToIndex):
-                """A default tree indexer created because none was provided by
+                """A default TreeToIndex created because none was provided by
                 the plugin"""
 
                 if file_to_index_class:
                     def file_to_index(self, *args, **kwargs):
                         return file_to_index_class(*args, **kwargs)
 
-        return cls(filters=[v for k, v in namespace.iteritems() if
-                            isclass(v) and
-                            not k.startswith('_') and
-                            k.endswith('Filter')],
+        return cls(filters=filters_from_namespace(namespace),
                    tree_to_index=tree_to_index,
                    file_to_skim=namespace.get('FileToSkim'))
+
+
+def filters_from_namespace(namespace):
+    """Return the filters which conform to our suggested naming convention.
+
+    :arg namespace: The namespace in which to look for filters
+
+    """
+    return [v for k, v in namespace.iteritems() if
+            isclass(v) and
+            not k.startswith('_') and
+            k.endswith('Filter')]
 
 
 def all_plugins():
