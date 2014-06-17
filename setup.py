@@ -21,7 +21,7 @@ setup(
     packages=find_packages(exclude=['ez_setup']),
     scripts=['bin/dxr-build.py', 'bin/dxr-serve.py'],
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
-#                                   'buglink = dxr.plugins.buglink',
+                                  'buglink = dxr.plugins.buglink',
 #                                   'clang = dxr.plugins.clang',
 #                                   'omniglot = dxr.plugins.omniglot',
 #                                   'pygmentize = dxr.plugins.pygmentize'
