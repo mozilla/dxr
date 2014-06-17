@@ -7,6 +7,7 @@ from os.path import isdir
 import sys
 
 import dxr
+from dxr.plugins import all_plugins
 
 
 # Please keep these config objects as simple as possible and in sync with
