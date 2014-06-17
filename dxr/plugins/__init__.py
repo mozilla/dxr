@@ -156,7 +156,11 @@ class FileViewData(object):
         return []
 
     def refs_by_line(self):
-        """Yield an ordered list of extents and menus for each line."""
+        """Yield an ordered list of extents and menus for each line::
+
+            (start, end, (menu, title attribute contents))
+
+        """
         return []
 
     def regions_by_line(self):
