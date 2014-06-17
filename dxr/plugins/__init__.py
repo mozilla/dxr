@@ -211,8 +211,9 @@ class FileToIndex(FileViewData):
     def needles(self):
         """Return an iterable of key-value pairs of search data about the file.
 
-        If a list value is returned, it will be merged with lists returned from
-        other plugins under equal keys.
+        If the framework encounters multiple needles of the same key (whether
+        coming from the same plugin or different ones), all unique values will
+        be retained.
 
         """
         # We go with pairs rather than a map so we can just chain all these
@@ -226,8 +227,9 @@ class FileToIndex(FileViewData):
         order by line. The data might be data to search on or data stowed away
         for a later realtime thing to generate refs or regions from.
 
-        If a list value is returned, it will be merged with lists returned from
-        other plugins under equal keys.
+        If the framework encounters multiple needles of the same key on the
+        same line (whether coming from the same plugin or different ones), all
+        unique values will be retained.
 
         """
         return []
