@@ -103,7 +103,7 @@ class TreeToIndex(object):
         pass
 
     def pre_build(self):
-        """Call this before the tree's build command is run.
+        """Hook called before the tree's build command is run
 
         This is where environment variables are commonly twiddled to activate
         and parametrize compiler plugins which dump analysis data. This is also
@@ -112,10 +112,13 @@ class TreeToIndex(object):
 
         """
 
-    # def post_build? What if there's whole-program stuff to do after the
-    # build? One could fire it off the first time file_to_index() is called,
-    # but that's mysterious.
+    def post_build(self):
+        """Hook called after the tree's build command completes
 
+        This is a good place to do any whole-program analysis. Plugins are
+        responsible for their own parallelism here.
+
+        """
 
     def file_to_index(self, path, text):
         """Return a FileToIndex representing a conceptual path in the tree.
