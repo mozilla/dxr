@@ -116,9 +116,6 @@ class TreeToIndex(object):
     # build? One could fire it off the first time file_to_index() is called,
     # but that's mysterious.
 
-    def mappings(self):
-        """Return a map of {doctype: list of mapping excerpts, ...}."""
-        return {}
 
     def file_to_index(self, path, text):
         """Return a FileToIndex representing a conceptual path in the tree.
@@ -273,7 +270,18 @@ class Plugin(object):
     plugin, consider exposing those as separate plugins.
 
     """
-    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None):
+    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None):
+        """Construct.
+
+        :arg mappings: Additional Elasticsearch mapping definitions for all the
+            plugin's ES-destined data
+        :arg analyzers: Analyzer, tokenizer, and filter definitions for the
+            elasticsearch mappings. A dict with keys "analyzer", "tokenizer",
+            etc., following the structure outlined at
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/
+            current/analysis.html.
+
+        """
         self.filters = filters or []
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
@@ -281,6 +289,8 @@ class Plugin(object):
         # effective and easier way to parallelize.
         self.tree_to_index = tree_to_index
         self.file_to_skim = file_to_skim
+        self.mappings = mappings or {}
+        self.analyzers = analyzers or {}
 
     @classmethod
     def from_namespace(cls, namespace):
@@ -316,7 +326,9 @@ class Plugin(object):
 
         return cls(filters=filters_from_namespace(namespace),
                    tree_to_index=tree_to_index,
-                   file_to_skim=namespace.get('FileToSkim'))
+                   file_to_skim=namespace.get('FileToSkim'),
+                   mappings=namespace.get('mappings'),
+                   analyzers=namespace.get('analyzers'))  # any other settings needed?
 
 
 def filters_from_namespace(namespace):
