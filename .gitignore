@@ -1,6 +1,7 @@
 *.pyc
 *.o
 *.so
+/dxr/static/js/templates.js
 /tests/*/target
 /tests/*/temp
 /tests/*/code/code
