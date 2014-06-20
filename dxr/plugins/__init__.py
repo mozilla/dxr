@@ -93,8 +93,15 @@ class PathFilter(object):
 class TreeToIndex(object):
     """Manager of data extraction from a tree at index time
 
-    A single TreeToIndex (for each plugin) is used for the entire build process
-    of a tree.
+    A single instance of each TreeToIndex class is used for the entire indexing
+    process of a tree.
+
+    Instances must be pickleable so as to make the journey to worker processes.
+    You might also want to keep the size down. It takes on the order of 2s for
+    a 150MB pickle to make its way across process boundaries, including
+    pickling and unpickling time. For this reason, we send the TreeToIndex once
+    and then have it index several files before sending it again. The number of
+    files per chunk is adjustable via the `something` config option.
 
     """
     def __init__(self, tree):
@@ -115,8 +122,7 @@ class TreeToIndex(object):
     def post_build(self):
         """Hook called after the tree's build command completes
 
-        This is a good place to do any whole-program analysis. Plugins are
-        responsible for their own parallelism here.
+        This is a good place to do any whole-program analysis.
 
         """
 
@@ -127,18 +133,15 @@ class TreeToIndex(object):
 
         Return None if there is no indexing to be done on the file.
 
-        Being a method on TreeToIndex, this can easily pass the FileToIndex a
-        ref to our temp directory or what-have-you.
+        Being a method on TreeToIndex, this can easily pass along the location
+        of our temp directory or other shared setup artifacts. However, beware
+        of passing mutable things; while the FileToIndex can mutate them,
+        visibility of those changes will be limited to objects spawned in the
+        same worker process. Thus, a TreeToIndex-dwelling dict might be a
+        suitable place for a cache, but it's not suitable for data that can't
+        afford to evaporate.
 
         """
-        # Consider that someday FileToIndex instances may run in parallel, in
-        # separate processes. This architecture, with computationally heavy
-        # methods like line_refs() being instance methods (and thus
-        # unpickleable) might make that tricky. Worst case, we can pass
-        # pool.submit() {the (pickleable) instance and the name of the method
-        # to call on it} as args to a (pickleable) top-level function that
-        # calls that method on that instance.
-        return None
 
     # This is probably the place to add whatever_indexer()s for other kinds of
     # things, like modules, if we ever wanted to support some other view of
@@ -264,8 +267,8 @@ class FileToSkim(FileViewData):
 class Plugin(object):
     """The deployer-visible unit of pluggability
 
-    A Plugin is an indexer, skimmer, and filter set meant to be used together.
-    In other words, there is no user-accessible way to subdivide a plugin via
+    A Plugin is an indexer, skimmer, filter set, and other miscellany meant to
+    be used together. In other words, there is no way to subdivide a plugin via
     configuration; there would be no sense running a plugin's filters if the
     indexer that was supposed to extract the requisite data never ran.
 
