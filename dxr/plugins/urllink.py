@@ -9,9 +9,8 @@ url_re = re.compile("https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-
 
 class FileToIndex(dxr.plugins.FileToIndex):
     def refs_by_line(self):
-        if isinstance(self.contents, unicode):
-            for line in self.contents.splitlines():
-                yield list(self._links_on_line(line))
+        for line in self.contents.splitlines():
+            yield list(self._links_on_line(line))
 
     def _links_on_line(self, line):
         """Return a sorted iterable of the refs in one line of text."""

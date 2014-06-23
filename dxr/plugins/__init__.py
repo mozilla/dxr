@@ -107,7 +107,7 @@ class TreeToIndex(object):
     def __init__(self, tree):
         # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_patterns out of the tree.
-        pass
+        self.tree = tree
 
     def pre_build(self):
         """Hook called before the tree's build command is run
@@ -126,20 +126,29 @@ class TreeToIndex(object):
 
         """
 
-    def file_to_index(self, path, text):
+    def file_to_index(self, path, contents):
         """Return a FileToIndex representing a conceptual path in the tree.
 
         :arg path: A tree-relative path to the file to index
+        :arg contents: What's in the file: unicode if we managed to guess an
+            encoding and decode it, str otherwise
 
         Return None if there is no indexing to be done on the file.
 
         Being a method on TreeToIndex, this can easily pass along the location
         of our temp directory or other shared setup artifacts. However, beware
         of passing mutable things; while the FileToIndex can mutate them,
-        visibility of those changes will be limited to objects spawned in the
-        same worker process. Thus, a TreeToIndex-dwelling dict might be a
-        suitable place for a cache, but it's not suitable for data that can't
-        afford to evaporate.
+        visibility of those changes will be limited to objects in the same
+        worker process. Thus, a TreeToIndex-dwelling dict might be a suitable
+        place for a cache, but it's not suitable for data that can't afford to
+        evaporate.
+
+        If a plugin omits a TreeToIndex class, :meth:`Plugin.from_namespace()`
+        constructs one dynamically. The method implementations of that class
+        are inherited from :class:`TreeToIndex`, with one exception: a
+        ``file_to_index()`` method is dynamically constructed which returns a
+        new instance of whatever ``FileToIndex`` class the plugin defines, if
+        any.
 
         """
 
@@ -151,8 +160,62 @@ class TreeToIndex(object):
     # introduce another kind of plugin: an enumerator.
 
 
-class FileViewData(object):
-    """Data needed to render a file-view page. Abstract."""
+class FileToSkim(object):
+    """A source of rendering data for a source file generated at request time
+
+    This is appropriate for unindexed files (such as old revisions pulled out
+    of a VCS) or for data so large or cheap to produce that it's a bad tradeoff
+    to store it in the index. An instance of me is mostly an opportunity for a
+    shared cache among my methods.
+
+    """
+    def __init__(self, path, contents, file_properties=None, line_properties=None):
+        """Construct.
+
+        :arg path: The conceptual path to the file, relative to the tree. Such
+            a file might not exist on disk. This is useful mostly as a hint for
+            syntax coloring.
+        :arg contents: What's in the file: unicode if we knew or successfully
+            guessed an encoding, str otherwise. Don't return any by-line data
+            for strs; the framework won't have succeeded in breaking up the
+            file by line for display, so there will be no useful UI for those
+            data to support. In fact, most skimmers won't be be able to do
+            anything useful with strs at all. For unicode, split the file into
+            lines using universal newlines (``unicode.splitlines()`` with no
+            params); that's what the rest of the framework expects.
+
+        If the file is indexed, there will also be...
+
+        :arg file_properties: Dict of file-wide needles emitted by the indexer
+        :arg line_properties: List of per-line needle dicts emitted by the
+            indexer
+
+        """
+        self.path = path
+        self.contents = contents
+
+    def is_interesting(self):
+        """Return whether it's worthwhile to examine this file.
+
+        For example, if this class knows about how to analyze JS files, return
+        True only if ``self.path.endswith('.js')``. If something falsy is
+        returned, the framework won't call data-producing methods like
+        ``links()``, ``refs_by_line()``, etc.
+
+        The default implementation selects only text files.
+
+        """
+        return self.contains_text()
+
+    def contains_text(self):
+        """Return whether this file can be decoded and divided into lines as
+        text.
+
+        This may come in handy as a component of your own
+        :meth:`is_interesting()` methods.
+
+        """
+        return isinstance(self.contents, unicode)
 
     def links(self):
         """Return an iterable of intra-page nav links."""
@@ -181,35 +244,41 @@ class FileViewData(object):
         return []
 
 
-class FileToIndex(FileViewData):
+class FileToIndex(FileToSkim):
     """A source of search and rendering data about one source file"""
 
-    def __init__(self, path, text='', ):
+    def __init__(self, path, contents):
         """Analyze a file or digest an analysis that happened at compile time.
 
-        Sock it away on an instance var. You can think of this as a per-file
-        post-build step. You could do this in a different method, using
-        memoization, but this way there's less code and less opportunity for
-        mistakes.
+        :arg path: A tree-relative path to the file to index
+        :arg contents: What's in the file: unicode if we managed to guess at an
+            encoding and decode it, str otherwise. Don't return any by-line
+            data for strs; the framework won't have succeeded in breaking up
+            the file by line for display, so there will be no useful UI for
+            those data to support. Think more along the lines of returning
+            EXIF data to search by for a JPEG. For unicode, split the file into
+            lines using universal newlines (``unicode.splitlines()`` with no
+            params); that's what the rest of the framework expects.
+
+        Initialization-time analysis results may be socked away on an instance
+        var. You can think of this constructor as a per-file post-build step.
+        You could do this in a different method, using memoization, but doing
+        it here makes for less code and less opportunity for error.
 
         FileToIndex classes of plugins may take whatever constructor args they
-        like; it is the responsibility of their ``TreeToIndex.file_to_index()``
-        methods to supply them.
-
-        Note that we do not receive the text of the file as an argument. DXR doesn't know whether to read individual files as bytestrings or unicode or what their encodings (if the latter) may be. And the OS file cache should buffer us against really reading the file from disk multiple times. Call the as_unicode() helper method if you want the contents.
-
-    Let's see which of the above and below paragraphs I prefer in the morning.
-
-        :arg contents: The contents of the file as unicode or string. DXR uses
-            the tree's ``source_encoding`` hint along with MIME type guessing
-            to identify which files are text and decode them appropriately. If
-            it succeeds, you get unicode. If not, you get a string, which you
-            can interpret as a bytestring to be safe or try to decode yourself
-            if you think you know better.
+        like; it is the responsibility of their
+        :meth:`TreeToIndex.file_to_index()` methods to supply them. However,
+        the ``path`` and ``contents`` instance vars should be initialized and
+        have the above semantics, or a lot of the provided convenience methods
+        and default implementations will break.
 
         """
-        self.path = path
-        self.text = text
+        # We receive the file contents from the outside for two reasons: (1) so
+        # we don't repeatedly redo the encoding guessing (which involves
+        # iterating over potentially the whole file looking for nulls) and (2)
+        # for symmetry with FileToSkim, so we can share many method
+        # implementations.
+        super(FileToIndex, self).__init__(path, contents)
 
     def needles(self):
         """Return an iterable of key-value pairs of search data about the file.
@@ -238,39 +307,14 @@ class FileToIndex(FileViewData):
         return []
 
 
-class FileToSkim(FileViewData):
-    """A source of rendering data for a source file generated at request time
-
-    This is appropriate for unindexed files (such as old revisions pulled out
-    of a VCS) or for data so large or cheap to produce that it's a bad tradeoff
-    to store it in the index. An instance of me is mostly an opportunity for a
-    shared cache among my methods.
-
-    """
-    def __init__(self, conceptual_path, text, file_properties=None, line_properties=None):
-        """Construct.
-
-        :arg conceptual_path: The conceptual path to the file, relative to the
-            tree. Such a file might not exist on disk. This is useful mostly as
-            a hint for syntax coloring.
-        :arg text: The full text of the file
-
-        If the file is indexed, there will also be...
-
-        :arg file_properties: Dict of file-wide needles emitted by the indexer
-        :arg line_properties: List of per-line needle dicts emitted by the
-            indexer
-
-        """
-
-
 class Plugin(object):
-    """The deployer-visible unit of pluggability
+    """Top-level entrypoint for DXR plugins
 
     A Plugin is an indexer, skimmer, filter set, and other miscellany meant to
-    be used together. In other words, there is no way to subdivide a plugin via
-    configuration; there would be no sense running a plugin's filters if the
-    indexer that was supposed to extract the requisite data never ran.
+    be used together; it is the deployer-visible unit of pluggability. In other
+    words, there is no way to subdivide a plugin via configuration; there would
+    be no sense running a plugin's filters if the indexer that was supposed to
+    extract the requisite data never ran.
 
     If the deployer should be able to independently enable parts of your
     plugin, consider exposing those as separate plugins.
@@ -279,6 +323,9 @@ class Plugin(object):
     def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None):
         """Construct.
 
+        :arg filters: A list of filter classes
+        :arg tree_to_index: A :class:`TreeToIndex` subclass
+        :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
             plugin's ES-destined data
         :arg analyzers: Analyzer, tokenizer, and filter definitions for the
@@ -327,8 +374,8 @@ class Plugin(object):
                 the plugin"""
 
                 if file_to_index_class:
-                    def file_to_index(self, *args, **kwargs):
-                        return file_to_index_class(*args, **kwargs)
+                    def file_to_index(self, path, contents):
+                        return file_to_index_class(path, contents)
 
         return cls(filters=filters_from_namespace(namespace),
                    tree_to_index=tree_to_index,
