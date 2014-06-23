@@ -169,7 +169,7 @@ class FileToSkim(object):
     shared cache among my methods.
 
     """
-    def __init__(self, path, contents, file_properties=None, line_properties=None):
+    def __init__(self, path, contents, tree, file_properties=None, line_properties=None):
         """Construct.
 
         :arg path: The conceptual path to the file, relative to the tree. Such
@@ -183,6 +183,8 @@ class FileToSkim(object):
             anything useful with strs at all. For unicode, split the file into
             lines using universal newlines (``unicode.splitlines()`` with no
             params); that's what the rest of the framework expects.
+        :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
+            the file belongs
 
         If the file is indexed, there will also be...
 
@@ -193,6 +195,7 @@ class FileToSkim(object):
         """
         self.path = path
         self.contents = contents
+        self.tree = tree
 
     def is_interesting(self):
         """Return whether it's worthwhile to examine this file.
@@ -247,7 +250,7 @@ class FileToSkim(object):
 class FileToIndex(FileToSkim):
     """A source of search and rendering data about one source file"""
 
-    def __init__(self, path, contents):
+    def __init__(self, path, contents, tree):
         """Analyze a file or digest an analysis that happened at compile time.
 
         :arg path: A tree-relative path to the file to index
@@ -259,6 +262,8 @@ class FileToIndex(FileToSkim):
             EXIF data to search by for a JPEG. For unicode, split the file into
             lines using universal newlines (``unicode.splitlines()`` with no
             params); that's what the rest of the framework expects.
+        :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
+            the file belongs
 
         Initialization-time analysis results may be socked away on an instance
         var. You can think of this constructor as a per-file post-build step.
@@ -278,7 +283,7 @@ class FileToIndex(FileToSkim):
         # iterating over potentially the whole file looking for nulls) and (2)
         # for symmetry with FileToSkim, so we can share many method
         # implementations.
-        super(FileToIndex, self).__init__(path, contents)
+        super(FileToIndex, self).__init__(path, contents, tree)
 
     def needles(self):
         """Return an iterable of key-value pairs of search data about the file.
@@ -375,7 +380,7 @@ class Plugin(object):
 
                 if file_to_index_class:
                     def file_to_index(self, path, contents):
-                        return file_to_index_class(path, contents)
+                        return file_to_index_class(path, contents, self.tree)
 
         return cls(filters=filters_from_namespace(namespace),
                    tree_to_index=tree_to_index,
