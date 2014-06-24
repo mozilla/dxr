@@ -1,3 +1,5 @@
+{%- from "partial/no_results.html" import no_results -%}
+
 <!DOCTYPE html>
 <html lang="en-US">
   <head>
@@ -65,7 +67,7 @@
     </form>
 
     {% block content %}
-      <div id="content" class="content" data-no-results="No results returned for current query."></div>
+      <div id="content" class="content" data-no-results="{{ no_results() }}"></div>
     {% endblock %}
 
     {% block footer %}

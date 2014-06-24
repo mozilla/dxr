@@ -299,6 +299,11 @@ def fixupEntryPath(args, file_key, conn, prefix=None):
 
 def fixupExtent(args, extents_key='extent'):
     if extents_key not in args:
+        # We use -1 instead of NULL because in UNIQUE constraints SQLite
+        # treats NULLs as distinct from all other values including other
+        # NULLs and this would lead to duplicate rows
+        args['extent_start'] = -1
+        args['extent_end'] = -1
         return
 
     value = args[extents_key]
@@ -592,11 +597,25 @@ def build_inherits(base, child, direct):
         db['inhtype'] = direct
     return db
 
+def _chunked_fetchall(cursor, chunk_size=100):
+    """Drop in replacement for fetchall designed to be tuned by 'chunking'.
+
+    Return a generator yielding lists of chunk_size rows.
+
+    """
+    rows = cursor.fetchmany(chunk_size)
+    while rows:
+        for row in rows:
+            yield row
+        rows = cursor.fetchmany(chunk_size)
+
+
 def generate_inheritance(conn):
     childMap, parentMap = {}, {}
     types = {}
 
-    for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id from types").fetchall():
+    cursor = conn.execute("SELECT qualname, file_id, file_line, file_col, id from types")
+    for row in _chunked_fetchall(cursor):
         types[(row[0], row[1], row[2], row[3])] = row[4]
 
     for infoKey in inheritance:
@@ -643,10 +662,12 @@ def generate_callgraph(conn):
     variables = {}
     callgraph = []
 
-    for row in conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions").fetchall():
+    cursor = conn.execute("SELECT qualname, file_id, file_line, file_col, id FROM functions")
+    for row in _chunked_fetchall(cursor):
         functions[(row[0], row[1], row[2], row[3])] = row[4]
-
-    for row in conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables").fetchall():
+    
+    cursor = conn.execute("SELECT name, file_id, file_line, file_col, id FROM variables")
+    for row in _chunked_fetchall(cursor):
         variables[(row[0], row[1], row[2], row[3])] = row[4]
 
     # Generate callers table

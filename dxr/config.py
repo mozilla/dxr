@@ -3,7 +3,7 @@ from datetime import datetime
 from ordereddict import OrderedDict
 from operator import attrgetter
 import os
-from os.path import isdir
+from os.path import dirname, isdir
 import sys
 
 import dxr
@@ -21,8 +21,7 @@ class Config(object):
     def __init__(self, configfile, **override):
         # Create parser with sane defaults
         parser = ConfigParser({
-            'dxrroot':          os.path.dirname(dxr.__file__),
-            'plugin_folder':    "%(dxrroot)s/plugins",
+            'plugin_folder':    "%s/plugins" % dirname(dxr.__file__),
             'nb_jobs':          "1",
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
@@ -39,7 +38,6 @@ class Config(object):
         parser.read(configfile)
 
         # Set config values
-        self.dxrroot          = parser.get('DXR', 'dxrroot',          False, override)
         self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
         self.nb_jobs          = parser.get('DXR', 'nb_jobs',          False, override)
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
@@ -64,7 +62,6 @@ class Config(object):
                 setattr(self, key, value)
 
         # Render all paths absolute
-        self.dxrroot          = os.path.abspath(self.dxrroot)
         self.plugin_folder    = os.path.abspath(self.plugin_folder)
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)

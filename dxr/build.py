@@ -99,7 +99,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     ensure_folder(config.temp_folder, not skip_indexing)
     ensure_folder(config.log_folder, not skip_indexing)
 
-    jinja_env = load_template_env(config.temp_folder, config.dxrroot)
+    jinja_env = load_template_env(config.temp_folder)
 
     # We don't want to load config file on the server, so we just write all the
     # setting into the config.py script, simple as that.
@@ -330,8 +330,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
                       _join_url(tree.name, 'source', folder, f)))
 
     # Lay down the HTML:
-    jinja_env = load_template_env(tree.config.temp_folder,
-                                  tree.config.dxrroot)
+    jinja_env = load_template_env(tree.config.temp_folder)
     dst_path = os.path.join(tree.target_folder,
                             folder,
                             tree.config.directory_index)
@@ -554,8 +553,7 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
         if htmlifier:
             htmlifiers.append(htmlifier)
     # Load template
-    env = load_template_env(tree.config.temp_folder,
-                            tree.config.dxrroot)
+    env = load_template_env(tree.config.temp_folder)
 
     arguments = {
         # Set common template variables
@@ -809,7 +807,9 @@ def tag_boundaries(htmlifiers):
                 # Also filter out None starts and ends. I don't know where they
                 # come from. That shouldn't happen and should be fixed in the
                 # plugins.
-                if start is not None and end is not None and start < end:
+                if (start is not None and start != -1 and
+                        end is not None and end != -1 and
+                        start < end):
                     yield start, True, tag
                     yield end, False, tag
 

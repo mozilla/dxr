@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% from "partial/switch_tree.html" import tree_menu %}
+{% from "partial/no_results.html" import no_results -%}
 
 {% block title %}{{ query }} - DXR Search{% endblock %}
 
@@ -9,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div id="content" class="content" data-no-results="No results returned for current query.">
+<div id="content" class="content" data-no-results="{{ no_results() }}">
   <p class="top-of-tree">Results from the <a href="{{ wwwroot }}/{{ tree }}/source/">{{ tree }}</a> tree:</p>
 
   {{ tree_menu(tree_tuples, tree) }}
@@ -52,7 +53,7 @@
       {% endfor %}
       </div>
   {% else %}
-    <p class="no-results">No results returned for current query.</p>
+    <p class="no-results">{{ no_results() }}</p>
   {% endif %}
 </div>
 {% endblock %}

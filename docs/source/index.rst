@@ -1,31 +1,47 @@
-.. DXR: Code Search and Cross-Reference Tool documentation master file, created by
-   sphinx-quickstart on Fri Mar 14 18:40:04 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Overview
+========
 
-Welcome to DXR: Code Search and Cross-Reference Tool's documentation!
-=====================================================================
+DXR is a code search and navigation tool aimed at making sense of large
+projects like Firefox. It supports full-text and regex searches as well as
+structural queries like "Find all the callers of this function." Behind the
+scenes, it uses trigram indices, the re2 library, and static analysis data
+collected by instrumented compilers to make searches faster and more accurate
+than is possible with simple tools like grep.
 
-Contents:
+Here's `an example of DXR running against the Firefox codebase`_. It looks like
+this:
+
+.. image:: screenshot.png
+
+.. _`an example of DXR running against the Firefox codebase`: http://dxr.mozilla.org/
+
+
+Contents
+========
 
 .. toctree::
-   :maxdepth: 2
-   :numbered:
-   :titlesonly:
+    :maxdepth: 2
+    :numbered:
 
-   architecture.rst
-   configuration.rst
-   deployment.rst
-   development.rst
-   icons.rst
-   plugins.rst
-   tests.rst
-   code-highlighter.rst
+    community
+    getting-started
+    configuration
+    deployment
+    use
+    development
 
-Indices and tables
-==================
 
+Back Matter
+===========
+
+.. toctree::
+   :hidden:
+
+   glossary
+   icons
+
+* :doc:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
+* :doc:`icons`

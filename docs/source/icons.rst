@@ -1,30 +1,17 @@
-DXR Icon Library
-================
+============
+Icon Credits
+============
 
-*The DXR icon library is a mix of icons from different authors and
-credit is distributed here.*
+DXR uses third-party icons from a variety of sources.
 
-Template Designers
-------------------
+If you add an icon, please document its origin in this document. Feel free to
+use existing icons, but keep in mind that they use semantic naming. So don't
+use the ``search`` icon for zoom, as we may later change the search icon from a
+magnifying glass to, for example, binoculars.
 
-When creating a template for DXR you should include the icons/ folder
-from the default template. You can replace icons as you see fit, but
-icons mentioned in this document may be referenced from
-{{wwwroot}}/static/icons/, so make sure the icon filenames are
-preserved.
 
-DXR/Plugin Developers
----------------------
-
-If your plugin needs an icon that is not present in the icons/ folder,
-please add it and document its origin in this document. Feel free to use
-icons already existing, but keep in mind that icons have semantic
-naming. So don't use the ``search`` icon for zoom, because a template
-designer may choose to change the search icon from a magnifying glass to
-binoculars.
-
-Icons From Silk
----------------
+From Silk
+=========
 
 Following icons originates from
 `Silk <http://www.famfamfam.com/lab/icons/silk/>`__ by Mark James,
@@ -63,15 +50,15 @@ licensed under Creative Commons Attribution 2.5 License.
 -  ``mimetypes/py`` (mixed with official python logo)
 -  ``mimetypes/mm`` (Remixed by DXR developers)
 
-Icons From FatCow Hosting
--------------------------
+From FatCow Hosting
+===================
 
 Following icons originates from
 `FatCow <http://www.fatcow.com/free-icons>`__ by FatCow hosting,
 licensed under Creative Commons Attribution 3.0 License.
 
-Icons From Fugue
-----------------
+From Fugue
+==========
 
 Following icons originates from
 `Fugue <http://p.yusukekamiyamane.com/>`__ by Yusuke Kamiyamane,
@@ -87,8 +74,8 @@ licensed under Creative Commons Attribution 3.0 License.
 -  ``mimetypes/diff``
 -  ``mimetypes/tex``
 
-Icons From SharpDevelop
------------------------
+From SharpDevelop
+=================
 
 Following icons originates from
 `SharpDevelop <http://www.icsharpcode.net/OpenSource/SD/>`__ a mix of
@@ -108,12 +95,11 @@ licensed under GNU LGPL.
 -  ``class``
 -  ``enum``
 
-Icons From Tango Project
-------------------------
+From Tango Project
+==================
 
 Following icons originates from
 `Tango <http://tango.freedesktop.org/>`__ by the Tango desktop project,
 released into public domain.
 
 -  ``search``
-
