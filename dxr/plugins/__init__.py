@@ -196,6 +196,8 @@ class FileToSkim(object):
         self.path = path
         self.contents = contents
         self.tree = tree
+        self.file_properties = file_properties or {}
+        self.line_properties = line_properties  # TODO: not clear what the default here should be. repeat([])?
 
     def is_interesting(self):
         """Return whether it's worthwhile to examine this file.
@@ -233,7 +235,9 @@ class FileToSkim(object):
         return []
 
     def regions_by_line(self):
-        """Yield an ordered list of extents for each line.
+        """Yield an ordered list of extents and CSS classes for each line::
+
+            (start, end, class)
 
         We'll probably store them in ES as a list of explicit objects, like
         {start: 5, end: 18, class: k}.
@@ -323,6 +327,9 @@ class Plugin(object):
 
     If the deployer should be able to independently enable parts of your
     plugin, consider exposing those as separate plugins.
+
+    Note that Plugins may be instantiated multiple times; don't assume
+    otherwise.
 
     """
     def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None):

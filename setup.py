@@ -24,8 +24,7 @@ setup(
                                   'buglink = dxr.plugins.buglink',
 #                                   'clang = dxr.plugins.clang',
 #                                   'omniglot = dxr.plugins.omniglot',
-#                                   'pygmentize = dxr.plugins.pygmentize'
-                                  ]},
+                                  'pygmentize = dxr.plugins.pygmentize']},
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',
                       'Jinja2>=2.6',

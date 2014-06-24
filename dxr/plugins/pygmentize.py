@@ -3,7 +3,7 @@ from os.path import basename
 from pygments.lexers import get_lexer_for_filename, JavascriptLexer
 from pygments.lexer import inherit
 from pygments.token import Token, Comment
-from pygments.utils import ClassNotFound
+from pygments.util import ClassNotFound
 
 import dxr.plugins
 
