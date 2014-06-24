@@ -32,7 +32,7 @@ def union_extents(tuples):
             yield extent
         # Turn other extents into an iterable of (start, end) tuples:
         for (s, e) in izip(other_extents[::2], other_extents[1::2]):
-            if s is not None and e is not None:
+            if is_valid_extent(s, e):
                 yield (s - 1), (e - 1)
 
 def flatten_extents(cursor):
@@ -62,6 +62,14 @@ def flatten_extents(cursor):
         extents = fix_extents_overlap(extents)
 
         yield line_results[0], extents
+
+
+def _valid_extent_boundary(boundary):
+    return boundary is not None and boundary != -1
+
+
+def is_valid_extent(start, end):
+    return _valid_extent_boundary(start) and _valid_extent_boundary(end)
 
 
 def highlight_line(content, extents, markup, markdown, encoding):
