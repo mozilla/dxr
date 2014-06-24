@@ -2,7 +2,7 @@ import cgi
 import re
 
 import dxr.plugins
-from dxr.plugins import MissingOptionError
+from dxr.config import MissingOptionError
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):
@@ -38,9 +38,9 @@ class FileToIndex(dxr.plugins.FileToIndex):
 
     def refs_by_line(self):
         for line in self.contents.splitlines():
-            yield list(self._bugs_on_line(line)
+            yield list(self._bugs_on_line(line))
 
-    def _bugs_on_line(self, line)
+    def _bugs_on_line(self, line):
         for m in self.regex.finditer(line):
             bug = m.group(1)
             yield m.start(0), m.end(0), ([{

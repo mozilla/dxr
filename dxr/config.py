@@ -116,6 +116,12 @@ class Config(object):
 
 class TreeConfig(object):
     """ Tree configuration for DXR """
+    # TODO: This should probably be a subclass of dict. Plugins and the
+    # framework can use .get() for optional options and .__getitem__() for
+    # required ones. We can override __missing__() to throw MissingOptionError
+    # whenever a getitem fails. Then we can remove the exception-raising
+    # machinery from places like buglink.
+
     def __init__(self, config, configfile, name):
         # Create parser with sane defaults
         parser = ConfigParser({
@@ -198,3 +204,18 @@ class TreeConfig(object):
         if "$jobs" not in self.build_command:
             msg = "Warning: $jobs is not used in build_command for '%s'"
             print >> sys.stderr, msg % name
+
+
+class MissingOptionError(Exception):
+    """Exception raised when a required option is missing from the config file
+
+    These include globally required options and options required for an enabled
+    plugin.
+
+    """
+    def __init__(self, option_name):
+        self.option_name = option_name
+
+    def __str__(self):
+        return ('The %s option is required. Add it to the config file, and '
+                'try indexing again.') % self.option_name
