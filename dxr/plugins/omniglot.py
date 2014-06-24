@@ -1,5 +1,6 @@
 import marshal
 import os
+from os.path import relpath
 import subprocess
 import urlparse
 
@@ -25,12 +26,8 @@ Todos:
 - add cvs, svn, bzr support
 - produce in-DXR blame information using VCSs
 - check if the mercurial paths are specific to Mozilla's customization or not.
+
 """
-
-# Global variables
-tree = None
-source_repositories = {}
-
 class VCS(object):
     """A class representing an abstract notion of a version-control system.
     In general, all path arguments to query methods should be normalized to be
@@ -108,11 +105,11 @@ class Mercurial(VCS):
         self.untracked_files = set(line.split()[1] for line in
             self.invoke_vcs(['hg', 'status', '-u', '-i']).split('\n')[:-1])
 
-    @staticmethod
-    def claim_vcs_source(path, dirs):
+    @classmethod
+    def claim_vcs_source(cls, path, dirs, tree):
         if '.hg' in dirs:
             dirs.remove('.hg')
-            return Mercurial(path)
+            return cls(path)
         return None
 
     def get_rev(self, path):
@@ -144,11 +141,11 @@ class Git(VCS):
                 self.upstream = self.synth_web_url(url)
                 break
 
-    @staticmethod
-    def claim_vcs_source(path, dirs):
+    @classmethod
+    def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
             dirs.remove('.git')
-            return Git(path)
+            return cls(path)
         return None
 
     def get_rev(self, path):
@@ -181,21 +178,19 @@ class Git(VCS):
 
 
 class Perforce(VCS):
-    def __init__(self, root):
+    def __init__(self, root, upstream):
         super(Perforce, self).__init__(root)
         have = self._p4run(['have'])
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
-        try:
-            self.upstream = tree.plugin_omniglot_p4web
-        except AttributeError:
-            self.upstream = "http://p4web/"
+        self.upstream = upstream
 
-    @staticmethod
-    def claim_vcs_source(path, dirs):
+    @classmethod
+    def claim_vcs_source(cls, path, dirs, tree):
         if 'P4CONFIG' not in os.environ:
             return None
         if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
-            return Perforce(path)
+            return cls(path,
+                       getattr(tree, 'plugin_omniglot_p4web', 'http://p4web/'))
         return None
 
     def _p4run(self, args):
@@ -245,81 +240,81 @@ class Perforce(VCS):
 every_vcs = [Mercurial, Git, Perforce]
 
 
-# Load global variables
-def load(tree_, conn):
-    global tree, lookup_order
-    tree = tree_
-    # Find all of the VCS's in the source directory
-    for cwd, dirs, files in os.walk(tree.source_folder):
-        for vcs in every_vcs:
-            attempt = vcs.claim_vcs_source(cwd, dirs)
-            if attempt is not None:
-                source_repositories[attempt.root] = attempt
+class TreeToIndex(dxr.plugins.TreeToIndex):
+    def pre_build(self):
+        """Find all the relevant VCS dirs in the project, and put them in
+        ``self.source_repositories``. Put the most-local-first order of its
+        keys in ``self.lookup_order``.
 
-    # It's possible that the root of the tree is not a VCS by itself, so walk up
-    # the hierarchy until we find a parent folder that is a VCS. If we can't
-    # find any, than no VCSs exist for the top-level of this repository.
-    directory = tree.source_folder
-    while directory != '/' and directory not in source_repositories:
-        directory = os.path.dirname(directory)
-        for vcs in every_vcs:
-            attempt = vcs.claim_vcs_source(directory, os.listdir(directory))
-            if attempt is not None:
-                source_repositories[directory] = attempt
-    # Note: we want to make sure that we look up source repositories by deepest
-    # directory first.
-    lookup_order = source_repositories.keys()
-    lookup_order.sort(key=len, reverse=True)
+        """
+        # Find all of the VCSs in the source directory:
+        for cwd, dirs, files in os.walk(self.tree.source_folder):
+            for vcs in every_vcs:
+                attempt = vcs.claim_vcs_source(cwd, dirs, self.tree)
+                if attempt is not None:
+                    self.source_repositories[attempt.root] = attempt
 
+        # It's possible that the root of the tree is not a VCS by itself, so walk up
+        # the hierarchy until we find a parent folder that is a VCS. If we can't
+        # find any, then no VCSs exist for the top level of this repository.
+        directory = self.tree.source_folder
+        while directory != '/' and directory not in self.source_repositories:
+            directory = os.path.dirname(directory)
+            for vcs in every_vcs:
+                attempt = vcs.claim_vcs_source(directory,
+                                               os.listdir(directory),
+                                               self.tree)
+                if attempt is not None:
+                    self.source_repositories[directory] = attempt
+        # Note: we want to make sure that we look up source repositories by deepest
+        # directory first.
+        self.lookup_order = self.source_repositories.keys()
+        self.lookup_order.sort(key=len, reverse=True)
 
-def find_vcs_for_file(path):
-    """Given an absolute path, find a source repository we know about that
-    claims to track that file.
-    """
-    for directory in lookup_order:
-        # This seems to be the easiest way to find "is path in the subtree
-        # rooted at directory?"
-        if os.path.relpath(path, directory).startswith('..'):
-            continue
-        vcs = source_repositories[directory]
-        if vcs.is_tracked(os.path.relpath(path, vcs.get_root_dir())):
-            return vcs
-    return None
+    def file_to_index(self, path, contents):
+        return FileToIndex(path,
+                           contents,
+                           self.tree,
+                           self.lookup_order,
+                           self.source_repositories)
 
 
-class LinksHtmlifier(object):
-    """Htmlifier which adds blame and external links to VCS web utilities."""
-    def __init__(self, path):
-        if not os.path.isabs(path):
-            path = os.path.join(tree.source_folder, path)
-        self.vcs = find_vcs_for_file(path)
-        if self.vcs is not None:
-            self.path = os.path.relpath(path, self.vcs.get_root_dir())
-            self.name = self.vcs.get_vcs_name()
+class FileToIndex(dxr.plugins.FileToIndex):
+    """Adder of blame and external links to items under version control"""
 
-    def refs(self):
-        return []
-
-    def regions(self):
-        return []
-
-    def annotations(self):
-        return []
+    def __init__(self, path, contents, tree, lookup_order, source_repositories):
+        super(FileToIndex, self).__init__(path, contents, tree)
+        self.lookup_order = lookup_order
+        self.source_repositories = source_repositories
 
     def links(self):
-        if self.vcs is None:
-            yield 5, 'Untracked file', []
-            return
         def items():
-            yield 'log', "Log", self.vcs.generate_log(self.path)
-            yield 'blame', "Blame", self.vcs.generate_blame(self.path)
-            yield 'diff',  "Diff", self.vcs.generate_diff(self.path)
-            yield 'raw', "Raw", self.vcs.generate_raw(self.path)
-        yield 5, '%s (%s)' % (self.name, self.vcs.get_rev(self.path)), items()
+            yield 'log', "Log", vcs.generate_log(vcs_relative_path)
+            yield 'blame', "Blame", vcs.generate_blame(vcs_relative_path)
+            yield 'diff',  "Diff", vcs.generate_diff(vcs_relative_path)
+            yield 'raw', "Raw", vcs.generate_raw(vcs_relative_path)
 
+        abs_path = self.absolute_path()
+        vcs = _find_vcs_for_file(abs_path)
+        if vcs:
+            vcs_relative_path = relpath(abs_path, vcs.get_root_dir())
+            yield (5,
+                   '%s (%s)' % (vcs.get_vcs_name(), vcs.get_rev(vcs_relative_path)),
+                   items())
+        else:
+            yield 5, 'Untracked file', []
 
-def htmlify(path, text):
-    return LinksHtmlifier(path)
+    def _find_vcs_for_file(abs_path):
+        """Given an absolute path, find a source repository we know about that
+        claims to track that file.
 
-
-__all__ = dxr.plugins.htmlifier_exports()
+        """
+        for directory in self.lookup_order:
+            # This seems to be the easiest way to find "is abs_path in the subtree
+            # rooted at directory?"
+            if relpath(abs_path, directory).startswith('..'):
+                continue
+            vcs = self.source_repositories[directory]
+            if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
+                return vcs
+        return None

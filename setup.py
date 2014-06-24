@@ -23,7 +23,7 @@ setup(
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
                                   'buglink = dxr.plugins.buglink',
 #                                   'clang = dxr.plugins.clang',
-#                                   'omniglot = dxr.plugins.omniglot',
+                                  'omniglot = dxr.plugins.omniglot',
                                   'pygmentize = dxr.plugins.pygmentize']},
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1',

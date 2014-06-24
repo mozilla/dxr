@@ -1,6 +1,7 @@
 """The DXR plugin architecture"""
 
-import os, sys
+import sys
+from os.path import join
 import imp
 from inspect import isclass
 
@@ -23,7 +24,7 @@ def load_indexers(tree):
     sys.path.append(tree.config.plugin_folder)
     plugins = []
     for name in tree.enabled_plugins:
-        path = os.path.join(tree.config.plugin_folder, name)
+        path = join(tree.config.plugin_folder, name)
         f, mod_path, desc = imp.find_module("indexer", [path])
         plugin = imp.load_module('dxr.plugins.' + name + "_indexer", f, mod_path, desc)
         f.close()
@@ -37,7 +38,7 @@ def load_htmlifiers(tree):
     sys.path.append(tree.config.plugin_folder)
     plugins = []
     for name in tree.enabled_plugins:
-        path = os.path.join(tree.config.plugin_folder, name)
+        path = join(tree.config.plugin_folder, name)
         f, mod_path, desc = imp.find_module("htmlifier", [path])
         plugin = imp.load_module('dxr.plugins.' + name + "_htmlifier", f, mod_path, desc)
         f.close()
@@ -129,7 +130,8 @@ class TreeToIndex(object):
     def file_to_index(self, path, contents):
         """Return a FileToIndex representing a conceptual path in the tree.
 
-        :arg path: A tree-relative path to the file to index
+        :arg path: A path to the file to index, relative to the tree's source
+            folder
         :arg contents: What's in the file: unicode if we managed to guess an
             encoding and decode it, str otherwise
 
@@ -172,9 +174,9 @@ class FileToSkim(object):
     def __init__(self, path, contents, tree, file_properties=None, line_properties=None):
         """Construct.
 
-        :arg path: The conceptual path to the file, relative to the tree. Such
-            a file might not exist on disk. This is useful mostly as a hint for
-            syntax coloring.
+        :arg path: The conceptual path to the file, relative to the tree's
+            source folder. Such a file might not exist on disk. This is useful
+            mostly as a hint for syntax coloring.
         :arg contents: What's in the file: unicode if we knew or successfully
             guessed an encoding, str otherwise. Don't return any by-line data
             for strs; the framework won't have succeeded in breaking up the
@@ -212,18 +214,12 @@ class FileToSkim(object):
         """
         return self.contains_text()
 
-    def contains_text(self):
-        """Return whether this file can be decoded and divided into lines as
-        text.
+    def links(self):
+        """Return an iterable of intra-page nav links::
 
-        This may come in handy as a component of your own
-        :meth:`is_interesting()` methods.
+            (sort order, heading, [(icon, title, href), ...])
 
         """
-        return isinstance(self.contents, unicode)
-
-    def links(self):
-        """Return an iterable of intra-page nav links."""
         return []
 
     def refs_by_line(self):
@@ -250,6 +246,18 @@ class FileToSkim(object):
         # everybody else? We can still show them per line if we want.
         return []
 
+    # Convenience methods:
+
+    def contains_text(self):
+        """Return whether this file can be decoded and divided into lines as
+        text.
+
+        This may come in handy as a component of your own
+        :meth:`is_interesting()` methods.
+
+        """
+        return isinstance(self.contents, unicode)
+
 
 class FileToIndex(FileToSkim):
     """A source of search and rendering data about one source file"""
@@ -257,7 +265,8 @@ class FileToIndex(FileToSkim):
     def __init__(self, path, contents, tree):
         """Analyze a file or digest an analysis that happened at compile time.
 
-        :arg path: A tree-relative path to the file to index
+        :arg path: A path to the file to index, relative to the tree's source
+            folder
         :arg contents: What's in the file: unicode if we managed to guess at an
             encoding and decode it, str otherwise. Don't return any by-line
             data for strs; the framework won't have succeeded in breaking up
@@ -314,6 +323,12 @@ class FileToIndex(FileToSkim):
 
         """
         return []
+
+    # Convenience methods:
+
+    def absolute_path(self):
+        """Return the absolute path of the file to index."""
+        return join(self.tree.source_folder, self.path)
 
 
 class Plugin(object):
