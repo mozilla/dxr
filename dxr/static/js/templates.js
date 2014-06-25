@@ -152,6 +152,35 @@ root: root
 };
 })();
 })();
+(function() {(window.nunjucksPrecompiled = window.nunjucksPrecompiled || {})["partial/no_results.html"] = (function() {function root(env, context, frame, runtime, cb) {
+var lineno = null;
+var colno = null;
+var output = "";
+try {
+var macro_t_1 = runtime.makeMacro(
+[], 
+[], 
+function (kwargs) {
+frame = frame.push();
+kwargs = kwargs || {};
+var output= "";
+output += "No results returned for current query.";
+frame = frame.pop();
+return new runtime.SafeString(output);
+});
+context.addExport("no_results");
+context.setVariable("no_results", macro_t_1);
+cb(null, output);
+;
+} catch (e) {
+  cb(runtime.handleError(e, lineno, colno));
+}
+}
+return {
+root: root
+};
+})();
+})();
 (function() {(window.nunjucksPrecompiled = window.nunjucksPrecompiled || {})["context_menu.html"] = (function() {function root(env, context, frame, runtime, cb) {
 var lineno = null;
 var colno = null;

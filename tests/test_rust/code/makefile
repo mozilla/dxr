@@ -1,8 +1,8 @@
 all: code  
 krate2: krate2.rs
-	$(RUST) $< -o $@
+	$(RUSTC) $< -o $@
 code: main.rs krate2
-	$(RUST) -L$(@D) $< -o $@
+	$(RUSTC) $< -o $@ -L$(@D)
 clean:
 	rm -rf code *.so
 

@@ -241,7 +241,7 @@ fn hello<X: SomeTrait>((z, a) : (u32, String), ex: X) {
 }
 
 // test kind bounds on trait objects
-fn kind_bounds(_: Box<SuperTrait>+Send, _: Box<SuperTrait>+'static) -> Box<SuperTrait>+ {
+fn kind_bounds(_: Box<SuperTrait>+Send, _: Box<SuperTrait>+'static) -> Box<SuperTrait> {
     fail!();
 }
 

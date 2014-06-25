@@ -14,8 +14,8 @@ def pre_process(tree, env):
     # We'll store all the havested metadata in the plugins temporary folder.
     plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
     temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-    if 'RUST' in env:
-        env['RUST'] += RUST_DXR_FLAG
+    if 'RUSTC' in env:
+        env['RUSTC'] += RUST_DXR_FLAG
     if 'RUSTFLAGS_STAGE2' in env:
         env['RUSTFLAGS_STAGE2'] += RUST_DXR_FLAG
     else:
