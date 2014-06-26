@@ -35,6 +35,13 @@ except ImportError:
     def compress(data, selectors):
         return (d for d, s in izip(data, selectors) if s)
 
+
+class BuildError(Exception):
+    """Catch-all error for expected kinds of failures during indexing"""
+    # This could be refined better, have params added, etc., but it beats
+    # calling sys.exit, which is what was happening before.
+
+
 def linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be
     used to display linked path components in the headers of file or folder
@@ -88,7 +95,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         trees = [t for t in config.trees if t.name == tree]
         if not trees:
             print >> sys.stderr, "Tree '%s' is not defined in config file!" % tree
-            sys.exit(1)
+            raise BuildError
     else:
         # Build everything if no tree is provided
         trees = config.trees
@@ -410,7 +417,7 @@ def build_tree(tree, conn, verbose):
             print >> sys.stderr, 'Log follows:'
             with open(log.name) as log_file:
                 print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
-        sys.exit(1)
+        raise BuildError
 
     # Let plugins post process
     for indexer in indexers:
@@ -435,7 +442,7 @@ def finalize_database(conn):
             isOkay = False
             print >> sys.stderr, "  | %s" % row[0]
     if not isOkay:
-        sys.exit(1)
+        raise BuildError
 
     conn.commit()
 
