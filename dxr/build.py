@@ -83,9 +83,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     # (this will abort on inconsistencies)
     overrides = {}
     if nb_jobs:
-        # TODO: Remove this brain-dead cast when we get the types right in the
-        # Config object:
-        overrides['nb_jobs'] = str(nb_jobs)
+        overrides['nb_jobs'] = nb_jobs
     config = Config(config_path, **overrides)
 
     skip_indexing = 'index' in config.skip_stages
@@ -472,7 +470,7 @@ def run_html_workers(tree, config, max_file_id):
 
     print ' - Initializing worker pool'
 
-    with ProcessPoolExecutor(max_workers=int(tree.config.nb_jobs)) as pool:
+    with ProcessPoolExecutor(max_workers=tree.config.nb_jobs) as pool:
         print ' - Enqueuing jobs'
         futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
                    (start, end) in _sliced_range_bounds(1, max_file_id, 500)]

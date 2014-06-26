@@ -22,7 +22,7 @@ class Config(object):
         # Create parser with sane defaults
         parser = ConfigParser({
             'plugin_folder':    "%s/plugins" % dirname(dxr.__file__),
-            'nb_jobs':          "1",
+            'nb_jobs':          1,
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
             'wwwroot':          "/",
@@ -39,7 +39,7 @@ class Config(object):
 
         # Set config values
         self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
-        self.nb_jobs          = parser.get('DXR', 'nb_jobs',          False, override)
+        self.nb_jobs          = int(parser.get('DXR', 'nb_jobs',      False, override))
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
