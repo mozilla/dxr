@@ -106,17 +106,35 @@ class TreeToIndex(object):
 
     """
     def __init__(self, tree):
+        """Construct.
+
+        :arg tree: The configuration of the tree to index: a TreeConfig
+
+        """
         # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_patterns out of the tree.
         self.tree = tree
 
+    def environment(self, vars):
+        """Return a dict of environment variables to do the build under.
+
+        This is where environment variables are commonly twiddled to activate
+        and parametrize compiler plugins which dump analysis data.
+
+        :arg vars: A dict of the already-set variables. You can make decisions
+            based on these.
+
+        You may return a new dict or scribble on ``vars`` and return it.
+
+        """
+        return vars
+
     def pre_build(self):
         """Hook called before the tree's build command is run
 
-        This is where environment variables are commonly twiddled to activate
-        and parametrize compiler plugins which dump analysis data. This is also
-        a good place to make a temp folder to dump said data in. You can stash
-        away a reference to it on the object so later methods can find it.
+        This is a good place to make a temp folder to dump said data in. You
+        can stash away a reference to it on the object so later methods can
+        find it.
 
         """
 
@@ -242,6 +260,11 @@ class FileToSkim(object):
         return []
 
     def annotations_by_line(self):
+        """Yield a list of annotation maps for each line::
+
+            {'title': ..., 'class': ..., 'style': ...}
+
+        """
         # TODO: Why are these just per line? Shouldn't they return extents like
         # everybody else? We can still show them per line if we want.
         return []
@@ -299,7 +322,8 @@ class FileToIndex(FileToSkim):
         super(FileToIndex, self).__init__(path, contents, tree)
 
     def needles(self):
-        """Return an iterable of key-value pairs of search data about the file.
+        """Return an iterable of key-value pairs of search data about the file
+        as a whole: for example, modification date or file size.
 
         If the framework encounters multiple needles of the same key (whether
         coming from the same plugin or different ones), all unique values will
@@ -311,11 +335,13 @@ class FileToIndex(FileToSkim):
         return []
 
     def needles_by_line(self):
-        """Return per-line search data for one file.
+        """Return per-line search data for one file: for example, markers that
+        indicate a function called "foo" is defined on a certain line.
 
-        Yield an iterable of key-value pairs for each of a file's lines, in
-        order by line. The data might be data to search on or data stowed away
-        for a later realtime thing to generate refs or regions from.
+        Yield an iterable of key-value pairs for each of a file's lines, one
+        iterable per line, in order. The data might be data to search on or
+        data stowed away for a later realtime thing to generate refs or
+        regions from.
 
         If the framework encounters multiple needles of the same key on the
         same line (whether coming from the same plugin or different ones), all
@@ -354,10 +380,13 @@ class Plugin(object):
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
-            plugin's ES-destined data
-        :arg analyzers: Analyzer, tokenizer, and filter definitions for the
-            elasticsearch mappings. A dict with keys "analyzer", "tokenizer",
-            etc., following the structure outlined at
+            plugin's ES-destined data. A dict with keys for each doctype and
+            values reflecting the structure described at
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/
+            current/indices-put-mapping.html.
+        :arg analyzers: Analyzer, tokenizer, and token and char filter
+            definitions for the elasticsearch mappings. A dict with keys
+            "analyzer", "tokenizer", etc., following the structure outlined at
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/analysis.html.
 
