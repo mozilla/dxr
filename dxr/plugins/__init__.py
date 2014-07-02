@@ -5,6 +5,7 @@ from os.path import join
 import imp
 from inspect import isclass
 
+from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
 
 
@@ -461,7 +462,14 @@ def all_plugins():
     object (which will be returned directly). The entry point name is what the
     user types into the config file under ``enabled_plugins``.
 
+    The core plugin, which provides many of DXR's cross-language, built-in
+    features, is always the first plugin when iterating over the returned
+    dict. This lets other plugins override bits of its ES mappings and
+    analyzers.
+
     """
+    import dxr.plugins.core
+
     def name_and_plugin(entry_point):
         """Return the name of an entry point and the Plugin it points to."""
         object = entry_point.load()
@@ -469,5 +477,8 @@ def all_plugins():
                   Plugin.from_namespace(object.__dict__))
         return entry_point.name, plugin
 
-    return dict(name_and_plugin(point) for point in
-                iter_entry_points('dxr.plugins'))
+    ret = OrderedDict()
+    ret['core'] = Plugin.from_namespace(dxr.plugins.core)
+    ret.update(name_and_plugin(point) for point in
+               iter_entry_points('dxr.plugins'))
+    return ret
