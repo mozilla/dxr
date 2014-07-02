@@ -50,10 +50,10 @@ def load_htmlifiers(tree):
 ## NEW STUFF. Most of the above should go away.
 
 # Domain constants:
-FILES = 'file'  # A FILES query will be promoted to a LINES query if any other query
-           # term triggers a line-based query. Thus, it's important to keep
-           # field names and semantics the same between lines and files.
-LINES = 'line'
+FILE = 'file'  # A FILE query will be promoted to a LINE query if any other query
+               # term triggers a line-based query. Thus, it's important to keep
+               # field names and semantics the same between lines and files.
+LINE = 'line'
 
 
 # This is a concrete example of a Filter. This should move to some kind of
@@ -63,7 +63,7 @@ class PathFilter(object):
     the querying and highlighting phases."""
 
     name = 'path'
-    domain = FILES
+    domain = FILE
 
     def __init__(self, term):
         """This is a good place to parse the term's arg (if it requires further
