@@ -9,14 +9,16 @@ import ctypes
 # is fine.
 ctypes.CDLL('libtrilite.so').load_trilite_extension()
 
+from collections import Mapping
 import os
 from os import dup
 from os.path import join, dirname
-import jinja2
+from itertools import izip
 import sqlite3
-import string
 from sys import stdout
 from urllib import quote, quote_plus
+
+import jinja2
 
 import dxr
 
@@ -117,3 +119,70 @@ def connect_db(dir):
     conn.execute("PRAGMA page_size=32768")
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def update(dest, source):
+    """A version of dict.update() that returns the updated dict.
+
+    Lets us do more reduce() one-liners.
+
+    """
+    dest.update(source)
+    return dest
+
+
+def deep_update(dest, source):
+    """Overlay two dictionaries recursively.
+
+    Overwrite keys that hold non-mapping values. Raise TypeError if ``dest``
+    and ``source`` disagree about which values are mappings.
+
+    """
+    for k, v in source.iteritems():
+        source_is_mapping = isinstance(v, Mapping)
+        if k in dest and source_is_mapping != isinstance(dest[k], Mapping):
+            raise TypeError("Can't merge value %r into %r for key %r." %
+                            (dest[k], v, k))
+        dest[k] = (deep_update(dest.get(k, {}), v) if source_is_mapping
+                   else source[k])
+    return dest
+
+
+def append_update(mapping, pairs):
+    """Merge key-value pairs into a mapping, preserving conflicting ones by
+    expanding values into lists.
+
+    Return the updated mapping.
+
+    :arg mapping: The mapping into which to merge the new pairs. All values
+        must be lists.
+    :arg pairs: An iterable of key-value pairs
+
+    """
+    for k, v in pairs:
+        mapping.setdefault(k, []).append(v)
+    return mapping
+
+
+def append_update_by_line(mappings, pairses):
+    """:func:`append_update()` each group of pairs into its parallel
+    ``mappings`` element.
+
+    Return the updated ``mappings``.
+
+    :arg mappings: A list of mappings the same length as ``pairses``
+    :arg pairses: An iterable of iterables of pairs to :func:`append_update()`
+        into ``mappings``, each into its parallel mapping
+
+    """
+    for mapping, pairs in izip(mappings, pairses):
+        append_update(mapping, pairs)
+    return mappings
+
+
+def append_by_line(dest_lists, list_per_line):
+    """Given two list and parallel iterable ``list_per_line``, merge the
+    element of the second into the element of the first."""
+    for dest_list, source_list in izip(dest_lists, list_per_line):
+        dest_list.extend(source_list)
+    return dest_lists

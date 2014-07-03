@@ -391,6 +391,10 @@ class Plugin(object):
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/analysis.html.
 
+        ``mappings`` and ``analyzers`` are merged into other plugins' mappings
+        and analyzers using the algorithm described at
+        :func:`~dxr.utils.deep_update()`.
+
         """
         self.filters = filters or []
         # Someday, these might become lists of indexers or skimmers, and then
