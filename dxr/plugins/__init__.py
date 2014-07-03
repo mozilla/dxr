@@ -102,8 +102,7 @@ class TreeToIndex(object):
     You might also want to keep the size down. It takes on the order of 2s for
     a 150MB pickle to make its way across process boundaries, including
     pickling and unpickling time. For this reason, we send the TreeToIndex once
-    and then have it index several files before sending it again. The number of
-    files per chunk is adjustable via the `something` config option.
+    and then have it index several files before sending it again.
 
     """
     def __init__(self, tree):
@@ -134,42 +133,43 @@ class TreeToIndex(object):
         """Hook called before the tree's build command is run
 
         This is a good place to make a temp folder to dump said data in. You
-        can stash away a reference to it on the object so later methods can
-        find it.
+        can stash away a reference to it on me so later methods can find it.
 
         """
 
     def post_build(self):
         """Hook called after the tree's build command completes
 
-        This is a good place to do any whole-program analysis.
+        This is a good place to do any whole-program analysis, storing it on
+        me or on disk.
 
         """
 
     def file_to_index(self, path, contents):
-        """Return a FileToIndex representing a conceptual path in the tree.
+        """Return an object that provides data about a given file.
+
+        Return an object conforming to the interface of :class:`FileToIndex`,
+        generally a subclass of it.
 
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess an
             encoding and decode it, str otherwise
 
-        Return None if there is no indexing to be done on the file.
+        Return None if there is no indexing to do on the file.
 
         Being a method on TreeToIndex, this can easily pass along the location
-        of our temp directory or other shared setup artifacts. However, beware
+        of a temp directory or other shared setup artifacts. However, beware
         of passing mutable things; while the FileToIndex can mutate them,
         visibility of those changes will be limited to objects in the same
         worker process. Thus, a TreeToIndex-dwelling dict might be a suitable
-        place for a cache, but it's not suitable for data that can't afford to
-        evaporate.
+        place for a cache but unsuitable for data that can't evaporate.
 
         If a plugin omits a TreeToIndex class, :meth:`Plugin.from_namespace()`
         constructs one dynamically. The method implementations of that class
-        are inherited from :class:`TreeToIndex`, with one exception: a
+        are inherited from this class, with one exception: a
         ``file_to_index()`` method is dynamically constructed which returns a
-        new instance of whatever ``FileToIndex`` class the plugin defines, if
-        any.
+        new instance of the ``FileToIndex`` class the plugin defines, if any.
 
         """
 
