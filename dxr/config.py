@@ -33,7 +33,9 @@ class Config(object):
             'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     "",
-            'filter_language':  "C"
+            'filter_language':  "C",
+            'es_hosts':         'http://127.0.0.1:9200/',
+            'es_index':         'dxr_{tree}_{unique}'
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -52,6 +54,8 @@ class Config(object):
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
         self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
+        self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
+        self.es_index         = parser.get('DXR', 'es_index', False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []

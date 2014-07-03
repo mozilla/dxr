@@ -25,6 +25,7 @@ from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 import dxr.mime
+from dxr.mime import is_text
 from dxr.query import filter_menu_items
 from dxr.utils import connect_db, load_template_env, open_log, browse_url
 
@@ -79,14 +80,27 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         file.
 
     """
+    def new_pool():
+        return ProcessPoolExecutor(max_workers=tree.config.nb_jobs)
+
+    def farm_out(method_name):
+        """Farm out a call to all tree indexers across a process pool.
+
+        Return the tree indexers, including anything mutations the method call
+        might have made.
+
+        Show progress while doing it.
+
+        """
+        futures = [pool.submit(save_scribbles, ti, method_name) for ti in tree_indexers]
+        return [ti for ti in show_progress(futures, message='Running %s.' % method_name)]
+
     # Load configuration file
     # (this will abort on inconsistencies)
     overrides = {}
     if nb_jobs:
         overrides['nb_jobs'] = nb_jobs
     config = Config(config_path, **overrides)
-
-    skip_indexing = 'index' in config.skip_stages
 
     # Find trees to make, fail if requested tree isn't available
     if tree:
@@ -98,8 +112,116 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         # Build everything if no tree is provided
         trees = config.trees
 
+    skip_indexing = 'index' in config.skip_stages
+
+    print " - Generating target folder."
+    create_skeleton(config, skip_indexing)
+
+    for tree in trees:
+        print "Processing tree '%s'." % tree.name
+
+        # Note starting time
+        start_time = datetime.now()
+
+        # Create folders (delete if exists)
+        ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
+        ensure_folder(tree.object_folder,                    # Object folder (user defined!)
+            tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
+        ensure_folder(tree.temp_folder, not skip_indexing)   # <config.temp_folder>/<tree.name>
+                                                             # (or user defined)
+        ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
+                                                             # (or user defined)
+        # Temporary folders for plugins
+        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
+        for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
+            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+
+        tree_indexers = [p.tree_to_index for p in tree.enabled_plugins if
+                         p.tree_to_index]
+
+        if skip_indexing:
+            print " - Skipping indexing (due to 'index' in 'skip_stages')"
+        else:
+            es = ElasticSearch(config.es_hosts)
+
+            # Make a new index with a semi-random name, having the tree name and format version in it. The prefix should come out of the tree config, falling back to the global config: dxr_hot_prod_{tree}_{whatever}.
+            index = config.es_index.format(tree=tree.name, unique=uuid1())
+            es.create_index(
+                index,
+                settings={
+                    'settings': {
+                        'index': {
+                            'number_of_shards': 10,  # wild guess
+                            'number_of_replicas': 1  # fairly arbitrary
+                        }
+                    },
+                    # Default analyzers and mappings are in the core plugin.
+                    'analysis': reduce(deep_update, (p.analyzers for p in
+                                       tree.enabled_plugins), {}),
+                    'mappings': reduce(deep_update, (p.mappings for p in
+                                       tree.enabled_plugins), {})
+                })
+
+
+            # Run pre-build hooks:
+            with new_pool() as pool:
+                tree_indexers = farm_out('pre_build')
+                # Tear down pool to let the build process use more RAM.
+
+            # Set up env vars, and build:
+            build_tree(tree, tree_indexers, verbose)
+
+            # Post-build, and index files:
+            with new_pool() as pool:
+                tree_indexers = farm_out('post_build')
+                index_files(tree, tree_indexers, index, pool)
+
+            # Index files, including paths, extensions, needles, etc. (index_files())
+            #   Index lines, including full text, needles_by_line.
+            #   Also build folder listings while we're at it. This (build_folder()) makes the whole folder tree needed for the static HTML.
+            # Also also lay down static HTML, pulling from links, refs_by_line, etc., if 'html' not in config.skip_stages
+
+            # Remember the semi-random index name.
+
+#         if 'html' in config.skip_stages:
+#             print " - Skipping htmlifying (due to 'html' in 'skip_stages')"
+#         else:
+#             print "Building HTML for the '%s' tree." % tree.name
+
+        print " - Finished processing '%s' in %s." % (tree.name,
+                                                      datetime.now() - start_time)
+
+    # For each tree, flop the ES alias for this format version (pulled from the config) to the new index, and delete the old one first.
+
+    # This is temporarily asymmetrical: it flops the index but leave it to the
+    # caller to flop the static HTML. This asymmetry will go away when the
+    # static HTML does.
+
+
+def show_progress(futures, message='Doing stuff.'):
+    """Show progress and yield results as futures complete."""
+    print message
+    num_jobs = len(futures)
+    for num_done, future in enumerate(as_completed(futures), 1):
+        print num_done, 'of', num_jobs, 'jobs done.'
+        yield future
+
+
+def save_scribbles(obj, method):
+    """Call obj.method(), then return obj and the result so the master process
+    can see anything method() scribbled on it.
+
+    This is meant to run in a remote process.
+
+    """
+    getattr(obj, method)()
+    return obj
+
+
+def create_skeleton(config, skip_indexing):
+    """Make the non-tree-specific FS artifacts needed to do the build."""
+
     # Create config.target_folder (if not exists)
-    print "Generating target folder"
     ensure_folder(config.target_folder, False)
     ensure_folder(config.temp_folder, not skip_indexing)
     ensure_folder(config.log_folder, not skip_indexing)
@@ -118,75 +240,16 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
              default_tree=repr(config.default_tree),
-             filter_language=repr(config.filter_language)))
+             filter_language=repr(config.filter_language),
+             es_hosts=repr(config.es_hosts),
+             es_index=repr(config.es_index)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
 
-    # TODO Make open-search.xml things (or make the server so it can do them!)
+    # TODO: Make open-search.xml once we go to request-time rendering.
 
-    # Build trees requested
     ensure_folder(os.path.join(config.target_folder, 'trees'))
-    for tree in trees:
-        # Note starting time
-        start_time = datetime.now()
-
-        # Create folders (delete if exists)
-        ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
-        ensure_folder(tree.object_folder,                    # Object folder (user defined!)
-            tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
-        ensure_folder(tree.temp_folder,   not skip_indexing) # <config.temp_folder>/<tree.name>
-                                                             # (or user defined)
-        ensure_folder(tree.log_folder,    not skip_indexing) # <config.log_folder>/<tree.name>
-                                                             # (or user defined)
-        # Temporary folders for plugins
-        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
-        for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
-
-        # Connect to database (exits on failure: sqlite_version, tokenizer, etc)
-        conn = connect_db(tree.target_folder)
-
-        if skip_indexing:
-            print " - Skipping indexing (due to 'index' in 'skip_stages')"
-        else:
-            # Create database tables
-            create_tables(tree, conn)
-
-            # Index all source files (for full text search)
-            # Also build all folder listing while we're at it
-            index_files(tree, conn)
-
-            # Build tree
-            build_tree(tree, conn, verbose)
-
-            # Optimize and run integrity check on database
-            finalize_database(conn)
-
-            # Commit database
-            conn.commit()
-
-        if 'html' in config.skip_stages:
-            print " - Skipping htmlifying (due to 'html' in 'skip_stages')"
-        else:
-            print "Building HTML for the '%s' tree." % tree.name
-
-            max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
-            if config.disable_workers:
-                print " - Worker pool disabled (due to 'disable_workers')"
-                _build_html_for_file_ids(tree, 0, max_file_id)
-            else:
-                run_html_workers(tree, config, max_file_id)
-
-        # Close connection
-        conn.commit()
-        conn.close()
-
-        # Save the tree finish time
-        delta = datetime.now() - start_time
-        print "(finished building '%s' in %s)" % (tree.name, delta)
-
-    # Print a neat summary
 
 
 def ensure_folder(folder, clean=False):
@@ -199,12 +262,6 @@ def ensure_folder(folder, clean=False):
         shutil.rmtree(folder, False)
     if not os.path.isdir(folder):
         os.mkdir(folder)
-
-
-def create_tables(tree, conn):
-    print "Creating tables"
-    conn.execute("CREATE VIRTUAL TABLE trg_index USING trilite")
-    conn.executescript(dxr.languages.language_schema.get_create_sql())
 
 
 def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
@@ -223,84 +280,190 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
                 yield folder
 
 
-def index_files(tree, conn):
-    """Build the ``files`` and ``lines`` tables, the trigram index, and the
-    HTML folder listings."""
-    print "Indexing files from the '%s' tree" % tree.name
-    start_time = datetime.now()
-    cur = conn.cursor()
-    # Walk the directory tree top-down, this allows us to modify folders to
-    # exclude folders matching an ignore_pattern
-    for root, folders, files in os.walk(tree.source_folder, topdown=True):
-        # Find relative path
-        rel_path = os.path.relpath(root, tree.source_folder)
-        if rel_path == '.':
-            rel_path = ""
+def file_contents(path, encoding_guess):
+    """Return the unicode contents of a file if we can figure out a decoding.
+    Otherwise, return the contents as a string.
 
-        # List of file we indexed (ie. add to folder listing)
-        indexed_files = []
+    :arg path: A sufficient path to the file
+    :arg encoding_guess: A guess at the encoding of the file, to be applied if
+        it seems to be text
+
+    """
+    # Read the binary contents of the file.
+    # If mime.is_text() says it's text, try to decode it using encoding_guess.
+    # If that works, return the resulting unicode.
+    # Otherwise, return the binary string.
+    with open(path, 'rb') as source_file:
+        contents = source_file.read()  # always str
+    if is_text(contents):
+        try:
+            contents = contents.decode(source_encoding)
+        except UnicodeDecodeError:
+            pass  # Leave contents as str.
+    return contents
+
+
+def unignored_files(folder, ignore_paths, ignore_patterns):
+    """Return an iterable of absolute paths to unignored source tree files.
+
+    Returned files include both binary and text ones.
+
+    """
+    for root, folders, files in os.walk(folder, topdown=True):
+        # Find relative path
+        rel_path = relpath(root, folder)
+        if rel_path == '.':
+            rel_path = ''
+
         for f in files:
             # Ignore file if it matches an ignore pattern
-            if any(fnmatchcase(f, e) for e in tree.ignore_patterns):
+            if any(fnmatchcase(f, e) for e in ignore_patterns):
                 continue  # Ignore the file.
 
-            # file_path and path
-            file_path = os.path.join(root, f)
-            path = os.path.join(rel_path, f)
+            path = join(rel_path, f)
 
             # Ignore file if its path (relative to the root) matches an ignore path
-            if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in tree.ignore_paths):
+            if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
                 continue  # Ignore the file.
 
-            # the file
-            try:
-                with open(file_path, 'r') as source_file:
-                    data = source_file.read()
-            except IOError as exc:
-                if exc.errno == ENOENT and islink(file_path):
-                    # It's just a bad symlink (or a symlink that was swiped out
-                    # from under us--whatever):
-                    continue
-                else:
-                    raise
-
-            # Discard non-text files
-            if not dxr.mime.is_text(file_path, data):
-                continue
-
-            # Find an icon (ideally dxr.mime should use magic numbers, etc.)
-            # that's why it makes sense to save this result in the database
-            icon = dxr.mime.icon(path)
-
-            # Insert this file
-            cur.execute("INSERT INTO files (path, icon, encoding) VALUES (?, ?, ?)",
-                        (path, icon, tree.source_encoding))
-            file_id = cur.lastrowid
-            # Index this file
-            for line_number, line in enumerate(data.splitlines(), 1):  # Was a TODO: Maybe we can take away the True in splitlines() and save some bytes, but I'm being conservative for now. I'm afraid the rendering routines might depend on extents not going past the end of the line. I would like to remove the linebreaks, though, not just for space but because it makes it easier to implement plugins: they no longer have to deal with arbitrary linebreak formats. OTOH, it means you can't do regex searches for explicit sequences of newlines and CRs. That corner case is totally not worth serving.
-                cur.execute("INSERT INTO lines (number, file_id) VALUES (?, ?)",
-                            (line_number, file_id))
-                cur.execute("INSERT INTO trg_index (id, text) VALUES (?, ?)",
-                            (cur.lastrowid, line))
-
-            # Okay to this file was indexed
-            indexed_files.append(f)
+            yield join(root, f)
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
         folders[:] = _unignored_folders(
-            folders, rel_path, tree.ignore_patterns, tree.ignore_paths)
+            folders, rel_path, ignore_patterns, ignore_paths)
 
-        indexed_files.sort()
-        folders.sort()
-        # Now build folder listing and folders for indexed_files
-        build_folder(tree, conn, rel_path, indexed_files, folders)
 
-    # Okay, let's commit everything
-    conn.commit()
+def index_file(tree, tree_indexers, path, es, index, jinja_env):
+    """Index a single file into ES and wherever else.
 
-    # Print time
-    print "(finished in %s)" % (datetime.now() - start_time)
+    For the moment, we execute plugins in series, figuring that we have plenty
+    of files to keep our processors busy in most trees that take very long. I'm
+    a little afraid of the cost of passing potentially large TreesToIndex to
+    worker processes. That goes at 52MB/s on my OS X laptop, measuring by the
+    size of the pickled object and including the pickling and unpickling time.
+
+    :arg path: Absolute path to the file to index
+
+    """
+    try:
+        contents = file_contents(path, tree.source_encoding)
+    except IOError as exc:
+        if exc.errno == ENOENT and islink(path):
+            # It's just a bad symlink (or a symlink that was swiped out
+            # from under us--whatever)
+            return
+        else:
+            raise
+
+    rel_path = relpath(path, tree.source_folder)
+
+    num_lines = len(contents.splitlines())
+    needles = {}
+    links = []
+    needles_by_line = [{}] * num_lines
+    refs_by_line = [[]] * num_lines
+    regions_by_line = [[]] * num_lines
+    annotations_by_line = [[]] * num_lines
+
+    for tree_indexer in tree_indexers:
+        file_to_index = tree_indexer.file_to_index(rel_path, contents)
+        if file_to_index.is_interesting():
+            # Per-file stuff:
+            append_update(needles, file_to_index.needles())
+            links.append(file_to_index.links())
+
+            # Per-line stuff:
+            append_update_by_line(needles_by_line, file_to_index.needles_by_line())
+            append_by_line(refs_by_line, file_to_index.refs_by_line())
+            append_by_line(regions_by_line, file_to_index.regions_by_line())
+            append_by_line(annotations_by_line, file_to_index.annotations_by_line())
+
+
+    # Index a doc of type 'file' so we can build folder listings.
+    # At the moment, we send to ES in the same worker that does the indexing.
+    # We could interpose an external queuing system, but I'm willing to
+    # potentially sacrifice a little speed here for the easy management of
+    # self-throttling.
+    # TODO: Merge with the bulk_index below when pyelasticsearch supports
+    # multi-doctype bulk indexing.
+    file_info = stat(path)
+    es.index(index,
+             FILE,
+             {'path': rel_path,
+              'size': file_info.st_size,
+              'modified': datetime.fromtimestamp(file_info.st_mtime)})
+
+    # Index all the lines:
+    es.bulk_index(index, LINE, (update(n, needles) for n in needles_by_line), id_field=None)
+
+    # Render some HTML:
+    _fill_and_write_template(
+        jinja_env,
+        'file.html',
+        join(tree.target_folder, rel_path + '.html'),
+        {# Common template variables:
+         'wwwroot': tree.config.wwwroot,
+         'tree': tree.name,
+         'tree_tuples': [(t.name,
+                          browse_url(t.name, tree.config.wwwroot, rel_path),
+                          t.description)
+                         for t in tree.config.sorted_tree_order],
+         'generated_date': tree.config.generated_date,
+         'filters': filter_menu_items(tree.config.filter_language),
+
+         # File template variables:
+         'paths_and_names': linked_pathname(rel_path, tree.name),
+         'icon': icon(rel_path),
+         'path': rel_path,
+         'name': os.path.basename(rel_path),
+
+         # Someday, it would be great to stream this and not concretize the
+         # whole thing in RAM. The template will have to quit looping through
+         # the whole thing 3 times.
+         'lines': zip(build_lines(text, htmlifiers, tree.source_encoding),
+                      annotations_by_line),
+
+         'sections': build_sections(links)})
+
+
+def index_chunk(tree, tree_indexers, paths, index):
+    """Index a pile of files.
+
+    This is the entrypoint for indexer pool workers.
+
+    """
+    path = '(no file yet)'
+    try:
+        es = ElasticSearch(tree.config.es_hosts)
+        jinja_env = load_template_env(tree.config.temp_folder)
+        for path in paths:
+            index_file(tree, tree_indexers, path, es, index, jinja_env)
+    except Exception as exc:
+        type, value, traceback = exc_info()
+        return format_exc(), type, value, file_id, path
+
+
+def index_files(tree, tree_indexers, index, pool):
+    """Build the ``files`` and ``lines`` tables, the trigram index, and the
+    HTML folder listings.
+
+    """
+    create_static_folders()  # Lay down all the containing folders so we can generate the file HTML in parallel.
+
+    unignored = unignored_files(tree.source_folder,
+                                tree.ignore_paths,
+                                tree.ignore_patterns)
+    futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index) for
+               paths in chunked(unignored, 500)]
+    for future in show_progress(futures, message=' - Indexing files.'):
+        result = future.result()
+        if result:
+            formatted_tb, type, value, id, path = result
+            print 'A worker failed while htmlifying %s:' % path
+            print formatted_tb
+            # Abort everything if anything fails:
+            raise type, value  # exits with non-zero
 
 
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
@@ -363,6 +526,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'folders': folders,
          'files': files})
 
+
 def _join_url(*args):
     """Join URL path segments with "/", skipping empty segments."""
     return '/'.join(a for a in args if a)
@@ -375,28 +539,16 @@ def _fill_and_write_template(jinja_env, template_name, out_path, vars):
     template.stream(**vars).dump(out_path, encoding='utf-8')
 
 
-def build_tree(tree, conn, verbose):
-    """Build the tree, pre_process, build and post_process."""
-    # Load indexers
-    indexers = load_indexers(tree)
+def build_tree(tree, tree_indexers, verbose):
+    """Set up env vars, and run the build command."""
 
-    # Get system environment variables
-    environ = {}
-    for key, val in os.environ.items():
-        environ[key] = val
+    # Set up build environment variables:
+    environ = os.environ.copy()
+    for ti in tree_indexers:
+        environ = ti.environment(environ)
 
-    # Let plugins preprocess
-    # modify environ, change makefile, hack things whatever!
-    for indexer in indexers:
-        indexer.pre_process(tree, environ)
-
-    # Add source and build directories to the command
-    environ["source_folder"] = tree.source_folder
-    environ["build_folder"] = tree.object_folder
-
-    # Open log file
+    # Call make or whatever:
     with open_log(tree, 'build.log', verbose) as log:
-        # Call the make command
         print "Building the '%s' tree" % tree.name
         r = subprocess.call(
             tree.build_command.replace('$jobs', tree.config.nb_jobs),
@@ -407,7 +559,7 @@ def build_tree(tree, conn, verbose):
             cwd     = tree.object_folder
         )
 
-    # Abort if build failed!
+    # Abort if build failed:
     if r != 0:
         print >> sys.stderr, ("Build command for '%s' failed, exited non-zero."
                               % tree.name)
@@ -417,177 +569,13 @@ def build_tree(tree, conn, verbose):
                 print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         raise BuildError
 
-    # Let plugins post process
-    for indexer in indexers:
-        indexer.post_process(tree, conn)
 
-
-def finalize_database(conn):
-    """Finalize the database."""
-    print "Finalize database:"
-
-    print " - Building database statistics for query optimization"
-    conn.execute("ANALYZE");
-
-    print " - Running integrity check"
-    isOkay = None
-    for row in conn.execute("PRAGMA integrity_check"):
-        if row[0] == "ok" and isOkay is None:
-            isOkay = True
-        else:
-            if isOkay is not False:
-                print >> sys.stderr, "Database integerity check failed"
-            isOkay = False
-            print >> sys.stderr, "  | %s" % row[0]
-    if not isOkay:
-        raise BuildError
-
-    conn.commit()
-
-
-def build_sections(tree, conn, path, text, htmlifiers):
+def build_sections(links):
     """ Build navigation sections for template """
-    # Chain links from different htmlifiers
-    links = chain(*(htmlifier.links() for htmlifier in htmlifiers))
-    # Sort by importance (resolve tries by section name)
-    links = sorted(links, key = lambda section: (section[0], section[1]))
+    # Sort by importance (resolve ties by section name)
+    links = sorted(links, key=lambda section: (section[0], section[1]))
     # Return list of section and items (without importance)
     return [(section, list(items)) for importance, section, items in links]
-
-
-def _sliced_range_bounds(a, b, slice_size):
-    """Divide ``range(a, b)`` into slices of size ``slice_size``, and
-    return the min and max values of each slice."""
-    this_min = a
-    while this_min == a or this_max < b:
-        this_max = min(b, this_min + slice_size - 1)
-        yield this_min, this_max
-        this_min = this_max + 1
-
-
-def run_html_workers(tree, config, max_file_id):
-    """Farm out the building of HTML to a pool of processes."""
-
-    print ' - Initializing worker pool'
-
-    with ProcessPoolExecutor(max_workers=tree.config.nb_jobs) as pool:
-        print ' - Enqueuing jobs'
-        futures = [pool.submit(_build_html_for_file_ids, tree, start, end) for
-                   (start, end) in _sliced_range_bounds(1, max_file_id, 500)]
-        print ' - Waiting for workers to complete'
-        for num_done, future in enumerate(as_completed(futures), 1):
-            print '%s of %s HTML workers done.' % (num_done, len(futures))
-            result = future.result()
-            if result:
-                formatted_tb, type, value, id, path = result
-                print 'A worker failed while htmlifying %s, id=%s:' % (path, id)
-                print formatted_tb
-                # Abort everything if anything fails:
-                raise type, value  # exits with non-zero
-
-
-def _build_html_for_file_ids(tree, start, end):
-    """Write HTML files for file IDs from ``start`` to ``end``. Return None if
-    all goes well, a tuple of (stringified exception, exc type, exc value, file
-    ID, file path) if something goes wrong while htmlifying a file.
-
-    This is the top-level function of an HTML worker process. Log progress to a
-    file named "build-html-<start>-<end>.log".
-
-    """
-    path = '(no file yet)'
-    file_id = -1
-    try:
-        # We might as well have this write its log directly rather than returning
-        # them to the master process, since it's already writing the built HTML
-        # directly, since that probably yields better parallelism.
-
-        conn = connect_db(tree.target_folder)
-        # TODO: Replace this ad hoc logging with the logging module (or something
-        # more humane) so we can get some automatic timestamps. If we get
-        # timestamps spit out in the parent process, we don't need any of the
-        # timing or counting code here.
-        with open_log(tree, 'build-html-%s-%s.log' % (start, end)) as log:
-            # Load htmlifier plugins:
-            plugins = load_htmlifiers(tree)
-            for plugin in plugins:
-                plugin.load(tree, conn)
-
-            start_time = datetime.now()
-
-            # Fetch and htmlify each document:
-            for num_files, (file_id, path, icon) in enumerate(
-                    conn.execute("""
-                                 SELECT id, path, icon
-                                 FROM files
-                                 WHERE id >= ?
-                                 AND id <= ?
-                                 """,
-                                 [start, end]),
-                    1):
-                text = '\n'.join(
-                    line_content for (line_content,) in
-                    conn.execute('SELECT trg_index.text '
-                                 'FROM files '
-                                 'INNER JOIN lines ON files.id=lines.file_id '
-                                 'INNER JOIN trg_index ON trg_index.id=lines.id '
-                                 'WHERE files.id=? '
-                                 'ORDER BY lines.number',
-                                 [file_id]))
-                dst_path = os.path.join(tree.target_folder, path + '.html')
-                log.write('Starting %s.\n' % path)
-                htmlify(tree, conn, icon, path, text, dst_path, plugins)
-
-            conn.commit()
-            conn.close()
-
-            # Write time information:
-            time = datetime.now() - start_time
-            log.write('Finished %s files in %s.\n' % (num_files, time))
-    except Exception as exc:
-        type, value, traceback = exc_info()
-        return format_exc(), type, value, file_id, path
-
-
-def htmlify(tree, conn, icon, path, text, dst_path, plugins):
-    """ Build HTML for path, text save it to dst_path """
-    # Create htmlifiers for this source
-    htmlifiers = []
-    for plugin in plugins:
-        htmlifier = plugin.htmlify(path, text)
-        if htmlifier:
-            htmlifiers.append(htmlifier)
-    # Load template
-    env = load_template_env(tree.config.temp_folder)
-
-    arguments = {
-        # Set common template variables
-        'wwwroot': tree.config.wwwroot,
-        'tree': tree.name,
-        'tree_tuples': [(t.name,
-                         browse_url(t.name, tree.config.wwwroot, path),
-                         t.description)
-                        for t in tree.config.sorted_tree_order],
-        'generated_date': tree.config.generated_date,
-        'filters': filter_menu_items(tree.config.filter_language),
-
-        # Set file template variables
-        'paths_and_names': linked_pathname(path, tree.name),
-        'icon': icon,
-        'path': path,
-        'name': os.path.basename(path),
-
-        # Someday, it would be great to stream this and not concretize the
-        # whole thing in RAM. The template will have to quit looping through
-        # the whole thing 3 times.
-        'lines': list(lines_and_annotations(build_lines(text, htmlifiers,
-                                                        tree.source_encoding),
-                                            htmlifiers)),
-
-        'sections': build_sections(tree, conn, path, text, htmlifiers)
-    }
-
-    _fill_and_write_template(env, 'file.html', dst_path, arguments)
 
 
 class Line(object):
@@ -941,31 +929,3 @@ def build_lines(text, htmlifiers, encoding='utf-8'):
                                   # that in html_lines().
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), decoded_slice)
-
-
-def lines_and_annotations(lines, htmlifiers):
-    """Collect all the annotations for each line into a list, and yield a tuple
-    of (line of HTML, annotations list) for each line.
-
-    :arg lines: An iterable of Markup objects, each representing a line of
-        HTMLified source code
-
-    """
-    def non_sparse_annotations(annotations):
-        """De-sparsify the annotations iterable so we can just zip it together
-        with the HTML lines.
-
-        Return an iterable of annotations iterables, one for each line.
-
-        """
-        next_unannotated_line = 0
-        for line, annotations in groupby(annotations, itemgetter(0)):
-            for next_unannotated_line in xrange(next_unannotated_line,
-                                                line - 1):
-                yield []
-            yield [data for line_num, data in annotations]
-            next_unannotated_line = line
-    return izip_longest(lines,
-                        non_sparse_annotations(merge(*[h.annotations() for h in
-                                                       htmlifiers])),
-                        fillvalue=[])

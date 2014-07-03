@@ -85,6 +85,20 @@ Here are the options that can live in the ``[DXR]`` section:
 ``wwwroot``
     URL path prefix to the root of DXR's web app. Default: ``/``
 
+``es_hosts``
+    A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
+    include port numbers. Default: http://127.0.0.1:9200/. Remember that you
+    can split whitespace-delimited things across lines in an ini file by
+    leading with spaces.
+
+``es_index``
+    A ``format()``-style template for coming up with elasticsearch index
+    names. The variable ``{tree}`` will be replaced with the tree name, and
+    ``{unique}`` will be replaced with a unique ID to keep a tree's new index
+    from colliding with the old one. The unique ID includes a random number
+    and the build hosts's MAC address so errant concurrent builds on different
+    hosts at least won't clobber each other.
+
 (Refer to the Plugin Configuration section for plugin keys available
 here).
 
