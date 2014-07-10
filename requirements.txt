@@ -22,7 +22,5 @@ Pygments==1.6
 # sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
 Werkzeug==0.8.3
 
-
-# For deployment script only:
 # sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3
