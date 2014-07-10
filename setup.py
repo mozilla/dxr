@@ -31,7 +31,7 @@ setup(
                       'ordereddict>=1.1',
                       'parsimonious==0.5',
                       'Pygments>=1.6',
-                      'requests>=1.0'],
+                      'requests>=1.0',
                       'funcy>=1.0'],
     tests_require=['nose'],
     test_suite='nose.collector',
