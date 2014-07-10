@@ -29,3 +29,4 @@ def is_function((_, obj)):
         return False
     type_ = obj['!type']
     return hasattr(type_, 'input') and hasattr(type_, 'output')
+
