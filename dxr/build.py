@@ -18,6 +18,7 @@ from traceback import format_exc
 from warnings import warn
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from funcy import merge
 from jinja2 import Markup
 from ordereddict import OrderedDict
 
@@ -394,8 +395,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
               'size': file_info.st_size,
               'modified': datetime.fromtimestamp(file_info.st_mtime)})
 
-    # Index all the lines:
-    es.bulk_index(index, LINE, (update(n, needles) for n in needles_by_line), id_field=None)
+    # Index all the lines, attaching the file-wide needles to each line as well:
+    es.bulk_index(index, LINE, (merge(n, needles) for n in needles_by_line), id_field=None)
 
     # Render some HTML:
     _fill_and_write_template(

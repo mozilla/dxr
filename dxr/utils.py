@@ -121,16 +121,6 @@ def connect_db(dir):
     return conn
 
 
-def update(dest, source):
-    """A version of dict.update() that returns the updated dict.
-
-    Lets us do more reduce() one-liners.
-
-    """
-    dest.update(source)
-    return dest
-
-
 def deep_update(dest, source):
     """Overlay two dictionaries recursively.
 
