@@ -50,6 +50,10 @@
     </div>
   {% endif %}
 
+  {% if not is_text %}
+    (binary file)
+  {% endif %}
+
   <div id="annotations">
     {% for line, annotations in lines %}
       <div class="annotation-set" id="aset-{{ loop.index }}">

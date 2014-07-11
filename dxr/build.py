@@ -345,6 +345,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     size of the pickled object and including the pickling and unpickling time.
 
     :arg path: Absolute path to the file to index
+    :arg index: The ES index name
 
     """
     try:
@@ -358,6 +359,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
             raise
 
     rel_path = relpath(path, tree.source_folder)
+    is_text = isinstance(unicode, contents)
 
     num_lines = len(contents.splitlines())
     needles = {}
@@ -375,10 +377,13 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
             links.append(file_to_index.links())
 
             # Per-line stuff:
-            append_update_by_line(needles_by_line, file_to_index.needles_by_line())
-            append_by_line(refs_by_line, file_to_index.refs_by_line())
-            append_by_line(regions_by_line, file_to_index.regions_by_line())
-            append_by_line(annotations_by_line, file_to_index.annotations_by_line())
+            if is_text:
+                append_update_by_line(needles_by_line,
+                                      file_to_index.needles_by_line())
+                append_by_line(refs_by_line, file_to_index.refs_by_line())
+                append_by_line(regions_by_line, file_to_index.regions_by_line())
+                append_by_line(annotations_by_line,
+                               file_to_index.annotations_by_line())
 
 
     # Index a doc of type 'file' so we can build folder listings.
@@ -396,7 +401,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
               'modified': datetime.fromtimestamp(file_info.st_mtime)})
 
     # Index all the lines, attaching the file-wide needles to each line as well:
-    es.bulk_index(index, LINE, (merge(n, needles) for n in needles_by_line), id_field=None)
+    if is_text:
+        es.bulk_index(index, LINE, (merge(n, needles) for n in needles_by_line), id_field=None)
 
     # Render some HTML:
     _fill_and_write_template(
@@ -424,6 +430,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
          # the whole thing 3 times.
          'lines': zip(build_lines(text, htmlifiers, tree.source_encoding),
                       annotations_by_line),
+
+         'is_text': is_text,
 
          'sections': build_sections(links)})
 
