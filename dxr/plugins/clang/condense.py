@@ -7,13 +7,13 @@ import csv
 from hashlib import sha1
 from os import path
 from glob import glob
-from operator import itemgetter, contains
+from operator import itemgetter
 from itertools import chain, izip
 
 from networkx import DiGraph
-from funcy import (walk, walk_keys, decorator, identity, select_keys, zipdict,
-                   merge, partial, imap, ifilter, group_by, select_values,
-                   walk_values, compose, autocurry, is_mapping, all_fn, pluck)
+from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
+                   imap, ifilter, group_by, compose, autocurry, is_mapping,
+                   pluck)
 from toposort import toposort_flatten
 
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
@@ -22,6 +22,7 @@ from dxr.plugins.utils import FuncSig, Position, Extent, Call
 POSSIBLE_FIELDS = {'call', 'macro', 'function', 'name', 'variable', 'ref',
                    'type', 'impl', 'decldef', 'typedef', 'warning',
                    'namespace', 'namespace_alias', 'include'}
+
 
 @decorator
 def without(call, *keys):
@@ -63,9 +64,10 @@ def process_declloc(props):
 
 def process_call(props):
     """Group caller and callee for the call site."""
-    return Call((props['calleename'], _process_loc(props.get('calleeloc'))),
-                (props.get('callername'), _process_loc(props.get('callerloc'))),
-                props['calltype'])
+    return Call(
+        (props['calleename'], _process_loc(props.get('calleeloc'))),
+        (props.get('callername'), _process_loc(props.get('callerloc'))),
+        props['calltype'])
 
 
 def process_scope(props):
@@ -124,6 +126,7 @@ def _get_condensed(fpath, csv_path):
     condensed['name'] = fpath
     return condensed
 
+
 def load_csv(csv_root, fpath):
     """Given a path to a build csv, return a dict representing the analysis."""
     csv_paths = glob("{0}.*.csv".format(
@@ -132,13 +135,12 @@ def load_csv(csv_root, fpath):
     return reduce(merge, imap(_get_condensed(fpath), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
+
 def call_graph(condensed):
     g = DiGraph()
     inherit = build_inhertitance(condensed)
-    store = create_store(condensed)
     for call in condensed['call']:
         g.add_edge(call.callee, call.caller, attr=call)
-        
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
@@ -149,18 +151,6 @@ def call_graph(condensed):
                     g.add_edge((child_qname, pos), call.caller, attr=call)
     return g
 
-
-def create_store(condensed):
-    """Uses same key as original indexer"""
-    src = condensed['name']
-    def _create_key((name, props), ):
-        (_, row1, col1), _ = props['span']
-        if 'scope' in props:
-            name = '{0}::{1}'.format(props['scope']['name'], name)
-        return (src, name, Position(None, row1, col1)), tuple(props.items())
-    
-        
-    return merge(dict(imap(_create_key, symbols(condensed))))
 
 def _relate((parent, children)):
     return parent, set((child['tcname']) for child in children)
@@ -176,6 +166,7 @@ def build_inhertitance(condensed):
             tree[node] |= tree[child]
     return tree
 
+
 def symbols(condensed):
     """Return a dict, (symbol name) -> (dict of fields and metadata)."""
     for props in chain.from_iterable(condensed.values()):
@@ -184,6 +175,6 @@ def symbols(condensed):
 
 
 def functions(condensed):
-    """Return an iterator of pairs (symbol, val) if the symbol is a function."""
+    """Return an iterator of pairs (symbol, val) if symbol is a function."""
     funcs = condensed['function']
     return izip(pluck('name', funcs), funcs)
