@@ -113,7 +113,10 @@ def process_fields(kind, fields):
 
 def process((kind, vals)):
     """Process row from csv output."""
-    return kind, map(compose(process_fields(kind), itemgetter(1)), vals)
+    mapping = map(compose(process_fields(kind), itemgetter(1)), vals)
+    if kind == 'ref':
+        mapping = group_by(itemgetter('kind'), mapping)
+    return kind, mapping
 
 
 @autocurry
