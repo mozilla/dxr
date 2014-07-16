@@ -32,7 +32,7 @@ def without(call, *keys):
 
 @without('args')
 def process_function(props):
-    """Create !type: FuncSig based on args."""
+    """Create type: FuncSig based on args."""
     input_args = tuple(ifilter(
         bool, imap(str.lstrip, props['args'][1:-1].split(","))))
     props['type'] = FuncSig(input_args, props['type'])
@@ -41,7 +41,7 @@ def process_function(props):
 
 @without('loc', 'extent')
 def process_loc(props):
-    """Create extent based on !loc and !extent."""
+    """Create extent based on loc and extent."""
     _, row, col = props['loc'].split(':')
     start, end = props['extent'].split(':')
     props['span'] = Extent(Position(start, row, col), Position(end, row, col))
@@ -140,7 +140,7 @@ def load_csv(csv_root, fpath):
 
 
 def call_graph(condensed):
-    """Create networkx DiGraph with edges representing funciton caller -> callee"""
+    """Create networkx DiGraph with edges representing function caller -> callee"""
     g = DiGraph()
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
