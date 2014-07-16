@@ -137,10 +137,11 @@ def load_csv(csv_root, fpath):
 
 
 def call_graph(condensed):
+    """Create networkx DiGraph with edges representing funciton caller -> callee"""
     g = DiGraph()
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
-        g.add_edge(call.callee, call.caller, attr=call)
+        g.add_edge(call.caller, call.callee, attr=call)
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
@@ -148,7 +149,7 @@ def call_graph(condensed):
                 scope, func = callee_qname.split('::')
                 for child in inherit[scope]:
                     child_qname = "{0}::{1}".format(child, func)
-                    g.add_edge((child_qname, pos), call.caller, attr=call)
+                    g.add_edge(call.caller, (child_qname, pos), attr=call)
     return g
 
 
