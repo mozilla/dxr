@@ -32,7 +32,7 @@ def without(call, *keys):
 
 @without('args')
 def process_function(props):
-    """Create type: FuncSig based on args."""
+    """Return type: FuncSig based on args."""
     input_args = tuple(ifilter(
         bool, imap(str.lstrip, props['args'][1:-1].split(","))))
     props['type'] = FuncSig(input_args, props['type'])
@@ -41,7 +41,7 @@ def process_function(props):
 
 @without('loc', 'extent')
 def process_loc(props):
-    """Create extent based on loc and extent."""
+    """Return extent based on loc and extent."""
     _, row, col = props['loc'].split(':')
     start, end = props['extent'].split(':')
     props['span'] = Extent(Position(start, row, col), Position(end, row, col))
@@ -49,6 +49,7 @@ def process_loc(props):
 
 
 def _process_loc(locstring):
+    """Analysis locstring for src and Position."""
     if locstring is None:
         return None
 
@@ -57,7 +58,7 @@ def _process_loc(locstring):
 
 
 def process_declloc(props):
-    """Create Position based on declloc."""
+    """Return Position based on declloc."""
     props['declloc'] = _process_loc(props['declloc'])
     return props
 
@@ -140,7 +141,7 @@ def load_csv(csv_root, fpath):
 
 
 def call_graph(condensed):
-    """Create networkx DiGraph with edges representing function caller -> callee"""
+    """Return networkx DiGraph with edges representing function caller -> callee."""
     g = DiGraph()
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
@@ -148,7 +149,7 @@ def call_graph(condensed):
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
-            if "::" in callee_qname:
+            if '::' in callee_qname:
                 scope, func = callee_qname.split('::')
                 for child in inherit[scope]:
                     child_qname = "{0}::{1}".format(child, func)
