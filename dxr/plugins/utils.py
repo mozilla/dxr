@@ -6,6 +6,7 @@ from itertools import ifilter
 Extent = namedtuple('Extent', ['start', 'end'])
 Position = namedtuple('Position', ['offset', 'row', 'col'])
 FuncSig = namedtuple('FuncSig', ['input', 'output'])
+Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
 
 def symbols(condensed):
     """Return a dict, (symbol name) -> (dict of fields and metadata)."""
@@ -29,4 +30,3 @@ def is_function((_, obj)):
         return False
     type_ = obj['!type']
     return hasattr(type_, 'input') and hasattr(type_, 'output')
-
