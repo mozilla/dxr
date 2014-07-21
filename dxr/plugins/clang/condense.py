@@ -42,8 +42,8 @@ def process_function(props):
 @without('loc', 'extent')
 def process_loc(props):
     """Return extent based on loc and extent."""
-    _, row, col = props['loc'].split(':')
-    start, end = props['extent'].split(':')
+    row, col = map(int, props['loc'].split(':')[1:])
+    start, end = map(int, props['extent'].split(':'))
     props['span'] = Extent(Position(start, row, col), Position(end, row, col))
     return props
 
@@ -54,7 +54,7 @@ def _process_loc(locstring):
         return None
 
     src, row, col = locstring.split(':')
-    return src, Position(None, row, col)
+    return src, Position(None, int(row), int(col))
 
 
 def process_declloc(props):
@@ -84,7 +84,7 @@ def group_loc_name(base, props):
     @without(name, loc)
     def _group_loc_name(props):
         src, row, col = props[loc].split(':')
-        props[root] = {'loc': (src, Position(None, row, col)),
+        props[root] = {'loc': (src, Position(None, int(row), int(col))),
                        'name': props[name]}
         return props
     return _group_loc_name(props)
@@ -120,15 +120,19 @@ def process((kind, vals)):
     return kind, mapping
 
 
-@autocurry
-def _get_condensed(fpath, csv_path):
+def get_condensed(fpath, lines):
     key = itemgetter(0)
-    with open(csv_path, 'rb') as f:
-        condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
-                                   for line in csv.reader(f)))
+    condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
+                               for line in csv.reader(lines)))
     condensed = walk(process, condensed)
     condensed['name'] = fpath
     return condensed
+
+
+@autocurry
+def _load_csv(fpath, csv_path):
+    with open(csv_path, 'rb') as f:
+        return get_condensed(fpath, f)
 
 
 def load_csv(csv_root, fpath):
@@ -136,7 +140,7 @@ def load_csv(csv_root, fpath):
     csv_paths = glob("{0}.*.csv".format(
         path.join(csv_root, sha1(fpath).hexdigest())))
 
-    return reduce(merge, imap(_get_condensed(fpath), csv_paths),
+    return reduce(merge, imap(_load_csv(fpath), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
 
