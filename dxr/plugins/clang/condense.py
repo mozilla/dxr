@@ -19,7 +19,7 @@ from toposort import toposort_flatten
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
 
 
-POSSIBLE_FIELDS = {'call', 'macro', 'function', 'name', 'variable', 'ref',
+POSSIBLE_FIELDS = {'call', 'macro', 'function', 'variable', 'ref',
                    'type', 'impl', 'decldef', 'typedef', 'warning',
                    'namespace', 'namespace_alias', 'include'}
 
