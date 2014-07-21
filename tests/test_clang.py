@@ -91,7 +91,11 @@ def test_macro(csv):
 @csv_from_doc
 def test_typedef(csv):
     """typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0"""
-    raise SkipTest
+    eq_(csv['typedef'][0], {
+        'name': 'x',
+        'qualname': 'x',
+        'span': DEFAULT_EXTENT
+    })
 
 @csv_from_doc
 def test_type(csv):
@@ -99,29 +103,67 @@ def test_type(csv):
     type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
     type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
     """
-    raise SkipTest
+    eq_(csv['type']['struct'][0], {
+        'name': 'foobar',
+        'qualname': 'foobar',
+        'kind': 'struct',
+        'span': DEFAULT_EXTENT
+    })
+
+    eq_(csv['type']['class'][0], {
+        'name': 'X',
+        'qualname': 'X',
+        'kind': 'class',
+        'span': DEFAULT_EXTENT
+    })
+    
 
 @csv_from_doc
 def test_impl(csv):
     """impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"""
-    raise SkipTest
+    
+    eq_(csv['impl'][0], {
+        'tb': {'name': 'X', 'span': DEFAULT_EXTENT},
+        'tc': {'name': 'Y', 'span': DEFAULT_EXTENT}
+    })
 
 @csv_from_doc
 def test_decldef(csv):
     """decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0"""
-    raise SkipTest
+    eq_(csv['decldef']['function'][0], {
+        'qualname': 'Queue::Queue<T>(int)',
+        'declloc': DEFAULT_EXTENT,
+        'defloc': DEFAULT_EXTENT
+    })
+    
 
 @csv_from_doc
 def test_warning(csv):
-    """warning,loc,"x:0:0",msg,"'gets' is deprecated",opt,"-Wdeprecated-declarations",extent,0:0"""
-    raise SkipTest
+    """warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0"""
+    eq_(csv['warning'][0], {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
 @csv_from_doc
 def test_namespace_alias(csv):
     """namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0"""
-    raise SkipTest
+    eq_(csv['namespace_alias'][0], {
+        'name': 'foo',
+        'qualname': 'foo',
+        'span': DEFAULT_EXTENT})
 
 @csv_from_doc
 def test_namespace(csv):
     """namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0"""
-    raise SkipTest
+    eq_(csv['namespace'][0], {
+        'name': 'foo',
+        'qualname': 'foo',
+        'span': DEFAULT_EXTENT
+    })
+
+@csv_from_doc
+def test_include(csv):
+    """include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0"""
+    eq_(csv['include'][0], {
+        'source_path': 'foo',
+        'target_path': 'bar',
+        'span': DEFAULT_EXTENT
+    })
