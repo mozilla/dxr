@@ -123,8 +123,9 @@ def test_impl(csv):
     """impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"""
     
     eq_(csv['impl'][0], {
-        'tb': {'name': 'X', 'span': DEFAULT_EXTENT},
-        'tc': {'name': 'Y', 'span': DEFAULT_EXTENT}
+        'tb': {'name': 'X', 'loc': DEFAULT_LOC},
+        'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
+        'access': 'public'
     })
 
 @csv_from_doc
@@ -152,10 +153,10 @@ def test_namespace_alias(csv):
 
 @csv_from_doc
 def test_namespace(csv):
-    """namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0"""
+    """namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0"""
     eq_(csv['namespace'][0], {
-        'name': 'foo',
-        'qualname': 'foo',
+        'name': 'x',
+        'qualname': 'x',
         'span': DEFAULT_EXTENT
     })
 

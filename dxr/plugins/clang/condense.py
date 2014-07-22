@@ -13,7 +13,7 @@ from itertools import chain, izip
 from networkx import DiGraph
 from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    imap, ifilter, group_by, compose, autocurry, is_mapping,
-                   pluck)
+                   pluck, first)
 from toposort import toposort_flatten
 
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
@@ -63,6 +63,11 @@ def process_declloc(props):
     return props
 
 
+def process_impl(props):
+    props = group_loc_name('tc', props)
+    return group_loc_name('tb', props)
+
+
 def process_call(props):
     """Group caller and callee for the call site."""
     return Call(
@@ -92,6 +97,7 @@ def group_loc_name(base, props):
 handlers = {
     'call': process_call,
     'function': process_function,
+    'impl': process_impl
 }
 
 
@@ -115,7 +121,7 @@ def process_fields(kind, fields):
 def process((kind, vals)):
     """Process row from csv output."""
     mapping = map(compose(process_fields(kind), itemgetter(1)), vals)
-    if kind == 'ref':
+    if 'kind' in first(mapping):
         mapping = group_by(itemgetter('kind'), mapping)
     return kind, mapping
 
