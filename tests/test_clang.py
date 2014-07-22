@@ -8,22 +8,17 @@ from dxr.plugins.utils import Extent, Position, FuncSig, Call
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 
+def get_csv(csv_str):
+    return get_condensed('', (x.strip() for x in csv_str.splitlines() if x.strip()))
 
-@decorator
-def csv_from_doc(call):
-    csv = get_condensed('', (x.strip() for x in  (call._func.__doc__ or '').splitlines() if x.strip()))
-    return call(csv)
+def test_smoke_test_csv():
+    get_csv('')
 
-@csv_from_doc
-def test_smoke_test_csv(csv):
-    pass
-
-@csv_from_doc
-def test_ref(csv):
-    """
+def test_ref():
+    csv = get_csv("""
     ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
     ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
-    """
+    """)
     eq_(csv['ref']['function'], [{'declloc': DEFAULT_LOC,
                                   'kind': 'function',
                                   'span': DEFAULT_EXTENT}])
@@ -31,9 +26,8 @@ def test_ref(csv):
                                   'kind': 'variable',
                                   'span': DEFAULT_EXTENT}])
     
-@csv_from_doc
-def test_function(csv):
-    """function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0"""
+def test_function():
+    csv = get_csv("""function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0""")
     eq_(csv['function'][0], {
         'name': 'comb',
         'qualname': 'comb(int **, int, int)',
@@ -41,9 +35,9 @@ def test_function(csv):
         'span': DEFAULT_EXTENT
     })
 
-@csv_from_doc
-def test_variable(csv):
-    """variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0"""
+
+def test_variable():
+    csv = get_csv("""variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0""")
     eq_(csv['variable'][0], {
         'name': 'a',
         'qualname': 'comb(int **, int, int)::a',
@@ -53,12 +47,12 @@ def test_variable(csv):
         'span': DEFAULT_EXTENT
     })
 
-@csv_from_doc
-def test_call(csv):
-    """
+
+def test_call():
+    csv = get_csv("""
     call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
     call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
-    """
+    """)
     eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
                              caller=('main()', DEFAULT_LOC),
                              calltype='static'))
@@ -68,12 +62,11 @@ def test_call(csv):
                              calltype='virtual'))
 
 
-@csv_from_doc
-def test_macro(csv):
-    """
+def test_macro():
+    csv = get_csv("""
     macro,loc,"x:0:0",name,"X",args,"(x, y)",text,"x + y",extent,0:0
     macro,loc,"x:0:0",name,"X",text,"2",extent,0:0
-    """
+    """)
     eq_(csv['macro'][0], {
         'name': 'X',
         'args': '(x, y)',
@@ -88,21 +81,20 @@ def test_macro(csv):
     })
 
 
-@csv_from_doc
-def test_typedef(csv):
-    """typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0"""
+def test_typedef():
+    csv = get_csv("""typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0""")
     eq_(csv['typedef'][0], {
         'name': 'x',
         'qualname': 'x',
         'span': DEFAULT_EXTENT
     })
 
-@csv_from_doc
-def test_type(csv):
-    """
+
+def test_type():
+    csv = get_csv("""
     type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
     type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
-    """
+    """)
     eq_(csv['type']['struct'][0], {
         'name': 'foobar',
         'qualname': 'foobar',
@@ -118,9 +110,8 @@ def test_type(csv):
     })
     
 
-@csv_from_doc
-def test_impl(csv):
-    """impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"""
+def test_impl():
+    csv = get_csv("""impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public""")
     
     eq_(csv['impl'][0], {
         'tb': {'name': 'X', 'loc': DEFAULT_LOC},
@@ -128,9 +119,9 @@ def test_impl(csv):
         'access': 'public'
     })
 
-@csv_from_doc
-def test_decldef(csv):
-    """decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0"""
+
+def test_decldef():
+    csv = get_csv("""decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0""")
     eq_(csv['decldef']['function'][0], {
         'qualname': 'Queue::Queue<T>(int)',
         'declloc': DEFAULT_LOC,
@@ -140,33 +131,35 @@ def test_decldef(csv):
     })
     
 
-@csv_from_doc
-def test_warning(csv):
-    """warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0"""
+
+def test_warning():
+    csv = get_csv("""warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0""")
     eq_(csv['warning'][0], {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
-@csv_from_doc
-def test_namespace_alias(csv):
-    """namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0"""
+
+def test_namespace_alias():
+    csv = get_csv("""namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0""")
     eq_(csv['namespace_alias'][0], {
         'name': 'foo',
         'qualname': 'foo',
         'span': DEFAULT_EXTENT})
 
-@csv_from_doc
-def test_namespace(csv):
-    """namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0"""
+
+def test_namespace():
+    csv = get_csv("""namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0""")
     eq_(csv['namespace'][0], {
         'name': 'x',
         'qualname': 'x',
         'span': DEFAULT_EXTENT
     })
 
-@csv_from_doc
-def test_include(csv):
-    """include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0"""
+
+def test_include():
+    csv = get_csv("""include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0""")
     eq_(csv['include'][0], {
         'source_path': 'foo',
         'target_path': 'bar',
         'span': DEFAULT_EXTENT
     })
+
+
