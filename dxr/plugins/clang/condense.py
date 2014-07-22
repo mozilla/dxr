@@ -62,6 +62,7 @@ def process_declloc(props):
     props['declloc'] = _process_loc(props['declloc'])
     return props
 
+
 def process_defloc(props):
     """Return Position based on defloc and extent."""
     props['defloc'] = _process_loc(props['defloc'])
@@ -160,7 +161,7 @@ def load_csv(csv_root, fpath):
 
 
 def call_graph(condensed):
-    """Return networkx DiGraph with edges representing function caller -> callee."""
+    """Return DiGraph with edges representing function caller -> callee."""
     g = DiGraph()
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
