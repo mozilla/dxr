@@ -2,7 +2,7 @@ from funcy import decorator, imap, tap
 from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.plugins.clang.condense import get_condensed
+from dxr.plugins.clang.condense import get_condensed, build_inhertitance, call_graph
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
@@ -163,3 +163,29 @@ def test_include():
     })
 
 
+def test_inheritance():
+    csv = get_csv("""
+    impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
+    impl,tcname,"Z",tcloc,"main.cpp:11:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
+    impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
+    impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
+    """)
+    inherit = build_inhertitance(csv)
+    eq_(inherit, {'X': {'Y', 'Z', 'W'},
+                  'Y': {'W'},
+                  'Z': {'W'},
+                  'W': set()})
+
+
+def test_callgraph():
+    csv = get_csv("""
+    impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+    impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+    impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
+    impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"    
+    call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::X()",calleeloc,"x:0:0",calltype,"static"
+    call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::foo()",calleeloc,"x:0:0",calltype,"virtual"
+    call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
+    """)
+    g = call_graph(csv)
+    eq_(len(set(g.edges())), 6)

@@ -177,12 +177,13 @@ def call_graph(condensed):
 
 
 def _relate((parent, children)):
-    return parent, set((child['tcname']) for child in children)
+    return parent, set((child['tc']['name']) for child in children)
 
 
 def build_inhertitance(condensed):
     """Builds mapping class -> set of all descendants."""
-    tree = walk(_relate, group_by(itemgetter('tbname'), condensed['impl']))
+    get_tbname = compose(itemgetter('name'), itemgetter('tb'))
+    tree = walk(_relate, group_by(get_tbname, condensed['impl']))
     tree.default_factory = set
     for node in toposort_flatten(tree):
         children = tree[node]
