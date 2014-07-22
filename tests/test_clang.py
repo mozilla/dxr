@@ -133,8 +133,10 @@ def test_decldef(csv):
     """decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0"""
     eq_(csv['decldef']['function'][0], {
         'qualname': 'Queue::Queue<T>(int)',
-        'declloc': DEFAULT_EXTENT,
-        'defloc': DEFAULT_EXTENT
+        'declloc': DEFAULT_LOC,
+        'defloc': DEFAULT_LOC,
+        'kind': 'function',
+        'extent': Extent(0, 0)
     })
     
 

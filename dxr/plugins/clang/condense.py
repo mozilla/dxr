@@ -62,6 +62,12 @@ def process_declloc(props):
     props['declloc'] = _process_loc(props['declloc'])
     return props
 
+def process_defloc(props):
+    """Return Position based on defloc and extent."""
+    props['defloc'] = _process_loc(props['defloc'])
+    props['extent'] = Extent(*map(int, props['extent'].split(':')))
+    return props
+
 
 def process_impl(props):
     props = group_loc_name('tc', props)
@@ -114,6 +120,9 @@ def process_fields(kind, fields):
 
     if 'declloc' in fields:
         fields = process_declloc(fields)
+
+    if 'defloc' in fields:
+        fields = process_defloc(fields)
 
     return fields
 
