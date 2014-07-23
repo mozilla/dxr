@@ -3,6 +3,8 @@
 from collections import namedtuple
 from itertools import ifilter
 
+from funcy import decorator
+
 from dxr.plugins import TreeToIndex
 
 Extent = namedtuple('Extent', ['start', 'end'])
@@ -49,16 +51,16 @@ def transition(call, start, end):
 
 class StatefulTreeToIndex(TreeToIndex):
     """Start -> Env -> Prebuild -> Postbuild"""
-    def __init__(tree, state_machine):
+    def __init__(self, tree, state_machine):
         super(StatefulTreeToIndex, self).__init__(tree)
-        self.state_machine = state_machine()
+        self.state_machine = state_machine(tree)
+        # start coroutine
         next(self.state_machine)
         self.state = "start"
         
     @transition('start', 'environment')
     def environment(self, vars):
-        self.state_machine.send(vars)
-        return next(self.state_machine)
+        return self.state_machine.send(vars)
 
     @transition('environment', 'pre_build')
     def pre_build(self):
@@ -70,4 +72,4 @@ class StatefulTreeToIndex(TreeToIndex):
 
     @transition('post_build', 'post_build')
     def file_to_index(self, path, contents):
-        return self.file_indexer(path, contents)
+        return self.file_indexer(path=path, contents=contents, tree=self.tree)

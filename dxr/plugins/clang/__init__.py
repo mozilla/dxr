@@ -3,7 +3,7 @@
 import os
 
 from functools import wraps
-from funcy import merge, partial, decorator
+from funcy import merge, partial
 
 from dxr.plugins import FileToIndex
 from dxr.plugins.utils import StatefulTreeToIndex
@@ -35,11 +35,14 @@ class ClangFileToIndex(FileToIndex):
 
 
 class ClangTreeToIndex(StatefulTreeToIndex):
-    def __init__(tree, state_machine):
+    def __init__(self, tree):
         super(ClangTreeToIndex, self).__init__(tree, clang_indexer)
 
 
-def env(vars_, tree):
+def clang_indexer(tree):
+    vars_ = yield
+    # ENV SETUP
+
     # Setup environment variables for inspecting clang as runtime
     # We'll store all the havested metadata in the plugins temporary folder.
     temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
@@ -62,15 +65,10 @@ def env(vars_, tree):
     env['DXR_CC'] = env['CC']
     env['DXR_CXX'] = env['CXX']
 
-    return merge(vars_, env)
-
-
-def clang_indexer(tree):
-    vars_ = yield
-    yield env(vars_, tree) # ENV SETUP
+    yield merge(vars_, env)
     # PREBUILD
     yield # BUILD STEP
     # POSTBUILD
-    condensed = load_csv(temp_folder, csv_path=None, only_impl=True)
+    condensed = load_csv(temp_folder, fpath=None, only_impl=True)
     inherit = build_inhertitance(condensed)
     yield partial(ClangFileToIndex, inherit=inherit)
