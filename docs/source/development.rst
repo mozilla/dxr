@@ -10,7 +10,7 @@ Architecture
 
 DXR divides into 2 halves:
 
-1. The indexer, :program:`dxr-serve.py`, is a batch job which analyzes code and
+1. The indexer, :program:`dxr-build.py`, is a batch job which analyzes code and
    builds on-disk indices.
 
    The indexer hosts various plugins which handle everything from syntax
