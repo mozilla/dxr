@@ -139,35 +139,38 @@ def process((kind, vals)):
     return kind, mapping
 
 
-def get_condensed(lines):
+def get_condensed(lines, only_impl=False):
     """Return condensed analysis of CSV files."""
     key = itemgetter(0)
+    pred = lambda line: not only_impl or line[0] == 'impl'
     condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
-                               for line in csv.reader(lines)))
+                               for line in csv.reader(lines) if pred(line)))
     condensed = walk(process, condensed)
     return condensed
 
 
 @autocurry
-def _load_csv(csv_path):
+def _load_csv(fpath, csv_path, only_impl=False):
     """Open CSV_PATH and return the output of get_condensed based on csv."""
     with open(csv_path, 'rb') as f:
-        return get_condensed(f)
+        return get_condensed(f, only_impl)
 
 
-def load_csv(csv_root, fpath):
+def load_csv(csv_root, fpath=None, only_impl=False):
     """Given a path to a build csv, return a dict representing the analysis."""
-    csv_paths = glob("{0}.*.csv".format(
-        path.join(csv_root, sha1(fpath).hexdigest())))
+    hashed_fname = '*' if fpath is None else sha1(fpath).hexdigest()
+    csv_paths = glob('{0}.*.csv'.format(path.join(csv_root, hashed_fname)))
 
-    return reduce(merge, imap(_load_csv(fpath), csv_paths),
+    return reduce(merge, imap(_load_csv(fpath, only_impl=only_impl), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
 
-def call_graph(condensed):
+def call_graph(condensed, inherit=None):
     """Return DiGraph with edges representing function caller -> callee."""
     g = {}
-    inherit = build_inhertitance(condensed)
+    if inherit is None:
+        inherit = build_inhertitance(condensed)
+
     for call in condensed['call']:
         g[(call.caller, call.callee)] = call
         if call.calltype == 'virtual':
