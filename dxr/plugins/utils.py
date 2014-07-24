@@ -3,7 +3,7 @@
 from collections import namedtuple
 from itertools import ifilter
 
-from funcy import decorator
+from funcy import decorator, is_mapping, flatten
 
 from dxr.plugins import TreeToIndex
 
@@ -12,23 +12,6 @@ Extent = namedtuple('Extent', ['start', 'end'])
 Position = namedtuple('Position', ['offset', 'row', 'col'])
 FuncSig = namedtuple('FuncSig', ['input', 'output'])
 Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
-
-
-def symbols(condensed):
-    """Return a dict, (symbol name) -> (dict of fields and metadata)."""
-    queue = condensed.items()
-    while queue:
-        key, val = queue.pop()
-        if key.startswith('!'):
-            continue
-        yield key, val
-        if hasattr(val, 'items'):
-            queue.extend(val.items())
-
-
-def functions(condensed):
-    """Return an iterator of pairs (sym, val) if the sym is a function."""
-    return ifilter(is_function, symbols(condensed))
 
 
 def is_function((_, obj)):
@@ -73,3 +56,47 @@ class StatefulTreeToIndex(TreeToIndex):
     @transition('post_build', 'post_build')
     def file_to_index(self, path, contents):
         return self.file_indexer(path=path, contents=contents, tree=self.tree)
+
+
+def unsparsify(annotations):
+    """[(line, key, val)] -> [[(key, val)]]"""
+    next_unannotated_line = 0
+    for line, annotations in groupby(annotations, itemgetter(0)):
+        for next_unannotated_line in xrange(next_unannotated_line,
+                                            line - 1):
+            yield []
+        yield [data for line_num, data in annotations]
+        next_unannotated_line = line
+
+
+def unsparsify_spans(key_val_spans):
+    return unsparsify(by_line(key_val_spans))
+
+
+def by_line(key_val_spans):
+    """[(key,val,span)] -> [(line, [(key,val)])]
+    Groups the key values by line.
+
+    """
+    return chain.from_iterable(
+        imap(itemgetter(1), span_to_lines(key_val_spans)))
+
+
+def span_to_lines(key_val_spans):
+    """[(key,val,span)] -> [(key,val,line)]
+    Converts spans to lines. The resulting iter will have len' >= len.
+    
+    """
+    key = itemgetter(0)
+    return groupby(sorted(chain.from_iterable(
+        imap(_span_to_lines, key_val_spans)), key=key), key)
+
+
+def _span_to_lines((key, val, span)):
+    return izip(xrange(span.start.row, span.end.row + 1), repeat((key, val)))
+
+
+def get_needles(condense, *args):
+    """Return list of unsparsified needles by line."""
+    sparse_needles = chain((to_needles(condense, arg) for arg in args))
+    return unsparsify_spans(sparse_needles)

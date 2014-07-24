@@ -5,6 +5,7 @@ from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
                                         call_graph)
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
 
+
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 

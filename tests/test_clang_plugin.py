@@ -42,3 +42,7 @@ def incorrect_order_tests():
         if only_cmds(order) == only_cmds(CORRECT_ORDER):
             continue
         yield check_incorrect_order, order
+
+
+def test_FileToIndex():
+    pass

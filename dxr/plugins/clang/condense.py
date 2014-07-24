@@ -198,16 +198,3 @@ def build_inhertitance(condensed):
         for child in set(children):
             tree[node] |= tree[child]
     return tree
-
-
-def symbols(condensed):
-    """Return a dict, (symbol name) -> (dict of fields and metadata)."""
-    for props in chain.from_iterable(condensed.values()):
-        if is_mapping(props) and 'name' in props:
-            yield props['name'], props
-
-
-def functions(condensed):
-    """Return an iterator of pairs (symbol, val) if symbol is a function."""
-    funcs = condensed['function']
-    return izip(pluck('name', funcs), funcs)
