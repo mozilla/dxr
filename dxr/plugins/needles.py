@@ -1,49 +1,37 @@
 """Helper utilities for working with needles."""
 
 from operator import itemgetter
-from itertools import chain, repeat, imap, izip
+from itertools import repeat, imap, izip, chain
 
 
-from funcy import group_by
+from funcy import group_by, pluck
 
+def unsparsify(span_needles):
+    """Transform a sparse needle list [(key, val, span:Extent)]
+    into proper dense needle format [[(key, val)]].
 
-def _unsparsify(annotations):
-    """[(line, key, val)] -> [[(key, val)]]"""
-    next_unannotated_line = 0
-    for line, annotations in groupby(annotations, itemgetter(0)):
-        for next_unannotated_line in xrange(next_unannotated_line,
-                                            line - 1):
-            yield []
-        yield [data for _, data in annotations]
-        next_unannotated_line = line
-
-
-def unsparsify(key_val_spans):
-    """Transform a sparse needle list [(key:str, val:str, Extent)]
-    into proper dense needle format [(key:str, val:str)].
+    In the dense format, the index, i, in the list corresponds to the lin_num.
+                         the list at i are all the (key, val) for that line.
 
     """
-    return _unsparsify(by_line(key_val_spans))
+    return group_needles(by_line(span_needles))
 
 
-def by_line(key_val_spans):
-    """[(key,val,span)] -> [(line, [(key,val)])]
-    Groups the key values by line.
-
-    """
-    return chain.from_iterable(
-        imap(itemgetter(1), span_to_lines(key_val_spans)))
+def group_needles(line_needles):
+    """Group line needles by line. [(_, line)] -> [[_]]."""
+    grouped_needles = group_by(itemgetter(1), line_needles)
+    return pluck(1, sorted(grouped_needles.items(), key=itemgetter(0)))
 
 
-def span_to_lines(key_val_spans):
-    """[(key,val,span)] -> [(key,val,line)]
+def by_line(span_needles):
+    """Transform [(_, span:Extent)] into [(_, line:int)].
+
     Converts spans to lines. The resulting iter will have len' >= len.
 
     """
-    key = itemgetter(0)
-    return group_by(key, chain.from_iterable(
-        imap(_span_to_lines, key_val_spans)), key=key)
+    return chain.from_iterable(imap(span_to_lines, span_needles))
 
 
-def _span_to_lines((key, val, span)):
-    return izip(xrange(span.start.row, span.end.row + 1), repeat((key, val)))
+def span_to_lines((val, span)):
+    """Expand (_,  span:Extent) into [(_, line:int)]."""
+    return izip(repeat(val), xrange(span.start.row, span.end.row + 1))
