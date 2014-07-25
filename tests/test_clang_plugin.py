@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import permutations, ifilter
 from operator import itemgetter
 from functools import partial
@@ -7,7 +7,8 @@ from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.plugins.clang import ClangTreeToIndex
+from dxr.plugins.clang import ClangTreeToIndex, ClangFileToIndex
+from dxr.plugins.utils import TransitionError
 
 
 def smoke_test():
@@ -28,21 +29,22 @@ def check_incorrect_order(order):
     try:
         check_order(order)
         assert False
-    except RuntimeError:
+    except TransitionError:
         pass
 
 
 def correct_order_test():
     check_order(CORRECT_ORDER)
 
-    
+
 def incorrect_order_tests():
     only_cmds = partial(map, itemgetter(0))
     for order in permutations(CORRECT_ORDER):
         if only_cmds(order) == only_cmds(CORRECT_ORDER):
             continue
-        yield check_incorrect_order, order
+        check_incorrect_order(order)
 
 
 def test_FileToIndex():
-    pass
+    c = ClangFileToIndex('', '', MagicMock(), {})
+    

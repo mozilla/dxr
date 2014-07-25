@@ -1,12 +1,14 @@
 """Clang Plugin"""
 
 import os
+from operator import itemgetter
+from itertools import chain
 
 from functools import wraps
-from funcy import merge, partial, imap
+from funcy import merge, partial, imap, group_by
 
 from dxr.plugins import FileToIndex
-from dxr.plugins.utils import StatefulTreeToIndex, get_needles
+from dxr.plugins.utils import StatefulTreeToIndex
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
@@ -17,40 +19,52 @@ class ClangFileToIndex(FileToIndex):
     def __init__(self, path, contents, tree, inherit):
         super(ClangFileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
-        self.condensed = load_csv(*os.path.split(path))
+        condensed = load_csv(*os.path.split(path))
+        self.needles, self.needles_by_line = get_needles(condensed, inherit)
+        self.refs_by_line = refs(condensed)
+        self.annotations_by_line = annotations(condensed)
+        
 
     def needles(self):
-        return []
+        return self.needles
 
     def needles_by_line(self):
-        get_needle_ = partial(get_needle, self.condensed)
-        return get_needles(condensed,
-                           get_needle('function', 'qualname'),
-                           get_needle('function', 'name'),
-                           get_needle('variable', 'qualname'),
-                           get_needle('variable', 'name'),
-                           get_needle('typedef', 'qualname'),
-                           get_needle('typedef', 'name'),
-                           get_needle('macro', 'qualname'),
-                           get_needle('macro', 'name'),
-                           get_needle('namespace', 'qualname'),
-                           get_needle('namespace', 'name'),
-                           get_needle('namespace-alias', 'qualname', field='namespace_alias'),
-                           get_needle('namespace-alias', 'name', field='namespace_alias'),
-        )
+        return self.needles_by_line
 
     def refs_by_line(self):
-        return [] # TODO: look at htmlify.py
+        return self.refs_by_line # TODO: look at htmlify.py
 
     def annotations_by_line(self):
-        return [] # TODO: look at htmlify.py
+        return self.annotations_by_line # TODO: look at htmlify.py
+
+
+def refs(_):
+    return []
+
+
+def annotations(_):
+    return []
 
 
 def pluck2(key1, key2, mappings):
+    """Plucks a pair of keys from mappings. 
+    This is a generalization of funcy's pluck function.
+
+    (k1, k2, {k: v}) -> [(v1, v2)]
+    """
     return imap(itemgetter(key1, key2), mappings)
 
 
-def get_needle(condensed, key1, key2, tag, field=None, prefix=''):
+def get_needles(condensed, inherit):
+    """Return a pair of iterators (file_needles, line_needles)."""
+    needles_ = group_by(len, all_needles(condensed, inherit))
+    return needles_[2], needles_[3]
+
+def all_needles(condensed, inherit):
+    return []
+
+
+def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
     if field is None:
         field = tag
         
