@@ -187,7 +187,7 @@ def _relate((parent, children)):
 
 def build_inhertitance(condensed):
     """Builds mapping class -> set of all descendants."""
-    get_tbname = lambda x: x['name']['tb']
+    get_tbname = lambda x: x['tb']['name']
     tree = walk(_relate, group_by(get_tbname, condensed['impl']))
     tree.default_factory = set
     for node in toposort_flatten(tree):

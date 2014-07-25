@@ -10,8 +10,8 @@ DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 
 
 def get_csv(csv_str):
-    return get_condensed('', (x.strip() for x in csv_str.splitlines()
-                              if x.strip()))
+    return get_condensed(x.strip() for x in csv_str.splitlines()
+                         if x.strip())
 
 
 def test_smoke_test_csv():
