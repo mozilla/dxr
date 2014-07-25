@@ -3,11 +3,13 @@ from itertools import permutations, ifilter
 from operator import itemgetter
 from functools import partial
 
+
 from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.plugins.clang import ClangTreeToIndex, ClangFileToIndex
+
+from dxr.plugins.clang import ClangTreeToIndex, ClangFileToIndex, needles
 from dxr.plugins.utils import TransitionError
 
 
@@ -47,4 +49,28 @@ def incorrect_order_tests():
 
 def test_FileToIndex():
     c = ClangFileToIndex('', '', MagicMock(), {})
-    
+
+
+CONDENSED = {
+    'function': [],
+    'warning': [],
+    'variable': [],
+    'typedef': [],
+    'ref': [],
+    'macro': [],
+    'namespace_alias': [],
+    'namespace': [],
+    'call': [],
+    'decldef': [],
+    'include': [],
+    'type': [],
+    'impl': [],
+}
+
+INHERIT = {
+    'X': {'Y', 'Z'},
+    'Y': {'W'}
+}
+
+def test_needles():
+    eq_(needles(defaultdict(list), {}), ([], []))

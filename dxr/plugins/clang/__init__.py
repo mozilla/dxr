@@ -20,7 +20,7 @@ class ClangFileToIndex(FileToIndex):
         super(ClangFileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
         condensed = load_csv(*os.path.split(path))
-        self.needles, self.needles_by_line = get_needles(condensed, inherit)
+        self.needles, self.needles_by_line = needles(condensed, inherit)
         self.refs_by_line = refs(condensed)
         self.annotations_by_line = annotations(condensed)
         
@@ -55,13 +55,10 @@ def pluck2(key1, key2, mappings):
     return imap(itemgetter(key1, key2), mappings)
 
 
-def get_needles(condensed, inherit):
+def group_sparse_needles(needles):
     """Return a pair of iterators (file_needles, line_needles)."""
-    needles_ = group_by(len, all_needles(condensed, inherit))
+    needles_ = group_by(len, needles)
     return needles_[2], needles_[3]
-
-def all_needles(condensed, inherit):
-    return []
 
 
 def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
@@ -72,6 +69,9 @@ def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
 
     return ((prefix + tag, key1, key2) for key1, key2
             in pluck2(key1, key2, condensed[field]))
+
+def needles(condensed, inherit):
+    return [], []
 
     
 class ClangTreeToIndex(StatefulTreeToIndex):
