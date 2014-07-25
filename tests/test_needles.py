@@ -1,8 +1,8 @@
-from nose import SkipTest
 from nose.tools import eq_
 
 
-from dxr.plugins.needles import unsparsify, by_line, group_needles, span_to_lines
+from dxr.plugins.needles import (unsparsify, by_line, group_needles,
+                                 span_to_lines)
 from dxr.plugins.utils import Extent, Position
 
 NEEDLE1 = ('x', Extent(Position(None, 0, 0), Position(None, 0, 0)))
@@ -12,6 +12,7 @@ NEEDLE3 = ('z', Extent(Position(None, 0, 0), Position(None, -1, 0)))
 
 def eq__(lis1, lis2):
     eq_(list(lis1), list(lis2))
+
 
 def test_needle_smoke_test():
     eq__(unsparsify([]), [])
@@ -23,7 +24,7 @@ def test_unsparsify():
     eq__([[('x', 0), ('y', 0)], [('y', 1)], [('y', 2)]],
          unsparsify([NEEDLE1, NEEDLE2]))
     eq__([[('y', 0), ('x', 0)], [('y', 1)], [('y', 2)]],
-         unsparsify([NEEDLE2, NEEDLE1]))    
+         unsparsify([NEEDLE2, NEEDLE1]))
 
 
 def test_group_needles():

@@ -6,6 +6,7 @@ from itertools import repeat, imap, izip, chain
 
 from funcy import group_by, pluck
 
+
 def unsparsify(span_needles):
     """Transform a sparse needle list [(key, val, span:Extent)]
     into proper dense needle format [[(key, val)]].
