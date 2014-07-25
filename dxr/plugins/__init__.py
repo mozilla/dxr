@@ -256,6 +256,14 @@ class FileToSkim(object):
              'href': 'URL',
              'icon': 'extensionless name of a PNG from the icons folder'}
 
+        where "tite attribute contents" is a dictionary mapping attributes to values
+        for example: {
+            'html': '<description>',
+            'title': '<better description>',
+            'href': '<link>',
+            'icon': '<icon type (method, references, etc)>'
+        }
+
         """
         return []
 
