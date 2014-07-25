@@ -19,9 +19,9 @@ from toposort import toposort_flatten
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
 
 
-POSSIBLE_FIELDS = {'call', 'macro', 'function', 'variable', 'ref',
-                   'type', 'impl', 'decldef', 'typedef', 'warning',
-                   'namespace', 'namespace_alias', 'include'}
+POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',
+                       'type', 'impl', 'decldef', 'typedef', 'warning',
+                       'namespace', 'namespace_alias', 'include'])
 
 
 @decorator
@@ -110,7 +110,10 @@ handlers = {
 
 @autocurry
 def process_fields(kind, fields):
-    """Return new fields dict based on the current contents."""
+    """Return new fields dict based on the current contents.
+    kind is the ast node type specified by the csv file.
+    
+    """
     fields = handlers.get(kind, identity)(fields)
 
     if 'loc' in fields:
@@ -136,19 +139,20 @@ def process((kind, vals)):
     return kind, mapping
 
 
-def get_condensed(fpath, lines):
+def get_condensed(lines):
+    """Return condensed analysis of CSV files."""
     key = itemgetter(0)
     condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
                                for line in csv.reader(lines)))
     condensed = walk(process, condensed)
-    condensed['name'] = fpath
     return condensed
 
 
 @autocurry
-def _load_csv(fpath, csv_path):
+def _load_csv(csv_path):
+    """Open CSV_PATH and return the output of get_condensed based on csv."""
     with open(csv_path, 'rb') as f:
-        return get_condensed(fpath, f)
+        return get_condensed(f)
 
 
 def load_csv(csv_root, fpath):
@@ -183,7 +187,7 @@ def _relate((parent, children)):
 
 def build_inhertitance(condensed):
     """Builds mapping class -> set of all descendants."""
-    get_tbname = compose(itemgetter('name'), itemgetter('tb'))
+    get_tbname = lambda x: x['name']['tb']
     tree = walk(_relate, group_by(get_tbname, condensed['impl']))
     tree.default_factory = set
     for node in toposort_flatten(tree):

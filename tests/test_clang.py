@@ -1,18 +1,22 @@
-from funcy import decorator, imap, tap
-from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.plugins.clang.condense import get_condensed, build_inhertitance, call_graph
+
+from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
+                                        call_graph)
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 
+
 def get_csv(csv_str):
-    return get_condensed('', (x.strip() for x in csv_str.splitlines() if x.strip()))
+    return get_condensed('', (x.strip() for x in csv_str.splitlines()
+                              if x.strip()))
+
 
 def test_smoke_test_csv():
     get_csv('')
+
 
 def test_ref():
     csv = get_csv("""
@@ -25,7 +29,8 @@ def test_ref():
     eq_(csv['ref']['variable'], [{'declloc': DEFAULT_LOC,
                                   'kind': 'variable',
                                   'span': DEFAULT_EXTENT}])
-    
+
+
 def test_function():
     csv = get_csv("""
     function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
@@ -114,13 +119,13 @@ def test_type():
         'kind': 'class',
         'span': DEFAULT_EXTENT
     })
-    
+
 
 def test_impl():
     csv = get_csv("""
     impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     """)
-    
+
     eq_(csv['impl'][0], {
         'tb': {'name': 'X', 'loc': DEFAULT_LOC},
         'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
@@ -139,7 +144,6 @@ def test_decldef():
         'kind': 'function',
         'extent': Extent(0, 0)
     })
-    
 
 
 def test_warning():
@@ -200,7 +204,7 @@ def test_callgraph():
     impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
-    impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"    
+    impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
     call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::X()",calleeloc,"x:0:0",calltype,"static"
     call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::foo()",calleeloc,"x:0:0",calltype,"virtual"
     call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
