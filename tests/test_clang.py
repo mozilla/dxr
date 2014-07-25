@@ -27,7 +27,9 @@ def test_ref():
                                   'span': DEFAULT_EXTENT}])
     
 def test_function():
-    csv = get_csv("""function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
+    """)
     eq_(csv['function'][0], {
         'name': 'comb',
         'qualname': 'comb(int **, int, int)',
@@ -37,7 +39,9 @@ def test_function():
 
 
 def test_variable():
-    csv = get_csv("""variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0
+    """)
     eq_(csv['variable'][0], {
         'name': 'a',
         'qualname': 'comb(int **, int, int)::a',
@@ -82,7 +86,9 @@ def test_macro():
 
 
 def test_typedef():
-    csv = get_csv("""typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
+    """)
     eq_(csv['typedef'][0], {
         'name': 'x',
         'qualname': 'x',
@@ -111,7 +117,9 @@ def test_type():
     
 
 def test_impl():
-    csv = get_csv("""impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public""")
+    csv = get_csv("""
+    impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+    """)
     
     eq_(csv['impl'][0], {
         'tb': {'name': 'X', 'loc': DEFAULT_LOC},
@@ -121,7 +129,9 @@ def test_impl():
 
 
 def test_decldef():
-    csv = get_csv("""decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0""")
+    csv = get_csv("""
+    decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
+    """)
     eq_(csv['decldef']['function'][0], {
         'qualname': 'Queue::Queue<T>(int)',
         'declloc': DEFAULT_LOC,
@@ -133,12 +143,16 @@ def test_decldef():
 
 
 def test_warning():
-    csv = get_csv("""warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0""")
+    csv = get_csv("""
+    warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0
+    """)
     eq_(csv['warning'][0], {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
 
 def test_namespace_alias():
-    csv = get_csv("""namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0
+    """)
     eq_(csv['namespace_alias'][0], {
         'name': 'foo',
         'qualname': 'foo',
@@ -146,7 +160,9 @@ def test_namespace_alias():
 
 
 def test_namespace():
-    csv = get_csv("""namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
+    """)
     eq_(csv['namespace'][0], {
         'name': 'x',
         'qualname': 'x',
@@ -155,7 +171,9 @@ def test_namespace():
 
 
 def test_include():
-    csv = get_csv("""include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0""")
+    csv = get_csv("""
+    include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0
+    """)
     eq_(csv['include'][0], {
         'source_path': 'foo',
         'target_path': 'bar',
