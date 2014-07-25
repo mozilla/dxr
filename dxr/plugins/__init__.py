@@ -244,7 +244,17 @@ class FileToSkim(object):
     def refs_by_line(self):
         """Yield an ordered list of extents and menus for each line::
 
-            (start, end, (menu, title attribute contents))
+            (start, end, (menu, title))
+
+        ``title`` is the contents of the <a> tag's title attribute. (The first
+        one wins.)
+
+        ``menu`` is a mapping representing an item of the context menu::
+
+            {'html': 'description',
+             'title': 'longer description',
+             'href': 'URL',
+             'icon': 'extensionless name of a PNG from the icons folder'}
 
         """
         return []
