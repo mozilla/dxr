@@ -51,22 +51,6 @@ def test_FileToIndex():
     c = ClangFileToIndex('', '', MagicMock(), {})
 
 
-CONDENSED = {
-    'function': [],
-    'warning': [],
-    'variable': [],
-    'typedef': [],
-    'ref': [],
-    'macro': [],
-    'namespace_alias': [],
-    'namespace': [],
-    'call': [],
-    'decldef': [],
-    'include': [],
-    'type': [],
-    'impl': [],
-}
-
 INHERIT = {
     'X': {'Y', 'Z'},
     'Y': {'W'}
