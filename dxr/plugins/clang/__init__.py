@@ -70,6 +70,43 @@ def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
     return ((prefix + tag, key1, key2) for key1, key2
             in pluck2(key1, key2, condensed[field]))
 
+
+def func_needles(condensed):
+    return []
+
+
+def var_needles(condensed):
+    return []
+
+
+def warn_needles(condensed):
+    return []
+
+
+def warn_op_needles(condensed):
+    return []
+
+
+def call_site_needles(condensed):
+    return []
+
+
+def typedef_needles(condensed):
+    return []
+
+
+def macro_needles(condensed):
+    return []
+
+
+def namespace_needles(condensed):
+    return []
+
+
+def namespace_alias_needles(condensed):
+    return []
+
+
 def needles(condensed, inherit):
     return [], []
 
