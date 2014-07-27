@@ -1,9 +1,18 @@
+from collections import namedtuple, defaultdict
+from itertools import permutations, ifilter
+from operator import itemgetter
+from functools import partial
+
+
+from mock import MagicMock
+from nose import SkipTest
 from nose.tools import eq_
 
 
+from dxr.plugins.utils import Extent, Position, FuncSig, Call, TransitionError
+from dxr.plugins.clang import ClangTreeToIndex, ClangFileToIndex, needles
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
                                         call_graph)
-from dxr.plugins.utils import Extent, Position, FuncSig, Call
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
@@ -209,6 +218,12 @@ def test_include():
     eq_(csv['include'][0], FIXTURE['include'][0])
 
 
+INHERIT = {'X': {'Y', 'Z', 'W'},
+           'Y': {'W'},
+           'Z': {'W'},
+           'W': set()}
+
+
 def test_inheritance():
     csv = get_csv("""
         impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
@@ -217,10 +232,7 @@ def test_inheritance():
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
     """)
     inherit = build_inhertitance(csv)
-    eq_(inherit, {'X': {'Y', 'Z', 'W'},
-                  'Y': {'W'},
-                  'Z': {'W'},
-                  'W': set()})
+    eq_(inherit, INHERIT)
 
 
 def test_callgraph():
@@ -240,3 +252,45 @@ def test_callgraph():
     """)
     g = call_graph(csv)
     eq_(len(set(g.keys())), 6)
+
+
+def smoke_test_tree():
+    c = ClangTreeToIndex('test')
+
+
+CORRECT_ORDER = [('environment', [{}]), ('pre_build', []), ('post_build', []),
+                 ('file_to_index', ['foo', 'bar'])]
+
+
+def check_order(order):
+    c = ClangTreeToIndex(MagicMock())
+    for cmd, args in order:
+        getattr(c, cmd)(*args)
+
+
+def check_incorrect_order(order):
+    try:
+        check_order(order)
+        assert False
+    except TransitionError:
+        pass
+
+
+def correct_order_test():
+    check_order(CORRECT_ORDER)
+
+
+def incorrect_order_tests():
+    only_cmds = partial(map, itemgetter(0))
+    for order in permutations(CORRECT_ORDER):
+        if only_cmds(order) == only_cmds(CORRECT_ORDER):
+            continue
+        check_incorrect_order(order)
+
+
+def test_FileToIndex():
+    c = ClangFileToIndex('', '', MagicMock(), {})
+
+
+def test_needles():
+    eq_(needles(defaultdict(list), {}), ([], []))
