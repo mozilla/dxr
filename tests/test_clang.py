@@ -20,8 +20,8 @@ def test_smoke_test_csv():
 
 def test_ref():
     csv = get_csv("""
-    ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
-    ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
+        ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
+        ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
     """)
     eq_(csv['ref']['function'], [{'declloc': DEFAULT_LOC,
                                   'kind': 'function',
@@ -33,7 +33,7 @@ def test_ref():
 
 def test_function():
     csv = get_csv("""
-    function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
+        function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
     """)
     eq_(csv['function'][0], {
         'name': 'comb',
@@ -45,7 +45,7 @@ def test_function():
 
 def test_variable():
     csv = get_csv("""
-    variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0
+        variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0
     """)
     eq_(csv['variable'][0], {
         'name': 'a',
@@ -59,8 +59,8 @@ def test_variable():
 
 def test_call():
     csv = get_csv("""
-    call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
-    call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
+        call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
+        call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
     """)
     eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
                              caller=('main()', DEFAULT_LOC),
@@ -73,8 +73,8 @@ def test_call():
 
 def test_macro():
     csv = get_csv("""
-    macro,loc,"x:0:0",name,"X",args,"(x, y)",text,"x + y",extent,0:0
-    macro,loc,"x:0:0",name,"X",text,"2",extent,0:0
+        macro,loc,"x:0:0",name,"X",args,"(x, y)",text,"x + y",extent,0:0
+        macro,loc,"x:0:0",name,"X",text,"2",extent,0:0
     """)
     eq_(csv['macro'][0], {
         'name': 'X',
@@ -92,7 +92,7 @@ def test_macro():
 
 def test_typedef():
     csv = get_csv("""
-    typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
+        typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
     """)
     eq_(csv['typedef'][0], {
         'name': 'x',
@@ -103,8 +103,8 @@ def test_typedef():
 
 def test_type():
     csv = get_csv("""
-    type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
-    type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
+        type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
+        type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
     """)
     eq_(csv['type']['struct'][0], {
         'name': 'foobar',
@@ -123,7 +123,7 @@ def test_type():
 
 def test_impl():
     csv = get_csv("""
-    impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     """)
 
     eq_(csv['impl'][0], {
@@ -135,7 +135,7 @@ def test_impl():
 
 def test_decldef():
     csv = get_csv("""
-    decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
+        decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
     """)
     eq_(csv['decldef']['function'][0], {
         'qualname': 'Queue::Queue<T>(int)',
@@ -148,14 +148,14 @@ def test_decldef():
 
 def test_warning():
     csv = get_csv("""
-    warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0
+        warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0
     """)
     eq_(csv['warning'][0], {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
 
 def test_namespace_alias():
     csv = get_csv("""
-    namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0
+        namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0
     """)
     eq_(csv['namespace_alias'][0], {
         'name': 'foo',
@@ -165,7 +165,7 @@ def test_namespace_alias():
 
 def test_namespace():
     csv = get_csv("""
-    namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
+        namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
     """)
     eq_(csv['namespace'][0], {
         'name': 'x',
@@ -176,7 +176,7 @@ def test_namespace():
 
 def test_include():
     csv = get_csv("""
-    include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0
+        include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0
     """)
     eq_(csv['include'][0], {
         'source_path': 'foo',
@@ -187,10 +187,10 @@ def test_include():
 
 def test_inheritance():
     csv = get_csv("""
-    impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
-    impl,tcname,"Z",tcloc,"main.cpp:11:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
-    impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
-    impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
+        impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
+        impl,tcname,"Z",tcloc,"main.cpp:11:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
+        impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
+        impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
     """)
     inherit = build_inhertitance(csv)
     eq_(inherit, {'X': {'Y', 'Z', 'W'},
@@ -206,13 +206,13 @@ def test_callgraph():
     """
 
     csv = get_csv("""
-    impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-    impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-    impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
-    impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
-    call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::X()",calleeloc,"x:0:0",calltype,"static"
-    call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::foo()",calleeloc,"x:0:0",calltype,"virtual"
-    call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
+        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+        impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+        impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
+        impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
+        call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::X()",calleeloc,"x:0:0",calltype,"static"
+        call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::foo()",calleeloc,"x:0:0",calltype,"virtual"
+        call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
     """)
     g = call_graph(csv)
     eq_(len(set(g.edges())), 6)
