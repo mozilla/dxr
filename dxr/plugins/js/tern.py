@@ -1,45 +1,8 @@
-from operator import itemgetter
-from itertools import chain, repeat, groupby, imap, izip
-
-from .condense import functions, symbols, properties
+from itertools import chain
 
 
-def unsparsify(annotations):
-    """[(line, key, val)] -> [[(key, val)]]"""
-    next_unannotated_line = 0
-    for line, annotations in groupby(annotations, itemgetter(0)):
-        for next_unannotated_line in xrange(next_unannotated_line,
-                                            line - 1):
-            yield []
-        yield [data for line_num, data in annotations]
-        next_unannotated_line = line
-
-
-def unsparsify_spans(key_val_spans):
-    return unsparsify(by_line(key_val_spans))
-
-
-def by_line(key_val_spans):
-    """[(key,val,span)] -> [(line, [(key,val)])]
-    Groups the key values by line.
-
-    """
-    return chain.from_iterable(
-        imap(itemgetter(1), span_to_lines(key_val_spans)))
-
-
-def span_to_lines(key_val_spans):
-    """[(key,val,span)] -> [(key,val,line)]
-    Converts spans to lines. The resulting iter will have len' >= len.
-    
-    """
-    key = itemgetter(0)
-    return groupby(sorted(chain.from_iterable(
-        imap(_span_to_lines, key_val_spans)), key=key), key)
-
-
-def _span_to_lines((key, val, span)):
-    return izip(xrange(span.start.row, span.end.row + 1), repeat((key, val)))
+from dxr.plugins.needles import unsparsify
+from dxr.plugins.clang.condense import functions, symbols, properties
 
 
 def function_needles_sparse(condensed):
@@ -63,4 +26,4 @@ def get_needles(condensed):
                            symbol_needles_sparse(condensed),
                            property_needles_sparse(condensed))
 
-    return unsparsify_spans(sparse_needles)
+    return unsparsify(sparse_needles)
