@@ -1,4 +1,4 @@
-"""Helper utilities for working with needles."""
+"""Helper utilities for working with needles"""
 
 from operator import itemgetter
 from itertools import repeat, imap, izip, chain
