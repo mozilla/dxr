@@ -2,11 +2,10 @@
 
 import os
 from operator import itemgetter
-from itertools import chain
+from itertools import chain, izip
 
 from functools import wraps
 from funcy import merge, partial, imap, group_by
-
 from dxr.plugins import FileToIndex
 from dxr.plugins.utils import StatefulTreeToIndex
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
@@ -23,7 +22,6 @@ class ClangFileToIndex(FileToIndex):
         self.needles, self.needles_by_line = needles(condensed, inherit)
         self.refs_by_line = refs(condensed)
         self.annotations_by_line = annotations(condensed)
-        
 
     def needles(self):
         return self.needles
@@ -71,54 +69,41 @@ def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
             in pluck2(key1, key2, condensed[field]))
 
 
-def func_needles(condensed):
-    return []
+def default_needles(condensed, key):
+    return izip((('c-{0}'.format(key.replace('_', '-')), props['name'])
+                for props in condensed[key]), spans(condensed, key))
 
 
-def var_needles(condensed):
-    return []
+def spans(condensed, key):
+    return imap(itemgetter('span'), condensed[key])
 
 
 def warn_needles(condensed):
-    return []
+    return izip((('c-warning', props['msg']) for props in condensed['warning']),
+                spans(condensed, 'warning'))
 
 
 def warn_op_needles(condensed):
-    return []
+    return izip((('c-warning-opt', props['opt']) for props in condensed['warning']),
+                spans(condensed, 'warning'))
 
 
 def call_site_needles(condensed):
     return []
 
 
-def typedef_needles(condensed):
-    return []
-
-
-def macro_needles(condensed):
-    return []
-
-
-def namespace_needles(condensed):
-    return []
-
-
-def namespace_alias_needles(condensed):
-    return []
-
-
 def needles(condensed, inherit):
-    return group_sparse_needles([
-        func_needles(condensed),
-        var_needles(condensed),
+    return group_sparse_needles(chain(*[
+        default_needles(condensed, 'function'),
+        default_needles(condensed, 'variable'),
+        default_needles(condensed, 'typedef'),
+        default_needles(condensed, 'macro'),
+        default_needles(condensed, 'namespace'),
+        default_needles(condensed, 'namespace_alias'),
         warn_needles(condensed),
         warn_op_needles(condensed),
         call_site_needles(condensed),
-        typedef_needles(condensed),
-        macro_needles(condensed),
-        namespace_needles(condensed),
-        namespace_alias_needles(condensed),
-    ])
+    ]))
 
     
 class ClangTreeToIndex(StatefulTreeToIndex):

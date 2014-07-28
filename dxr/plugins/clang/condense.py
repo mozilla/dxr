@@ -76,9 +76,11 @@ def process_impl(props):
 
 def process_call(props):
     """Group caller and callee for the call site."""
+    callee_pos = _process_loc(props.get('calleeloc'))[1]
+    caller_pos = _process_loc(props.get('callerloc'))[1]
     return Call(
-        (props['calleename'], _process_loc(props.get('calleeloc'))),
-        (props.get('callername'), _process_loc(props.get('callerloc'))),
+        (props['calleename'], Extent(callee_pos, callee_pos)),
+        (props.get('callername'), Extent(caller_pos, caller_pos)),
         props['calltype'])
 
 

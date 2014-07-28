@@ -11,17 +11,15 @@ from nose.tools import eq_
 
 from dxr.plugins.utils import Extent, Position, FuncSig, Call, TransitionError
 from dxr.plugins.clang import (ClangTreeToIndex, ClangFileToIndex, needles,
-                               func_needles, var_needles, warn_needles,
-                               warn_op_needles, call_site_needles,
-                               typedef_needles, macro_needles,
-                               namespace_needles, namespace_alias_needles,
-                               group_sparse_needles)
+                               warn_needles, warn_op_needles, call_site_needles,
+                               group_sparse_needles, default_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
                                         call_graph)
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
+CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
 FIXTURE = {
     'function': [{
         'name': 'comb',
@@ -74,11 +72,11 @@ FIXTURE = {
         'span': DEFAULT_EXTENT
     }],
     'call': [
-        Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
-             caller=('main()', DEFAULT_LOC),
+        Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+             caller=('main()', CALL_EXTENT),
              calltype='static'),
-        Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
-             caller=('main()', DEFAULT_LOC),
+        Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+             caller=('main()', CALL_EXTENT),
              calltype='virtual')
          ],
     'decldef': {
@@ -297,41 +295,47 @@ def test_FileToIndex():
     c = ClangFileToIndex('', '', MagicMock(), {})
 
 
+def eq__(l1, l2):
+    eq_(list(l1), list(l2))
+
+
 def test_func_needles():
-    eq_(func_needles(FIXTURE), [(('c-function', 'comb'), DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'function'), [(('c-function', 'comb'),
+                                                 DEFAULT_EXTENT)])
 
 
 def test_var_needles():
-    eq_(var_needles(FIXTURE), [(('c-variable', 'a'), DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'variable'), [(('c-variable', 'a'), DEFAULT_EXTENT)])
 
 
 def test_warn_needles():
-    eq_(warn_needles(FIXTURE), [(('c-warning', 'hi'), DEFAULT_EXTENT)])
-    eq_(warn_op_needles(FIXTURE), [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
+    eq__(warn_needles(FIXTURE), [(('c-warning', 'hi'), DEFAULT_EXTENT)])
+    eq__(warn_op_needles(FIXTURE), [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
 
 
 def test_typedef_needles():
-    eq_(typedef_needles(FIXTURE), [(('c-typedef', 'x'), DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'typedef'), [(('c-typedef', 'x'), DEFAULT_EXTENT)])
 
 
 def test_macro_needles():
-    eq_(macro_needles(FIXTURE), [(('c-macro', 'X'), DEFAULT_EXTENT),
-                                 (('c-macro', 'X'), DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'macro'), [(('c-macro', 'X'), DEFAULT_EXTENT),
+                                             (('c-macro', 'X'), DEFAULT_EXTENT)])
 
 
 def test_namespace_alias():
-    eq_(namespace_alias_needles(FIXTURE),
-        [(('c-namespace-alias', 'foo'), DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'namespace_alias'),
+         [(('c-namespace-alias', 'foo'), DEFAULT_EXTENT)])
 
 
 def test_namespace():
-    eq_(namespace_needles(FIXTURE), [('c-namespace', 'x', DEFAULT_EXTENT)])
+    eq__(default_needles(FIXTURE, 'namespace'), [(('c-namespace', 'x'), DEFAULT_EXTENT)])
 
 
 def test_call_site_needles():
-    eq_(call_site_needles(FIXTURE),
-        [(('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT),
-         (('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT)])
+    eq__(call_site_needles(FIXTURE),
+         [(('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT),
+          (('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT)])
+
 
 def test_decldefs_needles():
     raise SkipTest
