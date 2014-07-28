@@ -111,7 +111,8 @@ handlers = {
 @autocurry
 def process_fields(kind, fields):
     """Return new fields dict based on the current contents.
-    kind is the ast node type specified by the csv file.
+
+    :arg kind: the ast node type specified by the csv file.
     
     """
     fields = handlers.get(kind, identity)(fields)
