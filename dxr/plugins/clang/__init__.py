@@ -4,9 +4,10 @@ import os
 from operator import itemgetter
 from itertools import chain, izip
 
-from funcy import merge, imap, group_by
+from funcy import merge, imap, group_by, is_mapping
 
 from dxr import plugins
+from dxr.plugins import FileToIndex as FTI, TreeToIndex as TTI
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
@@ -95,6 +96,24 @@ def callee_needles(condensed):
 def caller_needles(condensed):
     return ((('c-called-by', call.caller[0]), call.caller[1]) for call
             in condensed['call'])
+
+
+def walk_types(condensed):
+    for key, vals in condensed.items():
+        if is_mapping(vals):
+            vals_ = vals.values()
+        for val in vals:
+            if 'type' in val and 'span' in val:
+                yield str(val['type']), val['span']
+
+    if 'type' in condensed:
+        for vals in condensed['type'].values():
+            for val in vals:
+                yield val['name'], val['span']
+
+
+def type_needles(condensed):
+    return ((('c-type', type_), span) for type_, span in walk_types(condensed))
 
 
 def needles(condensed, inherit):
