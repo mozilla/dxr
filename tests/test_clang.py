@@ -11,8 +11,9 @@ from nose.tools import eq_
 
 from dxr.plugins.utils import Extent, Position, FuncSig, Call, TransitionError
 from dxr.plugins.clang import (ClangTreeToIndex, ClangFileToIndex, needles,
-                               warn_needles, warn_op_needles, call_site_needles,
-                               group_sparse_needles, default_needles)
+                               warn_needles, warn_op_needles, default_needles,
+                               group_sparse_needles, callee_needles,
+                               caller_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
                                         call_graph)
 
@@ -331,10 +332,19 @@ def test_namespace():
     eq__(default_needles(FIXTURE, 'namespace'), [(('c-namespace', 'x'), DEFAULT_EXTENT)])
 
 
-def test_call_site_needles():
-    eq__(call_site_needles(FIXTURE),
-         [(('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT),
-          (('c-call-site', 'comb(int **, int, int)'), DEFAULT_EXTENT)])
+def test_callee_needles():
+    eq__(callee_needles(FIXTURE),
+         [(('c-callee', 'comb(int **, int, int)'), CALL_EXTENT),
+          (('c-callee', 'comb(int **, int, int)'), CALL_EXTENT)])
+
+
+def test_caller_needles():
+    eq__(caller_needles(FIXTURE),
+         [(('c-called-by', 'main()'), CALL_EXTENT),
+          (('c-called-by', 'main()'), CALL_EXTENT)])
+
+
+
 
 
 def test_decldefs_needles():

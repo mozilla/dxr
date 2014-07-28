@@ -88,8 +88,14 @@ def warn_op_needles(condensed):
                 spans(condensed, 'warning'))
 
 
-def call_site_needles(condensed):
-    return []
+def callee_needles(condensed):
+    return ((('c-callee', call.callee[0]), call.callee[1]) for call
+            in condensed['call'])
+
+
+def caller_needles(condensed):
+    return ((('c-called-by', call.caller[0]), call.caller[1]) for call
+            in condensed['call'])
 
 
 def needles(condensed, inherit):
@@ -102,7 +108,8 @@ def needles(condensed, inherit):
         default_needles(condensed, 'namespace_alias'),
         warn_needles(condensed),
         warn_op_needles(condensed),
-        call_site_needles(condensed),
+        callee_needles(condensed),
+        caller_needles(condensed),
     ]))
 
     
