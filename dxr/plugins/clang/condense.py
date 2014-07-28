@@ -13,15 +13,15 @@ from itertools import chain, izip
 from networkx import DiGraph
 from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    imap, ifilter, group_by, compose, autocurry, is_mapping,
-                   pluck)
+                   pluck, first)
 from toposort import toposort_flatten
 
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
 
 
-POSSIBLE_FIELDS = {'call', 'macro', 'function', 'name', 'variable', 'ref',
-                   'type', 'impl', 'decldef', 'typedef', 'warning',
-                   'namespace', 'namespace_alias', 'include'}
+POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',
+                       'type', 'impl', 'decldef', 'typedef', 'warning',
+                       'namespace', 'namespace_alias', 'include'])
 
 
 @decorator
@@ -42,8 +42,8 @@ def process_function(props):
 @without('loc', 'extent')
 def process_loc(props):
     """Return extent based on loc and extent."""
-    _, row, col = props['loc'].split(':')
-    start, end = props['extent'].split(':')
+    row, col = map(int, props['loc'].split(':')[1:])
+    start, end = map(int, props['extent'].split(':'))
     props['span'] = Extent(Position(start, row, col), Position(end, row, col))
     return props
 
@@ -54,13 +54,25 @@ def _process_loc(locstring):
         return None
 
     src, row, col = locstring.split(':')
-    return src, Position(None, row, col)
+    return src, Position(None, int(row), int(col))
 
 
 def process_declloc(props):
     """Return Position based on declloc."""
     props['declloc'] = _process_loc(props['declloc'])
     return props
+
+
+def process_defloc(props):
+    """Return Position based on defloc and extent."""
+    props['defloc'] = _process_loc(props['defloc'])
+    props['extent'] = Extent(*map(int, props['extent'].split(':')))
+    return props
+
+
+def process_impl(props):
+    props = group_loc_name('tc', props)
+    return group_loc_name('tb', props)
 
 
 def process_call(props):
@@ -84,7 +96,7 @@ def group_loc_name(base, props):
     @without(name, loc)
     def _group_loc_name(props):
         src, row, col = props[loc].split(':')
-        props[root] = {'loc': (src, Position(None, row, col)),
+        props[root] = {'loc': (src, Position(None, int(row), int(col))),
                        'name': props[name]}
         return props
     return _group_loc_name(props)
@@ -92,12 +104,17 @@ def group_loc_name(base, props):
 handlers = {
     'call': process_call,
     'function': process_function,
+    'impl': process_impl
 }
 
 
 @autocurry
 def process_fields(kind, fields):
-    """Return new fields dict based on the current contents."""
+    """Return new fields dict based on the current contents.
+
+    :arg kind: the ast node type specified by the csv file.
+    
+    """
     fields = handlers.get(kind, identity)(fields)
 
     if 'loc' in fields:
@@ -109,26 +126,34 @@ def process_fields(kind, fields):
     if 'declloc' in fields:
         fields = process_declloc(fields)
 
+    if 'defloc' in fields:
+        fields = process_defloc(fields)
+
     return fields
 
 
 def process((kind, vals)):
     """Process row from csv output."""
     mapping = map(compose(process_fields(kind), itemgetter(1)), vals)
-    if kind == 'ref':
+    if 'kind' in first(mapping):
         mapping = group_by(itemgetter('kind'), mapping)
     return kind, mapping
 
 
-@autocurry
-def _get_condensed(fpath, csv_path):
+def get_condensed(lines):
+    """Return condensed analysis of CSV files."""
     key = itemgetter(0)
-    with open(csv_path, 'rb') as f:
-        condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
-                                   for line in csv.reader(f)))
+    condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
+                               for line in csv.reader(lines)))
     condensed = walk(process, condensed)
-    condensed['name'] = fpath
     return condensed
+
+
+@autocurry
+def _load_csv(csv_path):
+    """Open CSV_PATH and return the output of get_condensed based on csv."""
+    with open(csv_path, 'rb') as f:
+        return get_condensed(f)
 
 
 def load_csv(csv_root, fpath):
@@ -136,12 +161,12 @@ def load_csv(csv_root, fpath):
     csv_paths = glob("{0}.*.csv".format(
         path.join(csv_root, sha1(fpath).hexdigest())))
 
-    return reduce(merge, imap(_get_condensed(fpath), csv_paths),
+    return reduce(merge, imap(_load_csv(fpath), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
 
 def call_graph(condensed):
-    """Return networkx DiGraph with edges representing function caller -> callee."""
+    """Return DiGraph with edges representing function caller -> callee."""
     g = DiGraph()
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
@@ -158,12 +183,13 @@ def call_graph(condensed):
 
 
 def _relate((parent, children)):
-    return parent, set((child['tcname']) for child in children)
+    return parent, set((child['tc']['name']) for child in children)
 
 
 def build_inhertitance(condensed):
     """Builds mapping class -> set of all descendants."""
-    tree = walk(_relate, group_by(itemgetter('tbname'), condensed['impl']))
+    get_tbname = lambda x: x['tb']['name']
+    tree = walk(_relate, group_by(get_tbname, condensed['impl']))
     tree.default_factory = set
     for node in toposort_flatten(tree):
         children = tree[node]

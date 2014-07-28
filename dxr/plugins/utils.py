@@ -4,9 +4,11 @@ from collections import namedtuple
 from itertools import ifilter
 
 Extent = namedtuple('Extent', ['start', 'end'])
+# Note that if offset is a Maybe Int, if not present it's None
 Position = namedtuple('Position', ['offset', 'row', 'col'])
 FuncSig = namedtuple('FuncSig', ['input', 'output'])
 Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
+
 
 def symbols(condensed):
     """Return a dict, (symbol name) -> (dict of fields and metadata)."""
@@ -21,7 +23,7 @@ def symbols(condensed):
 
 
 def functions(condensed):
-    """Return an iterator of pairs (symbol, val) if the symbol is a function."""
+    """Return an iterator of pairs (sym, val) if the sym is a function."""
     return ifilter(is_function, symbols(condensed))
 
 
