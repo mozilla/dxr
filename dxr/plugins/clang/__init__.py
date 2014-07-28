@@ -57,8 +57,8 @@ def pluck2(key1, key2, mappings):
 
 def group_sparse_needles(needles):
     """Return a pair of iterators (file_needles, line_needles)."""
-    needles_ = group_by(len, needles)
-    return needles_[2], needles_[3]
+    needles_ = group_by(lambda x: 'file' if x[1] is None else 'line', needles)
+    return needles_['file'], needles_['line']
 
 
 def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
@@ -108,7 +108,7 @@ def namespace_alias_needles(condensed):
 
 
 def needles(condensed, inherit):
-    return [], []
+    return group_sparse_needles([])
 
     
 class ClangTreeToIndex(StatefulTreeToIndex):
