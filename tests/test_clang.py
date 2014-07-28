@@ -200,6 +200,11 @@ def test_inheritance():
 
 
 def test_callgraph():
+    """Test that virtual call expands into 4 different calls
+    There are also the 2 static calls.
+
+    """
+
     csv = get_csv("""
     impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
