@@ -108,7 +108,17 @@ def namespace_alias_needles(condensed):
 
 
 def needles(condensed, inherit):
-    return group_sparse_needles([])
+    return group_sparse_needles([
+        func_needles(condensed),
+        var_needles(condensed),
+        warn_needles(condensed),
+        warn_op_needles(condensed),
+        call_site_needles(condensed),
+        typedef_needles(condensed),
+        macro_needles(condensed),
+        namespace_needles(condensed),
+        namespace_alias_needles(condensed),
+    ])
 
     
 class ClangTreeToIndex(StatefulTreeToIndex):
