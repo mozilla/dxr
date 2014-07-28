@@ -11,7 +11,7 @@ def unsparsify(span_needles):
     """Transform a sparse needle list [(key, val, span:Extent)]
     into proper dense needle format [[(key, val)]].
 
-    In the dense format, the index, i, in the list corresponds to the lin_num.
+    In the dense format, the index, i, specifies the line number from the file.
                          the list at i are all the (key, val) for that line.
 
     """
@@ -34,5 +34,5 @@ def by_line(span_needles):
 
 
 def span_to_lines((val, span)):
-    """Expand (_,  span:Extent) into [(_, line:int)]."""
+    """Expand (_, span:Extent) into [(_, line:int)]."""
     return izip(repeat(val), xrange(span.start.row, span.end.row + 1))
