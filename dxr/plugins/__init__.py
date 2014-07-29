@@ -246,6 +246,10 @@ class FileToSkim(object):
 
             (start, end, (menu, title))
 
+        ``start`` and ``end`` are the bounds of a slice of a Unicode string
+        holding the contents of the file. (``refs_by_line()`` will not be
+        called for binary files.)
+
         ``title`` is the contents of the <a> tag's title attribute. (The first
         one wins.)
 
@@ -263,6 +267,10 @@ class FileToSkim(object):
         """Yield an ordered list of extents and CSS classes for each line::
 
             (start, end, class)
+
+        ``start`` and ``end`` are the bounds of a slice of a Unicode string
+        holding the contents of the file. (``regions_by_line()`` will not be
+        called for binary files.)
 
         We'll probably store them in ES as a list of explicit objects, like
         {start: 5, end: 18, class: k}.

@@ -29,7 +29,7 @@ mappings = {
             }
         }
     },
-    
+
     # The line doctype is the main workhorse of DXR searches. The search
     # results present lines, so that's what we index.
     LINE: {

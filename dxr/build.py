@@ -16,11 +16,13 @@ import sys
 from sys import exc_info
 from traceback import format_exc
 from warnings import warn
+from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from funcy import merge
 from jinja2 import Markup
 from ordereddict import OrderedDict
+from pyelasticsearch import ElasticSearch
 
 from dxr.config import Config
 from dxr.plugins import load_htmlifiers, load_indexers
@@ -28,7 +30,8 @@ import dxr.languages
 import dxr.mime
 from dxr.mime import is_text
 from dxr.query import filter_menu_items
-from dxr.utils import connect_db, load_template_env, open_log, browse_url
+from dxr.utils import (connect_db, load_template_env, open_log, browse_url,
+                       deep_update)
 
 try:
     from itertools import compress
@@ -137,8 +140,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
             ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
 
-        tree_indexers = [p.tree_to_index for p in tree.enabled_plugins if
-                         p.tree_to_index]
+        tree_indexers = [p.tree_to_index for p in tree.enabled_plugins.values()
+                         if p.tree_to_index]
 
         if skip_indexing:
             print " - Skipping indexing (due to 'index' in 'skip_stages')"
@@ -158,9 +161,9 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
                     },
                     # Default analyzers and mappings are in the core plugin.
                     'analysis': reduce(deep_update, (p.analyzers for p in
-                                       tree.enabled_plugins), {}),
+                                       tree.enabled_plugins.values()), {}),
                     'mappings': reduce(deep_update, (p.mappings for p in
-                                       tree.enabled_plugins), {})
+                                       tree.enabled_plugins.values()), {})
                 })
 
 
@@ -281,7 +284,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
                 yield folder
 
 
-def file_contents(path, encoding_guess):
+def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
     """Return the unicode contents of a file if we can figure out a decoding.
     Otherwise, return the contents as a string.
 
@@ -310,6 +313,7 @@ def unignored_files(folder, ignore_paths, ignore_patterns):
     Returned files include both binary and text ones.
 
     """
+    # TODO: Expose a lot of pieces of this as routines plugins can call.
     for root, folders, files in os.walk(folder, topdown=True):
         # Find relative path
         rel_path = relpath(root, folder)
@@ -428,8 +432,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
          # Someday, it would be great to stream this and not concretize the
          # whole thing in RAM. The template will have to quit looping through
          # the whole thing 3 times.
-         'lines': zip(build_lines(text, htmlifiers, tree.source_encoding),
-                      annotations_by_line),
+         'lines': zip(build_lines(contents, refs_by_line, regions_by_line),
+                      annotations_by_line) if is_text else [],
 
          'is_text': is_text,
 
@@ -595,6 +599,7 @@ class Line(object):
 
     """
     sort_order = 0  # Sort Lines outermost.
+
     def __repr__(self):
         return 'Line()'
 
@@ -786,7 +791,7 @@ def balanced_tags_with_empties(tags):
     yield point, False, LINE
 
 
-def tag_boundaries(htmlifiers):
+def tag_boundaries(refs, regions):
     """Return a sequence of (offset, is_start, Region/Ref/Line) tuples.
 
     Basically, split the atomic tags that come out of plugins into separate
@@ -797,29 +802,28 @@ def tag_boundaries(htmlifiers):
     the source code char it comes before.
 
     """
-    for h in htmlifiers:
-        for intervals, cls in [(h.regions(), Region), (h.refs(), Ref)]:
-            for start, end, data in intervals:
-                tag = cls(data)
-                # Filter out zero-length spans which don't do any good and
-                # which can cause starts to sort after ends, crashing the tag
-                # balancer. Incidentally filter out spans where start tags come
-                # after end tags, though that should never happen.
-                #
-                # Also filter out None starts and ends. I don't know where they
-                # come from. That shouldn't happen and should be fixed in the
-                # plugins.
-                if (start is not None and start != -1 and
-                        end is not None and end != -1 and
-                        start < end):
-                    yield start, True, tag
-                    yield end, False, tag
+    for intervals, cls in [(regions, Region), (refs, Ref)]:
+        for start, end, data in intervals:
+            tag = cls(data)
+            # Filter out zero-length spans which don't do any good and
+            # which can cause starts to sort after ends, crashing the tag
+            # balancer. Incidentally filter out spans where start tags come
+            # after end tags, though that should never happen.
+            #
+            # Also filter out None starts and ends. I don't know where they
+            # come from. That shouldn't happen and should be fixed in the
+            # plugins.
+            if (start is not None and start != -1 and
+                    end is not None and end != -1 and
+                    start < end):
+                yield start, True, tag
+                yield end, False, tag
 
 
 def line_boundaries(text):
     """Return a tag for the end of each line in a string.
 
-    :arg text: A UTF-8-encoded string
+    :arg text: Unicode
 
     Endpoints and start points are coincident: right after a (universal)
     newline.
@@ -915,26 +919,20 @@ def nesting_order((point, is_start, payload)):
                              -payload.sort_order)
 
 
-def build_lines(text, htmlifiers, encoding='utf-8'):
-    """Yield lines of Markup, with decorations from the htmlifier plugins
-    applied.
+def build_lines(text, refs_by_line, regions_by_line):
+    """Yield lines of Markup, with links and syntax coloring applied.
 
-    :arg text: UTF-8-encoded string. (In practice, this is not true if the
-        input file wasn't UTF-8. We should make it true.)
+    :arg text: Unicode text of the file to htmlify. ``build_lines`` may not be
+        used on binary files.
 
     """
-    decoder = getdecoder(encoding)
-    def decoded_slice(start, end):
-        return decoder(text[start:end], errors='replace')[0]
+    # Plugins return unicode offsets, not byte ones.
 
-    # For now, we make the same assumption the old build_lines() implementation
-    # did, just so we can ship: plugins return byte offsets, not Unicode char
-    # offsets. However, I think only the clang plugin returns byte offsets. I
-    # bet Pygments returns char ones. We should homogenize one way or the
-    # other.
-    tags = list(tag_boundaries(htmlifiers))  # start and endpoints of intervals
+    # Get start and endpoints of intervals:
+    tags = list(tag_boundaries(refs_by_line, regions_by_line))
+
     tags.extend(line_boundaries(text))
-    tags.sort(key=nesting_order)  # Balanced_tags undoes this, but we tolerate
+    tags.sort(key=nesting_order)  # balanced_tags undoes this, but we tolerate
                                   # that in html_lines().
     remove_overlapping_refs(tags)
-    return html_lines(balanced_tags(tags), decoded_slice)
+    return html_lines(balanced_tags(tags), text.__getslice__)

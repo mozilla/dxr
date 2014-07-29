@@ -228,7 +228,7 @@ class Htmlifier(object):
 
 def test_tag_boundaries():
     """Sanity-check ``tag_boundaries()``."""
-    eq_(str(list(tag_boundaries([Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])]))),
+    eq_(str(list(tag_boundaries([], [(0, 3, 'a'), (3, 5, 'b')]))),
         '[(0, True, Region("a")), (3, False, Region("a")), '
         '(3, True, Region("b")), (5, False, Region("b"))]')
 
@@ -253,20 +253,22 @@ class IntegrationTests(TestCase):
         """Sanity-check build_lines, which ties the whole shootin' match
         together."""
         eq_(''.join(build_lines('hello',
-                                [Htmlifier(regions=[(0, 3, 'a'), (3, 5, 'b')])])),
+                                [],
+                                [(0, 3, 'a'), (3, 5, 'b')])),
             u'<span class="a">hel</span><span class="b">lo</span>')
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
         eq_(''.join(build_lines('this that',
-                                [Htmlifier(regions=[(0, 4, 'k')],
-                                           refs=[(0, 9, ({}, '', None))])])),
+                                [(0, 9, ({}, ''))],
+                                [(0, 4, 'k')])),
             u'<a data-menu="{}"><span class="k">this</span> that</a>')
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
         eq_(list(build_lines('this\nthat',
-                             [Htmlifier(refs=[(0, 9, ({}, '', None))])])),
+                             [(0, 9, ({}, ''))],
+                             [])),
             [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
 
     def test_horrors(self):
@@ -276,10 +278,11 @@ class IntegrationTests(TestCase):
         # span of text is within the right spans. We don't care what order the
         # span tags are in.
         eq_(list(build_lines('this&that',
-                             [Htmlifier(regions=[(0, 9, 'a'), (1, 8, 'b'),
-                                                 (4, 7, 'c'), (3, 4, 'd'),
-                                                 (3, 5, 'e'), (0, 4, 'm'),
-                                                 (5, 9, 'n')])])),
+                             [],
+                             [(0, 9, 'a'), (1, 8, 'b'),
+                              (4, 7, 'c'), (3, 4, 'd'),
+                              (3, 5, 'e'), (0, 4, 'm'),
+                              (5, 9, 'n')])),
             [u'<span class="a"><span class="m">t<span class="b">hi<span class="d"><span class="e">s</span></span></span></span><span class="b"><span class="e"><span class="c">&amp;</span></span><span class="c"><span class="n">th</span></span><span class="n">a</span></span><span class="n">t</span></span>'])
 
     def test_empty_tag_boundaries(self):
@@ -290,4 +293,5 @@ class IntegrationTests(TestCase):
 
         """
         list(build_lines('hello!',
-                         [Htmlifier(regions=[(3, 3, 'a'), (3, 5, 'b')])]))
+                         [],
+                         [(3, 3, 'a'), (3, 5, 'b')]))
