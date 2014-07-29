@@ -215,4 +215,4 @@ def test_callgraph():
         call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
     """)
     g = call_graph(csv)
-    eq_(len(set(g.edges())), 6)
+    eq_(len(set(g.keys())), 6)

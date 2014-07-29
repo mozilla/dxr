@@ -10,7 +10,6 @@ from glob import glob
 from operator import itemgetter
 from itertools import chain, izip
 
-from networkx import DiGraph
 from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    imap, ifilter, group_by, compose, autocurry, is_mapping,
                    pluck, first)
@@ -167,10 +166,10 @@ def load_csv(csv_root, fpath):
 
 def call_graph(condensed):
     """Return DiGraph with edges representing function caller -> callee."""
-    g = DiGraph()
+    g = {}
     inherit = build_inhertitance(condensed)
     for call in condensed['call']:
-        g.add_edge(call.caller, call.callee, attr=call)
+        g[(call.caller, call.callee)] = call
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
@@ -178,7 +177,7 @@ def call_graph(condensed):
                 scope, func = callee_qname.split('::')
                 for child in inherit[scope]:
                     child_qname = "{0}::{1}".format(child, func)
-                    g.add_edge(call.caller, (child_qname, pos), attr=call)
+                    g[(call.caller, (child_qname, pos))] = call
     return g
 
 
