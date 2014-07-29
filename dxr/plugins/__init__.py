@@ -500,7 +500,7 @@ def all_plugins():
         return entry_point.name, plugin
 
     ret = OrderedDict()
-    ret['core'] = Plugin.from_namespace(dxr.plugins.core)
+    ret['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
     ret.update(name_and_plugin(point) for point in
                iter_entry_points('dxr.plugins'))
     return ret
