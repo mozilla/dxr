@@ -4,7 +4,7 @@ import os
 from operator import itemgetter
 from itertools import chain, izip
 
-from funcy import merge, partial, imap, group_by
+from funcy import merge, imap, group_by
 from dxr.plugins import FileToIndex as FTI, TreeToIndex as TTI
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
@@ -28,10 +28,10 @@ class FileToIndex(FTI):
         return self.needles_by_line
 
     def refs_by_line(self):
-        return self.refs_by_line # TODO: look at htmlify.py
+        return self.refs_by_line  # TODO: look at htmlify.py
 
     def annotations_by_line(self):
-        return self.annotations_by_line # TODO: look at htmlify.py
+        return self.annotations_by_line  # TODO: look at htmlify.py
 
 
 def refs(_):
@@ -43,7 +43,7 @@ def annotations(_):
 
 
 def pluck2(key1, key2, mappings):
-    """Plucks a pair of keys from mappings. 
+    """Plucks a pair of keys from mappings.
     This is a generalization of funcy's pluck function.
 
     (k1, k2, {k: v}) -> [(v1, v2)]
@@ -60,7 +60,7 @@ def group_sparse_needles(needles):
 def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
     if field is None:
         field = tag
-        
+
     prefix = '{0}-'.format(prefix) if prefix else ''
 
     return ((prefix + tag, key1, key2) for key1, key2
@@ -77,13 +77,13 @@ def spans(condensed, key):
 
 
 def warn_needles(condensed):
-    return izip((('c-warning', props['msg']) for props in condensed['warning']),
-                spans(condensed, 'warning'))
+    return izip((('c-warning', props['msg']) for props
+                 in condensed['warning']), spans(condensed, 'warning'))
 
 
 def warn_op_needles(condensed):
-    return izip((('c-warning-opt', props['opt']) for props in condensed['warning']),
-                spans(condensed, 'warning'))
+    return izip((('c-warning-opt', props['opt']) for props
+                 in condensed['warning']), spans(condensed, 'warning'))
 
 
 def callee_needles(condensed):
@@ -114,9 +114,13 @@ def needles(condensed, inherit):
 class TreeToIndex(TTI):
     def __init__(self, tree):
         self.tree = tree
-    
-    def environment(self, vars_):    # Setup environment variables for inspecting clang as runtime
-        # We'll store all the havested metadata in the plugins temporary folder.
+
+    def environment(self, vars_):
+        """Setup environment variables for inspecting clang as runtime
+
+        We'll store all the havested metadata in the plugins temporary folder.
+
+        """
         tree = self.tree
         temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
         self.temp_folder = temp_folder
@@ -145,6 +149,3 @@ class TreeToIndex(TTI):
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.tree, self.inherit)
-
-
-
