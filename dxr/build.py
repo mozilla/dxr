@@ -409,35 +409,36 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         es.bulk_index(index, LINE, (merge(n, needles) for n in needles_by_line), id_field=None)
 
     # Render some HTML:
-    _fill_and_write_template(
-        jinja_env,
-        'file.html',
-        join(tree.target_folder, rel_path + '.html'),
-        {# Common template variables:
-         'wwwroot': tree.config.wwwroot,
-         'tree': tree.name,
-         'tree_tuples': [(t.name,
-                          browse_url(t.name, tree.config.wwwroot, rel_path),
-                          t.description)
-                         for t in tree.config.sorted_tree_order],
-         'generated_date': tree.config.generated_date,
-         'filters': filter_menu_items(tree.config.filter_language),
+    if 'html' not in tree.config.skip_stages:
+        _fill_and_write_template(
+            jinja_env,
+            'file.html',
+            join(tree.target_folder, rel_path + '.html'),
+            {# Common template variables:
+             'wwwroot': tree.config.wwwroot,
+             'tree': tree.name,
+             'tree_tuples': [(t.name,
+                              browse_url(t.name, tree.config.wwwroot, rel_path),
+                              t.description)
+                             for t in tree.config.sorted_tree_order],
+             'generated_date': tree.config.generated_date,
+             'filters': filter_menu_items(tree.config.filter_language),
 
-         # File template variables:
-         'paths_and_names': linked_pathname(rel_path, tree.name),
-         'icon': icon(rel_path),
-         'path': rel_path,
-         'name': os.path.basename(rel_path),
+             # File template variables:
+             'paths_and_names': linked_pathname(rel_path, tree.name),
+             'icon': icon(rel_path),
+             'path': rel_path,
+             'name': os.path.basename(rel_path),
 
-         # Someday, it would be great to stream this and not concretize the
-         # whole thing in RAM. The template will have to quit looping through
-         # the whole thing 3 times.
-         'lines': zip(build_lines(contents, refs_by_line, regions_by_line),
-                      annotations_by_line) if is_text else [],
+             # Someday, it would be great to stream this and not concretize the
+             # whole thing in RAM. The template will have to quit looping through
+             # the whole thing 3 times.
+             'lines': zip(build_lines(contents, refs_by_line, regions_by_line),
+                          annotations_by_line) if is_text else [],
 
-         'is_text': is_text,
+             'is_text': is_text,
 
-         'sections': build_sections(links)})
+             'sections': build_sections(links)})
 
 
 def index_chunk(tree, tree_indexers, paths, index):
