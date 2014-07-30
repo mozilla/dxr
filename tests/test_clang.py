@@ -3,14 +3,12 @@ from itertools import permutations, ifilter
 from operator import itemgetter
 from functools import partial
 
-
 from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
 
-
 from dxr.plugins.utils import Extent, Position, FuncSig, Call, TransitionError
-from dxr.plugins.clang import (ClangTreeToIndex, ClangFileToIndex, needles,
+from dxr.plugins.clang import (TreeToIndex, FileToIndex, needles,
                                warn_needles, warn_op_needles, default_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles)
@@ -259,7 +257,7 @@ def test_callgraph():
 
 
 def smoke_test_tree():
-    c = ClangTreeToIndex('test')
+    c = TreeToIndex('test')
 
 
 CORRECT_ORDER = [('environment', [{}]), ('pre_build', []), ('post_build', []),
@@ -267,7 +265,7 @@ CORRECT_ORDER = [('environment', [{}]), ('pre_build', []), ('post_build', []),
 
 
 def check_order(order):
-    c = ClangTreeToIndex(MagicMock())
+    c = TreeToIndex(MagicMock())
     for cmd, args in order:
         getattr(c, cmd)(*args)
 
@@ -293,7 +291,7 @@ def incorrect_order_tests():
 
 
 def test_FileToIndex():
-    c = ClangFileToIndex('', '', MagicMock(), {})
+    c = FileToIndex('', '', MagicMock(), {})
 
 
 def eq__(l1, l2):

@@ -28,7 +28,7 @@ class TransitionError(Exception):
 
 @decorator
 def transition(call, start, end):
-    """Assert"""
+    """Raises TransitionError if transition invariant is broken."""
     self = call._args[0]
     if self.state != start:
         raise TransitionError('In state {0}, expected {1}'.format(
@@ -62,3 +62,16 @@ class StatefulTreeToIndex(TreeToIndex):
     @transition('post_build', 'post_build')
     def file_to_index(self, path, contents):
         return self.file_indexer(path=path, contents=contents, tree=self.tree)
+
+
+@decorator
+def tree_to_index(call):
+    """Wrap co-routine with this decorator to create StatefulTreeToIndex.
+
+    Co-Routine uses order: Start -> Env -> Prebuild -> Postbuild
+
+    """
+    class TreeToIndex_(StatefulTreeToIndex):
+        def __init__(self, tree):
+            super(TreeToIndex_, self).__init__(tree, call._func)
+    return TreeToIndex_(*call._args, **call._kwargs)

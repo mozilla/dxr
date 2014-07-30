@@ -1,4 +1,4 @@
-"""Clang Plugin"""
+"""C and CXX Plugin. (Currently relies on the clang compiler)"""
 
 import os
 from operator import itemgetter
@@ -7,16 +7,16 @@ from itertools import chain, izip
 from functools import wraps
 from funcy import merge, partial, imap, group_by
 from dxr.plugins import FileToIndex
-from dxr.plugins.utils import StatefulTreeToIndex
+from dxr.plugins.utils import tree_to_index
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
 PLUGIN_NAME = 'clang'
 
 
-class ClangFileToIndex(FileToIndex):
+class FileToIndex(FileToIndex):
     def __init__(self, path, contents, tree, inherit):
-        super(ClangFileToIndex, self).__init__(path, contents, tree)
+        super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
         condensed = load_csv(*os.path.split(path))
         self.needles, self.needles_by_line = needles(condensed, inherit)
@@ -112,13 +112,9 @@ def needles(condensed, inherit):
         caller_needles(condensed),
     ]))
 
-    
-class ClangTreeToIndex(StatefulTreeToIndex):
-    def __init__(self, tree):
-        super(ClangTreeToIndex, self).__init__(tree, clang_indexer)
 
-
-def clang_indexer(tree):
+@tree_to_index
+def TreeToIndex(tree):
     vars_ = yield
     # ENV SETUP
 
@@ -149,4 +145,4 @@ def clang_indexer(tree):
     # POSTBUILD
     condensed = load_csv(temp_folder, fpath=None, only_impl=True)
     inherit = build_inhertitance(condensed)
-    yield partial(ClangFileToIndex, inherit=inherit)
+    yield partial(FileToIndex, inherit=inherit)
