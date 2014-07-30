@@ -4,17 +4,15 @@ import os
 from operator import itemgetter
 from itertools import chain, izip
 
-from functools import wraps
 from funcy import merge, partial, imap, group_by
-from dxr.plugins import FileToIndex
-from dxr.plugins.utils import tree_to_index
+from dxr.plugins import FileToIndex as FTI, TreeToIndex as TTI
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
 PLUGIN_NAME = 'clang'
 
 
-class FileToIndex(FileToIndex):
+class FileToIndex(FTI):
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
@@ -113,36 +111,40 @@ def needles(condensed, inherit):
     ]))
 
 
-@tree_to_index
-def TreeToIndex(tree):
-    vars_ = yield
-    # ENV SETUP
+class TreeToIndex(TTI):
+    def __init__(self, tree):
+        self.tree = tree
+    
+    def environment(self, vars_):    # Setup environment variables for inspecting clang as runtime
+        # We'll store all the havested metadata in the plugins temporary folder.
+        tree = self.tree
+        temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
+        self.temp_folder = temp_folder
+        plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
+        flags = [
+            '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
+            '-add-plugin', 'dxr-index',
+            '-plugin-arg-dxr-index', tree.source_folder
+        ]
+        flags_str = " ".join(imap('-Xclang {}'.format, flags))
 
-    # Setup environment variables for inspecting clang as runtime
-    # We'll store all the havested metadata in the plugins temporary folder.
-    temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-    plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
-    flags = [
-        '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
-        '-add-plugin', 'dxr-index',
-        '-plugin-arg-dxr-index', tree.source_folder
-    ]
-    flags_str = " ".join(imap('-Xclang {}'.format, flags))
+        env = {
+            'CC': "clang %s" % flags_str,
+            'CXX': "clang++ %s" % flags_str,
+            'DXR_CLANG_FLAGS': flags_str,
+            'DXR_CXX_CLANG_OBJECT_FOLDER': tree.object_folder,
+            'DXR_CXX_CLANG_TEMP_FOLDER': temp_folder,
+        }
+        env['DXR_CC'] = env['CC']
+        env['DXR_CXX'] = env['CXX']
+        return merge(vars_, env)
 
-    env = {
-        'CC': "clang %s" % flags_str,
-        'CXX': "clang++ %s" % flags_str,
-        'DXR_CLANG_FLAGS': flags_str,
-        'DXR_CXX_CLANG_OBJECT_FOLDER': tree.object_folder,
-        'DXR_CXX_CLANG_TEMP_FOLDER': temp_folder,
-    }
-    env['DXR_CC'] = env['CC']
-    env['DXR_CXX'] = env['CXX']
+    def post_build(self):
+        condensed = load_csv(self.temp_folder, fpath=None, only_impl=True)
+        self.inherit = build_inhertitance(condensed)
 
-    yield merge(vars_, env)
-    # PREBUILD
-    yield # BUILD STEP
-    # POSTBUILD
-    condensed = load_csv(temp_folder, fpath=None, only_impl=True)
-    inherit = build_inhertitance(condensed)
-    yield partial(FileToIndex, inherit=inherit)
+    def file_to_index(self, path, contents):
+        return FileToIndex(path, contents, self.tree, self.inherit)
+
+
+

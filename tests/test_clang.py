@@ -7,7 +7,7 @@ from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.plugins.utils import Extent, Position, FuncSig, Call, TransitionError
+from dxr.plugins.utils import Extent, Position, FuncSig, Call
 from dxr.plugins.clang import (TreeToIndex, FileToIndex, needles,
                                warn_needles, warn_op_needles, default_needles,
                                group_sparse_needles, callee_needles,
@@ -262,32 +262,6 @@ def smoke_test_tree():
 
 CORRECT_ORDER = [('environment', [{}]), ('pre_build', []), ('post_build', []),
                  ('file_to_index', ['foo', 'bar'])]
-
-
-def check_order(order):
-    c = TreeToIndex(MagicMock())
-    for cmd, args in order:
-        getattr(c, cmd)(*args)
-
-
-def check_incorrect_order(order):
-    try:
-        check_order(order)
-        assert False
-    except TransitionError:
-        pass
-
-
-def correct_order_test():
-    check_order(CORRECT_ORDER)
-
-
-def incorrect_order_tests():
-    only_cmds = partial(map, itemgetter(0))
-    for order in permutations(CORRECT_ORDER):
-        if only_cmds(order) == only_cmds(CORRECT_ORDER):
-            continue
-        check_incorrect_order(order)
 
 
 def test_FileToIndex():
