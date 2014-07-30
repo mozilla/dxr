@@ -19,7 +19,7 @@ from warnings import warn
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from funcy import merge
+from funcy import merge, chunks
 from jinja2 import Markup
 from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch
@@ -469,7 +469,7 @@ def index_files(tree, tree_indexers, index, pool):
                                 tree.ignore_paths,
                                 tree.ignore_patterns)
     futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index) for
-               paths in chunked(unignored, 500)]
+               paths in chunks(500, unignored)]
     for future in show_progress(futures, message=' - Indexing files.'):
         result = future.result()
         if result:
