@@ -28,7 +28,7 @@ class TransitionError(Exception):
 
 @decorator
 def transition(call, start, end):
-    """Raises TransitionError if transition invariant is broken."""
+    """Raise TransitionError if transition invariant is broken."""
     self = call._args[0]
     if self.state != start:
         raise TransitionError('In state {0}, expected {1}'.format(
