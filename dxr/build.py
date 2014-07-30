@@ -180,17 +180,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool)
 
-            # Index files, including paths, extensions, needles, etc. (index_files())
-            #   Index lines, including full text, needles_by_line.
-            #   Also build folder listings while we're at it. This (build_folder()) makes the whole folder tree needed for the static HTML.
-            # Also also lay down static HTML, pulling from links, refs_by_line, etc., if 'html' not in config.skip_stages
-
             # Remember the semi-random index name.
-
-#         if 'html' in config.skip_stages:
-#             print " - Skipping htmlifying (due to 'html' in 'skip_stages')"
-#         else:
-#             print "Building HTML for the '%s' tree." % tree.name
 
         print " - Finished processing '%s' in %s." % (tree.name,
                                                       datetime.now() - start_time)
@@ -392,7 +382,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
     # Index a doc of type 'file' so we can build folder listings.
     # At the moment, we send to ES in the same worker that does the indexing.
-    # We could interpose an external queuing system, but I'm willing to
+    # We could interpose an external queueing system, but I'm willing to
     # potentially sacrifice a little speed here for the easy management of
     # self-throttling.
     # TODO: Merge with the bulk_index below when pyelasticsearch supports
@@ -480,6 +470,7 @@ def index_files(tree, tree_indexers, index, pool):
             raise type, value  # exits with non-zero
 
 
+# TODO: Move to request time, pulling from FILE docs.
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     """Build an HTML index file for a single folder."""
     # Create the subfolder if it doesn't exist:

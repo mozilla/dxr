@@ -100,6 +100,7 @@ class FileToIndex(dxr.plugins.FileToIndex):
     def needles(self):
         """Fill out path (and path_trg)."""
         yield 'path', self.path
+        # TODO: Add extension as a separate field (and to the mapping)?
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
