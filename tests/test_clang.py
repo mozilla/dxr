@@ -9,7 +9,7 @@ from nose.tools import eq_
 
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
 from dxr.plugins.clang import (TreeToIndex, FileToIndex, needles,
-                               warn_needles, warn_op_needles, default_needles,
+                               warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
@@ -247,9 +247,10 @@ def eq__(l1, l2):
 
 
 def test_name_needles():
-    eq__(default_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
+    eq__(name_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
          [(('c-key', 'x'), 'SPAN!!!')])
-    eq__(default_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
+    # _ -> -
+    eq__(name_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
          [(('c-key-2', 'x'), 'SPAN!')])
 
 

@@ -67,7 +67,7 @@ def get_needle(condensed, tag, key1, key2, field=None, prefix=''):
             in pluck2(key1, key2, condensed[field]))
 
 
-def default_needles(condensed, key):
+def name_needles(condensed, key):
     return izip((('c-{0}'.format(key.replace('_', '-')), props['name'])
                 for props in condensed[key]), spans(condensed, key))
 
@@ -98,12 +98,12 @@ def caller_needles(condensed):
 
 def needles(condensed, inherit):
     return group_sparse_needles(chain(*[
-        default_needles(condensed, 'function'),
-        default_needles(condensed, 'variable'),
-        default_needles(condensed, 'typedef'),
-        default_needles(condensed, 'macro'),
-        default_needles(condensed, 'namespace'),
-        default_needles(condensed, 'namespace_alias'),
+        name_needles(condensed, 'function'),
+        name_needles(condensed, 'variable'),
+        name_needles(condensed, 'typedef'),
+        name_needles(condensed, 'macro'),
+        name_needles(condensed, 'namespace'),
+        name_needles(condensed, 'namespace_alias'),
         warn_needles(condensed),
         warn_op_needles(condensed),
         callee_needles(condensed),
