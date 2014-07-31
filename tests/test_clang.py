@@ -19,98 +19,6 @@ from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
-FIXTURE = {
-    'function': [{
-        'name': 'comb',
-        'qualname': 'comb(int **, int, int)',
-        'type': FuncSig(input=('int **', 'int', 'int'), output='int **'),
-        'span': DEFAULT_EXTENT
-    }],
-    'warning': [{'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT}],
-    'variable': [{
-        'name': 'a',
-        'qualname': 'comb(int **, int, int)::a',
-        'type': 'int **',
-        'scope': {'loc': DEFAULT_LOC,
-                  'name': 'comb(int **, int, int)'},
-        'span': DEFAULT_EXTENT
-    }],
-    'typedef': [{
-        'name': 'x',
-        'qualname': 'x',
-        'span': DEFAULT_EXTENT
-    }],
-    'ref': {
-        'function': [{'declloc': DEFAULT_LOC,
-                      'kind': 'function',
-                      'span': DEFAULT_EXTENT}],
-        'variable': [{'declloc': DEFAULT_LOC,
-                      'kind': 'variable',
-                      'span': DEFAULT_EXTENT}]
-    },
-    'macro': [
-        {
-        'name': 'X',
-            'args': '(x, y)',
-            'text': 'x + y',
-            'span': DEFAULT_EXTENT
-        },
-        {
-            'name': 'X',
-            'text': '2',
-            'span': DEFAULT_EXTENT
-        }
-    ],
-    'namespace_alias': [{
-        'name': 'foo',
-        'qualname': 'foo',
-        'span': DEFAULT_EXTENT}],
-    'namespace': [{
-        'name': 'x',
-        'qualname': 'x',
-        'span': DEFAULT_EXTENT
-    }],
-    'call': [
-        Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-             caller=('main()', CALL_EXTENT),
-             calltype='static'),
-        Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-             caller=('main()', CALL_EXTENT),
-             calltype='virtual')
-         ],
-    'decldef': {
-        'function': [{
-            'qualname': 'Queue::Queue<T>(int)',
-            'declloc': DEFAULT_LOC,
-            'defloc': DEFAULT_LOC,
-            'kind': 'function',
-            'extent': Extent(0, 0)}],
-    },
-    'include': [{
-        'source_path': 'foo',
-        'target_path': 'bar',
-        'span': DEFAULT_EXTENT
-    }],
-    'type': {
-        'struct': [{
-            'name': 'foobar',
-            'qualname': 'foobar',
-            'kind': 'struct',
-            'span': DEFAULT_EXTENT
-        }],
-        'class': [{
-        'name': 'X',
-        'qualname': 'X',
-        'kind': 'class',
-        'span': DEFAULT_EXTENT
-        }]
-    },
-    'impl': [{
-        'tb': {'name': 'X', 'loc': DEFAULT_LOC},
-        'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
-        'access': 'public'}],
-}
-
 
 def get_csv(csv_str):
     return get_condensed(x.strip() for x in csv_str.splitlines()
@@ -126,22 +34,38 @@ def test_ref():
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
     """)
-    eq_(csv['ref']['function'], FIXTURE['ref']['function'])
-    eq_(csv['ref']['variable'], FIXTURE['ref']['variable'])
+    eq_(csv['ref']['function'][0], {'declloc': DEFAULT_LOC,
+                                    'kind': 'function',
+                                    'span': DEFAULT_EXTENT})
+    eq_(csv['ref']['variable'][0], {'declloc': DEFAULT_LOC,
+                                    'kind': 'variable',
+                                    'span': DEFAULT_EXTENT})
 
 
 def test_function():
     csv = get_csv("""
         function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
     """)
-    eq_(csv['function'][0], FIXTURE['function'][0])
+    eq_(csv['function'][0], {
+        'name': 'comb',
+        'qualname': 'comb(int **, int, int)',
+        'type': FuncSig(input=('int **', 'int', 'int'), output='int **'),
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_variable():
     csv = get_csv("""
         variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0
     """)
-    eq_(csv['variable'][0], FIXTURE['variable'][0])
+    eq_(csv['variable'][0], {
+        'name': 'a',
+        'qualname': 'comb(int **, int, int)::a',
+        'type': 'int **',
+        'scope': {'loc': DEFAULT_LOC,
+                  'name': 'comb(int **, int, int)'},
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_call():
@@ -149,8 +73,12 @@ def test_call():
         call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
         call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
     """)
-    eq_(csv['call'][0], FIXTURE['call'][0])
-    eq_(csv['call'][1], FIXTURE['call'][1])
+    eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                             caller=('main()', CALL_EXTENT),
+                             calltype='static'))
+    eq_(csv['call'][1], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+             caller=('main()', CALL_EXTENT),
+             calltype='virtual'))
 
 
 def test_macro():
@@ -158,15 +86,28 @@ def test_macro():
         macro,loc,"x:0:0",name,"X",args,"(x, y)",text,"x + y",extent,0:0
         macro,loc,"x:0:0",name,"X",text,"2",extent,0:0
     """)
-    eq_(csv['macro'][0], FIXTURE['macro'][0])
-    eq_(csv['macro'][1], FIXTURE['macro'][1])
+    eq_(csv['macro'][0], {
+        'name': 'X',
+            'args': '(x, y)',
+            'text': 'x + y',
+            'span': DEFAULT_EXTENT
+    })
+    eq_(csv['macro'][1], {
+            'name': 'X',
+            'text': '2',
+            'span': DEFAULT_EXTENT
+    })
 
 
 def test_typedef():
     csv = get_csv("""
         typedef,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
     """)
-    eq_(csv['typedef'][0], FIXTURE['typedef'][0])
+    eq_(csv['typedef'][0], {
+        'name': 'x',
+        'qualname': 'x',
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_type():
@@ -174,50 +115,83 @@ def test_type():
         type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
         type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
     """)
-    eq_(csv['type']['struct'][0], FIXTURE['type']['struct'][0])
-    eq_(csv['type']['class'][0], FIXTURE['type']['class'][0])
+    eq_(csv['type']['struct'][0], {
+        'name': 'foobar',
+        'qualname': 'foobar',
+        'kind': 'struct',
+        'span': DEFAULT_EXTENT
+    })
+    eq_(csv['type']['class'][0], {
+        'name': 'X',
+        'qualname': 'X',
+        'kind': 'class',
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_impl():
     csv = get_csv("""
         impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     """)
-    eq_(csv['impl'][0], FIXTURE['impl'][0])
+    eq_(csv['impl'][0], {
+        'tb': {'name': 'X', 'loc': DEFAULT_LOC},
+        'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
+        'access': 'public'
+    })
 
 
 def test_decldef():
     csv = get_csv("""
         decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
     """)
-    eq_(csv['decldef']['function'][0], FIXTURE['decldef']['function'][0])
+    eq_(csv['decldef']['function'][0], {
+        'qualname': 'Queue::Queue<T>(int)',
+        'declloc': DEFAULT_LOC,
+        'defloc': DEFAULT_LOC,
+        'kind': 'function',
+        'extent': Extent(0, 0)
+    })
 
 
 def test_warning():
     csv = get_csv("""
         warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0
     """)
-    eq_(csv['warning'][0], FIXTURE['warning'][0])
+    eq_(csv['warning'][0],
+        {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
 
 def test_namespace_alias():
     csv = get_csv("""
         namespace_alias,name,"foo",qualname,"foo",loc,"x:0:0",extent,0:0
     """)
-    eq_(csv['namespace_alias'][0], FIXTURE['namespace_alias'][0])
+    eq_(csv['namespace_alias'][0], {
+        'name': 'foo',
+        'qualname': 'foo',
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_namespace():
     csv = get_csv("""
         namespace,name,"x",qualname,"x",loc,"x:0:0",extent,0:0
     """)
-    eq_(csv['namespace'][0], FIXTURE['namespace'][0])
+    eq_(csv['namespace'][0], {
+        'name': 'x',
+        'qualname': 'x',
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_include():
     csv = get_csv("""
         include,source_path,"foo",target_path,"bar",loc,"x:0:0",extent,0:0
     """)
-    eq_(csv['include'][0], FIXTURE['include'][0])
+    eq_(csv['include'][0], {
+        'source_path': 'foo',
+        'target_path': 'bar',
+        'span': DEFAULT_EXTENT
+    })
 
 
 INHERIT = {'X': {'Y', 'Z', 'W'},
@@ -272,51 +246,32 @@ def eq__(l1, l2):
     eq_(list(l1), list(l2))
 
 
-def test_func_needles():
-    eq__(default_needles(FIXTURE, 'function'), [(('c-function', 'comb'),
-                                                 DEFAULT_EXTENT)])
+def test_name_needles():
+    eq__(default_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
+         [(('c-key', 'x'), 'SPAN!!!')])
+    eq__(default_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
+         [(('c-key-2', 'x'), 'SPAN!')])
 
 
-def test_var_needles():
-    eq__(default_needles(FIXTURE, 'variable'), [(('c-variable', 'a'), DEFAULT_EXTENT)])
+def test_call_needles():
+    fixture = {
+        'call': [
+            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                 caller=('main()', CALL_EXTENT),
+                 calltype='static'),
+            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                 caller=('main()', CALL_EXTENT),
+                 calltype='virtual')
+        ]
+    }
 
-
-def test_warn_needles():
-    eq__(warn_needles(FIXTURE), [(('c-warning', 'hi'), DEFAULT_EXTENT)])
-    eq__(warn_op_needles(FIXTURE), [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
-
-
-def test_typedef_needles():
-    eq__(default_needles(FIXTURE, 'typedef'), [(('c-typedef', 'x'), DEFAULT_EXTENT)])
-
-
-def test_macro_needles():
-    eq__(default_needles(FIXTURE, 'macro'), [(('c-macro', 'X'), DEFAULT_EXTENT),
-                                             (('c-macro', 'X'), DEFAULT_EXTENT)])
-
-
-def test_namespace_alias():
-    eq__(default_needles(FIXTURE, 'namespace_alias'),
-         [(('c-namespace-alias', 'foo'), DEFAULT_EXTENT)])
-
-
-def test_namespace():
-    eq__(default_needles(FIXTURE, 'namespace'), [(('c-namespace', 'x'), DEFAULT_EXTENT)])
-
-
-def test_callee_needles():
-    eq__(callee_needles(FIXTURE),
+    eq__(callee_needles(fixture),
          [(('c-callee', 'comb(int **, int, int)'), CALL_EXTENT),
           (('c-callee', 'comb(int **, int, int)'), CALL_EXTENT)])
 
-
-def test_caller_needles():
-    eq__(caller_needles(FIXTURE),
+    eq__(caller_needles(fixture),
          [(('c-called-by', 'main()'), CALL_EXTENT),
           (('c-called-by', 'main()'), CALL_EXTENT)])
-
-
-
 
 
 def test_decldefs_needles():
