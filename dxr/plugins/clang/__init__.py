@@ -255,7 +255,7 @@ def child_needles(condensed, inherit):
 
     """
     return inherit_needles(condensed, 'child',
-                            lambda name: inherit.get(name, []))
+                           lambda name: inherit.get(name, []))
 
 
 def parent_needles(condensed, inherit):
@@ -326,7 +326,7 @@ class TreeToIndex(plugins.TreeToIndex):
 
     def post_build(self):
         condensed = load_csv(self._temp_folder, fpath=None, only_impl=True)
-        self._inherit = build_inheritance(condensed)
+        self.inherit = build_inheritance(condensed)
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.tree, self._inherit)
