@@ -187,10 +187,10 @@ def call_graph(condensed, inherit=None):
     """Return DiGraph with edges representing function caller -> callee."""
     g = {}
     if inherit is None:
-        inherit = build_inhertitance(condensed)
+        inherit = build_inheritance(condensed)
 
     for call in condensed['call']:
-        g[(call.caller, call.callee)] = call
+        g[call] = call
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
@@ -198,7 +198,7 @@ def call_graph(condensed, inherit=None):
                 scope, func = callee_qname.split('::')
                 for child in inherit[scope]:
                     child_qname = "{0}::{1}".format(child, func)
-                    g[(call.caller, (child_qname, pos))] = call
+                    g[(call.caller, (child_qname, pos), 'virtual')] = call
     return g
 
 
@@ -206,9 +206,9 @@ def _relate((parent, children)):
     return parent, set((child['tc']['name']) for child in children)
 
 
-def build_inhertitance(condensed):
+def build_inheritance(condensed):
     """Builds mapping class -> set of all descendants."""
-    get_tbname = lambda x: x['tb']['name']
+    get_tbname = lambda x: x['tb']['name']  # tb are parents, tc are children
     tree = walk(_relate, group_by(get_tbname, condensed['impl']))
     tree.default_factory = set
     for node in toposort_flatten(tree):

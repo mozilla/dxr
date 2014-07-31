@@ -4,10 +4,10 @@ import os
 from operator import itemgetter
 from itertools import chain, izip
 
-from funcy import merge, imap, group_by, is_mapping
+from funcy import merge, imap, group_by, is_mapping, repeat
 
 from dxr import plugins
-from dxr.plugins.clang.condense import load_csv, build_inhertitance
+from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 
 
 PLUGIN_NAME = 'clang'
@@ -18,7 +18,8 @@ class FileToIndex(plugins.FileToIndex):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
         condensed = load_csv(*os.path.split(path))
-        self.needles, self.needles_by_line = needles(condensed, inherit)
+        g = call_graph(condensed, inherit)
+        self.needles, self.needles_by_line = needles(condensed, inherit, g)
         self.refs_by_line = refs(condensed)
         self.annotations_by_line = annotations(condensed)
 
@@ -87,14 +88,14 @@ def warn_op_needles(condensed):
                  in condensed['warning']), spans(condensed, 'warning'))
 
 
-def callee_needles(condensed):
+def callee_needles(call_graph):
     return ((('c-callee', call.callee[0]), call.callee[1]) for call
-            in condensed['call'])
+            in call_graph.keys())
 
 
-def caller_needles(condensed):
+def caller_needles(call_graph):
     return ((('c-called-by', call.caller[0]), call.caller[1]) for call
-            in condensed['call'])
+            in call_graph.keys())
 
 
 def walk_types(condensed):
@@ -117,7 +118,31 @@ def type_needles(condensed):
     return ((('c-type', type_), span) for type_, span in walk_types(condensed))
 
 
-def needles(condensed, inherit):
+def _inherit_needles(condensed, tag, func):
+    if isinstance(condensed['type'], list):
+        return []
+    children = (izip(func(c['name']), repeat(c['span'])) for c
+                in condensed['type']['class'])
+
+    return imap(lambda (a, (b, c)): ((a, b), c),
+        izip(repeat('c-{0}'.format(tag)), chain.from_iterable(children)))
+    
+
+
+def child_needles(condensed, inherit):
+    return _inherit_needles(condensed, 'child',
+                            lambda name: inherit.get(name, []))
+
+
+def parent_needles(condensed, inherit):
+    def get_parents(name):
+        return (parent for parent, children in inherit.items()
+                if name in children)
+
+    return _inherit_needles(condensed, 'parent', get_parents)
+
+
+def needles(condensed, inherit, call_graph):
     return group_sparse_needles(chain(*[
         name_needles(condensed, 'function'),
         name_needles(condensed, 'variable'),
@@ -127,8 +152,10 @@ def needles(condensed, inherit):
         name_needles(condensed, 'namespace_alias'),
         warn_needles(condensed),
         warn_op_needles(condensed),
-        callee_needles(condensed),
-        caller_needles(condensed),
+        callee_needles(call_graph),
+        caller_needles(call_graph),
+        parent_needles(condensed, inherit),
+        child_needles(condensed, inherit),
     ]))
 
 
@@ -166,7 +193,7 @@ class TreeToIndex(plugins.TreeToIndex):
 
     def post_build(self):
         condensed = load_csv(self.temp_folder, fpath=None, only_impl=True)
-        self.inherit = build_inhertitance(condensed)
+        self.inherit = build_inheritance(condensed)
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.tree, self.inherit)
