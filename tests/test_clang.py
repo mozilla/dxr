@@ -1,14 +1,9 @@
-from collections import namedtuple, defaultdict
-from itertools import permutations, ifilter
-from operator import itemgetter
-from functools import partial
-
 from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
 
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
-from dxr.plugins.clang import (TreeToIndex, FileToIndex, needles,
+from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles)
@@ -248,6 +243,15 @@ def test_name_needles():
     # _ -> -
     eq__(name_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
          [(('c-key-2', 'x'), 'SPAN!')])
+
+
+def test_warn_needles():
+    fixture = {'warning': [{'msg': 'hi', 'opt': '-oh-hi',
+                            'span': DEFAULT_EXTENT}]}
+    eq__(warn_needles(fixture),
+         [(('c-warning', 'hi'), DEFAULT_EXTENT)])
+    eq__(warn_op_needles(fixture),
+         [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
 
 
 def test_call_needles():
