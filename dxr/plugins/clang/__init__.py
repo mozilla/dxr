@@ -7,7 +7,6 @@ from itertools import chain, izip
 from funcy import merge, imap, group_by, is_mapping
 
 from dxr import plugins
-from dxr.plugins import FileToIndex as FTI, TreeToIndex as TTI
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
@@ -101,7 +100,7 @@ def caller_needles(condensed):
 def walk_types(condensed):
     for key, vals in condensed.items():
         if is_mapping(vals):
-            vals_ = vals.values()
+            vals = vals.values()
         for val in vals:
             if 'type' in val and 'span' in val:
                 yield str(val['type']), val['span']
