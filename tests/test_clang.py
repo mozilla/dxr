@@ -1,12 +1,19 @@
+from mock import MagicMock
+from nose import SkipTest
 from nose.tools import eq_
 
-
+from dxr.plugins.utils import Extent, Position, FuncSig, Call
+from dxr.plugins.clang import (TreeToIndex, FileToIndex,
+                               warn_needles, warn_op_needles, name_needles,
+                               group_sparse_needles, callee_needles,
+                               caller_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
                                         call_graph)
-from dxr.plugins.utils import Extent, Position, FuncSig, Call
+
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
+CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
 
 
 def get_csv(csv_str):
@@ -23,12 +30,12 @@ def test_ref():
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
     """)
-    eq_(csv['ref']['function'], [{'declloc': DEFAULT_LOC,
-                                  'kind': 'function',
-                                  'span': DEFAULT_EXTENT}])
-    eq_(csv['ref']['variable'], [{'declloc': DEFAULT_LOC,
-                                  'kind': 'variable',
-                                  'span': DEFAULT_EXTENT}])
+    eq_(csv['ref']['function'][0], {'declloc': DEFAULT_LOC,
+                                    'kind': 'function',
+                                    'span': DEFAULT_EXTENT})
+    eq_(csv['ref']['variable'][0], {'declloc': DEFAULT_LOC,
+                                    'kind': 'variable',
+                                    'span': DEFAULT_EXTENT})
 
 
 def test_function():
@@ -62,12 +69,11 @@ def test_call():
         call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
         call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
     """)
-    eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
-                             caller=('main()', DEFAULT_LOC),
+    eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                             caller=('main()', CALL_EXTENT),
                              calltype='static'))
-
-    eq_(csv['call'][1], Call(callee=('comb(int **, int, int)', DEFAULT_LOC),
-                             caller=('main()', DEFAULT_LOC),
+    eq_(csv['call'][1], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                             caller=('main()', CALL_EXTENT),
                              calltype='virtual'))
 
 
@@ -82,7 +88,6 @@ def test_macro():
         'text': 'x + y',
         'span': DEFAULT_EXTENT
     })
-
     eq_(csv['macro'][1], {
         'name': 'X',
         'text': '2',
@@ -112,7 +117,6 @@ def test_type():
         'kind': 'struct',
         'span': DEFAULT_EXTENT
     })
-
     eq_(csv['type']['class'][0], {
         'name': 'X',
         'qualname': 'X',
@@ -125,7 +129,6 @@ def test_impl():
     csv = get_csv("""
         impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
     """)
-
     eq_(csv['impl'][0], {
         'tb': {'name': 'X', 'loc': DEFAULT_LOC},
         'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
@@ -150,7 +153,8 @@ def test_warning():
     csv = get_csv("""
         warning,loc,"x:0:0",msg,"hi",opt,"-oh-hi",extent,0:0
     """)
-    eq_(csv['warning'][0], {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
+    eq_(csv['warning'][0],
+        {'msg': 'hi', 'opt': '-oh-hi', 'span': DEFAULT_EXTENT})
 
 
 def test_namespace_alias():
@@ -160,7 +164,8 @@ def test_namespace_alias():
     eq_(csv['namespace_alias'][0], {
         'name': 'foo',
         'qualname': 'foo',
-        'span': DEFAULT_EXTENT})
+        'span': DEFAULT_EXTENT
+    })
 
 
 def test_namespace():
@@ -185,6 +190,12 @@ def test_include():
     })
 
 
+INHERIT = {'X': {'Y', 'Z', 'W'},
+           'Y': {'W'},
+           'Z': {'W'},
+           'W': set()}
+
+
 def test_inheritance():
     csv = get_csv("""
         impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
@@ -193,10 +204,7 @@ def test_inheritance():
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
     """)
     inherit = build_inhertitance(csv)
-    eq_(inherit, {'X': {'Y', 'Z', 'W'},
-                  'Y': {'W'},
-                  'Z': {'W'},
-                  'W': set()})
+    eq_(inherit, INHERIT)
 
 
 def test_callgraph():
@@ -216,3 +224,77 @@ def test_callgraph():
     """)
     g = call_graph(csv)
     eq_(len(set(g.keys())), 6)
+
+
+def smoke_test_tree():
+    TreeToIndex('test')
+
+
+def test_FileToIndex():
+    FileToIndex('', '', MagicMock(), {})
+
+
+def eq__(l1, l2):
+    eq_(list(l1), list(l2))
+
+
+def test_name_needles():
+    eq__(name_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
+         [(('c-key', 'x'), 'SPAN!!!')])
+    # _ -> -
+    eq__(name_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
+         [(('c-key-2', 'x'), 'SPAN!')])
+
+
+def test_warn_needles():
+    fixture = {'warning': [{'msg': 'hi', 'opt': '-oh-hi',
+                            'span': DEFAULT_EXTENT}]}
+    eq__(warn_needles(fixture),
+         [(('c-warning', 'hi'), DEFAULT_EXTENT)])
+    eq__(warn_op_needles(fixture),
+         [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
+
+
+def test_call_needles():
+    fixture = {
+        'call': [
+            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                 caller=('main()', CALL_EXTENT),
+                 calltype='static'),
+            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
+                 caller=('main()', CALL_EXTENT),
+                 calltype='virtual')
+        ]
+    }
+
+    eq__(callee_needles(fixture),
+         [(('c-callee', 'comb(int **, int, int)'), CALL_EXTENT),
+          (('c-callee', 'comb(int **, int, int)'), CALL_EXTENT)])
+
+    eq__(caller_needles(fixture),
+         [(('c-called-by', 'main()'), CALL_EXTENT),
+          (('c-called-by', 'main()'), CALL_EXTENT)])
+
+
+def test_decldefs_needles():
+    raise SkipTest
+
+
+def test_include_needles():
+    raise SkipTest
+
+
+def test_type_needles():
+    raise SkipTest
+
+
+def impl_needles():
+    raise SkipTest
+
+
+def test_group_sparse_needles():
+    n1 = (None, 'not None')
+    n2 = ('blah', None)
+    n3 = ('x', 'not None')
+    sparse_needles = [n1, n2, n3, n2, n2]
+    eq_(group_sparse_needles(sparse_needles), ([n2, n2, n2], [n1, n3]))
