@@ -28,9 +28,6 @@ funcy==1.1
 # sha256: 3zdO5VK2mPKZ63yWLDoLQymVjK1SoGOECuLs6Dt8ac0
 toposort==1.0
 
-# sha256: uDndLZwRfHAUMMFJlWkYpCOphjtIsJyQ4wpgE-fS9E8
-mock==1.0.1
-
 # For deployment script only:
 # sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3
