@@ -234,10 +234,6 @@ def smoke_test_tree():
     c = TreeToIndex('test')
 
 
-CORRECT_ORDER = [('environment', [{}]), ('pre_build', []), ('post_build', []),
-                 ('file_to_index', ['foo', 'bar'])]
-
-
 def test_FileToIndex():
     c = FileToIndex('', '', MagicMock(), {})
 
