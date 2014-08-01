@@ -5,14 +5,15 @@ from operator import itemgetter
 from itertools import chain, izip
 
 from funcy import merge, imap, group_by
-from dxr.plugins import FileToIndex as FTI, TreeToIndex as TTI
+
+from dxr import plugins
 from dxr.plugins.clang.condense import load_csv, build_inhertitance
 
 
 PLUGIN_NAME = 'clang'
 
 
-class FileToIndex(FTI):
+class FileToIndex(plugins.FileToIndex):
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
@@ -111,7 +112,7 @@ def needles(condensed, inherit):
     ]))
 
 
-class TreeToIndex(TTI):
+class TreeToIndex(plugins.TreeToIndex):
     def __init__(self, tree):
         self.tree = tree
 
