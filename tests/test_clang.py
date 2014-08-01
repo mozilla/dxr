@@ -15,6 +15,7 @@ DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
 CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
 
+
 def get_csv(csv_str):
     return get_condensed(x.strip() for x in csv_str.splitlines()
                          if x.strip())
@@ -72,8 +73,8 @@ def test_call():
                              caller=('main()', CALL_EXTENT),
                              calltype='static'))
     eq_(csv['call'][1], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-             caller=('main()', CALL_EXTENT),
-             calltype='virtual'))
+                             caller=('main()', CALL_EXTENT),
+                             calltype='virtual'))
 
 
 def test_macro():
@@ -83,14 +84,14 @@ def test_macro():
     """)
     eq_(csv['macro'][0], {
         'name': 'X',
-            'args': '(x, y)',
-            'text': 'x + y',
-            'span': DEFAULT_EXTENT
+        'args': '(x, y)',
+        'text': 'x + y',
+        'span': DEFAULT_EXTENT
     })
     eq_(csv['macro'][1], {
-            'name': 'X',
-            'text': '2',
-            'span': DEFAULT_EXTENT
+        'name': 'X',
+        'text': '2',
+        'span': DEFAULT_EXTENT
     })
 
 
@@ -226,11 +227,11 @@ def test_callgraph():
 
 
 def smoke_test_tree():
-    c = TreeToIndex('test')
+    TreeToIndex('test')
 
 
 def test_FileToIndex():
-    c = FileToIndex('', '', MagicMock(), {})
+    FileToIndex('', '', MagicMock(), {})
 
 
 def eq__(l1, l2):
