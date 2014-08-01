@@ -125,8 +125,8 @@ def _inherit_needles(condensed, tag, func):
                 in condensed['type']['class'])
 
     return imap(lambda (a, (b, c)): ((a, b), c),
-        izip(repeat('c-{0}'.format(tag)), chain.from_iterable(children)))
-    
+                izip(repeat('c-{0}'.format(tag)),
+                     chain.from_iterable(children)))
 
 
 def child_needles(condensed, inherit):
