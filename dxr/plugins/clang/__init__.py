@@ -98,6 +98,7 @@ def caller_needles(condensed):
 
 
 def walk_types(condensed):
+    """Yield type, span of all types in analysis."""
     for key, vals in condensed.items():
         if is_mapping(vals):
             vals = vals.values()
@@ -112,6 +113,7 @@ def walk_types(condensed):
 
 
 def type_needles(condensed):
+    """Return needles ((c-type, type), span)."""
     return ((('c-type', type_), span) for type_, span in walk_types(condensed))
 
 
