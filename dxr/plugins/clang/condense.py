@@ -8,7 +8,6 @@ from hashlib import sha1
 from os import path
 from glob import glob
 from operator import itemgetter
-from itertools import chain, izip
 
 from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    imap, ifilter, group_by, compose, autocurry, is_mapping,
@@ -86,6 +85,7 @@ def process_defloc(props):
 
 
 def process_impl(props):
+    """Group tc and tb fields in impl field."""
     props = group_loc_name('tc', props)
     return group_loc_name('tb', props)
 
@@ -118,7 +118,8 @@ def group_loc_name(base, props):
         return props
     return _group_loc_name(props)
 
-handlers = {
+
+HANDLERS = {
     'call': process_call,
     'function': process_function,
     'impl': process_impl
@@ -132,7 +133,7 @@ def process_fields(kind, fields):
     :arg kind: the ast node type specified by the csv file.
 
     """
-    fields = handlers.get(kind, identity)(fields)
+    fields = HANDLERS.get(kind, identity)(fields)
 
     if 'loc' in fields:
         fields = process_loc(fields)
@@ -168,10 +169,10 @@ def get_condensed(lines, only_impl=False):
 
 
 @autocurry
-def _load_csv(fpath, csv_path, only_impl=False):
+def _load_csv(csv_path, only_impl=False):
     """Open CSV_PATH and return the output of get_condensed based on csv."""
-    with open(csv_path, 'rb') as f:
-        return get_condensed(f, only_impl)
+    with open(csv_path, 'rb') as filep:
+        return get_condensed(filep, only_impl)
 
 
 def load_csv(csv_root, fpath=None, only_impl=False):
@@ -179,18 +180,18 @@ def load_csv(csv_root, fpath=None, only_impl=False):
     hashed_fname = '*' if fpath is None else sha1(fpath).hexdigest()
     csv_paths = glob('{0}.*.csv'.format(path.join(csv_root, hashed_fname)))
 
-    return reduce(merge, imap(_load_csv(fpath, only_impl=only_impl), csv_paths),
+    return reduce(merge, imap(_load_csv(only_impl=only_impl), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
 
 def call_graph(condensed, inherit=None):
     """Return DiGraph with edges representing function caller -> callee."""
-    g = {}
+    graph = {}
     if inherit is None:
         inherit = build_inheritance(condensed)
 
     for call in condensed['call']:
-        g[call] = call
+        graph[call] = call
         if call.calltype == 'virtual':
             # add children
             callee_qname, pos = call.callee
@@ -198,8 +199,8 @@ def call_graph(condensed, inherit=None):
                 scope, func = callee_qname.split('::')
                 for child in inherit[scope]:
                     child_qname = "{0}::{1}".format(child, func)
-                    g[(call.caller, (child_qname, pos), 'virtual')] = call
-    return g
+                    graph[(call.caller, (child_qname, pos), 'virtual')] = call
+    return graph
 
 
 def _relate((parent, children)):
