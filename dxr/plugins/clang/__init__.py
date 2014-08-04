@@ -170,7 +170,7 @@ def group_sparse_needles(needles_):
 
 
 def name_needles(condensed, key):
-    """Return a list of needles ((c-key, name), span).
+    """Return needles ((c-key, name), span).
 
     :param key: name of entry in condensed to get names from.
     """
@@ -180,32 +180,31 @@ def name_needles(condensed, key):
 
 def spans(condensed, key):
     """Return list of spans from condensed.
-
     :arg key: name of entry in condensed to get spans from.
     """
     return imap(itemgetter('span'), condensed[key])
 
 
 def warn_needles(condensed):
-    """Return list of needles (('c-warning', msg), span)."""
+    """Return needles (('c-warning', msg), span)."""
     return izip((('c-warning', props['msg']) for props
                  in condensed['warning']), spans(condensed, 'warning'))
 
 
 def warn_op_needles(condensed):
-    """Return list of needles (('c-warning-opt', opt), span)."""
+    """Return needles (('c-warning-opt', opt), span)."""
     return izip((('c-warning-opt', props['opt']) for props
                  in condensed['warning']), spans(condensed, 'warning'))
 
 
 def callee_needles(graph):
-    """Return list of needles (('c-callee', callee name), span)."""
+    """Return needles (('c-callee', callee name), span)."""
     return ((('c-callee', call.callee[0]), call.callee[1]) for call
             in graph)
 
 
 def caller_needles(graph):
-    """Return list of needles (('c-needle', caller name), span)."""
+    """Return needles (('c-needle', caller name), span)."""
     return ((('c-called-by', call.caller[0]), call.caller[1]) for call
             in graph)
 
@@ -249,7 +248,7 @@ def inherit_needles(condensed, tag, func):
 
 
 def child_needles(condensed, inherit):
-    """Return list of needles representing subclass relationships.
+    """Return needles representing subclass relationships.
 
     :type inherit: mapping parent:str -> Set child:str
 
@@ -259,7 +258,7 @@ def child_needles(condensed, inherit):
 
 
 def parent_needles(condensed, inherit):
-    """Return list of needles representing super class relationships.
+    """Return needles representing super class relationships.
 
     :type inherit: mapping parent:str -> Set child:str
 
@@ -272,14 +271,26 @@ def parent_needles(condensed, inherit):
 
 
 def member_needles(condensed):
-    """Return list of needles for the scopes that various symbols belong to."""
+    """Return needles for the scopes that various symbols belong to."""
     for _, vals in condensed.items():
         if is_mapping(vals):
             continue
         for val in vals:
             if 'scope' not in val:
                 continue
-            yield ('c-member', val['scope']['scopename']), val['span']
+            yield ('c-member', val['scope']['name']), val['span']
+
+
+def overrides_needles(condensed):
+    """Return needles of methods which override the given one."""
+    return ((('c-overrides', func['override']['name']), func['span']) for func
+            in condensed['function'])
+
+
+def overridden_needles(condensed):
+    """Return needles of methods which are overridden by the given one."""
+    return ((('c-overridden', func['override']['name']),
+             func['override']['span']) for func in condensed['function'])
 
 
 def needles(condensed, inherit, graph):

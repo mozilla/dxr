@@ -105,6 +105,11 @@ def process_scope(props):
     return group_loc_name('scope', props)
 
 
+def process_override(props):
+    """Group overrideloc and overridename into a override field."""
+    return group_loc_name('override', props)
+
+
 def group_loc_name(base, props):
     """Group the loc and name fields into a base field."""
     root = '{0}'.format(base)
@@ -140,6 +145,9 @@ def process_fields(kind, fields):
 
     if 'scopeloc' in fields:
         fields = process_scope(fields)
+
+    if 'overrideloc' in fields:
+        fields = process_override(fields)
 
     if 'declloc' in fields:
         fields = process_declloc(fields)

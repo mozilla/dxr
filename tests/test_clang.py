@@ -7,7 +7,9 @@ from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles, type_needles, child_needles,
-                               parent_needles, member_needles)
+                               parent_needles, member_needles,
+                               overrides_needles, overridden_needles)
+
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
 
@@ -42,12 +44,28 @@ def test_ref():
 def test_function():
     csv = get_csv("""
         function,name,"comb",qualname,"comb(int **, int, int)",type,"int **",args,"(int **, int, int)",loc,"x:0:0",extent,0:0
+        function,name,"op",qualname,"add::op()",type,"void",args,"()",loc,"x:0:0",scopename,"add",scopeloc,"x:0:0",extent,0:0,overridename,"base::op()",overrideloc,"x:0:0"
     """)
     eq_(csv['function'][0], {
         'name': 'comb',
         'qualname': 'comb(int **, int, int)',
         'type': FuncSig(('int**', 'int', 'int'), 'int**'),
         'span': DEFAULT_EXTENT
+    })
+
+    eq_(csv['function'][1], {
+        'name': 'op',
+        'qualname': 'add::op()',
+        'type': FuncSig(input=tuple(), output='void'),
+        'span': DEFAULT_EXTENT,
+        'scope': {
+            'name': 'add',
+            'loc': DEFAULT_LOC
+        },
+        'override': {
+            'name': 'base::op()',
+            'loc': DEFAULT_LOC,
+        }
     })
 
 
@@ -334,9 +352,21 @@ def test_type_needles():
 
 def test_member_needles():
     fixture = {
-        'foo': [{'scope': {'scopename': 'A'}, 'span': DEFAULT_EXTENT}]
+        'foo': [{'scope': {'name': 'A'}, 'span': DEFAULT_EXTENT}]
     }
     eq__(member_needles(fixture), [(('c-member', 'A'), DEFAULT_EXTENT)])
+
+
+def test_override_needls():
+    fixture = {
+        'function': [{'override': {'name': 'x', 'span': DEFAULT_EXTENT}}],
+    }
+    eq__(overrides_needles({
+        'function': [{'override': {'name': 'x'}, 'span': DEFAULT_EXTENT}],
+    }), [(('c-overrides', 'x'), DEFAULT_EXTENT)])
+    eq__(overridden_needles({
+        'function': [{'override': {'name': 'x', 'span': DEFAULT_EXTENT}}],
+    }), [(('c-overridden', 'x'), DEFAULT_EXTENT)])
 
 
 def test_group_sparse_needles():
