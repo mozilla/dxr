@@ -271,6 +271,17 @@ def parent_needles(condensed, inherit):
     return inherit_needles(condensed, 'parent', get_parents)
 
 
+def member_needles(condensed):
+    """Return list of needles for the scopes that various symbols belong to."""
+    for _, vals in condensed.items():
+        if is_mapping(vals):
+            continue
+        for val in vals:
+            if 'scope' not in val:
+                continue
+            yield ('c-member', val['scope']['scopename']), val['span']
+
+
 def needles(condensed, inherit, graph):
     """Return all C plugin needles."""
 

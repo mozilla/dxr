@@ -7,7 +7,7 @@ from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles, type_needles, child_needles,
-                               parent_needles)
+                               parent_needles, member_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
 
@@ -330,6 +330,13 @@ def test_type_needles():
              (('c-type', 'a'), DEFAULT_EXTENT),
              (('c-type', 'X'), DEFAULT_EXTENT),
              (('c-type', 'foobar'), DEFAULT_EXTENT)]))
+
+
+def test_member_needles():
+    fixture = {
+        'foo': [{'scope': {'scopename': 'A'}, 'span': DEFAULT_EXTENT}]
+    }
+    eq__(member_needles(fixture), [(('c-member', 'A'), DEFAULT_EXTENT)])
 
 
 def test_group_sparse_needles():
