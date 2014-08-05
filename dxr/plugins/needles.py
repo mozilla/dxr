@@ -3,7 +3,12 @@
 from operator import itemgetter
 from itertools import repeat, imap, izip, chain
 
-from funcy import group_by, pluck
+from funcy import group_by, pluck, decorator
+
+
+@decorator
+def unsparsify_func(call):
+    return unsparsify(call())
 
 
 def unsparsify(span_needles):
