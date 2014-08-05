@@ -1,251 +1,59 @@
-import dxr.plugins
 import os, sys
 import fnmatch
 import urllib, re
+from itertools import chain
+from operator import itemgetter
 
+from funcy import compose, constantly
+
+import dxr.plugins
 from dxr.utils import search_url
 
 
 class ClangHtmlifier(object):
-    def __init__(self, tree, conn, file_id):
+    def __init__(self, tree, condensed):
         self.tree    = tree
-        self.conn    = conn
-        self.file_id = file_id
+        self.condensed = condensed
 
     def regions(self):
         return []
 
+    def _common_ref(self, create_menu, view, get_val=constantly(None)):
+        for prop in view(self.condensed):
+            start, end = prop['span']
+            menu = create_menu(prop)
+            src, line, _ = start
+            if src is not None:
+                self.add_jump_definition(menu, src, line)
+            yield start, end, (self.func(prop), get_val(prop))
+
     def refs(self):
         """ Generate reference menus """
         # We'll need this argument for all queries here
-        args = (self.file_id,)
-
         # Extents for functions defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname,
-                EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
-                FROM functions
-              WHERE file_id = ?
-        """
-        for start, end, qualname, isvirtual in self.conn.execute(sql, args):
-            yield start, end, (self.function_menu(qualname, isvirtual), None)
+        itemgetter2 = lambda x y : compose(itemgetter(y), itemgetter(x))
+        type_getter = lambda x: compose(chain, dict.values, itemgetter(x))
+        return chain(
+            self._common_ref(self.function_menu, itemgetter2('ref', 'function')),
+            self._common_ref(self.variable_menu, itemgetter2('ref', 'variable')),
+            self._common_ref(self.type_menu, type_getter('type')),
+            self._common_ref(self.type_menu, type_getter('decldef')),
+            self._common_ref(self.type_menu, itemgetter('typedefs')),
+            self._common_ref(self.namespace_menu, itemgetter('namespace')),
+            self._common_ref(self.namespace_alias_menu,
+                             itemgetter('namespace_aliases')),
+            self._common_ref(self.macro_menu, itemgetter('macro'),
+                             itemgetter('text'))
+            self._include_ref()
+        )
 
-        # Extents for functions declared here
-        sql = """
-            SELECT decldef.extent_start,
-                          decldef.extent_end,
-                          functions.qualname,
-                          (SELECT path FROM files WHERE files.id = functions.file_id),
-                          functions.file_line,
-                          EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
-                FROM function_decldef AS decldef, functions
-              WHERE decldef.defid = functions.id
-                  AND decldef.file_id = ?
-        """
-        for start, end, qualname, path, line, isvirtual in self.conn.execute(sql, args):
-            menu = self.function_menu(qualname, isvirtual)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Extents for variables defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname, value
-                FROM variables
-              WHERE file_id = ?
-        """
-        for start, end, qualname, value in self.conn.execute(sql, args):
-            yield start, end, (self.variable_menu(qualname), value)
-
-        # Extents for variables declared here
-        sql = """
-            SELECT decldef.extent_start,
-                          decldef.extent_end,
-                          variables.qualname,
-                          variables.value,
-                          (SELECT path FROM files WHERE files.id = variables.file_id),
-                          variables.file_line
-                FROM variable_decldef AS decldef, variables
-              WHERE decldef.defid = variables.id
-                  AND decldef.file_id = ?
-        """
-        for start, end, qualname, value, path, line in self.conn.execute(sql, args):
-            menu = self.variable_menu(qualname)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, value)
-
-        # Extents for types defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname, kind
-                FROM types
-              WHERE file_id = ?
-        """
-        for start, end, qualname, kind in self.conn.execute(sql, args):
-            yield start, end, (self.type_menu(qualname, kind), None)
-
-        # Extents for types declared here
-        sql = """
-            SELECT decldef.extent_start,
-                          decldef.extent_end,
-                          types.qualname,
-                          types.kind,
-                          (SELECT path FROM files WHERE files.id = types.file_id),
-                          types.file_line
-                FROM type_decldef AS decldef, types
-              WHERE decldef.defid = types.id
-                  AND decldef.file_id = ?
-        """
-        for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
-            menu = self.type_menu(qualname, kind)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Extents for typedefs defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname
-                FROM typedefs
-              WHERE file_id = ?
-        """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.typedef_menu(qualname), None)
-
-        # Extents for namespaces defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname
-                FROM namespaces
-              WHERE file_id = ?
-        """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.namespace_menu(qualname), None)
-
-        # Extents for namespace aliases defined here
-        sql = """
-            SELECT extent_start, extent_end, qualname
-                FROM namespace_aliases
-              WHERE file_id = ?
-        """
-        for start, end, qualname in self.conn.execute(sql, args):
-            yield start, end, (self.namespace_alias_menu(qualname), None)
-
-        # Extents for macros defined here
-        sql = """
-            SELECT extent_start, extent_end, name, text
-                FROM macros
-              WHERE file_id = ?
-        """
-        for start, end, name, value in self.conn.execute(sql, args):
-            yield start, end, (self.macro_menu(name), value)
-
-        # Add references to types
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          types.qualname,
-                          types.kind,
-                          (SELECT path FROM files WHERE files.id = types.file_id),
-                          types.file_line
-                FROM types, type_refs AS refs
-              WHERE types.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, kind, path, line in self.conn.execute(sql, args):
-            menu = self.type_menu(qualname, kind)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Add references to typedefs
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          typedefs.qualname,
-                          (SELECT path FROM files WHERE files.id = typedefs.file_id),
-                          typedefs.file_line
-                FROM typedefs, typedef_refs AS refs
-              WHERE typedefs.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.typedef_menu(qualname)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Add references to functions
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          functions.qualname,
-                          (SELECT path FROM files WHERE files.id = functions.file_id),
-                          functions.file_line,
-                          EXISTS (SELECT targetid FROM targets WHERE funcid=functions.id) AS isvirtual
-                FROM functions, function_refs AS refs
-              WHERE functions.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, path, line, isvirtual in self.conn.execute(sql, args):
-            menu = self.function_menu(qualname, isvirtual)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Add references to variables
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          variables.qualname,
-                          variables.value,
-                          (SELECT path FROM files WHERE files.id = variables.file_id),
-                          variables.file_line
-                FROM variables, variable_refs AS refs
-              WHERE variables.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, value, path, line in self.conn.execute(sql, args):
-            menu = self.variable_menu(qualname)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, value)
-
-        # Add references to namespaces
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          namespaces.qualname,
-                          (SELECT path FROM files WHERE files.id = namespaces.file_id),
-                          namespaces.file_line
-                FROM namespaces, namespace_refs AS refs
-              WHERE namespaces.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.namespace_menu(qualname)
-            yield start, end, (menu, None)
-
-        # Add references to namespace aliases
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          namespace_aliases.qualname,
-                          (SELECT path FROM files WHERE files.id = namespace_aliases.file_id),
-                          namespace_aliases.file_line
-                FROM namespace_aliases, namespace_alias_refs AS refs
-              WHERE namespace_aliases.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, qualname, path, line in self.conn.execute(sql, args):
-            menu = self.namespace_alias_menu(qualname)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, None)
-
-        # Add references to macros
-        sql = """
-            SELECT refs.extent_start, refs.extent_end,
-                          macros.name,
-                          macros.text,
-                          (SELECT path FROM files WHERE files.id = macros.file_id),
-                          macros.file_line
-                FROM macros, macro_refs AS refs
-              WHERE macros.id = refs.refid AND refs.file_id = ?
-        """
-        for start, end, name, value, path, line in self.conn.execute(sql, args):
-            menu = self.macro_menu(name)
-            self.add_jump_definition(menu, path, line)
-            yield start, end, (menu, value)
-
-        # Link all the #includes in this file to the files they reference.
-        for start, end, path in self.conn.execute(
-                'SELECT extent_start, extent_end, path FROM includes '
-                'INNER JOIN files ON files.id=includes.target_id '
-                'WHERE includes.file_id = ?', args):
-            yield start, end, ([{'html': 'Jump to file',
-                                 'title': 'Jump to what is included here.',
-                                 'href': self.tree.config.wwwroot + '/' +
-                                         self.tree.name + '/source/' + path,
-                                 'icon': 'jump'}], None)
+    def include_menu(self, props):
+        (path, _, _), _ = props['span']
+        return {'html': 'Jump to file',
+                'title': 'Jump to what is included here.',
+                'href': self.tree.config.wwwroot + '/' + self.tree.name
+                \ + '/source/' + path,
+                'icon': 'jump'}
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
@@ -264,7 +72,7 @@ class ClangHtmlifier(object):
         # Definition url
         url = self.tree.config.wwwroot + '/' + self.tree.name + '/source/' + path
         url += "#%s" % line
-        menu.insert(0, { 
+        menu.insert(0, {
             'html':   "Jump to definition",
             'title':  "Jump to the definition in '%s'" % os.path.basename(path),
             'href':   url,
@@ -308,7 +116,6 @@ class ClangHtmlifier(object):
         })
         return menu
 
-
     def typedef_menu(self, qualname):
         """ Build menu for typedef """
         menu = []
@@ -320,9 +127,9 @@ class ClangHtmlifier(object):
         })
         return menu
 
-
-    def variable_menu(self, qualname):
+    def variable_menu(self, props):
         """ Build menu for a variable """
+        qualname = props['qualnam']
         menu = []
         menu.append({
             'html':   "Find declarations",
@@ -339,9 +146,9 @@ class ClangHtmlifier(object):
         # TODO Investigate whether assignments and usages is possible and useful?
         return menu
 
-
-    def namespace_menu(self, qualname):
+    def namespace_menu(self, props):
         """ Build menu for a namespace """
+        qualname = props['qualname']
         menu = []
         menu.append({
             'html':   "Find definitions",
@@ -357,9 +164,9 @@ class ClangHtmlifier(object):
         })
         return menu
 
-
-    def namespace_alias_menu(self, qualname):
+    def namespace_alias_menu(self, props):
         """ Build menu for a namespace """
+        qualname = props['qualname']
         menu = []
         menu.append({
             'html':   "Find references",
@@ -369,8 +176,8 @@ class ClangHtmlifier(object):
         })
         return menu
 
-
-    def macro_menu(self, name):
+    def macro_menu(self, props):
+        name = props['name']
         menu = []
         # Things we can do with macros
         menu.append({
@@ -381,9 +188,10 @@ class ClangHtmlifier(object):
         })
         return menu
 
-
-    def function_menu(self, qualname, isvirtual):
+    def function_menu(self, func):
         """ Build menu for a function """
+        qualname = func['qualname']
+        isvirtual = 'override' in func
         menu = []
         # Things we can do with qualified name
         menu.append({
@@ -424,7 +232,6 @@ class ClangHtmlifier(object):
                 'icon':   'method'
             })
         return menu
-
 
     def annotations(self):
         icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
