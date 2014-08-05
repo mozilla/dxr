@@ -1,7 +1,7 @@
 import os, sys
 import fnmatch
 import urllib, re
-from itertools import chain
+from itertools import chain, imap
 from operator import itemgetter
 
 from funcy import compose, constantly
@@ -57,9 +57,7 @@ class ClangHtmlifier(object):
 
     def search(self, query):
         """ Auxiliary function for getting the search url for query """
-        return search_url(self.tree.config.wwwroot,
-                          self.tree.name,
-                          query)
+        return search_url(self.tree.config.wwwroot, self.tree.name, query)
 
     def quote(self, qualname):
         """ Wrap qualname in quotes if it contains spaces """
@@ -235,8 +233,9 @@ class ClangHtmlifier(object):
 
     def annotations(self):
         icon = "background-image: url('%s/static/icons/warning.png');" % self.tree.config.wwwroot
-        sql = "SELECT msg, opt, file_line FROM warnings WHERE file_id = ? ORDER BY file_line"
-        for msg, opt, line in self.conn.execute(sql, (self.file_id,)):
+        getter = itemgetter('msg', 'opt', 'span')
+        for msg, opt, span in imap(getter, self.condensed['warnings']):
+            (_, line, _), _ = span
             if opt:
                 msg = msg + " [" + opt + "]"
             yield line, {
@@ -247,78 +246,44 @@ class ClangHtmlifier(object):
 
     def links(self):
         # For each type add a section with members
-        sql = "SELECT name, id, file_line, kind FROM types WHERE file_id = ?"
-        for name, tid, line, kind in self.conn.execute(sql, (self.file_id,)):
-            if len(name) == 0: continue
-            links = []
-            links += list(self.member_functions(tid))
-            links += list(self.member_variables(tid))
 
-            # Sort them by line
-            links = sorted(links, key = lambda link: link[1])
+        getter = itemgetter('name', 'qualname', 'span', 'kind')
+        for name, tid, span, kind in imap(getter, self.condensed['type']):
+            (_, line, _), _ = span
+            if len(name) == 0:
+                continue
 
             # Make sure we have a sane limitation of kind
             if kind not in ('class', 'struct', 'enum', 'union'):
                 print >> sys.stderr, "kind '%s' was replaced for 'type'!" % kind
                 kind = 'type'
 
-            # Add the outer type as the first link
-            links.insert(0, (kind, name, "#%s" % line))
+            links = chain(self._member('function', tid),
+                          self._member('variable', tid))
 
-            # Now return the type
-            yield (30, name, links)
+            links = sorted(links, key=itemgetter(1))  # by line
+
+            # Add the outer type as the first link
+            links = [(kind, name, "#%s" % line)] + links
+
+            yield 30, name, links
 
         # Add all macros to the macro section
         links = []
-        sql = "SELECT name, file_line FROM macros WHERE file_id = ?"
-        for name, line in self.conn.execute(sql, (self.file_id,)):
+        getter = itemgetter('name', 'span')
+        for name, line in imap(getter, self.condensed['type']]:
+            (_, line, _), _ = span
             links.append(('macro', name, "#%s" % line))
         if links:
-            yield (100, "Macros", links)
+            yield 100, "Macros", links
 
-    def member_functions(self, tid):
-        """ Fetch member functions given a type id """
-        sql = """
-            SELECT name, file_line
-            FROM functions
-            WHERE file_id = ? AND scopeid = ?
-        """
-        for name, line in self.conn.execute(sql, (self.file_id, tid)):
+
+    def _member(self, key, id_):
+        """Fetch member {{key}} given a type id."""
+        for props in (prop for self.condensed[key] if tid == prop['qualname']):
             # Skip nameless things
-            if len(name) == 0: continue
+            name = props['qualname']
+            (_, line, _), _ = props['span']
+            if len(name) == 0:
+                continue
             yield 'method', name, "#%s" % line
-
-    def member_variables(self, tid):
-        """ Fetch member variables given a type id """
-        sql = """
-            SELECT name, file_line
-            FROM variables
-            WHERE file_id = ? AND scopeid = ?
-        """
-        for name, line in self.conn.execute(sql, (self.file_id, tid)):
-            # Skip nameless things
-            if len(name) == 0: continue
-            yield 'field', name, "#%s" % line
-
-
-_tree = None
-_conn = None
-def load(tree, conn):
-    global _tree, _conn
-    _tree = tree
-    _conn = conn
-
-
-_patterns = ('*.c', '*.cc', '*.cpp', '*.cxx', '*.h', '*.hpp')
-def htmlify(path, text):
-    fname = os.path.basename(path)
-    if any((fnmatch.fnmatchcase(fname, p) for p in _patterns)):
-        # Get file_id, skip if not in database
-        sql = "SELECT files.id FROM files WHERE path = ? LIMIT 1"
-        row = _conn.execute(sql, (path,)).fetchone()
-        if row:
-            return ClangHtmlifier(_tree, _conn, row[0])
-    return None
-
-
-__all__ = dxr.plugins.htmlifier_exports()
