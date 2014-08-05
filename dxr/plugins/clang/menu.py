@@ -1,4 +1,4 @@
-""" """
+"""All menu constructors for the C/CXX refs."""
 from dxr.utils import search_url
 
 
@@ -14,8 +14,9 @@ def search(tree, query):
     return search_url(tree.config.wwwroot, tree.name, query)
 
 
-def include_menu(tree, props):
-    (path, _, _), _ = props['span']
+def include_menu(tree, include):
+    """Return menu for include reference."""
+    (path, _, _), _ = include['span']
     return {
         'html': 'Jump to file',
         'title': 'Jump to what is included here.',
@@ -24,8 +25,9 @@ def include_menu(tree, props):
     }
 
 
-def macro_menu(tree, props):
-    name = props['name']
+def macro_menu(tree, macro):
+    """Return menu for macro reference."""
+    name = macro['name']
     return {
         'html': "Find references",
         'title': "Find references to macros with this name",
@@ -34,15 +36,16 @@ def macro_menu(tree, props):
     }
 
 
-def type_menu(tree, qualname, kind):
-    """ Build menu for type """
+def type_menu(tree, type_):
+    """Return menu for type reference."""
+    qualname, kind = type_['qualname'], type_['kind']
     menu = []
     # Things we can do with qualname
     menu.append({
         'html': "Find declarations",
         'title': "Find declarations of this class",
         'href': search(tree, "+type-decl:%s" % quote(qualname)),
-        'icon': 'reference'  # FIXME?
+        'icon': 'reference'
     })
     if kind == 'class' or kind == 'struct':
         menu.append({
@@ -71,8 +74,9 @@ def type_menu(tree, qualname, kind):
     })
     return menu
 
-def typedef_menu(tree, qualname):
+def typedef_menu(tree, typedef):
     """ Build menu for typedef """
+    qualname = typedef['qualname']
     menu = []
     menu.append({
         'html': "Find references",
@@ -82,15 +86,15 @@ def typedef_menu(tree, qualname):
     })
     return menu
 
-def variable_menu(tree, props):
+def variable_menu(tree, variable):
     """ Build menu for a variable """
-    qualname = props['qualnam']
+    qualname = variable['qualname']
     menu = []
     menu.append({
         'html': "Find declarations",
         'title': "Find declarations of this variable",
         'href': search(tree, "+var-decl:%s" % quote(qualname)),
-        'icon': 'reference' # FIXME?
+        'icon': 'reference'
     })
     menu.append({
         'html': "Find references",
@@ -98,13 +102,11 @@ def variable_menu(tree, props):
         'href': search(tree, "+var-ref:%s" % quote(qualname)),
         'icon': 'field'
     })
-    # TODO Investigate whether assignments and usages is possible and
-    # useful?
     return menu
 
-def namespace_menu(tree, props):
+def namespace_menu(tree, namespace):
     """ Build menu for a namespace """
-    qualname = props['qualname']
+    qualname = namespace['qualname']
     menu = []
     menu.append({
         'html': "Find definitions",
@@ -120,9 +122,9 @@ def namespace_menu(tree, props):
     })
     return menu
 
-def namespace_alias_menu(tree, props):
+def namespace_alias_menu(tree, namespace_alias):
     """ Build menu for a namespace """
-    qualname = props['qualname']
+    qualname = namespace_alias['qualname']
     menu = []
     menu.append({
         'html': "Find references",
@@ -143,7 +145,7 @@ def function_menu(tree, func):
         'html': "Find declarations",
         'title': "Find declarations of this function",
         'href': search(tree, "+function-decl:%s" % quote(qualname)),
-        'icon': 'reference'  # FIXME?
+        'icon': 'reference'
     })
     menu.append({
         'html': "Find callers",
