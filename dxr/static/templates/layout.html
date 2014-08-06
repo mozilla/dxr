@@ -26,7 +26,10 @@
                 <div class="elem_container find">
                     <label for="query" class="query_label visually-hidden">Find</label>
                     <input type="text" name="q" {% if should_autofocus_query %}autofocus {% endif %}value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
-
+                    <div class="zero-size-container">
+                      <div class="bubble">
+                      </div>
+                    </div>
                     <section id="search-filter" class="search-filter">
                       <button type="button" class="sf-select-trigger" aria-label="Select Filter">
                           <!-- arrow icon using icon font -->

@@ -1,7 +1,6 @@
-{%- if is_first_or_only -%}
-    <a class="{{ icon_class }}"
-{%- else -%}
-    <span class="path-separator">/</span><a
+{%- if not is_first_or_only -%}
+    <span class="path-separator">/</span>
 {%- endif -%}
-
-{%- if is_dir %} data-path="{{ data_path }}"{% endif %} href="{{ url }}">{{ display_path }}</a>
+    <a style="display:inline;" {%- if is_dir %} data-path="{{ data_path }}" {% endif %} href="{{ url }}">
+        {{ display_path }}
+    </a>

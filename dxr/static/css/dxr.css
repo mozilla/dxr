@@ -183,46 +183,60 @@ mark {
     background-color: transparent;
 }
 
-/* result-snippet */
-table.result_snippet tr:hover,
+/* results */
+
+.results tr:hover,
 .file tr:hover {
     background: none;
 }
-.result_snippet th:first-child {
-    border-right: 1px solid #fff;
-    text-align: center;
-}
-table.result_snippet tr,
+.results tr,
 .file tr {
     border: 0;
     line-height: 1.3;
-    vertical-align: baseline;
 }
-.result_snippet td:first-child,
-.file td:first-child {
-    border-right: 1px solid #fff;
-    color: #aaa;
+
+.left-column
+{
     text-align: right;
-    width: 4%;
+    color: #aaa;
+    padding-right: 0.6rem;
 }
-.result_snippet td {
+div.icon-container
+{
+    float:right;
+    padding: 8px;
+}
+
+.results td {
     padding: .1rem .5rem;
 }
-.result_snippet a {
+.results a {
     cursor: pointer;
-    display: block;
+    display: block; 
     width: 100%;
 }
-.result_snippet a:target,
+
 .file a:target {
     background-color: gray;
     color: white;
     padding: 0 .5rem;
 }
-.result_snippet code {
+.results code {
     white-space: pre;
 }
-/* end result-snippet */
+
+.result-head td
+{
+    padding-top: .3rem; /* Additional padding to visually seperate results.*/
+    padding-bottom: 0;
+}
+
+.result-head td.left-column
+{
+    padding-right: .2rem; /* Moves the icon closer to the path by reducing the padding.*/
+}
+
+/* end results */
 
 .file td {
     padding: 0 .5em 0 .5em;
@@ -240,6 +254,7 @@ table.result_snippet tr,
 mark {
     padding: .3rem 0;
 }
+
 /* Context Menu */
 .context-menu {
     position: absolute;
@@ -324,21 +339,9 @@ mark {
     margin-top: 55px;
     padding: 1rem 2rem;
 }
-.path {
-    background-repeat: no-repeat;
-    background-position: 0 3px;
-    margin: 1.2em 0 0.1em 0;
-}
 .path-separator {
-    margin: 0 .2rem;
+    margin: 0 .1rem;
 }
-
-/* Keep icons in search results from clipping: */
-.result .path a {
-    display: inline-block;
-    min-height: 16px;
-}
-
 .breadcrumbs,
 .top-of-tree {
     display: inline-block;
@@ -347,21 +350,26 @@ mark {
     padding: .5rem 0 1rem 0;
     text-align: left;
 }
+
 /* top of tree */
 .top-of-tree a:link,
 .top-of-tree a:visited,
 .breadcrumbs a:link,
 .breadcrumbs a:visited,
 .bubble a:link,
-.bubble a:visited {
+.bubble a:visited,
+.result-head a:link,
+.result-head a:visited {
     color: #0095dd;
 }
 .top-of-tree a:hover,
-.breadcrumbs a:hover {
+.breadcrumbs a:hover,
+.result-head a:hover {
     color: #00539f;
 }
 .top-of-tree a:focus,
-.breadcrumbs a:focus {
+.breadcrumbs a:focus,
+.result-head a:focus {
     color: #00539f;
     text-decoration: none;
 }
@@ -370,6 +378,7 @@ mark {
     font-size: .7rem;
     margin: 0 0 0 1.2rem;
 }
+
 /* Navigation panel */
 .panel {
     position: fixed;
