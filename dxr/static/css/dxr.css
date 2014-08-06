@@ -194,28 +194,23 @@ mark {
     border: 0;
     line-height: 1.3;
 }
-
-.left-column
-{
+.left-column {
     text-align: right;
     color: #aaa;
     padding-right: 0.6rem;
 }
-div.icon-container
-{
+div.icon-container{
     float:right;
     padding: 8px;
 }
-
 .results td {
     padding: .1rem .5rem;
 }
 .results a {
     cursor: pointer;
-    display: block; 
+    display: block;
     width: 100%;
 }
-
 .file a:target {
     background-color: gray;
     color: white;
@@ -224,13 +219,11 @@ div.icon-container
 .results code {
     white-space: pre;
 }
-
 .result-head td
 {
     padding-top: .3rem; /* Additional padding to visually seperate results.*/
     padding-bottom: 0;
 }
-
 .result-head td.left-column
 {
     padding-right: .2rem; /* Moves the icon closer to the path by reducing the padding.*/
