@@ -27,13 +27,13 @@ def c_type_sig(inputs, output, method=None):
     """Return FuncSig based on C style input, output, and method."""
     inputs = remove(lambda x: x == "void", inputs)  # Void Elimination
 
-    inputs = map(lambda x: x.replace(' ', ''), inputs)  # Quote Elimination
+    inputs = map(lambda x: x.replace(' ', ''), inputs)  # Space Elimination
     output = output.replace(' ', '')
 
     if method is not None:  # Implicit first argument
         inputs = [method] + inputs
 
-    if len(inputs) == 0:  # Expa
+    if len(inputs) == 0:  # Expand no inputs to a single void input
         inputs = ["void"]
 
     return FuncSig(tuple(inputs), output)
