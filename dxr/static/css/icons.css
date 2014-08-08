@@ -51,7 +51,7 @@ a.exclude-path {
     background: transparent url(/static/icons/mimetypes/build.png) no-repeat;
     padding-left: 1.5rem;
 }
-a.c {
+.c {
     background: transparent url(/static/icons/mimetypes/c.png) no-repeat;
     padding-left: 1.5rem;
 }
@@ -65,6 +65,10 @@ a.c {
 }
 .cs {
     background: transparent url(/static/icons/mimetypes/cs.png) no-repeat;
+    padding-left: 1.5rem;
+}
+.css {
+    background: transparent url(/static/icons/mimetypes/css.png) no-repeat;
     padding-left: 1.5rem;
 }
 .diff {
