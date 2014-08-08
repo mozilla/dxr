@@ -14,7 +14,7 @@ PLUGIN_NAME = 'clang'
 
 
 class FileToIndex(plugins.FileToIndex):
-    """"""
+    """C and CXX File Indexer using Clang Plugin."""
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
@@ -72,7 +72,7 @@ def name_needles(condensed, key):
 
 
 def spans(condensed, key):
-    """Return all list of spans from condensed.
+    """Return list of spans from condensed.
 
     :arg key: name of entry in condensed to get spans from.
     """
@@ -127,7 +127,8 @@ def _inherit_needles(condensed, tag, func):
     """Return list of needles ((c-tag, val), span).
 
     :type func: str -> iterable
-    :param tag: the key in for the needle. i.e. c-foo if the tag is foo
+    :param func: Map node name to an iterable of other node names.
+    :param tag: First element in the needle tuple.
 
     """
     if isinstance(condensed['type'], list):
