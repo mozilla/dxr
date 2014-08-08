@@ -12,7 +12,7 @@ from itertools import chain, izip
 
 from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    imap, ifilter, group_by, compose, autocurry, is_mapping,
-                   pluck, first)
+                   pluck, first, remove)
 from toposort import toposort_flatten
 
 from dxr.plugins.utils import FuncSig, Position, Extent, Call
@@ -23,18 +23,34 @@ POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',
                        'namespace', 'namespace_alias', 'include'])
 
 
+def c_type_sig(inputs, output, method=None):
+    """Return FuncSig based on C style input, output, and method."""
+    inputs = remove(lambda x: x == "void", inputs)  # Void Elimination
+
+    inputs = map(lambda x: x.replace(' ', ''), inputs)  # Space Elimination
+    output = output.replace(' ', '')
+
+    if method is not None:  # Implicit first argument
+        inputs = [method] + inputs
+
+    if len(inputs) == 0:  # Expand no inputs to a single void input
+        inputs = ["void"]
+
+    return FuncSig(tuple(inputs), output)
+
+
 @decorator
 def without(call, *keys):
-    """Returns dictionary without the given keys"""
+    """Return dictionary without the given keys"""
     return select_keys(lambda k: k not in keys, call())
 
 
 @without('args')
 def process_function(props):
-    """Return type: FuncSig based on args."""
+    """Return FuncSig based on args."""
     input_args = tuple(ifilter(
         bool, imap(str.lstrip, props['args'][1:-1].split(","))))
-    props['type'] = FuncSig(input_args, props['type'])
+    props['type'] = c_type_sig(input_args, props['type'])
     return props
 
 
@@ -114,7 +130,7 @@ def process_fields(kind, fields):
     """Return new fields dict based on the current contents.
 
     :arg kind: the ast node type specified by the csv file.
-    
+
     """
     fields = handlers.get(kind, identity)(fields)
 

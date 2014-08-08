@@ -6,10 +6,10 @@ from dxr.plugins.utils import Extent, Position, FuncSig, Call
 from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
-                               caller_needles)
+                               caller_needles, type_needles)
 from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
-                                        call_graph)
-
+                                        call_graph, c_type_sig)
+from dxr.plugins.utils import Extent, Position, Call, FuncSig
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
@@ -45,7 +45,7 @@ def test_function():
     eq_(csv['function'][0], {
         'name': 'comb',
         'qualname': 'comb(int **, int, int)',
-        'type': FuncSig(input=('int **', 'int', 'int'), output='int **'),
+        'type': FuncSig(('int**', 'int', 'int'), 'int**'),
         'span': DEFAULT_EXTENT
     })
 
@@ -276,20 +276,32 @@ def test_call_needles():
           (('c-called-by', 'main()'), CALL_EXTENT)])
 
 
-def test_decldefs_needles():
-    raise SkipTest
-
-
-def test_include_needles():
-    raise SkipTest
-
 
 def test_type_needles():
-    raise SkipTest
-
-
-def impl_needles():
-    raise SkipTest
+    eq_(set(type_needles({
+        'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
+                      'span': DEFAULT_EXTENT}],
+        'variable': [{'type': 'a',
+                      'span': DEFAULT_EXTENT}],
+        'type': {
+            'struct': [{
+                'name': 'foobar',
+                'qualname': 'foobar',
+                'kind': 'struct',
+                'span': DEFAULT_EXTENT
+            }],
+            'class': [{
+                'name': 'X',
+                'qualname': 'X',
+                'kind': 'class',
+                'span': DEFAULT_EXTENT
+            }]
+        }
+    })),
+        set([(('c-type', '(int**, int, int) -> int**'), DEFAULT_EXTENT),
+             (('c-type', 'a'), DEFAULT_EXTENT),
+             (('c-type', 'X'), DEFAULT_EXTENT),
+             (('c-type', 'foobar'), DEFAULT_EXTENT)]))
 
 
 def test_group_sparse_needles():
