@@ -226,6 +226,10 @@ mark {
 {
     padding-right: .2rem; /* Moves the icon closer to the path by reducing the padding.*/
 }
+.result-head a
+{
+    display: inline;
+}
 
 /* end results */
 
@@ -331,7 +335,7 @@ mark {
     padding: 1rem 2rem;
 }
 .path-separator {
-    margin: 0 .1rem;
+    margin: 0 .2rem;
 }
 .breadcrumbs,
 .top-of-tree {
