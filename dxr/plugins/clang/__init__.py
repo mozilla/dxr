@@ -169,13 +169,25 @@ def group_sparse_needles(needles_):
     return needles_['file'], needles_['line']
 
 
-def name_needles(condensed, key):
+def _name_needles(condensed, key, name_key):
+    """Helper function for name_needles.
+
+    :param name_key: key to access the name of a property.
+
+    """
+    names = (('c-{0}'.format(key.replace('_', '-')), props[name_key])
+             for props in condensed[key] if name_key in props)
+    return izip(names, spans(condensed, key))
+
+
+def name_needles(condensed, key, ):
     """Return needles ((c-key, name), span).
 
     :param key: name of entry in condensed to get names from.
+
     """
-    return izip((('c-{0}'.format(key.replace('_', '-')), props['name'])
-                 for props in condensed[key]), spans(condensed, key))
+    return chain(_name_needles(condensed, key, "name"),
+                 _name_needles(condensed, key, "qualname"))
 
 
 def spans(condensed, key):
@@ -272,7 +284,8 @@ def parent_needles(condensed, inherit):
 
 def member_needles(condensed):
     """Return needles for the scopes that various symbols belong to."""
-    for _, vals in condensed.items():
+    for vals in condensed.itervalues():
+        # Many of the fields are grouped by kind
         if is_mapping(vals):
             continue
         for val in vals:

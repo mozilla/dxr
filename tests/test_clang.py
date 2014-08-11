@@ -260,8 +260,11 @@ def eq__(l1, l2):
 def test_name_needles():
     eq__(name_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
          [(('c-key', 'x'), 'SPAN!!!')])
-    # _ -> -
     eq__(name_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
+         [(('c-key-2', 'x'), 'SPAN!')])
+    eq__(name_needles({'key': [{'qualname': 'x', 'span': 'SPAN!!!'}]}, 'key'),
+         [(('c-key', 'x'), 'SPAN!!!')])
+    eq__(name_needles({'key_2': [{'qualname': 'x', 'span': 'SPAN!'}]}, 'key_2'),
          [(('c-key-2', 'x'), 'SPAN!')])
 
 
