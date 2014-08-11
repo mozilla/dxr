@@ -4,6 +4,7 @@ import os
 import sys
 from operator import itemgetter
 from itertools import chain, izip, ifilter
+from functools import partial
 
 from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
                    constantly)
@@ -294,16 +295,25 @@ def member_needles(condensed):
             yield ('c-member', val['scope']['name']), val['span']
 
 
+def _over_needles(condensed, tag, name_key, get_span):
+    return ((('c-overrides', func['override'][name_key]), get_span(func))
+            for func in condensed['function'] if name_key in func['override'])
+
 def overrides_needles(condensed):
     """Return needles of methods which override the given one."""
-    return ((('c-overrides', func['override']['name']), func['span']) for func
-            in condensed['function'])
+    _overrides_needles = partial(_over_needles, condensed=condensed,
+                                tag='overrides', get_span=itemgetter('span'))
+    return chain(_overrides_needles(name_key='name'),
+                 _overrides_needles(name_key='qualname'))
 
 
 def overridden_needles(condensed):
     """Return needles of methods which are overridden by the given one."""
-    return ((('c-overridden', func['override']['name']),
-             func['override']['span']) for func in condensed['function'])
+    get_span = lambda x: x['override']['span']
+    _overriden_needles = partial(_over_needles, condensed=condensed,
+                                 tag='overrides', get_span=get_span)
+    return chain(_overriden_needles(name_key='name'),
+                 _overriden_needles(name_key='qualname'))
 
 
 def needles(condensed, inherit, graph):

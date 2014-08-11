@@ -360,7 +360,7 @@ def test_member_needles():
     eq__(member_needles(fixture), [(('c-member', 'A'), DEFAULT_EXTENT)])
 
 
-def test_override_needls():
+def test_override_needles():
     fixture = {
         'function': [{'override': {'name': 'x', 'span': DEFAULT_EXTENT}}],
     }
