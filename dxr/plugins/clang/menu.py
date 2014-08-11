@@ -3,14 +3,14 @@ from dxr.utils import search_url
 
 
 def quote(qualname):
-    """ Wrap qualname in quotes if it contains spaces """
+    """Wrap qualname in quotes if it contains spaces."""
     if ' ' in qualname:
         qualname = '"' + qualname + '"'
     return qualname
 
 
 def search(tree, query):
-    """ Auxiliary function for getting the search url for query """
+    """Auxiliary function for getting the search url for query."""
     return search_url(tree.config.wwwroot, tree.name, query)
 
 
@@ -75,7 +75,7 @@ def type_menu(tree, type_):
     return menu
 
 def typedef_menu(tree, typedef):
-    """ Build menu for typedef """
+    """Build menu for typedef."""
     qualname = typedef['qualname']
     menu = []
     menu.append({
@@ -87,7 +87,7 @@ def typedef_menu(tree, typedef):
     return menu
 
 def variable_menu(tree, variable):
-    """ Build menu for a variable """
+    """Build menu for a variable."""
     qualname = variable['qualname']
     menu = []
     menu.append({
@@ -105,7 +105,7 @@ def variable_menu(tree, variable):
     return menu
 
 def namespace_menu(tree, namespace):
-    """ Build menu for a namespace """
+    """Build menu for a namespace."""
     qualname = namespace['qualname']
     menu = []
     menu.append({
@@ -123,7 +123,7 @@ def namespace_menu(tree, namespace):
     return menu
 
 def namespace_alias_menu(tree, namespace_alias):
-    """ Build menu for a namespace """
+    """Build menu for a namespace."""
     qualname = namespace_alias['qualname']
     menu = []
     menu.append({
@@ -136,7 +136,7 @@ def namespace_alias_menu(tree, namespace_alias):
 
 
 def function_menu(tree, func):
-    """ Build menu for a function """
+    """Build menu for a function."""
     qualname = func['qualname']
     isvirtual = 'override' in func
     menu = []
