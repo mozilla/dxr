@@ -12,6 +12,11 @@ from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 
 PLUGIN_NAME = 'clang'
 
+__all__ = [
+    'FileToIndex',
+    'TreeToIndex',
+]
+
 
 class FileToIndex(plugins.FileToIndex):
     """C and CXX File Indexer using Clang Plugin."""
@@ -123,7 +128,7 @@ def type_needles(condensed):
     return ((('c-type', type_), span) for type_, span in walk_types(condensed))
 
 
-def _inherit_needles(condensed, tag, func):
+def inherit_needles(condensed, tag, func):
     """Return list of needles ((c-tag, val), span).
 
     :type func: str -> iterable
@@ -147,8 +152,7 @@ def child_needles(condensed, inherit):
     :type inherit: mapping parent:str -> Set child:str
 
     """
-
-    return _inherit_needles(condensed, 'child',
+    return inherit_needles(condensed, 'child',
                             lambda name: inherit.get(name, []))
 
 
@@ -162,7 +166,7 @@ def parent_needles(condensed, inherit):
         return (parent for parent, children in inherit.items()
                 if name in children)
 
-    return _inherit_needles(condensed, 'parent', get_parents)
+    return inherit_needles(condensed, 'parent', get_parents)
 
 
 def needles(condensed, inherit, graph):
@@ -188,7 +192,7 @@ class TreeToIndex(plugins.TreeToIndex):
     def __init__(self, tree):
         super(TreeToIndex, self).__init__(tree)
         self.tree = tree
-        self.inherit, self.temp_folder = None, None
+        self._inherit, self._temp_folder = None, None
 
     def environment(self, vars_):
         """Setup environment variables for inspecting clang as runtime
@@ -198,7 +202,7 @@ class TreeToIndex(plugins.TreeToIndex):
         """
         tree = self.tree
         temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-        self.temp_folder = temp_folder
+        self._temp_folder = temp_folder
         plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
         flags = [
             '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
@@ -219,8 +223,8 @@ class TreeToIndex(plugins.TreeToIndex):
         return merge(vars_, env)
 
     def post_build(self):
-        condensed = load_csv(self.temp_folder, fpath=None, only_impl=True)
-        self.inherit = build_inheritance(condensed)
+        condensed = load_csv(self._temp_folder, fpath=None, only_impl=True)
+        self._inherit = build_inheritance(condensed)
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.tree, self.inherit)
+        return FileToIndex(path, contents, self.tree, self._inherit)
