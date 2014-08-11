@@ -94,12 +94,12 @@ $(function() {
     /**
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
-     *
+     * 
      * @param {string} fullPath - The full path of the currently displayed file.
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildPathLine(fullPath, tree, icon) {
+    function buildResultHead(fullPath, tree, icon) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
@@ -117,16 +117,15 @@ $(function() {
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
-                'icon_class': isFirstOrOnly ? iconClass : '',
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
                 'is_dir': !isLastOrOnly
             });
         }
 
-        return pathLines;
+        return [iconClass, pathLines];
     }
-
+    
     var searchForm = $('#basic_search'),
         queryField = $('#query'),
         query = null,
@@ -334,7 +333,9 @@ $(function() {
 
             for (var result in results) {
                 var icon = results[result].icon;
-                results[result].pathLine = buildPathLine(results[result].path, data.tree, icon);
+                var resultHead = buildResultHead(results[result].path, data.tree, icon);
+                results[result].iconClass = resultHead[0];
+                results[result].pathLine = resultHead[1];
             }
 
             var container = append ? contentContainer : contentContainer.empty();

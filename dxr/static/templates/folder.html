@@ -43,10 +43,10 @@
       {% endfor %}
 
       {% for icon, name, modified, size, relative_url in files %}
+        {%- set icon_class = icon.split('/')[1] -%}
       <tr>
         <td><a href="{{ wwwroot }}/{{ relative_url }}"
-               style="background-image: url('{{ wwwroot }}/static/icons/{{ icon }}.png')"
-               class="icon">
+               class="icon {{icon_class}}">
                {{ name }}</a></td>
         <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ modified.strftime("%Y-%b-%d %H:%m") }}</a></td>
         <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ size|filesizeformat }}</a></td>
