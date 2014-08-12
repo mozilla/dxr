@@ -198,7 +198,7 @@ def index_tree(tree, es, verbose=False):
         ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
 
     tree_indexers = [p.tree_to_index(tree) for p in
-                     tree.enabled_plugins.values() if p.tree_to_index]
+                     tree.enabled_plugins.itervalues() if p.tree_to_index]
 
     if skip_indexing:
         print " - Skipping indexing (due to 'index' in 'skip_stages')"

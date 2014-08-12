@@ -147,7 +147,7 @@ class TreeConfig(object):
         parser.read(configfile)
 
         # Set config values
-        self.enabled_plugins  = parser.get(name, 'enabled_plugins')
+        self._enabled_plugins = parser.get(name, 'enabled_plugins')
         self.disabled_plugins = parser.get(name, 'disabled_plugins')
         self.temp_folder      = parser.get(name, 'temp_folder')
         self.log_folder       = parser.get(name, 'log_folder')
@@ -192,15 +192,18 @@ class TreeConfig(object):
 
         # enabled_plugins, unlike in Config, is a dict of name -> Plugin. TODO:
         # Clean this up when we refactor the whole config system.
-        if self.enabled_plugins == "*":
-            self.enabled_plugins = dict(
-                (name, plug) for name, plug in all_plugins().iteritems() if
+        all_the_plugins = all_plugins()
+        if self._enabled_plugins == "*":
+            enableds = [
+                (name, plug) for name, plug in all_the_plugins.iteritems() if
                 name in config.enabled_plugins and
-                name not in self.disabled_plugins)
+                name not in self.disabled_plugins]
         else:
-            self.enabled_plugins = dict(
-                (name, plug) for name, plug in all_plugins().iteritems() if
-                name in self.enabled_plugins.split())
+            enableds = [
+                (name, plug) for name, plug in all_the_plugins.iteritems() if
+                name in self._enabled_plugins.split()]
+        self.enabled_plugins = OrderedDict([('core', all_the_plugins['core'])] +
+                                         enableds)
 
         # Test for conflicting plugins settings
         conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
