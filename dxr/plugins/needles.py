@@ -3,7 +3,6 @@
 from operator import itemgetter
 from itertools import repeat, imap, izip, chain
 
-
 from funcy import group_by, pluck
 
 

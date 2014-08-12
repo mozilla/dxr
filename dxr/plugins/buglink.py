@@ -36,12 +36,8 @@ class FileToIndex(dxr.plugins.FileToIndex):
         self.tracker_name = tracker_name
         self.url_template = url_template
 
-    def refs_by_line(self):
-        for line in self.contents.splitlines():
-            yield list(self._bugs_on_line(line))
-
-    def _bugs_on_line(self, line):
-        for m in self.regex.finditer(line):
+    def refs(self):
+        for m in self.regex.finditer(self.contents):
             bug = m.group(1)
             yield m.start(0), m.end(0), ([{
                 'html': cgi.escape("Lookup #%s" % bug),

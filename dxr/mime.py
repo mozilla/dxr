@@ -10,7 +10,7 @@ def icon(path):
     return "mimetypes/" + ext_map.get(ext[1:], "unknown")
 
 
-def is_text(path, data):
+def is_text(data):
     # Simple stupid test that apparently works rather well :)
     return '\0' not in data
 

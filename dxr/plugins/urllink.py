@@ -8,13 +8,8 @@ url_re = re.compile("https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-
 
 
 class FileToIndex(dxr.plugins.FileToIndex):
-    def refs_by_line(self):
-        for line in self.contents.splitlines():
-            yield list(self._links_on_line(line))
-
-    def _links_on_line(self, line):
-        """Return a sorted iterable of the refs in one line of text."""
-        for m in url_re.finditer(line):
+    def refs(self):
+        for m in url_re.finditer(self.contents):
             url = m.group(0)
             yield m.start(0), m.end(0), ([{
                 'html': 'Follow link',

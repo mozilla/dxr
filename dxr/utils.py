@@ -171,7 +171,7 @@ def append_update_by_line(mappings, pairses):
 
 
 def append_by_line(dest_lists, list_per_line):
-    """Given two list and parallel iterable ``list_per_line``, merge the
+    """Given a list and parallel iterable ``list_per_line``, merge the
     element of the second into the element of the first."""
     for dest_list, source_list in izip(dest_lists, list_per_line):
         dest_list.extend(source_list)
