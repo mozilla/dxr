@@ -16,6 +16,9 @@ ordereddict==1.1
 # sha256: 1DgyuiXqTOdHsKq2dcB-pGOEF6LMm5xcDLjvaClLEsA
 parsimonious==0.5
 
+# sha256: 33p-8L41qGMvjgz1P1yPfNdFbaokcLtaaD_u_5g9Uqg
+pyelasticsearch==0.7.1
+
 # sha256: eZ7Uyvd1FuVEQIBtjZzYKnYH399OT7ZDgVFxpLXJIcA
 Pygments==1.6
 
