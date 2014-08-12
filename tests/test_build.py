@@ -210,22 +210,6 @@ class BalancedTagTests(TestCase):
         eq_(list(balanced_tags([])), [])
 
 
-class Htmlifier(object):
-    def __init__(self, regions=None, refs=None, annotations=None):
-        self._regions = regions or []
-        self._refs = refs or []
-        self._annotations = annotations or []
-
-    def regions(self):
-        return self._regions
-
-    def refs(self):
-        return self._refs
-
-    def annotations(self):
-        return self._annotations
-
-
 def test_tag_boundaries():
     """Sanity-check ``tag_boundaries()``."""
     eq_(str(list(tag_boundaries([], [(0, 3, 'a'), (3, 5, 'b')]))),
