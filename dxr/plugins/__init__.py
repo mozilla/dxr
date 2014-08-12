@@ -1,5 +1,6 @@
 """The DXR plugin architecture"""
 
+from functools import partial
 import sys
 from os.path import join
 import imp
@@ -376,6 +377,18 @@ class FileToIndex(FileToSkim):
         return join(self.tree.source_folder, self.path)
 
 
+class AdHocTreeToIndex(TreeToIndex):
+    """A default TreeToIndex created because some plugin provided none"""
+
+    def __init__(self, *args, **kwargs):
+        self._file_to_index_class = kwargs.pop('file_to_index_class', None)
+        super(AdHocTreeToIndex, self).__init__(*args, **kwargs)
+
+    def file_to_index(self, path, contents):
+        if self._file_to_index_class:
+            return self._file_to_index_class(path, contents, self.tree)
+
+
 class Plugin(object):
     """Top-level entrypoint for DXR plugins
 
@@ -447,14 +460,9 @@ class Plugin(object):
         # Grab a tree indexer by name, or make one up:
         tree_to_index = namespace.get('TreeToIndex')
         if not tree_to_index:
-            file_to_index_class = namespace.get('FileToIndex')
-            class tree_to_index(TreeToIndex):
-                """A default TreeToIndex created because none was provided by
-                the plugin"""
-
-                if file_to_index_class:
-                    def file_to_index(self, path, contents):
-                        return file_to_index_class(path, contents, self.tree)
+            tree_to_index = partial(
+                    AdHocTreeToIndex,
+                    file_to_index_class=namespace.get('FileToIndex'))
 
         return cls(filters=filters_from_namespace(namespace),
                    tree_to_index=tree_to_index,
