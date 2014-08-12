@@ -10,6 +10,7 @@ import unittest
 from urllib2 import quote
 
 from nose.tools import eq_
+from pyelasticsearch import ElasticSearch
 
 try:
     from nose.tools import assert_in
@@ -19,9 +20,7 @@ except ImportError:
         ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
 from dxr.app import make_app
-
-
-# ---- This crap is very temporary: ----
+from dxr.build import build_instance
 
 
 class CommandFailure(Exception):
@@ -45,9 +44,6 @@ def run(command):
     if status:
         raise CommandFailure(command, status, output)
     return output
-
-
-# ---- More permanent stuff: ----
 
 
 class TestCase(unittest.TestCase):
@@ -126,6 +122,17 @@ class TestCase(unittest.TestCase):
             (quote(query), 'true' if is_case_sensitive else 'false'))
         return json.loads(response.data)['results']
 
+    @classmethod
+    def _delete_es_indices(cls):
+        """Delete anything that is named like a DXR test index.
+
+        Yes, this is scary as hell but very expedient. Won't work if
+        ES's action.destructive_requires_name is set to true.
+
+        """
+        # When you delete an index, any alias to it goes with it.
+        ElasticSearch('http://127.0.0.1:9200/').delete_index('dxr_test_*')
+
 
 class DxrInstanceTestCase(TestCase):
     """Test case which builds an actual DXR instance that lives on the
@@ -147,6 +154,7 @@ class DxrInstanceTestCase(TestCase):
     @classmethod
     def teardown_class(cls):
         chdir(cls._config_dir_path)
+        cls._delete_es_indices()
         run('make clean')
 
 
@@ -176,6 +184,8 @@ enabled_plugins = pygmentize clang
 temp_folder = {config_dir_path}/temp
 target_folder = {config_dir_path}/target
 nb_jobs = 4
+es_index = dxr_test_{{format}}_{{tree}}_{{unique}}
+es_alias = dxr_test_{{format}}_{{tree}}
 
 [code]
 source_folder = {config_dir_path}/code
@@ -184,11 +194,12 @@ build_command = $CXX -o main main.cpp
 """.format(config_dir_path=cls._config_dir_path))
 
         chdir(cls._config_dir_path)
-        run('dxr-build.py')
+        build_instance(os.path.join(cls._config_dir_path, 'dxr.config'))
 
     @classmethod
     def teardown_class(cls):
         if cls.should_delete_instance:
+            cls._delete_es_indices()
             rmtree(cls._config_dir_path)
         else:
             print 'Not deleting instance in %s.' % cls._config_dir_path

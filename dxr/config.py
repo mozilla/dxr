@@ -42,7 +42,8 @@ class Config(object):
             'default_tree':     "",
             'filter_language':  "C",
             'es_hosts':         'http://127.0.0.1:9200/',
-            'es_index':         'dxr_{tree}_{unique}'
+            'es_index':         'dxr_{format}_{tree}_{unique}',
+            'es_alias':         'dxr_{format}_{tree}',
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -63,6 +64,7 @@ class Config(object):
         self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
         self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
         self.es_index         = parser.get('DXR', 'es_index', False, override)
+        self.es_alias         = parser.get('DXR', 'es_alias', False, override)
         # Set configfile
         self.configfile       = configfile
         self.trees            = []
