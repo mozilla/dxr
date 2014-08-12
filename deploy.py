@@ -165,7 +165,7 @@ class Deployment(object):
                 run('git checkout -q {rev}', rev=rev)
 
                 # If there's no instance of a suitable version, bail out:
-                with open('format') as format_file:
+                with open('dxr/format') as format_file:
                     format = format_file.read().rstrip()
                 target_path = '{base_path}/instances/{format}/target'.format(
                     base_path=self.base_path, format=format)

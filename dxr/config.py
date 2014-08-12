@@ -6,8 +6,15 @@ import os
 from os.path import dirname, isdir
 import sys
 
+from pkg_resources import resource_string
+
 import dxr
 from dxr.plugins import all_plugins
+
+
+# Format version, signifying the instance format this web frontend code is
+# able to serve. Must match exactly; deploy will do nothing until it does.
+FORMAT = resource_string('dxr', 'format').strip()
 
 
 # Please keep these config objects as simple as possible and in sync with

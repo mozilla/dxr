@@ -136,7 +136,7 @@ need to make sure :envvar:`LD_LIBRARY_PATH` in your environment points to the
 The Format Version
 ------------------
 
-At the root level of the repo lurks a file called :file:`format`. Its role is
+In the :file:`dxr` folder lurks a file called :file:`format`. Its role is
 to facilitate the automatic deployment of new versions of DXR using a script
 like the included :file:`deploy.py`. The format file contains an integer which
 represents the instance format expected by the DXR code. If a change in the
