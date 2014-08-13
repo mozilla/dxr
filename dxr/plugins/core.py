@@ -8,16 +8,21 @@ from dxr.plugins import FILE, LINE
 
 
 mappings = {
-    # The file doctype exists solely to support folder listings, which query by
-    # path and then display size and mod date.
     FILE: {
         '_all': {
             'enabled': False
         },
         'properties': {
-            'path': {
+            # FILE filters query this. It supports globbing via JS regex script.
+            'path': {  # path/to/a/folder/filename.cpp
                 'type': 'string',
-                'index': 'not_analyzed'
+                'index': 'no',  # support JS source fetching but not Wildcard queries
+                'fields': {
+                    'trigrams': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'  # accelerate regexes
+                    }
+                }
             },
             'size': {
                 'type': 'integer',  # bytes
@@ -39,26 +44,37 @@ mappings = {
         'properties': {
             'path': {
                 'type': 'string',
-                'index': 'not_analyzed'  # TODO: What about case-insensitive?
+                # TODO: What about case-insensitive?
+                'index': 'not_analyzed',  # support sorting
+                'fields': {
+                    'trigrams': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
+                    }
+                }
             },
-            'path_trg': {
-                'type': 'string',
-                'analyzer': 'trigramalyzer'
-            },
-            # TODO: Use match_phrase_prefix queries on non-globbed paths, analyzing them with the path analyzer, for max perf. Perfect! Otherwise, fall back to trigram-accelerated substring or wildcard matching.
-            # TODO: Use multi-fields so we don't have to pass the text in twice on indexing.
+            # TODO: Use match_phrase_prefix queries on non-globbed paths,
+            # analyzing them with the path analyzer, for max perf. Perfect!
+            # Otherwise, fall back to trigram-accelerated substring or wildcard
+            # matching.
 
             'number': {
                 'type': 'integer'
             },
 
+            # We index content 2 ways to keep RAM use down. Naively, we should
+            # be able to pull the content.trigrams source out using our JS
+            # regex script, but in actuality, that uses much more RAM than
+            # pulling just plain content and crashes.
             'content': {
                 'type': 'string',
-                'index': 'no'
-            },
-            'content_trg': {
-                'type': 'string',
-                'analyzer': 'trigramalyzer'
+                'index': 'no',
+                'fields': {
+                    'trigrams': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
+                    }
+                }
             }
         }
     }
@@ -98,7 +114,7 @@ class TreeToIndex(dxr.plugins.TreeToIndex):
 
 class FileToIndex(dxr.plugins.FileToIndex):
     def needles(self):
-        """Fill out path (and path_trg)."""
+        """Fill out path (and path.trigrams)."""
         yield 'path', self.path
         # TODO: Add extension as a separate field (and to the mapping)?
 
