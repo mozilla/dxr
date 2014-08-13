@@ -15,6 +15,7 @@ from dxr.plugins.needles import unsparsify_func
 from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
                                     namespace_menu, namespace_alias_menu,
                                     macro_menu, include_menu)
+from dxr.plugins.utils import needle_filter_factory
 
 
 PLUGIN_NAME = 'clang'
@@ -377,3 +378,25 @@ class TreeToIndex(plugins.TreeToIndex):
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.tree, self._inherit)
+
+
+FunctionFilter = needle_filter_factory('c-function')
+FunctionRefFilter = needle_filter_factory('c-function-ref')
+FunctionDeclFilter = needle_filter_factory('c-function-decl')
+TypeRef = needle_filter_factory('c-type-ref')
+TypeDecl = needle_filter_factory('c-type-decl')
+VariableFilter = needle_filter_factory('c-variable')
+TypeDefFilter = needle_filter_factory('c-typedef')
+MacroFilter = needle_filter_factory('c-macro')
+MacroRefFilter = needle_filter_factory('c-macro-ref')
+NamespaceFilter = needle_filter_factory('c-namespace')
+NamespaceRefFilter = needle_filter_factory('c-namespace-ref')
+NamespaceAliasFilter = needle_filter_factory('c-namespace-alias')
+NamespaceAliasRefFilter = needle_filter_factory('c-namespace-alias-ref')
+WarningFilter = needle_filter_factory('c-warning')
+WarningOptFilter = needle_filter_factory('c-warning-opt')
+CalleeFilter = needle_filter_factory('c-callee')
+CallerFilter = needle_filter_factory('c-caller')
+ParentFilter = needle_filter_factory('c-parent')
+MemberFilter = needle_filter_factory('c-member')
+>>>>>>> wrote scaffolding for filters

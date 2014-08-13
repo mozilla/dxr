@@ -1,6 +1,7 @@
 """Some common utilities used by plugins but _not_ required by the API"""
 
 from collections import namedtuple
+from dxr.plugins import LINE
 
 
 Extent = namedtuple('Extent', ['start', 'end'])
@@ -24,3 +25,24 @@ def is_function((_, obj)):
         return False
     type_ = obj['!type']
     return hasattr(type_, 'input') and hasattr(type_, 'output')
+
+
+def needle_filter_factory(tag):
+    class NeedleFilter(object):
+        name = "{0}-needle".format(tag)
+        domain = LINE
+
+        def __init__(self, term):
+            self.term = term
+
+        def filter(self):
+            return {
+                "filtered": {
+                    "term": {
+                        tag: self.term
+                    }
+                }
+            }
+
+        def highlight(self, result):
+            return []
