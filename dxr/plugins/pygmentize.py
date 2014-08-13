@@ -84,7 +84,7 @@ def _lexer_for_filename(filename):
 class FileToIndex(dxr.plugins.FileToIndex):
     """Emitter of CSS classes for syntax-highlit regions"""
 
-    def regions_by_line(self):
+    def regions(self):
         lexer = _lexer_for_filename(basename(self.path))
         if lexer:
             for index, token, text in lexer.get_tokens_unprocessed(self.contents):

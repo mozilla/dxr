@@ -93,11 +93,19 @@ Here are the options that can live in the ``[DXR]`` section:
 
 ``es_index``
     A ``format()``-style template for coming up with elasticsearch index
-    names. The variable ``{tree}`` will be replaced with the tree name, and
-    ``{unique}`` will be replaced with a unique ID to keep a tree's new index
-    from colliding with the old one. The unique ID includes a random number
-    and the build hosts's MAC address so errant concurrent builds on different
-    hosts at least won't clobber each other.
+    names. The variable ``{tree}`` will be replaced with the tree name,
+    ``{format}`` will be replaced with the format version, and ``{unique}``
+    will be replaced with a unique ID to keep a tree's new index from
+    colliding with the old one. The unique ID includes a random number and the
+    build hosts's MAC address so errant concurrent builds on different hosts
+    at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
+
+``es_alias``
+    A ``format()``-style template for coming up with elasticsearch alias
+    names. These live in the same namespace as indices, so don't pave over any
+    index name you're already using. The variables ``{format}`` and ``{tree}``
+    will be substituted, and their meanings are as in ``es_index``. Default:
+    ``dxr_{format}_{tree}``.
 
 (Refer to the Plugin Configuration section for plugin keys available
 here).

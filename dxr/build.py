@@ -4,12 +4,11 @@ from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
 from heapq import merge
-from itertools import chain, groupby, izip_longest
 import json
 from operator import itemgetter
 import os
-from os import stat
-from os.path import dirname, islink
+from os import stat, mkdir
+from os.path import dirname, islink, relpath, join
 import shutil
 import subprocess
 import sys
@@ -19,19 +18,20 @@ from warnings import warn
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from funcy import merge, chunks
+from funcy import merge, chunks, first, suppress
 from jinja2 import Markup
 from ordereddict import OrderedDict
-from pyelasticsearch import ElasticSearch
+from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
-from dxr.config import Config
+from dxr.config import Config, FORMAT
 from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
-import dxr.mime
-from dxr.mime import is_text
+from dxr.mime import is_text, icon
+from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
 from dxr.query import filter_menu_items
 from dxr.utils import (connect_db, load_template_env, open_log, browse_url,
-                       deep_update)
+                       deep_update, append_update, append_update_by_line,
+                       append_by_line)
 
 try:
     from itertools import compress
@@ -75,7 +75,8 @@ def linked_pathname(path, tree_name):
 
 
 def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
-    """Build a DXR instance.
+    """Build a DXR instance, point the ES aliases to the new indices, and
+    delete the old ones.
 
     :arg config_path: The path to a config file
     :arg nb_jobs: The number of parallel jobs to pass into ``make``. Defaults
@@ -84,21 +85,6 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         file.
 
     """
-    def new_pool():
-        return ProcessPoolExecutor(max_workers=tree.config.nb_jobs)
-
-    def farm_out(method_name):
-        """Farm out a call to all tree indexers across a process pool.
-
-        Return the tree indexers, including anything mutations the method call
-        might have made.
-
-        Show progress while doing it.
-
-        """
-        futures = [pool.submit(save_scribbles, ti, method_name) for ti in tree_indexers]
-        return [ti for ti in show_progress(futures, message='Running %s.' % method_name)]
-
     # Load configuration file
     # (this will abort on inconsistencies)
     overrides = {}
@@ -116,40 +102,115 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         # Build everything if no tree is provided
         trees = config.trees
 
-    skip_indexing = 'index' in config.skip_stages
+    es = ElasticSearch(config.es_hosts)
 
     print " - Generating target folder."
-    create_skeleton(config, skip_indexing)
+    create_skeleton(config)
 
-    for tree in trees:
-        print "Processing tree '%s'." % tree.name
+    # Index the trees, collecting (tree name, alias, index name):
+    indices = [(tree.name,
+                config.es_alias.format(format=FORMAT, tree=tree.name),
+                index_tree(tree, es, verbose=verbose)) for tree in trees]
 
-        # Note starting time
-        start_time = datetime.now()
+    # Lay down config file:
+    _fill_and_write_template(
+        load_template_env(config.temp_folder),
+        'config.py.jinja',
+        os.path.join(config.target_folder, 'config.py'),
+        dict(trees=repr(OrderedDict((t.name, t.description)
+                                    for t in config.trees)),
+             wwwroot=repr(config.wwwroot),
+             generated_date=repr(config.generated_date),
+             directory_index=repr(config.directory_index),
+             default_tree=repr(config.default_tree),
+             filter_language=repr(config.filter_language),
+             es_hosts=repr(config.es_hosts),
+             es_aliases=repr(dict((name, alias) for
+                                  name, alias, index in indices))))
 
-        # Create folders (delete if exists)
-        ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
-        ensure_folder(tree.object_folder,                    # Object folder (user defined!)
-            tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
-        ensure_folder(tree.temp_folder, not skip_indexing)   # <config.temp_folder>/<tree.name>
-                                                             # (or user defined)
-        ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
-                                                             # (or user defined)
-        # Temporary folders for plugins
-        ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
-        for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-            ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+    # Make new indices live:
+    for _, alias, index in indices:
+        swap_alias(alias, index, es)
 
-        tree_indexers = [p.tree_to_index(tree) for p in
-                         tree.enabled_plugins.values() if p.tree_to_index]
+    # Deploy script should immediately move new FS dirs into place. There's a
+    # little race here; it will go away once we dispense with FS artifacts.
 
-        if skip_indexing:
-            print " - Skipping indexing (due to 'index' in 'skip_stages')"
-        else:
-            es = ElasticSearch(config.es_hosts)
 
-            # Make a new index with a semi-random name, having the tree name and format version in it. The prefix should come out of the tree config, falling back to the global config: dxr_hot_prod_{tree}_{whatever}.
-            index = config.es_index.format(tree=tree.name, unique=uuid1())
+def swap_alias(alias, index, es):
+    """Point an ES alias to a new index, and delete the old index.
+
+    :arg index: The new index name
+
+    """
+    # Get the index the alias currently points to.
+    old_index = first(es.aliases(alias))
+
+    # Make the alias point to the new index.
+    removal = ([{'remove': {'index': old_index, 'alias': alias}}] if
+               old_index else [])
+    es.update_aliases(removal + [{'add': {'index': index, 'alias': alias}}])  # atomic
+
+    # Delete the old index.
+    if old_index:
+        es.delete_index(old_index)
+
+
+def index_tree(tree, es, verbose=False):
+    """Index a single tree into ES and the FS, and return the name of the new
+    ES index.
+
+    """
+    def new_pool():
+        return ProcessPoolExecutor(max_workers=tree.config.nb_jobs)
+
+    def farm_out(method_name):
+        """Farm out a call to all tree indexers across a process pool.
+
+        Return the tree indexers, including anything mutations the method call
+        might have made.
+
+        Show progress while doing it.
+
+        """
+        futures = [pool.submit(save_scribbles, ti, method_name) for ti in
+                   tree_indexers]
+        return [future.result() for future in
+                show_progress(futures, message='Running %s.' % method_name)]
+
+    print "Processing tree '%s'." % tree.name
+
+    # Note starting time
+    start_time = datetime.now()
+
+    skip_indexing = 'index' in tree.config.skip_stages
+
+    # Create folders (delete if exists)
+    ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
+    ensure_folder(tree.object_folder,                    # Object folder (user defined!)
+        tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
+    ensure_folder(tree.temp_folder, not skip_indexing)   # <config.temp_folder>/<tree.name>
+                                                         # (or user defined)
+    ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
+                                                         # (or user defined)
+    # Temporary folders for plugins
+    ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
+    for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
+        ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+
+    tree_indexers = [p.tree_to_index(tree) for p in
+                     tree.enabled_plugins.itervalues() if p.tree_to_index]
+
+    if skip_indexing:
+        print " - Skipping indexing (due to 'index' in 'skip_stages')"
+    else:
+        # Make a new index with a semi-random name, having the tree name
+        # and format version in it. TODO: The prefix should come out of
+        # the tree config, falling back to the global config:
+        # dxr_hot_prod_{tree}_{whatever}.
+        index = tree.config.es_index.format(format=FORMAT,
+                                            tree=tree.name,
+                                            unique=uuid1())
+        try:
             es.create_index(
                 index,
                 settings={
@@ -157,11 +218,11 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
                         'index': {
                             'number_of_shards': 10,  # wild guess
                             'number_of_replicas': 1  # fairly arbitrary
-                        }
+                        },
+                        # Default analyzers and mappings are in the core plugin.
+                        'analysis': reduce(deep_update, (p.analyzers for p in
+                                           tree.enabled_plugins.values()), {})
                     },
-                    # Default analyzers and mappings are in the core plugin.
-                    'analysis': reduce(deep_update, (p.analyzers for p in
-                                       tree.enabled_plugins.values()), {}),
                     'mappings': reduce(deep_update, (p.mappings for p in
                                        tree.enabled_plugins.values()), {})
                 })
@@ -179,11 +240,18 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
             with new_pool() as pool:
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool)
+        except Exception:
+            # If anything went wrong, delete the index, because we're not
+            # going to have a way of returning its name if we raise an
+            # exception.
+            with suppress(ElasticHttpNotFoundError):
+                es.delete_index(index)
+            raise
 
-            # Remember the semi-random index name.
-
-        print " - Finished processing '%s' in %s." % (tree.name,
+    print " - Finished processing '%s' in %s." % (tree.name,
                                                       datetime.now() - start_time)
+
+    return index
 
     # For each tree, flop the ES alias for this format version (pulled from the config) to the new index, and delete the old one first.
 
@@ -212,31 +280,15 @@ def save_scribbles(obj, method):
     return obj
 
 
-def create_skeleton(config, skip_indexing):
+def create_skeleton(config):
     """Make the non-tree-specific FS artifacts needed to do the build."""
+
+    skip_indexing = 'index' in config.skip_stages
 
     # Create config.target_folder (if not exists)
     ensure_folder(config.target_folder, False)
     ensure_folder(config.temp_folder, not skip_indexing)
     ensure_folder(config.log_folder, not skip_indexing)
-
-    jinja_env = load_template_env(config.temp_folder)
-
-    # We don't want to load config file on the server, so we just write all the
-    # setting into the config.py script, simple as that.
-    _fill_and_write_template(
-        jinja_env,
-        'config.py.jinja',
-        os.path.join(config.target_folder, 'config.py'),
-        dict(trees=repr(OrderedDict((t.name, t.description)
-                                    for t in config.trees)),
-             wwwroot=repr(config.wwwroot),
-             generated_date=repr(config.generated_date),
-             directory_index=repr(config.directory_index),
-             default_tree=repr(config.default_tree),
-             filter_language=repr(config.filter_language),
-             es_hosts=repr(config.es_hosts),
-             es_index=repr(config.es_index)))
 
     # Create jinja cache folder in target folder
     ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
@@ -255,7 +307,7 @@ def ensure_folder(folder, clean=False):
     if clean and os.path.isdir(folder):
         shutil.rmtree(folder, False)
     if not os.path.isdir(folder):
-        os.mkdir(folder)
+        mkdir(folder)
 
 
 def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
@@ -291,46 +343,58 @@ def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex
         contents = source_file.read()  # always str
     if is_text(contents):
         try:
-            contents = contents.decode(source_encoding)
+            contents = contents.decode(encoding_guess)
         except UnicodeDecodeError:
             pass  # Leave contents as str.
     return contents
 
 
-def unignored_files(folder, ignore_paths, ignore_patterns):
-    """Return an iterable of absolute paths to unignored source tree files.
+def unignored(folder, ignore_paths, ignore_patterns, want_folders=False):
+    """Return an iterable of absolute paths to unignored source tree files or
+    the folders that contain them.
 
     Returned files include both binary and text ones.
 
+    :arg want_folders: If falsey, return files. If truthy, return folders
+        instead.
+
     """
+    def raise_(exc):
+        raise exc
+
     # TODO: Expose a lot of pieces of this as routines plugins can call.
-    for root, folders, files in os.walk(folder, topdown=True):
+    for root, folders, files in os.walk(folder, topdown=True, onerror=raise_):
         # Find relative path
         rel_path = relpath(root, folder)
         if rel_path == '.':
             rel_path = ''
 
-        for f in files:
-            # Ignore file if it matches an ignore pattern
-            if any(fnmatchcase(f, e) for e in ignore_patterns):
-                continue  # Ignore the file.
+        if not want_folders:
+            for f in files:
+                # Ignore file if it matches an ignore pattern
+                if any(fnmatchcase(f, e) for e in ignore_patterns):
+                    continue  # Ignore the file.
 
-            path = join(rel_path, f)
+                path = join(rel_path, f)
 
-            # Ignore file if its path (relative to the root) matches an ignore path
-            if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
-                continue  # Ignore the file.
+                # Ignore file if its path (relative to the root) matches an
+                # ignore path.
+                if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
+                    continue  # Ignore the file.
 
-            yield join(root, f)
+                yield join(root, f)
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
         folders[:] = _unignored_folders(
             folders, rel_path, ignore_patterns, ignore_paths)
+        if want_folders:
+            for f in folders:
+                yield join(root, f)
 
 
 def index_file(tree, tree_indexers, path, es, index, jinja_env):
-    """Index a single file into ES and wherever else.
+    """Index a single file into ES, and build a static HTML representation of it.
 
     For the moment, we execute plugins in series, figuring that we have plenty
     of files to keep our processors busy in most trees that take very long. I'm
@@ -353,29 +417,27 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
             raise
 
     rel_path = relpath(path, tree.source_folder)
-    is_text = isinstance(unicode, contents)
+    is_text = isinstance(contents, unicode)
 
     num_lines = len(contents.splitlines())
     needles = {}
-    links = []
-    needles_by_line = [{}] * num_lines
-    refs_by_line = [[]] * num_lines
-    regions_by_line = [[]] * num_lines
-    annotations_by_line = [[]] * num_lines
+    links, refs, regions = [], [], []
+    needles_by_line = [{} for _ in xrange(num_lines)]
+    annotations_by_line = [[] for _ in xrange(num_lines)]
 
     for tree_indexer in tree_indexers:
         file_to_index = tree_indexer.file_to_index(rel_path, contents)
         if file_to_index.is_interesting():
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
-            links.append(file_to_index.links())
+            links.extend(file_to_index.links())
+            refs.extend(file_to_index.refs())
+            regions.extend(file_to_index.regions())
 
             # Per-line stuff:
             if is_text:
                 append_update_by_line(needles_by_line,
                                       file_to_index.needles_by_line())
-                append_by_line(refs_by_line, file_to_index.refs_by_line())
-                append_by_line(regions_by_line, file_to_index.regions_by_line())
                 append_by_line(annotations_by_line,
                                file_to_index.annotations_by_line())
 
@@ -389,17 +451,22 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     # multi-doctype bulk indexing.
     file_info = stat(path)
     es.index(index,
-             FILE,
+             FILE_DOCTYPE,
              {'path': rel_path,
               'size': file_info.st_size,
               'modified': datetime.fromtimestamp(file_info.st_mtime)})
 
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text:
-        es.bulk_index(index, LINE, (merge(n, needles) for n in needles_by_line), id_field=None)
+        es.bulk_index(index,
+                      LINE_DOCTYPE,
+                      (merge(n, needles) for n in needles_by_line),
+                      id_field=None)
 
     # Render some HTML:
-    if 'html' not in tree.config.skip_stages:
+    # TODO: Make this no longer conditional on is_text, and come up with a nice
+    # way to show binary files, especially images.
+    if is_text and 'html' not in tree.config.skip_stages:
         _fill_and_write_template(
             jinja_env,
             'file.html',
@@ -421,9 +488,9 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              'name': os.path.basename(rel_path),
 
              # Someday, it would be great to stream this and not concretize the
-             # whole thing in RAM. The template will have to quit looping through
-             # the whole thing 3 times.
-             'lines': zip(build_lines(contents, refs_by_line, regions_by_line),
+             # whole thing in RAM. The template will have to quit looping
+             # through the whole thing 3 times.
+             'lines': zip(build_lines(contents, refs, regions),
                           annotations_by_line) if is_text else [],
 
              'is_text': is_text,
@@ -431,7 +498,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              'sections': build_sections(links)})
 
 
-def index_chunk(tree, tree_indexers, paths, index):
+def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
     """Index a pile of files.
 
     This is the entrypoint for indexer pool workers.
@@ -444,30 +511,46 @@ def index_chunk(tree, tree_indexers, paths, index):
         for path in paths:
             index_file(tree, tree_indexers, path, es, index, jinja_env)
     except Exception as exc:
-        type, value, traceback = exc_info()
-        return format_exc(), type, value, file_id, path
+        if swallow_exc:
+            type, value, traceback = exc_info()
+            return format_exc(), type, value, path
+        else:
+            raise
 
 
 def index_files(tree, tree_indexers, index, pool):
-    """Build the ``files`` and ``lines`` tables, the trigram index, and the
-    HTML folder listings.
+    """Divide source files into groups, and send them out to be indexed."""
 
-    """
-    create_static_folders()  # Lay down all the containing folders so we can generate the file HTML in parallel.
+    def path_chunks(tree):
+        """Return an iterable of worker-sized iterables of paths."""
+        return chunks(500, unignored(tree.source_folder,
+                                     tree.ignore_paths,
+                                     tree.ignore_patterns))
 
-    unignored = unignored_files(tree.source_folder,
-                                tree.ignore_paths,
-                                tree.ignore_patterns)
-    futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index) for
-               paths in chunks(500, unignored)]
-    for future in show_progress(futures, message=' - Indexing files.'):
-        result = future.result()
-        if result:
-            formatted_tb, type, value, id, path = result
-            print 'A worker failed while htmlifying %s:' % path
-            print formatted_tb
-            # Abort everything if anything fails:
-            raise type, value  # exits with non-zero
+    # Lay down all the containing folders so we can generate the file HTML in
+    # parallel:
+    for folder in unignored(
+            tree.source_folder,
+            tree.ignore_paths,
+            tree.ignore_patterns,
+            want_folders=True):
+        mkdir(folder)
+
+    if tree.config.disable_workers:
+        for paths in path_chunks(tree):
+            result = index_chunk(tree, tree_indexers, paths, index,
+                                 swallow_exc=False)
+    else:
+        futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index,
+                               swallow_exc=True) for paths in path_chunks(tree)]
+        for future in show_progress(futures, message=' - Indexing files.'):
+            result = future.result()
+            if result:
+                formatted_tb, type, value, path = result
+                print 'A worker failed while indexing %s:' % path
+                print formatted_tb
+                # Abort everything if anything fails:
+                raise type, value  # exits with non-zero
 
 
 # TODO: Move to request time, pulling from FILE docs.
@@ -496,7 +579,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
         # Get file path on disk
         path = os.path.join(tree.source_folder, folder, f)
         file_info = stat(path)
-        files.append((dxr.mime.icon(path),
+        files.append((icon(path),
                       f,
                       datetime.fromtimestamp(file_info.st_mtime),
                       file_info.st_size,
@@ -556,7 +639,7 @@ def build_tree(tree, tree_indexers, verbose):
     with open_log(tree, 'build.log', verbose) as log:
         print "Building the '%s' tree" % tree.name
         r = subprocess.call(
-            tree.build_command.replace('$jobs', tree.config.nb_jobs),
+            tree.build_command.replace('$jobs', str(tree.config.nb_jobs)),
             shell   = True,
             stdout  = log,
             stderr  = log,
@@ -911,7 +994,7 @@ def nesting_order((point, is_start, payload)):
                              -payload.sort_order)
 
 
-def build_lines(text, refs_by_line, regions_by_line):
+def build_lines(text, refs, regions):
     """Yield lines of Markup, with links and syntax coloring applied.
 
     :arg text: Unicode text of the file to htmlify. ``build_lines`` may not be
@@ -921,7 +1004,7 @@ def build_lines(text, refs_by_line, regions_by_line):
     # Plugins return unicode offsets, not byte ones.
 
     # Get start and endpoints of intervals:
-    tags = list(tag_boundaries(refs_by_line, regions_by_line))
+    tags = list(tag_boundaries(refs, regions))
 
     tags.extend(line_boundaries(text))
     tags.sort(key=nesting_order)  # balanced_tags undoes this, but we tolerate

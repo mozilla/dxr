@@ -3,6 +3,8 @@ enabled_plugins     = pygmentize clang
 temp_folder         = PWD/temp
 target_folder       = PWD/target
 nb_jobs             = 4
+es_index            = dxr_test_{format}_{tree}_{unique}
+es_alias            = dxr_test_{format}_{tree}
 
 [code]
 source_folder       = PWD/code

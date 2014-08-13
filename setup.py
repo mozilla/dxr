@@ -31,6 +31,7 @@ setup(
                       'more-itertools>=2.2,<3.0',
                       'ordereddict>=1.1,<2.0',
                       'parsimonious==0.5',
+                      'pyelasticsearch==0.7.1',
                       'Pygments>=1.6,<2.0',
                       'requests>=1.0,<2.0',
                       'funcy>=1.0,<2.0',
