@@ -24,7 +24,6 @@ from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
 from dxr.config import Config, FORMAT
-from dxr.plugins import load_htmlifiers, load_indexers
 import dxr.languages
 from dxr.mime import is_text, icon
 from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
