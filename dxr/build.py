@@ -8,7 +8,7 @@ import json
 from operator import itemgetter
 import os
 from os import stat, mkdir
-from os.path import dirname, islink, relpath, join
+from os.path import dirname, islink, relpath, join, split
 import shutil
 import subprocess
 import sys
@@ -67,8 +67,8 @@ def linked_pathname(path, tree_name):
         return components
 
     for idx in range(1, len(dirs)+1):
-        subtree_path = os.path.join('/', tree_name, 'source', *dirs[:idx])
-        subtree_name = os.path.split(subtree_path)[1] or tree_name
+        subtree_path = join('/', tree_name, 'source', *dirs[:idx])
+        subtree_name = split(subtree_path)[1] or tree_name
         components.append((subtree_path, subtree_name))
 
     return components
@@ -116,7 +116,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     _fill_and_write_template(
         load_template_env(config.temp_folder),
         'config.py.jinja',
-        os.path.join(config.target_folder, 'config.py'),
+        join(config.target_folder, 'config.py'),
         dict(trees=repr(OrderedDict((t.name, t.description)
                                     for t in config.trees)),
              wwwroot=repr(config.wwwroot),
@@ -193,9 +193,9 @@ def index_tree(tree, es, verbose=False):
     ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
                                                          # (or user defined)
     # Temporary folders for plugins
-    ensure_folder(os.path.join(tree.temp_folder, 'plugins'), not skip_indexing)
+    ensure_folder(join(tree.temp_folder, 'plugins'), not skip_indexing)
     for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-        ensure_folder(os.path.join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+        ensure_folder(join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
 
     tree_indexers = [p.tree_to_index(tree) for p in
                      tree.enabled_plugins.itervalues() if p.tree_to_index]
@@ -291,11 +291,11 @@ def create_skeleton(config):
     ensure_folder(config.log_folder, not skip_indexing)
 
     # Create jinja cache folder in target folder
-    ensure_folder(os.path.join(config.target_folder, 'jinja_dxr_cache'))
+    ensure_folder(join(config.target_folder, 'jinja_dxr_cache'))
 
     # TODO: Make open-search.xml once we go to request-time rendering.
 
-    ensure_folder(os.path.join(config.target_folder, 'trees'))
+    ensure_folder(join(config.target_folder, 'trees'))
 
 
 def ensure_folder(folder, clean=False):
@@ -321,7 +321,7 @@ def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
     """
     for folder in folders:
         if not any(fnmatchcase(folder, p) for p in ignore_patterns):
-            folder_path = '/' + os.path.join(source_path, folder).replace(os.sep, '/') + '/'
+            folder_path = '/' + join(source_path, folder).replace(os.sep, '/') + '/'
             if not any(fnmatchcase(folder_path, p) for p in ignore_paths):
                 yield folder
 
@@ -557,7 +557,7 @@ def index_files(tree, tree_indexers, index, pool):
 def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     """Build an HTML index file for a single folder."""
     # Create the subfolder if it doesn't exist:
-    ensure_folder(os.path.join(tree.target_folder, folder))
+    ensure_folder(join(tree.target_folder, folder))
 
     # Build the folder listing:
     # Name is either basename (or if that is "" name of tree)
@@ -566,9 +566,9 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     # Generate list of folders and their mod dates:
     folders = [('folder',
                 f,
-                datetime.fromtimestamp(stat(os.path.join(tree.source_folder,
-                                                         folder,
-                                                         f)).st_mtime),
+                datetime.fromtimestamp(stat(join(tree.source_folder,
+                                                 folder,
+                                                 f)).st_mtime),
                 # TODO: DRY with Flask route. Use url_for:
                 _join_url(tree.name, 'source', folder, f))
                for f in indexed_folders]
@@ -577,7 +577,7 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
     files = []
     for f in indexed_files:
         # Get file path on disk
-        path = os.path.join(tree.source_folder, folder, f)
+        path = join(tree.source_folder, folder, f)
         file_info = stat(path)
         files.append((icon(path),
                       f,
@@ -587,9 +587,9 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
 
     # Lay down the HTML:
     jinja_env = load_template_env(tree.config.temp_folder)
-    dst_path = os.path.join(tree.target_folder,
-                            folder,
-                            tree.config.directory_index)
+    dst_path = join(tree.target_folder,
+                    folder,
+                    tree.config.directory_index)
 
     _fill_and_write_template(
         jinja_env,
