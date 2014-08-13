@@ -18,7 +18,7 @@ from warnings import warn
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from funcy import merge, chunks, first
+from funcy import merge, chunks, first, suppress
 from jinja2 import Markup
 from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
@@ -244,10 +244,8 @@ def index_tree(tree, es, verbose=False):
             # If anything went wrong, delete the index, because we're not
             # going to have a way of returning its name if we raise an
             # exception.
-            try:
+            with suppress(ElasticHttpNotFoundError):
                 es.delete_index(index)
-            except ElasticHttpNotFoundError:
-                pass
             raise
 
     print " - Finished processing '%s' in %s." % (tree.name,
