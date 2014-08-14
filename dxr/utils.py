@@ -7,7 +7,7 @@ import ctypes
 # different version, will fail to load. If you're having trouble getting
 # trilite to load, make sure you're not importing sqlite3 beforehand. Afterward
 # is fine.
-ctypes.CDLL('libtrilite.so').load_trilite_extension()
+#ctypes.CDLL('libtrilite.so').load_trilite_extension()
 
 from collections import Mapping
 import os

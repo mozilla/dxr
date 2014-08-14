@@ -1,13 +1,19 @@
 """C and CXX Plugin. (Currently relies on the clang compiler)"""
 
 import os
+import sys
 from operator import itemgetter
-from itertools import chain, izip
+from itertools import chain, izip, ifilter
 
-from funcy import merge, imap, group_by, is_mapping, repeat
+from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
+                   constantly)
 
 from dxr import plugins
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
+from dxr.plugins.needles import unsparsify_func
+from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
+                                    namespace_menu, namespace_alias_menu,
+                                    macro_menu, include_menu)
 
 
 PLUGIN_NAME = 'clang'
@@ -18,37 +24,133 @@ __all__ = [
 ]
 
 
+def jump_definition(tree, path, line):
+    """ Add a jump to definition to the menu """
+    url = '{0}/{1}/source/{2}#{3}'.format(
+        tree.config.wwwroot, tree.name, path, line)
+
+    return {
+        'html':   "Jump to definition",
+        'title':  "Jump to the definition in '%s'" % os.path.basename(path),
+        'href':   url,
+        'icon':   'jump'
+    }
+
+
+def _members(condensed, key, id_):
+    """Fetch member {{key}} given a type id."""
+    pred = lambda x: id_ == x['qualname']
+    for props in ifilter(pred, condensed[key]):
+        # Skip nameless things
+        name = props['qualname']
+        (_, line, _), _ = props['span']
+        if not name:
+            continue
+        yield 'method', name, "#%s" % line
+
+
 class FileToIndex(plugins.FileToIndex):
     """C and CXX File Indexer using Clang Plugin."""
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
-        condensed = load_csv(*os.path.split(path))
-        graph = call_graph(condensed, inherit)
-        self._needles, self._needles_by_line = needles(condensed, inherit,
+        self.condensed = load_csv(*os.path.split(path))
+        graph = call_graph(self.condensed, inherit)
+        self._needles, self._needles_by_line = needles(self.condensed, inherit,
                                                        graph)
-        self._refs_by_line = refs(condensed)
-        self._annotations_by_line = annotations(condensed)
 
     def needles(self):
         return self._needles
 
+    @unsparsify_func
     def needles_by_line(self):
         return self._needles_by_line
 
+    @unsparsify_func
     def refs_by_line(self):
-        return self._refs_by_line  # TODO: look at htmlify.py
+        """ Generate reference menus """
+        # We'll need this argument for all queries here
+        # Extents for functions defined here
+        itemgetter2 = lambda x, y: compose(itemgetter(y), itemgetter(x))
+        type_getter = lambda x: compose(chain, dict.values, itemgetter(x))
+        return chain(
+            self._common_ref(create_menu=function_menu,
+                             view=itemgetter2('ref', 'function')),
+            self._common_ref(create_menu=variable_menu,
+                             view=itemgetter2('ref', 'variable')),
+            self._common_ref(create_menu=type_menu,
+                             view=type_getter('type')),
+            self._common_ref(create_menu=type_menu,
+                             view=type_getter('decldef')),
+            self._common_ref(create_menu=type_menu,
+                             view=itemgetter('typedefs')),
+            self._common_ref(create_menu=namespace_menu,
+                             view=itemgetter('namespace')),
+            self._common_ref(create_menu=namespace_alias_menu,
+                             view=itemgetter('namespace_aliases')),
+            self._common_ref(create_menu=macro_menu,
+                             view=itemgetter('macro'),
+                             get_val=itemgetter('text')),
+            self._common_ref(create_menu=include_menu,
+                             view=itemgetter('include'))
+        )
 
+    @unsparsify_func
     def annotations_by_line(self):
-        return self._annotations_by_line  # TODO: look at htmlify.py
+        icon = "background-image: url('{0}/static/icons/warning.png');".format(
+            self.tree.config.wwwroot)
+        getter = itemgetter('msg', 'opt', 'span')
+        for msg, opt, span in imap(getter, self.condensed['warnings']):
+            if opt:
+                msg = "{0}[{1}]".format(msg, opt)
+            annotation = {
+                'title': msg,
+                'class': "note note-warning",
+                'style': icon
+            }
+            yield annotation, span
 
+    def _common_ref(self, create_menu, view, get_val=constantly(None)):
+        for prop in view(self.condensed):
+            start, end = prop['span']
+            menu = create_menu(self.tree, prop)
+            src, line, _ = start
+            if src is not None:
+                menu = jump_definition(self.tree, src, line) + menu
+            yield (start, end, (menu, get_val(prop))), prop['span']
 
-def refs(_):
-    return []
+    def links(self):
+        # For each type add a section with members
 
+        getter = itemgetter('name', 'qualname', 'span', 'kind')
+        for name, tid, span, kind in imap(getter, self.condensed['type']):
+            (_, line, _), _ = span
+            if len(name) == 0:
+                continue
 
-def annotations(_):
-    return []
+            # Make sure we have a sane limitation of kind
+            if kind not in ('class', 'struct', 'enum', 'union'):
+                print >> sys.stderr, "kind '%s' was replaced for 'type'!" % kind
+                kind = 'type'
+
+            links = chain(_members(self.condensed, 'function', tid),
+                          _members(self.condensed, 'variable', tid))
+
+            links = sorted(links, key=itemgetter(1))  # by line
+
+            # Add the outer type as the first link
+            links = [(kind, name, "#%s" % line)] + links
+
+            yield 30, name, links
+
+        # Add all macros to the macro section
+        links = []
+        getter = itemgetter('name', 'span')
+        for name, span in imap(getter, self.condensed['type']):
+            (_, line, _), _ = span
+            links.append(('macro', name, "#%s" % line))
+        if links:
+            yield 100, "Macros", links
 
 
 def pluck2(key1, key2, mappings):
