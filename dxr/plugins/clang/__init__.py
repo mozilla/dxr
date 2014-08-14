@@ -296,7 +296,7 @@ def member_needles(condensed):
 
 
 def _over_needles(condensed, tag, name_key, get_span):
-    return ((('c-overrides', func['override'][name_key]), get_span(func))
+    return ((('c-{0}'.format(tag), func['override'][name_key]), get_span(func))
             for func in condensed['function'] if name_key in func['override'])
 
 def overrides_needles(condensed):
@@ -311,7 +311,7 @@ def overridden_needles(condensed):
     """Return needles of methods which are overridden by the given one."""
     get_span = lambda x: x['override']['span']
     _overriden_needles = partial(_over_needles, condensed=condensed,
-                                 tag='overrides', get_span=get_span)
+                                 tag='overridden', get_span=get_span)
     return chain(_overriden_needles(name_key='name'),
                  _overriden_needles(name_key='qualname'))
 

@@ -52,11 +52,10 @@ def test_function():
         'type': FuncSig(('int**', 'int', 'int'), 'int**'),
         'span': DEFAULT_EXTENT
     })
-
     eq_(csv['function'][1], {
         'name': 'op',
         'qualname': 'add::op()',
-        'type': FuncSig(input=tuple(), output='void'),
+        'type': FuncSig(inputs=tuple(['void']), output='void'),
         'span': DEFAULT_EXTENT,
         'scope': {
             'name': 'add',
