@@ -6,10 +6,11 @@ from dxr.plugins.utils import Extent, Position, FuncSig, Call
 from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
-                               caller_needles, type_needles)
-from dxr.plugins.clang.condense import (get_condensed, build_inhertitance,
+                               caller_needles, type_needles, child_needles,
+                               parent_needles)
+from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
-from dxr.plugins.utils import Extent, Position, Call, FuncSig
+
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
@@ -203,7 +204,7 @@ def test_inheritance():
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
     """)
-    inherit = build_inhertitance(csv)
+    inherit = build_inheritance(csv)
     eq_(inherit, INHERIT)
 
 
@@ -266,15 +267,42 @@ def test_call_needles():
                  calltype='virtual')
         ]
     }
-
-    eq__(callee_needles(fixture),
+    g = call_graph(fixture, {})
+    eq__(callee_needles(g),
          [(('c-callee', 'comb(int **, int, int)'), CALL_EXTENT),
           (('c-callee', 'comb(int **, int, int)'), CALL_EXTENT)])
 
-    eq__(caller_needles(fixture),
+    eq__(caller_needles(g),
          [(('c-called-by', 'main()'), CALL_EXTENT),
           (('c-called-by', 'main()'), CALL_EXTENT)])
 
+
+def test_inherit_needles():
+    csv = get_csv("""
+        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+        impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
+        impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
+        impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
+        type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
+        type,name,"Y",qualname,"Y",loc,"x:0:0",kind,"class",extent,0:0
+        type,name,"W",qualname,"W",loc,"x:0:0",kind,"class",extent,0:0
+        type,name,"Z",qualname,"Z",loc,"x:0:0",kind,"class",extent,0:0
+    """)
+    c_needles = [(('c-child', 'Y'), DEFAULT_EXTENT),
+                 (('c-child', 'Z'), DEFAULT_EXTENT),
+                 (('c-child', 'W'), DEFAULT_EXTENT),
+                 (('c-child', 'W'), DEFAULT_EXTENT),
+                 (('c-child', 'W'), DEFAULT_EXTENT)]
+    eq_(len(list(child_needles(csv, INHERIT))), len(c_needles))
+    eq_(set(child_needles(csv, INHERIT)), set(c_needles))
+
+    p_needles = [(('c-parent', 'X'), DEFAULT_EXTENT),
+                 (('c-parent', 'X'), DEFAULT_EXTENT),
+                 (('c-parent', 'Y'), DEFAULT_EXTENT),
+                 (('c-parent', 'X'), DEFAULT_EXTENT),
+                 (('c-parent', 'Z'), DEFAULT_EXTENT)]
+    eq_(len(list(parent_needles(csv, INHERIT))), len(p_needles))
+    eq_(set(parent_needles(csv, INHERIT)), set(p_needles))
 
 
 def test_type_needles():
