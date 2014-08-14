@@ -44,7 +44,7 @@ def _members(condensed, key, id_):
         # Skip nameless things
         name = props['qualname']
         (_, line, _), _ = props['span']
-        if len(name) == 0:
+        if not name:
             continue
         yield 'method', name, "#%s" % line
 
