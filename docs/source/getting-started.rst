@@ -2,7 +2,13 @@
 Getting Started
 ===============
 
-The fastest path to a working DXR instance is...
+.. note::
+
+    These instructions are suited to trying out DXR to see if you like it. If
+    you plan to contribute code to DXR itself, please see :doc:`development`
+    instead.
+
+The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
 2. Tell DXR how to build it.

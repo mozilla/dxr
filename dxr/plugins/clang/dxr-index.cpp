@@ -459,7 +459,11 @@ public:
       beginRecord("function", d->getLocation());
       recordValue("name", d->getNameAsString());
       recordValue("qualname", getQualifiedName(*d));
+#if CLANG_AT_LEAST(3, 5)
+      recordValue("type", d->getCallResultType().getAsString());
+#else
       recordValue("type", d->getResultType().getAsString());
+#endif
       std::string args("(");
       for (FunctionDecl::param_iterator it = d->param_begin();
           it != d->param_end(); it++) {
@@ -1183,8 +1187,8 @@ protected:
     if (!abs_src) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-        "Source directory '" + args[0] + "' does not exist");
-      D.Report(DiagID);
+        "Source directory '%0' does not exist");
+      D.Report(DiagID) << args[0];
       return false;
     }
     srcdir = abs_src;
@@ -1197,8 +1201,8 @@ protected:
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-        "Output directory '" + output + "' does not exist");
-      D.Report(DiagID);
+        "Output directory '%0' does not exist");
+      D.Report(DiagID) << output;
       return false;
     }
     output = realpath(output.c_str(), NULL);
@@ -1214,8 +1218,8 @@ protected:
     if(!abs_tmpdir){
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-        "Temporary directory '" + output + "' does not exist");
-      D.Report(DiagID);
+        "Temporary directory '%0' does not exist");
+      D.Report(DiagID) << tmpdir;
       return false;
     }
     tmpdir = realpath(tmpdir.c_str(), NULL);

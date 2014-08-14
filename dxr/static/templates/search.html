@@ -16,42 +16,46 @@
   {{ tree_menu(tree_tuples, tree) }}
 
   {% if results|length > 0 %}
-    {%- for icon, path, lines in results -%}
-      <div class="result">
-        <div class="path">
+    <table class="results">
+      <caption class="visually-hidden">Query matches</caption>
+      <thead class="visually-hidden">
+          <th scope="col">Line</th>
+          <th scope="col">Code Snippet</th>
+      </thead>
+      <tbody>
+      {%- for icon, path, lines in results -%}
+        <tr class="result-head">
           {%- set icon_class = icon.split('/')[1] -%}
-          {%- set paths = path.split('/') -%}
-
-          {%- for display_path in paths -%}
-            {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
-            {%- set is_first_or_only = loop.first or paths|length == 1 -%}
-            {%- set is_dir = not loop.last -%}
-            {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
-
-            {%- include 'path_line.html' -%}
-          {%- endfor -%}
-        </div>
-        <table class="result_snippet">
-          <caption class="visually-hidden">Query matches in {{ path }}</caption>
-          <thead class="visually-hidden">
-              <th scope="col">Line</th>
-              <th scope="col">Code Snippet</th>
-          </thead>
-          {% for number, line in lines %}
-          <tbody>
-              <tr>
-                  <td>{{ number }}</td>
-                  <td>
-  <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
-  <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
-  </a>
-                  </td>
-              </tr>
-          </tbody>
-          {% endfor %}
-      </table>
-      {% endfor %}
-      </div>
+          <td class="left-column">
+            <div class="{{icon_class}} icon-container"></div>
+          </td>
+          <td>
+            {%- set paths = path.split('/') -%}
+            {%- for display_path in paths -%}
+              {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
+              {%- set is_first_or_only = loop.first or paths|length == 1 -%}
+              {%- set is_dir = not loop.last -%}
+              {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
+  
+              {%- include 'path_line.html' -%}
+            {%- endfor -%}
+          </td>
+        </tr>
+        {% for number, line in lines %}
+        <tr>
+          <td class="left-column">
+            {{ number }}
+          </td>
+          <td>
+<a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+<code aria-labelledby="{{ number }}">{{ line|safe }}</code>
+</a>
+          </td>
+        </tr>
+        {% endfor %}
+    {% endfor %}
+      </tbody>
+    </table>
   {% else %}
     <p class="no-results">{{ no_results() }}</p>
   {% endif %}

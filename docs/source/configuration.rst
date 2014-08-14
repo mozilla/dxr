@@ -30,9 +30,10 @@ Here are the options that can live in the ``[DXR]`` section:
     Where to put the built :term:`index`. **Required.**
 
 ``temp_folder``
-    Folder for temporary items during indexing. Default: ``/tmp/dxr-temp``.
-    **Recommended** to avoid exceeding the size of the :file:`/tmp` volume
-    and to avoid collisions between concurrent indexing runs
+    The default container for individual tree-specific temp folders. Default:
+    ``/tmp/dxr-temp``. **Recommended** to avoid exceeding the size of the
+    :file:`/tmp` volume and to avoid collisions between concurrent indexing
+    runs
 
 ``directory_index``
     Filename for directory index files in the generated static HTML. Default:
@@ -62,7 +63,7 @@ Here are the options that can live in the ``[DXR]`` section:
     started
 
 ``log_folder``
-    Folder for log files generated during indexing. Default:
+    The default container for individual tree-specific log folders. Default:
     ``<temp_folder>/logs``.
 
 ``nb_jobs``
@@ -146,9 +147,12 @@ are the options describing a tree:
 ``source_folder``
     The folder containing the source code to index. **Required.**
 
+``source_encoding``
+    The Unicode encoding of the tree's source files. Default: ``utf-8``
+
 ``temp_folder``
-    Temporary folder for this tree. Default: ``<global temp_folder>/<tree>``.
-    You generally shouldn't set this.
+    Folder for temporary items made during indexing. Default: ``<global
+    temp_folder>/<tree>``. You generally shouldn't set this.
 
 
 Plugin-Specific Options
