@@ -27,13 +27,13 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-def needle_filter_factory(tag):
+def needle_filter_factory(lang, tag):
     class NeedleFilter(object):
-        name = "{0}-needle".format(tag)
+        name = tag
         domain = LINE
 
         def __init__(self, term):
-            self.term = term
+            self.term = "{0}-{1}".format(lang, term)
 
         def filter(self):
             return {
