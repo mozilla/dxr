@@ -2,12 +2,11 @@ import cgi
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
-from heapq import merge
 import json
-from operator import itemgetter, attrgetter
+from operator import attrgetter
 import os
 from os import stat, mkdir
-from os.path import dirname, islink, relpath, join, split
+from os.path import islink, relpath, join, split
 import shutil
 import subprocess
 import sys
@@ -26,7 +25,7 @@ from dxr.config import Config, FORMAT
 from dxr.mime import is_text, icon
 from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
 from dxr.query import filter_menu_items
-from dxr.utils import (connect_db, load_template_env, open_log, browse_url,
+from dxr.utils import (load_template_env, open_log, browse_url,
                        deep_update, append_update, append_update_by_line,
                        append_by_line)
 
@@ -564,73 +563,6 @@ def index_files(tree, tree_indexers, index, pool, es):
                 print formatted_tb
                 # Abort everything if anything fails:
                 raise type, value  # exits with non-zero
-
-
-# TODO: Move to request time, pulling from FILE docs.
-def build_folder(tree, conn, folder, indexed_files, indexed_folders):
-    """Build an HTML index file for a single folder."""
-    # Create the subfolder if it doesn't exist:
-    ensure_folder(join(tree.target_folder, folder))
-
-    # Build the folder listing:
-    # Name is either basename (or if that is "" name of tree)
-    name = os.path.basename(folder) or tree.name
-
-    # Generate list of folders and their mod dates:
-    folders = [('folder',
-                f,
-                datetime.fromtimestamp(stat(join(tree.source_folder,
-                                                 folder,
-                                                 f)).st_mtime),
-                # TODO: DRY with Flask route. Use url_for:
-                _join_url(tree.name, 'source', folder, f))
-               for f in indexed_folders]
-
-    # Generate list of files:
-    files = []
-    for f in indexed_files:
-        # Get file path on disk
-        path = join(tree.source_folder, folder, f)
-        file_info = stat(path)
-        files.append((icon(path),
-                      f,
-                      datetime.fromtimestamp(file_info.st_mtime),
-                      file_info.st_size,
-                      _join_url(tree.name, 'source', folder, f)))
-
-    # Lay down the HTML:
-    jinja_env = load_template_env(tree.config.temp_folder)
-    dst_path = join(tree.target_folder,
-                    folder,
-                    tree.config.directory_index)
-
-    _fill_and_write_template(
-        jinja_env,
-        'folder.html',
-        dst_path,
-        {# Common template variables:
-         'wwwroot': tree.config.wwwroot,
-         'tree': tree.name,
-         'tree_tuples': [(t.name,
-                          browse_url(t.name, tree.config.wwwroot, folder),
-                          t.description)
-                         for t in tree.config.sorted_tree_order],
-         'generated_date': tree.config.generated_date,
-         'paths_and_names': linked_pathname(folder, tree.name),
-         'filters': filter_menu_items(tree.config.filter_language),
-         # Autofocus only at the root of each tree:
-         'should_autofocus_query': folder == '',
-
-         # Folder template variables:
-         'name': name,
-         'path': folder,
-         'folders': folders,
-         'files': files})
-
-
-def _join_url(*args):
-    """Join URL path segments with "/", skipping empty segments."""
-    return '/'.join(a for a in args if a)
 
 
 def _fill_and_write_template(jinja_env, template_name, out_path, vars):
