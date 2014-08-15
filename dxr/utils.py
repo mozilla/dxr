@@ -10,6 +10,7 @@ import ctypes
 #ctypes.CDLL('libtrilite.so').load_trilite_extension()
 
 from collections import Mapping
+from datetime import datetime
 import os
 from os import dup
 from os.path import join, dirname
@@ -176,3 +177,8 @@ def append_by_line(dest_lists, list_per_line):
     for dest_list, source_list in izip(dest_lists, list_per_line):
         dest_list.extend(source_list)
     return dest_lists
+
+
+def decode_es_datetime(es_datetime):
+    """Turn an elasticsearch datetime into a datetime object."""
+    return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S')

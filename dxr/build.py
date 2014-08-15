@@ -1,11 +1,10 @@
-from codecs import getdecoder
 import cgi
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
 from heapq import merge
 import json
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 import os
 from os import stat, mkdir
 from os.path import dirname, islink, relpath, join, split
@@ -24,7 +23,6 @@ from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
 from dxr.config import Config, FORMAT
-import dxr.languages
 from dxr.mime import is_text, icon
 from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
 from dxr.query import filter_menu_items
@@ -117,7 +115,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
         'config.py.jinja',
         join(config.target_folder, 'config.py'),
         dict(trees=repr(OrderedDict((t.name, t.description)
-                                    for t in config.trees)),
+                                    for t in sorted(config.trees,
+                                                    key=attrgetter('name')))),
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
@@ -238,7 +237,7 @@ def index_tree(tree, es, verbose=False):
             # Post-build, and index files:
             with new_pool() as pool:
                 tree_indexers = farm_out('post_build')
-                index_files(tree, tree_indexers, index, pool)
+                index_files(tree, tree_indexers, index, pool, es)
         except Exception:
             # If anything went wrong, delete the index, because we're not
             # going to have a way of returning its name if we raise an
@@ -449,11 +448,17 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     # TODO: Merge with the bulk_index below when pyelasticsearch supports
     # multi-doctype bulk indexing.
     file_info = stat(path)
-    es.index(index,
-             FILE_DOCTYPE,
-             {'path': rel_path,
-              'size': file_info.st_size,
-              'modified': datetime.fromtimestamp(file_info.st_mtime)})
+    folder_name, file_name = split(rel_path)
+
+    if is_text:  # conditional until we figure out how to display binary files
+        es.index(index,
+                 FILE_DOCTYPE,
+                 {'path': rel_path,
+                  'folder': folder_name,
+                  'name': file_name,
+                  'size': file_info.st_size,
+                  'modified': datetime.fromtimestamp(file_info.st_mtime),
+                  'is_folder': False})
 
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text:
@@ -517,7 +522,7 @@ def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
             raise
 
 
-def index_files(tree, tree_indexers, index, pool):
+def index_files(tree, tree_indexers, index, pool, es):
     """Divide source files into groups, and send them out to be indexed."""
 
     def path_chunks(tree):
@@ -528,6 +533,7 @@ def index_files(tree, tree_indexers, index, pool):
 
     # Lay down all the containing folders so we can generate the file HTML in
     # parallel:
+#    with es.bulk_indexing(doctype=FILE_DOCTYPE, index=, size=100) as indexer:
     for folder in unignored(
             tree.source_folder,
             tree.ignore_paths,
@@ -535,6 +541,13 @@ def index_files(tree, tree_indexers, index, pool):
             want_folders=True):
         rel_path = relpath(folder, tree.source_folder)
         mkdir(join(tree.target_folder, rel_path))
+        superfolder_path, folder_name = split(rel_path)
+#        indexer.index({
+        es.index(index, FILE_DOCTYPE, {
+            'path': rel_path,
+            'folder': superfolder_path,
+            'name': folder_name,
+            'is_folder': True})
 
     if tree.config.disable_workers:
         for paths in path_chunks(tree):

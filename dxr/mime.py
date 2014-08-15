@@ -1,13 +1,10 @@
 from os.path import splitext
 
-# Current implementation is very simple, if utf-8 decoding works we declare it
-# text, otherwise we say it's binary.
-# To find an icon we file extension, ultimately we use libmagic and resolve
-# mimetypes to icons.
 
 def icon(path):
+    """Return the basename (no extension) of the icon file to use for a path."""
     root, ext = splitext(path)
-    return "mimetypes/" + ext_map.get(ext[1:], "unknown")
+    return ext_map.get(ext[1:], 'unknown')
 
 
 def is_text(data):

@@ -6,7 +6,7 @@
 
 {% block site_css %}
   {{ super() }}
-  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{{ url_for('static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
 {% set state_eof = True %}
@@ -34,23 +34,12 @@
       </tr>
     </thead>
     <tbody>
-      {% for icon, name, modified, relative_url in folders %}
-      <tr>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}" class="folder-icon">{{ name }}/</a></td>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ modified.strftime("%Y-%b-%d %H:%m") }}</a></td>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}">-</a></td>
-      </tr>
-      {% endfor %}
-
-      {% for icon, name, modified, size, relative_url in files %}
-        {%- set icon_class = icon.split('/')[1] -%}
-      <tr>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}"
-               class="icon {{icon_class}}">
-               {{ name }}</a></td>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ modified.strftime("%Y-%b-%d %H:%m") }}</a></td>
-        <td><a href="{{ wwwroot }}/{{ relative_url }}">{{ size|filesizeformat }}</a></td>
-      </tr>
+      {% for icon, name, modified, size, relative_url in files_and_folders %}
+        <tr>
+          <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
+          <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
+          <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>

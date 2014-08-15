@@ -8,6 +8,8 @@ from dxr.plugins import FILE, LINE
 
 
 mappings = {
+    # We also insert entries here for folders. This gives us folders in dir
+    # listings and the ability to find matches in folder pathnames.
     FILE: {
         '_all': {
             'enabled': False
@@ -16,7 +18,7 @@ mappings = {
             # FILE filters query this. It supports globbing via JS regex script.
             'path': {  # path/to/a/folder/filename.cpp
                 'type': 'string',
-                'index': 'no',  # support JS source fetching but not Wildcard queries
+                'index': 'not_analyzed',  # support JS source fetching & sorting
                 'fields': {
                     'trigrams': {
                         'type': 'string',
@@ -24,13 +26,28 @@ mappings = {
                     }
                 }
             },
-            'size': {
+
+            # Folder listings query by folder and then display filename, size,
+            # and mod date.
+            'folder': {  # path/to/a/folder
+                'type': 'string',
+                'index': 'not_analyzed'
+            },
+
+            'name': {  # filename.cpp or leaf_folder (for sorting and display)
+                'type': 'string',
+                'index': 'not_analyzed'
+            },
+            'size': {  # not present for folders
                 'type': 'integer',  # bytes
                 'index': 'no'
             },
-            'modified': {
+            'modified': {  # not present for folders
                 'type': 'date',
                 'index': 'no'
+            },
+            'is_folder': {
+                'type': 'boolean'
             }
         }
     },
