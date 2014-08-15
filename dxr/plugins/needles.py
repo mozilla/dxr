@@ -47,12 +47,13 @@ def span_to_lines((val, span)):
 
     """
     if span.end.row == span.start.row:
-        yield ((val, (span.start.col, span.end.col)), span.start.row)
+        yield (val, (span.start.col, span.end.col)), span.start.row
 
     elif span.end.row < span.start.row:
-        pass
+        raise UnOrderedRowError
+
     else:
-        yield ((val, (span.start.col, None)), span.start.row)
+        yield (val, (span.start.col, None)), span.start.row
 
         # Really with we could use yield from
         for row in xrange(span.start.row + 1, span.end.row):
@@ -60,3 +61,6 @@ def span_to_lines((val, span)):
 
         yield ((val, (0, span.end.col)), span.end.row)
 
+
+class UnOrderedRowError(Exception):
+    """Raised iff the end.row < start.row."""
