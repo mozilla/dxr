@@ -533,7 +533,8 @@ def index_files(tree, tree_indexers, index, pool):
             tree.ignore_paths,
             tree.ignore_patterns,
             want_folders=True):
-        mkdir(folder)
+        rel_path = relpath(folder, tree.source_folder)
+        mkdir(join(tree.target_folder, rel_path))
 
     if tree.config.disable_workers:
         for paths in path_chunks(tree):
