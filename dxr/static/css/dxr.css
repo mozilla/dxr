@@ -175,6 +175,9 @@ td pre code {
 code a {
     cursor: pointer;
 }
+.code code a {
+    cursor: context-menu;
+}
 mark {
     position: relative;
     padding: .5rem;
@@ -269,7 +272,6 @@ mark {
 }
 .context-menu a {
     display: block;
-    padding: .4rem;
     text-decoration: none;
 }
 .context-menu li:first-child a:hover {
@@ -439,7 +441,6 @@ mark {
 .panel section a {
     display: inline-block;
     background-color: #fff;
-    padding: .3rem .5rem .3rem 1.5rem;
     width: 100%;
 }
 .panel section a:hover {
