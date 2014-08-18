@@ -101,7 +101,7 @@ class FileToIndex(plugins.FileToIndex):
         icon = "background-image: url('{0}/static/icons/warning.png');".format(
             self.tree.config.wwwroot)
         getter = itemgetter('msg', 'opt', 'span')
-        for msg, opt, span in imap(getter, self.condensed['warnings']):
+        for msg, opt, span in imap(getter, self.condensed.get('warnings', [])):
             if opt:
                 msg = "{0}[{1}]".format(msg, opt)
             annotation = {
