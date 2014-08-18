@@ -15,7 +15,7 @@ from dxr.plugins.needles import unsparsify_func
 from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
                                     namespace_menu, namespace_alias_menu,
                                     macro_menu, include_menu)
-from dxr.plugins.utils import needle_filter_factory
+from dxr.plugins.clang.filters import *
 
 
 PLUGIN_NAME = 'clang'
@@ -380,26 +380,4 @@ class TreeToIndex(plugins.TreeToIndex):
         return FileToIndex(path, contents, self.tree, self._inherit)
 
 
-c_needle_filter_factory = partial(needle_filter_factory, 'c')
-
-
-FunctionFilter = c_needle_filter_factory('function')
-FunctionRefFilter = c_needle_filter_factory('function-ref')
-FunctionDeclFilter = c_needle_filter_factory('function-decl')
-TypeRef = c_needle_filter_factory('type-ref')
-TypeDecl = c_needle_filter_factory('type-decl')
-VariableFilter = c_needle_filter_factory('variable')
-TypeDefFilter = c_needle_filter_factory('typedef')
-MacroFilter = c_needle_filter_factory('macro')
-MacroRefFilter = c_needle_filter_factory('macro-ref')
-NamespaceFilter = c_needle_filter_factory('namespace')
-NamespaceRefFilter = c_needle_filter_factory('namespace-ref')
-NamespaceAliasFilter = c_needle_filter_factory('namespace-alias')
-NamespaceAliasRefFilter = c_needle_filter_factory('namespace-alias-ref')
-WarningFilter = c_needle_filter_factory('warning')
-WarningOptFilter = c_needle_filter_factory('warning-opt')
-CalleeFilter = c_needle_filter_factory('callee')
-CallerFilter = c_needle_filter_factory('caller')
-ParentFilter = c_needle_filter_factory('parent')
-MemberFilter = c_needle_filter_factory('member')
 

@@ -29,11 +29,12 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-def needle_filter_factory(lang, tag):
+def needle_filter_factory(lang, tag, desc):
     """Default Filter for simple term matching needles."""
     class NeedleFilter(object):
         name = tag
         domain = LINE
+        description = desc
         field_name = "{0}-{1}".format(lang, tag)
         
         def __init__(self, term):
