@@ -1,6 +1,8 @@
 """Some common utilities used by plugins but _not_ required by the API"""
 
 from collections import namedtuple
+from operator import itemgetter
+
 from dxr.plugins import LINE
 
 
@@ -28,6 +30,7 @@ def is_function((_, obj)):
 
 
 def needle_filter_factory(lang, tag):
+    """Default Filter for a simple term mactching needles."""
     class NeedleFilter(object):
         name = tag
         domain = LINE
@@ -46,10 +49,15 @@ def needle_filter_factory(lang, tag):
             }
 
         def highlight(self, result):
-            c1, c2 = result['loc']
-            if c2 is None:
-                c2 = len(result['content'])
-            return {
-                field_name: [(c1, c2)]
-            }
+            content = result['content']
+            def _highlight(needle):
+                return needle['start'], needle['end'] or len(content)
+            highlights = sorted((_highlight(needle) for needle
+                                 in needle[field_name]
+                                 if needle['term'] == self.term),
+                                key=itemgetter('start'))
+            return {'content': highlights}
+
     return needle_filter_factory
+
+
