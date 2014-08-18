@@ -31,18 +31,25 @@ def needle_filter_factory(lang, tag):
     class NeedleFilter(object):
         name = tag
         domain = LINE
-
+        field_name = "{0}-{1}".format(lang, term)
+        
         def __init__(self, term):
-            self.term = "{0}-{1}".format(lang, term)
+            self.term = term
 
         def filter(self):
             return {
                 "filtered": {
                     "term": {
-                        tag: self.term
+                        field_name: self.term
                     }
                 }
             }
 
         def highlight(self, result):
-            return []
+            c1, c2 = result['loc']
+            if c2 is None:
+                c2 = len(result['content'])
+            return {
+                field_name: [(c1, c2)]
+            }
+    return needle_filter_factory
