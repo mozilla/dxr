@@ -40,6 +40,9 @@ def by_line(span_needles):
     return imapcat(span_to_lines, span_needles)
 
 
+def pack(val, start, end):
+    return {'term': val, 'start': start, 'end': end}
+
 def span_to_lines((val, span)):
     """Expand (_, span:Extent) into [((_, line_span), line:int)].
 
@@ -47,20 +50,16 @@ def span_to_lines((val, span)):
 
     """
     if span.end.row == span.start.row:
-        yield (val, (span.start.col, span.end.col)), span.start.row
+        yield pack(val, span.start.col, span.end.col), span.start.row
 
     elif span.end.row < span.start.row:
-        raise UnOrderedRowError
+        raise ValueError("end.row < start.row")
 
     else:
-        yield (val, (span.start.col, None)), span.start.row
+        yield pack(val, span.start.col, None), span.start.row
 
         # Really with we could use yield from
         for row in xrange(span.start.row + 1, span.end.row):
-            yield ((val, (0, None)), row)
+            yield (pack(val, 0, None), row)
 
-        yield ((val, (0, span.end.col)), span.end.row)
-
-
-class UnOrderedRowError(Exception):
-    """Raised iff the end.row < start.row."""
+        yield (pack(val, 0, span.end.col), span.end.row)

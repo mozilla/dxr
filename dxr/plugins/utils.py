@@ -31,7 +31,7 @@ def needle_filter_factory(lang, tag):
     class NeedleFilter(object):
         name = tag
         domain = LINE
-        field_name = "{0}-{1}".format(lang, term)
+        field_name = "{0}-{1}".format(lang, tag)
         
         def __init__(self, term):
             self.term = term
