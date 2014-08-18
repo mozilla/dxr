@@ -13,6 +13,12 @@
     background-repeat: no-repeat;
     padding: .5em .5em .5em 30px;
 }
+.icon-container {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    float: right;
+    padding: 8px; /* Makes the container 16x16 in order to show full icon. */
+}
 a.reference {
     background: transparent url(/static/icons/reference.png) 4px 8px no-repeat;
     padding-left: 1.5rem;
@@ -51,95 +57,77 @@ a.exclude-path {
     background: transparent url(/static/icons/mimetypes/build.png) no-repeat;
     padding-left: 1.5rem;
 }
-a.c {
-    background: transparent url(/static/icons/mimetypes/c.png) no-repeat;
-    padding-left: 1.5rem;
+/* The .c calss is used in files for comments. This definition is there just to prevent overriding.*/
+.icon-container.c,
+.icon.c { 
+    background-image: url(/static/icons/mimetypes/c.png);
 }
 .conf {
-    background: transparent url(/static/icons/mimetypes/conf.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/conf.png);
 }
 .cpp {
-    background: transparent url(/static/icons/mimetypes/cpp.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/cpp.png);
 }
 .cs {
-    background: transparent url(/static/icons/mimetypes/cs.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/cs.png);
+}
+.css {
+    background-image: url(/static/icons/mimetypes/css.png);
 }
 .diff {
-    background: transparent url(/static/icons/mimetypes/diff.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/diff.png);
 }
 .h {
-    background: transparent url(/static/icons/mimetypes/h.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/h.png);
 }
 .html {
-    background: transparent url(/static/icons/mimetypes/html.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/html.png);
 }
 .iso {
-    background: transparent url(/static/icons/mimetypes/iso.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/iso.png);
 }
 .java {
-    background: transparent url(/static/icons/mimetypes/java.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/java.png);
 }
 .js {
-    background: transparent url(/static/icons/mimetypes/js.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/js.png);
 }
 .mm {
-    background: transparent url(/static/icons/mimetypes/mm.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/mm.png);
 }
 .page_white_code_red {
-    background: transparent url(/static/icons/mimetypes/page_white_code_red.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/page_white_code_red.png);
 }
 .php {
-    background: transparent url(/static/icons/mimetypes/php.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/php.png);
 }
 .py {
-    background: transparent url(/static/icons/mimetypes/py.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/py.png);
 }
 .rb {
-    background: transparent url(/static/icons/mimetypes/rb.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/rb.png);
 }
 .sh {
-    background: transparent url(/static/icons/mimetypes/sh.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/sh.png);
 }
 .svg {
-    background: transparent url(/static/icons/mimetypes/svg.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/svg.png);
 }
 .tex {
-    background: transparent url(/static/icons/mimetypes/tex.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/tex.png);
 }
 .txt {
-    background: transparent url(/static/icons/mimetypes/txt.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/txt.png);
 }
 .ui {
-    background: transparent url(/static/icons/mimetypes/ui.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/ui.png);
 }
 .unknown {
-    background: transparent url(/static/icons/mimetypes/unknown.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/unknown.png);
 }
 .vs {
-    background: transparent url(/static/icons/mimetypes/vs.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/vs.png);
 }
 .xml {
-    background: transparent url(/static/icons/mimetypes/xml.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/xml.png);
 }
