@@ -30,7 +30,7 @@ def is_function((_, obj)):
 
 
 def needle_filter_factory(lang, tag):
-    """Default Filter for a simple term mactching needles."""
+    """Default Filter for simple term matching needles."""
     class NeedleFilter(object):
         name = tag
         domain = LINE
