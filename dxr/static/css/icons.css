@@ -52,6 +52,9 @@ a.exclude-path {
     background: transparent url(/static/icons/exclude_path.png) 4px 8px no-repeat;
     padding-left: 1.5rem;
 }
+a.diff {
+    background: none; /* Do not inherit the rule for .diff below. */
+}
 /* MimeType Icons */
 .build {
     background: transparent url(/static/icons/mimetypes/build.png) no-repeat;
