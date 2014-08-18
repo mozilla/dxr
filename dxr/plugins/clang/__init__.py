@@ -231,7 +231,7 @@ def walk_types(condensed):
             if 'type' in val and 'span' in val:
                 yield str(val['type']), val['span']
 
-    if 'type' in condensed:
+    if condensed['type']:
         for vals in condensed['type'].values():
             for val in vals:
                 yield val['name'], val['span']
@@ -279,6 +279,7 @@ def parent_needles(condensed, inherit):
     def get_parents(name):
         return (parent for parent, children in inherit.items()
                 if name in children)
+
 
     return inherit_needles(condensed, 'parent', get_parents)
 
@@ -332,6 +333,10 @@ def needles(condensed, inherit, graph):
         caller_needles(graph),
         parent_needles(condensed, inherit),
         child_needles(condensed, inherit),
+        member_needles(condensed),
+        overridden_needles(condensed),
+        overrides_needles(condensed),
+        type_needles(condensed)
     ))
 
 
