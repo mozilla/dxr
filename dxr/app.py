@@ -1,3 +1,4 @@
+from functools import partial
 from logging import StreamHandler
 from os.path import isdir, isfile, join, basename
 from sys import stderr
@@ -14,7 +15,7 @@ from dxr.build import linked_pathname
 from dxr.mime import icon
 from dxr.plugins import FILE
 from dxr.query import Query, filter_menu_items
-from dxr.utils import connect_db, non_negative_int, search_url, TEMPLATE_DIR, sqlite3, decode_es_datetime  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
+from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
 
 
 # Look in the 'dxr' package for static files, etc.:
@@ -76,82 +77,63 @@ def search(tree):
         'wwwroot': www_root,
         'generated_date': config['GENERATED_DATE']}
 
-    error = warning = ''
+    error = ''
     status_code = None
 
     if tree in trees:
         arguments['tree'] = tree
 
-        # Connect to database
-        try:
-            conn = connect_db(join(current_app.instance_path, 'trees', tree))
-        except sqlite3.Error:
-            error = 'Failed to establish database connection.'
-        else:
-            # Parse the search query
-            qtext = querystring.get('q', '')
-            is_case_sensitive = querystring.get('case') == 'true'
-            q = Query(conn,
-                      qtext,
-                      should_explain='explain' in querystring,
-                      is_case_sensitive=is_case_sensitive)
+        # Parse the search query
+        qtext = querystring.get('q', '')
+        is_case_sensitive = querystring.get('case') == 'true'
+        q = Query(partial(current_app.es.search,
+                          index=config['ES_ALIASES'][tree]),
+                  qtext,
+                  is_case_sensitive=is_case_sensitive)
 
-            # Try for a direct result:
-            if querystring.get('redirect') == 'true':
-                result = q.direct_result()
-                if result:
-                    path, line = result
-                    # TODO: Does this escape qtext properly?
-                    return redirect(
-                        '%s/%s/source/%s?from=%s%s#%i' %
-                        (www_root,
-                         tree,
-                         path,
-                         qtext,
-                         '&case=true' if is_case_sensitive else '', line))
+        # Try for a direct result:
+        if querystring.get('redirect') == 'true':
+            result = q.direct_result()
+            if result:
+                path, line = result
+                # TODO: Does this escape qtext properly?
+                return redirect(
+                    '%s/%s/source/%s?from=%s%s#%i' %
+                    (www_root,
+                     tree,
+                     path,
+                     qtext,
+                     '&case=true' if is_case_sensitive else '', line))
 
-            # Return multiple results:
-            template = 'search.html'
-            start = time()
-            try:
-                results = list(q.results(offset, limit))
-            except sqlite3.OperationalError as e:
-                if e.message.startswith('REGEXP:'):
-                    # Malformed regex
-                    warning = e.message[7:]
-                    results = []
-                elif e.message.startswith('QUERY:'):
-                    warning = e.message[6:]
-                    results = []
-                else:
-                    error = 'Database error: %s' % e.message
-            if not error:
-                # Search template variables:
-                arguments['time'] = time() - start
-                arguments['query'] = qtext
-                arguments['search_url'] = search_url(www_root,
-                                                     arguments['tree'],
-                                                     qtext,
-                                                     redirect=False)
-                arguments['results'] = results
-                arguments['offset'] = offset
-                arguments['limit'] = limit
-                arguments['is_case_sensitive'] = is_case_sensitive
-                arguments['tree_tuples'] = [
-                        (t,
-                         search_url(www_root,
-                                    t,
-                                    qtext,
-                                    case=True if is_case_sensitive else None),
-                         description)
-                        for t, description in trees.iteritems()]
+        # Return multiple results:
+        template = 'search.html'
+        results = list(q.results(offset, limit))
+
+        # Search template variables:
+        arguments['query'] = qtext
+        arguments['search_url'] = url_for('.search',
+                                          tree=arguments['tree'],
+                                          q=qtext,
+                                          redirect='false')
+        arguments['results'] = results
+        arguments['offset'] = offset
+        arguments['limit'] = limit
+        arguments['is_case_sensitive'] = is_case_sensitive
+        arguments['tree_tuples'] = [
+                (t,
+                 url_for('.search',
+                         tree=t,
+                         q=qtext,
+                         **({'case': 'true'} if is_case_sensitive else {})),
+                 description)
+                for t, description in trees.iteritems()]
     else:
         arguments['tree'] = trees.keys()[0]
         error = "Tree '%s' is not a valid tree." % tree
         status_code = 404
 
-    if warning or error:
-        arguments['error'] = error or warning
+    if error:
+        arguments['error'] = error
 
     if querystring.get('format') == 'json':
         if error:

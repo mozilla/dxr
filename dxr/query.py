@@ -1,12 +1,13 @@
 from itertools import chain, count, groupby
 import re
-import time
 
 from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
 
-from dxr.extents import flatten_extents, highlight_line
-from dxr.filters import filters
+from dxr.extents import highlight
+from dxr.mime import icon
+from dxr.plugins import all_plugins, LINE, FILE
+from dxr.utils import append_update
 
 # TODO: Some kind of UI feedback for bad regexes
 # TODO: Special argument files-only to just search for file names
@@ -16,13 +17,19 @@ from dxr.filters import filters
 _line_number = re.compile("^.*:[0-9]+$")
 
 
+# A dict mapping a filter name to a list of all filters having that name,
+# across all plugins
+FILTERS_NAMED = append_update(
+    {},
+    ((f.name, f) for f in
+     chain.from_iterable(p.filters for p in all_plugins().itervalues())))
+
+
 class Query(object):
     """Query object, constructor will parse any search query"""
 
-    def __init__(self, conn, querystr, should_explain=False, is_case_sensitive=True):
-        self.conn = conn
-        self._should_explain = should_explain
-        self._sql_profile = []
+    def __init__(self, es_search, querystr, is_case_sensitive=True):
+        self.es_search = es_search
         self.is_case_sensitive = is_case_sensitive
 
         # A list of dicts describing query terms:
@@ -35,51 +42,10 @@ class Query(object):
         non-textual one, return None.
 
         """
-        if len(self.terms) == 1 and self.terms[0]['type'] == 'text':
+        if len(self.terms) == 1 and self.terms[0]['name'] == 'text':
             return self.terms[0]['arg']
 
-    def execute_sql(self, sql, *parameters):
-        if self._should_explain:
-            self._sql_profile.append({
-                "sql" : sql,
-                "parameters" : parameters[0] if len(parameters) >= 1 else [],
-                "explanation" : self.conn.execute("EXPLAIN QUERY PLAN " + sql, *parameters)
-            })
-            start_time = time.time()
-        res = self.conn.execute(sql, *parameters)
-        if self._should_explain:
-            # fetch results eagerly so we can get an accurate time for the entire operation
-            res = res.fetchall()
-            self._sql_profile[-1]["elapsed_time"] = time.time() - start_time
-            self._sql_profile[-1]["nrows"] = len(res)
-        return res
-
-    def _sql_report(self):
-        """Yield a report on how long the SQL I've run has taken."""
-        def number_lines(arr):
-            ret = []
-            for i in range(len(arr)):
-                if arr[i] == "":
-                    ret.append((i, " "))  # empty lines cause the <div> to collapse and mess up the formatting
-                else:
-                    ret.append((i, arr[i]))
-            return ret
-
-        for i in range(len(self._sql_profile)):
-            profile = self._sql_profile[i]
-            yield ("",
-                          "sql %d (%d row(s); %s seconds)" % (i, profile["nrows"], profile["elapsed_time"]),
-                          number_lines(profile["sql"].split("\n")))
-            yield ("",
-                          "parameters %d" % i,
-                          number_lines(map(lambda parm: repr(parm), profile["parameters"])));
-            yield ("",
-                          "explanation %d" % i,
-                          number_lines(map(lambda row: row["detail"], profile["explanation"])))
-
-    def results(self,
-                offset=0, limit=100,
-                markup='<b>', markdown='</b>'):
+    def results(self, offset=0, limit=100):
         """Return search results as an iterable of these::
 
             (icon,
@@ -87,100 +53,69 @@ class Query(object):
              [(line_number, highlighted_line_of_code), ...])
 
         """
-        sql = ('SELECT %s '
-               'FROM %s '
-               '%s '
-               '%s '
-               'ORDER BY %s LIMIT ? OFFSET ?')
-        # Filters can add additional fields, in pairs of {extent_start,
-        # extent_end}, to be used for highlighting.
-        fields = ['files.path', 'files.icon']  # TODO: move extents() to TriliteSearchFilter
-        tables = ['files']
-        conditions, arguments, joins, join_arguments = [], [], [], []
-        orderings = ['files.path']
-        has_lines = False
+        # Instantiate applicable filters, yielding a list of lists, each inner
+        # list representing the filters of the name of the parallel term. We
+        # will OR the elements of the inner lists and then AND those OR balls
+        # together.
+        filters = [[f(term) for f in FILTERS_NAMED[term['name']]] for term in
+                   self.terms]
 
-        # Give each registered filter an opportunity to contribute to the
-        # query, narrowing it down to the set of matching lines:
-        aliases = alias_counter()
-        for term in self.terms:
-            filter = filters[term['type']]
-            pieces = filter.filter(term, aliases)
-            if not pieces:
-                continue
-            flds, tbls, cond, args, jns, jargs = pieces
-            if not has_lines and filter.has_lines:
-                has_lines = True
-                # 2 types of query are possible: ones that return just
-                # files and involve no other tables, and ones which join
-                # the lines and trg_index tables and return lines and
-                # extents. This switches from the former to the latter.
-                #
-                # The first time we hit a line-having filter, glom on the
-                # line-based fields. That way, they're always at the
-                # beginning (non-line-having filters never return fields),
-                # so we can use our clever slicing later on to find the
-                # extents fields.
-                fields.extend(['files.encoding', 'files.id as file_id',
-                               'lines.id as line_id', 'lines.number',
-                               'trg_index.text', 'extents(trg_index.contents)'])
-                tables.extend(['lines', 'trg_index'])
-                conditions.extend(['files.id=lines.file_id', 'lines.id=trg_index.id'])
-                orderings.append('lines.number')
+        # See if we're returning lines or just files-and-folders:
+        is_line_query = any(f.domain == LINE for f in
+                            chain.from_iterable(filters))
 
-            # We fetch the extents for structural filters without doing
-            # separate queries, by adding columns to the master search
-            # query. Since we're only talking about a line at a time, it is
-            # unlikely that there will be multiple highlit extents per
-            # filter per line, so any cartesian product of rows can
-            # reasonably be absorbed and merged in the app.
-            fields.extend(flds)
+        # An ORed-together ball for each term's filters:
+        ors = [{'or': [f.filter() for f in t]} for t in filters]
 
-            tables.extend(tbls)
-            joins.extend(jns)
-            conditions.append(cond)
-            arguments.extend(args)
-            join_arguments.extend(jargs)
+        if not is_line_query:
+            # Don't show folders yet in search results. I don't think the JS
+            # is able to handle them.
+            ors.append({'term': {'is_folder': False}})
 
-        sql %= (', '.join(fields),
-                ', '.join(tables),
-                ' '.join(joins),
-                ('WHERE ' + ' AND '.join(conditions)) if conditions else '',
-                ', '.join(orderings))
-        cursor = self.execute_sql(sql,
-                                  join_arguments + arguments + [limit, offset])
+        results = self.es_search(
+            {
+                'query': {
+                    'filtered': {
+                        'query': {
+                            'match_all': {}
+                        },
+                        'filter': {
+                            'and': ors
+                        }
+                    }
+                },
+                'sort': ['path', 'number'] if is_line_query else ['path'],
+                'from': offset,
+                'size': limit
+            },
+            doc_type=LINE if is_line_query else FILE)['hits']['hits']
+        results = [r['_source'] for r in results]
 
-        if self._should_explain:
-            for r in self._sql_report():
-                yield r
-
-        if has_lines:
+        highlighters = [f.highlight for f in chain.from_iterable(filters)]
+        if is_line_query:
             # Group lines into files:
-            for file_id, fields_and_extents_for_lines in \
-                    groupby(flatten_extents(cursor),
-                            lambda (fields, extents): fields['file_id']):
-                # fields_and_extents_for_lines is [(fields, extents) for one line,
-                #                                   ...] for a single file.
-                fields_and_extents_for_lines = list(fields_and_extents_for_lines)
-                shared_fields = fields_and_extents_for_lines[0][0]  # same for each line in the file
-
-                yield (shared_fields['icon'],
-                       shared_fields['path'],
-                       [(fields['number'],
-                         highlight_line(
-                                fields['text'],
-                                extents,
-                                markup,
-                                markdown,
-                                shared_fields['encoding']))
-                        for fields, extents in fields_and_extents_for_lines])
+            for path, lines in groupby(results, lambda r: r['path'][0]):
+                lines = list(lines)
+                highlit_path = highlight(
+                    path,
+                    chain.from_iterable((h(lines[0], 'path') for h in
+                                         highlighters)))
+                icon_for_path = icon(path)
+                yield (icon_for_path,
+                       highlit_path,
+                       [(line['number'][0],
+                         highlight(line['content'][0],
+                                   chain.from_iterable(h(line, 'content') for
+                                                       h in highlighters)))
+                        for line in lines])
         else:
-            for result in cursor:
-                yield (result['icon'],
-                       result['path'],
+            for file in results:
+                yield (icon(file['path'][0]),
+                       highlight(file['path'][0],
+                                 chain.from_iterable(h.highlight(file, 'path')
+                                     for h in highlighters)),
                        [])
 
-        # Boy, as I see what this is doing, I think how good a fit ES is: you fetch a line document, and everything you'd need to highlight is right there. # If var-ref returns 2 extents on one line, it'll just duplicate a line, and we'll merge stuff after the fact. Hey, does that mean I should gather and merge everything before I try to homogenize the extents?
         # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 
     def direct_result(self):
@@ -305,10 +240,10 @@ query_grammar = Grammar(ur'''
     filter = ~r"''' +
         # regexp, function, etc. No filter is a prefix of a later one. This
         # avoids premature matches.
-        '|'.join(sorted((re.escape(filter_type) for
-                                filter_type, filter in
-                                filters.iteritems() if
-                                filter.description),
+        '|'.join(sorted((re.escape(filter_name) for
+                                filter_name, filters in
+                                FILTERS_NAMED.iteritems() if
+                                filters[0].description),
                         key=len,
                         reverse=True)) + ur'''"
 
@@ -374,17 +309,17 @@ class QueryVisitor(NodeVisitor):
     def visit_filtered_term(self, filtered_term, (plus, filter, colon, term_dict)):
         """Add fully-qualified indicator and the filter name to the term_dict."""
         term_dict['qualified'] = plus.text == '+'
-        term_dict['type'] = filter.text
+        term_dict['name'] = filter.text
         return term_dict
 
     def visit_text(self, text, ((some_text,), _)):
         """Create the dictionary that lives in Query.terms. Return it with a
-        filter type of 'text', indicating that this is a bare or quoted run of
+        filter name of 'text', indicating that this is a bare or quoted run of
         text. If it is actually an argument to a filter,
         ``visit_filtered_term`` will overrule us later.
 
         """
-        return {'type': 'text', 'arg': some_text}
+        return {'name': 'text', 'arg': some_text}
 
     def visit_maybe_plus(self, plus, wtf):
         """Keep the plus from turning into a list half the time. That makes it
@@ -410,11 +345,6 @@ class QueryVisitor(NodeVisitor):
 
 def filter_menu_items(language):
     """Return the additional template variables needed to render filter.html."""
-    return (dict(name=type, description=filter.description) for type, filter in
-            filters.iteritems() if filter.description and
-            filter.valid_for_language(language))
-
-
-def alias_counter():
-    """Return an infinite iterable of unique, valid SQL alias names."""
-    return ('t%s' % num for num in count())
+    return (dict(name=name, description=filters[0].description) for
+            name, filters in
+            FILTERS_NAMED.iteritems() if filters[0].description)

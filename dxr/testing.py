@@ -123,6 +123,10 @@ class TestCase(unittest.TestCase):
         return json.loads(response.data)['results']
 
     @classmethod
+    def _es(cls):
+        return ElasticSearch('http://127.0.0.1:9200/')
+
+    @classmethod
     def _delete_es_indices(cls):
         """Delete anything that is named like a DXR test index.
 
@@ -131,7 +135,7 @@ class TestCase(unittest.TestCase):
 
         """
         # When you delete an index, any alias to it goes with it.
-        ElasticSearch('http://127.0.0.1:9200/').delete_index('dxr_test_*')
+        cls._es().delete_index('dxr_test_*')
 
 
 class DxrInstanceTestCase(TestCase):
@@ -150,6 +154,7 @@ class DxrInstanceTestCase(TestCase):
         cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
         chdir(cls._config_dir_path)
         run('make')
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
@@ -195,6 +200,7 @@ build_command = $CXX -o main main.cpp
 
         chdir(cls._config_dir_path)
         build_instance(os.path.join(cls._config_dir_path, 'dxr.config'))
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):

@@ -36,31 +36,50 @@ class PathFilter(object):
 
     name = 'path'
     domain = FILE
+    # Maybe add a highlight_field attr here and remove the field arg from
+    # highlight(). Then results() can see from the outside which highlighters
+    # it has to call, so it doesn't have to call as many. And, more
+    # importantly, it makes highlight() easier to implement each time: no ifs
+    # needed.
+
+    #: Unicode or Markup (in case you want to include HTML) describing this
+    #: filter for the Filters menu. Of filters having the same name, the
+    #: description of the first one encountered will be the one used.
+    description = u'Some description for the Filters menu'
 
     def __init__(self, term):
         """This is a good place to parse the term's arg (if it requires further
         parsing) and stash it away on the instance."""
 
     def filter(self):
-        """Return the ES query segment that applies my restrictions to the
-        found set of lines.
+        """Return the ES filter clause that applies my restrictions to the
+        found set of lines (or files and folders, if this is a FILES filter).
 
-        Actually, return (a domain constant, the query segment).
+        We might even make this return a list of filter clauses, for things
+        like the RegexFilter which want a bunch of match_phrases and a script.
 
         """
 
-    def highlight(self, result):
-        """Return a map of result field names to sorted iterables of extents
-        that should be highlighted.
+    def highlight(self, result, field):
+        """Return a sorted iterable of extents that should be highlighted in
+        the given field.
 
         :arg result: A mapping representing properties from a search result,
-            whether a file or a line
+            whether a file or a line. With access to all the data, you can,
+            for example, use the extents from a 'c-function' needle to inform
+            the highlighting of the 'content' field.
+        :arg field: The name of the field to compute highlights for: currently
+            either 'path' or 'content'
 
         """
 
     # A filter can eventually grow a "kind" attr that says "structural" or
     # "text" or whatever, and we can vary the highlight color or whatever based
     # on that to make identifiers easy to pick out visually.
+
+
+class Filter(object):
+    description = u''
 
 
 class TreeToIndex(object):
@@ -450,7 +469,8 @@ def filters_from_namespace(namespace):
     return [v for k, v in namespace.iteritems() if
             isclass(v) and
             not k.startswith('_') and
-            k.endswith('Filter')]
+            k.endswith('Filter') and
+            v is not Filter]
 
 
 def all_plugins():
