@@ -105,7 +105,7 @@ a.type {
 .build {
     background-image: url(/static/icons/mimetypes/build.png);
 }
-/* The .c calss is used in files for comments. This definition is there just to prevent overriding.*/
+/* The .c class is used in files for comments. This definition is there just to prevent overriding. */
 .icon-container.c,
 .icon.c { 
     background-image: url(/static/icons/mimetypes/c.png);
@@ -122,7 +122,7 @@ a.type {
 .css {
     background-image: url(/static/icons/mimetypes/css.png);
 }
-/* Prevents display of diff icon in the panel, which has it's own */
+/* Prevents display of diff icon in the panel, which has its own */
 .results .diff,
 .folder-content .diff {
     background-image: url(/static/icons/mimetypes/diff.png);
