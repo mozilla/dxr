@@ -346,7 +346,7 @@ def test_type_needles():
             }]
         }
     })),
-        set([(('c-type', '(int**, int, int) -> int**'), DEFAULT_EXTENT),
+        set([(('c-type', 'int;*;*;int;int;int;*;*'), DEFAULT_EXTENT),
              (('c-type', 'a'), DEFAULT_EXTENT),
              (('c-type', 'X'), DEFAULT_EXTENT),
              (('c-type', 'foobar'), DEFAULT_EXTENT)]))

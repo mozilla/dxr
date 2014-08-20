@@ -31,5 +31,5 @@ def test_type_classes():
 
 def test_str_rep():
     eq_(str(c_type_sig(['bool', 'int'], 'Q<T>', method='Q<T>')),
-        "(Q<T>, bool, int) -> Q<T>")
+        "Q;T;bool;int;Q;T")
 

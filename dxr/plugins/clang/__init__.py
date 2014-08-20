@@ -234,7 +234,7 @@ def walk_types(condensed):
     if 'type' in condensed:
         for vals in condensed['type'].values():
             for val in vals:
-                yield val['name'], val['span']
+                yield str(val['name']), val['span']
 
 
 def type_needles(condensed):
