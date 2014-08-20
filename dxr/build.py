@@ -578,7 +578,7 @@ def build_tree(tree, tree_indexers, verbose):
     # Set up build environment variables:
     environ = os.environ.copy()
     for ti in tree_indexers:
-        environ = ti.environment(environ)
+        environ.update(ti.environment(environ))
 
     # Call make or whatever:
     with open_log(tree, 'build.log', verbose) as log:
