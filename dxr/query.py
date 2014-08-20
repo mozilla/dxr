@@ -91,22 +91,26 @@ class Query(object):
             doc_type=LINE if is_line_query else FILE)['hits']['hits']
         results = [r['_source'] for r in results]
 
-        highlighters = [f.highlight for f in chain.from_iterable(filters)]
+
+        path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
+                             if hasattr(f, 'highlight_path')]
+        content_highlighters = [f.highlight_content for f in chain.from_iterable(filters)
+                                if hasattr(f, 'highlight_content')]
         if is_line_query:
             # Group lines into files:
             for path, lines in groupby(results, lambda r: r['path'][0]):
                 lines = list(lines)
                 highlit_path = highlight(
                     path,
-                    chain.from_iterable((h(lines[0], 'path') for h in
-                                         highlighters)))
+                    chain.from_iterable((h(lines[0]) for h in
+                                         path_highlighters)))
                 icon_for_path = icon(path)
                 yield (icon_for_path,
                        highlit_path,
                        [(line['number'][0],
                          highlight(line['content'][0],
-                                   chain.from_iterable(h(line, 'content') for
-                                                       h in highlighters)))
+                                   chain.from_iterable(h(line) for h in
+                                                       content_highlighters)))
                         for line in lines])
         else:
             for file in results:

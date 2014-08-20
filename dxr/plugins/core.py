@@ -144,7 +144,6 @@ class TextFilter(Filter):
     """Filter matching a run of plain text in a file"""
 
     name = 'text'
-    domain = LINE
 
     def __init__(self, term):
         """Store the text we're searching for."""
@@ -163,16 +162,13 @@ class TextFilter(Filter):
             }
         }
 
-    def highlight(self, result, field):
-        if field == 'content':
-            text_len = len(self.text)
-            return ((i, i + text_len) for i in
-                    # We assume content is a singleton. How could it be
-                    # otherwise?
-                    _find_iter(result['content'][0].lower(),
-                               self.text.lower()))
-        else:
-            return []
+    def highlight_content(self, result):
+        text_len = len(self.text)
+        return ((i, i + text_len) for i in
+                # We assume content is a singleton. How could it be
+                # otherwise?
+                _find_iter(result['content'][0].lower(),
+                           self.text.lower()))
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):

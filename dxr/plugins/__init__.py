@@ -36,11 +36,6 @@ class PathFilter(object):
 
     name = 'path'
     domain = FILE
-    # Maybe add a highlight_field attr here and remove the field arg from
-    # highlight(). Then results() can see from the outside which highlighters
-    # it has to call, so it doesn't have to call as many. And, more
-    # importantly, it makes highlight() easier to implement each time: no ifs
-    # needed.
 
     #: Unicode or Markup (in case you want to include HTML) describing this
     #: filter for the Filters menu. Of filters having the same name, the
@@ -60,16 +55,31 @@ class PathFilter(object):
 
         """
 
-    def highlight(self, result, field):
+    def highlight_path(self, result):
         """Return a sorted iterable of extents that should be highlighted in
-        the given field.
+        the ``path`` field of a search result.
 
         :arg result: A mapping representing properties from a search result,
             whether a file or a line. With access to all the data, you can,
             for example, use the extents from a 'c-function' needle to inform
             the highlighting of the 'content' field.
-        :arg field: The name of the field to compute highlights for: currently
-            either 'path' or 'content'
+
+        It is an optimization to omit this method if no path highlighting
+        is needed.
+
+        """
+
+    def highlight_content(self, result):
+        """Return a sorted iterable of extents that should be highlighted in
+        the ``content`` field of a search result.
+
+        :arg result: A mapping representing properties from a search result,
+            whether a file or a line. With access to all the data, you can,
+            for example, use the extents from a 'c-function' needle to inform
+            the highlighting of the 'content' field.
+
+        It is an optimization to omit this method if no content highlighting
+        is needed.
 
         """
 
@@ -79,6 +89,7 @@ class PathFilter(object):
 
 
 class Filter(object):
+    domain = LINE
     description = u''
 
 
