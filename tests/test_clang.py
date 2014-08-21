@@ -33,12 +33,12 @@ def test_ref():
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
         ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
     """)
-    eq_(csv['ref']['function'][0], {'declloc': DEFAULT_LOC,
-                                    'kind': 'function',
-                                    'span': DEFAULT_EXTENT})
-    eq_(csv['ref']['variable'][0], {'declloc': DEFAULT_LOC,
-                                    'kind': 'variable',
-                                    'span': DEFAULT_EXTENT})
+    eq_(csv['ref'][0], {'declloc': DEFAULT_LOC,
+                        'kind': 'function',
+                        'span': DEFAULT_EXTENT})
+    eq_(csv['ref'][1], {'declloc': DEFAULT_LOC,
+                        'kind': 'variable',
+                        'span': DEFAULT_EXTENT})
 
 
 def test_function():
@@ -129,13 +129,13 @@ def test_type():
         type,name,"foobar",qualname,"foobar",loc,"x:0:0",kind,"struct",extent,0:0
         type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
     """)
-    eq_(csv['type']['struct'][0], {
+    eq_(csv['type'][0], {
         'name': 'foobar',
         'qualname': 'foobar',
         'kind': 'struct',
         'span': DEFAULT_EXTENT
     })
-    eq_(csv['type']['class'][0], {
+    eq_(csv['type'][1], {
         'name': 'X',
         'qualname': 'X',
         'kind': 'class',
@@ -158,7 +158,7 @@ def test_decldef():
     csv = get_csv("""
         decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
     """)
-    eq_(csv['decldef']['function'][0], {
+    eq_(csv['decldef'][0], {
         'qualname': 'Queue::Queue<T>(int)',
         'declloc': DEFAULT_LOC,
         'defloc': DEFAULT_LOC,
@@ -313,6 +313,7 @@ def test_inherit_needles():
                  (('c-child', 'W'), DEFAULT_EXTENT),
                  (('c-child', 'W'), DEFAULT_EXTENT),
                  (('c-child', 'W'), DEFAULT_EXTENT)]
+
     eq_(len(list(child_needles(csv, INHERIT))), len(c_needles))
     eq_(set(child_needles(csv, INHERIT)), set(c_needles))
 

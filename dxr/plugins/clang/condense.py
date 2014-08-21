@@ -161,8 +161,6 @@ def process_fields(kind, fields):
 def process((kind, vals)):
     """Process row from csv output."""
     mapping = map(compose(process_fields(kind), itemgetter(1)), vals)
-    if 'kind' in first(mapping):
-        mapping = group_by(itemgetter('kind'), mapping)
     return kind, mapping
 
 
