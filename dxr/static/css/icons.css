@@ -3,13 +3,12 @@
     background: transparent url(/static/icons/folder.png) .5em 7px no-repeat;
     padding: .5em .5em .5em 30px;  /* 30px = 16px icon + 7px padding above + a little more whitespace */
 }
-.folder-content,
-.result {
+.folder-content {
     clear: both;
 }
-.folder-content .icon {
+.icon {
     background-color: transparent;
-    background-position: .5em 6px;
+    background-position: .5em center;
     background-repeat: no-repeat;
     padding: .5em .5em .5em 30px;
 }
@@ -19,45 +18,91 @@
     float: right;
     padding: 8px; /* Makes the container 16x16 in order to show full icon. */
 }
-a.reference {
-    background: transparent url(/static/icons/reference.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
-}
-a.method {
-    background: transparent url(/static/icons/method.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
-}
-a.field {
-    background: transparent url(/static/icons/field.png) 2px 8px no-repeat;
-    padding-left: 1.5rem;
-}
-a.search {
-    background: transparent url(/static/icons/search.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
-}
-a.class {
-    background: transparent url(/static/icons/class.png) 4px 2px no-repeat;
-    padding-left: 1.5rem;
-}
-/* Folder context menu */
+
+/* Folder context-menu */
 a.goto-folder {
-    background: transparent url(/static/icons/goto_folder.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/goto_folder.png);
 }
 a.path-search {
-    background: transparent url(/static/icons/path_search.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/path_search.png);
 }
 a.exclude-path {
-    background: transparent url(/static/icons/exclude_path.png) 4px 8px no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/exclude_path.png);
 }
+/* End of folder context-menu */
+
+/* Context-menu and Panel icons */
+a.class {
+    background-image: url(/static/icons/class.png);
+}
+a.method {
+    background-image: url(/static/icons/method.png);
+}
+a.field {
+    background-image: url(/static/icons/field.png);
+}
+/* End of Context-menu and Panel icons */
+
+/* Context-menu only icons */
+a.reference {
+    background-image: url(/static/icons/reference.png);
+}
+a.search {
+    background-image: url(/static/icons/search.png);
+}
+a.buglink {
+    background-image: url(/static/icons/buglink.png);
+}
+a.external_link {
+    background-image: url(/static/icons/external_link.png);
+}
+a.jump {
+    background-image: url(/static/icons/jump.png);
+}
+a.members {
+    background-image: url(/static/icons/members.png);
+}
+a.type {
+    background-image: url(/static/icons/type.png);
+}
+/* End of Context-menu only icons */
+
+/* Panel only icons */
+
+/* Panel icons that are always shown - uncomment when ready! ->
+.panel .blame {
+    background-image: url(/static/icons/blame.png);
+}
+.panel .diff {
+    background-image: url(/static/icons/diff.png);
+}
+.panel .log {
+    background-image: url(/static/icons/log.png);
+}
+.panel .raw {
+    background-image: url(/static/icons/raw.png);
+}
+/* End of Panel icons that are always shown */
+
+.enum {
+    background-image: url(/static/icons/enum.png);
+}
+.struct {
+    background-image: url(/static/icons/struct.png);
+}
+.union {
+    background-image: url(/static/icons/union.png);
+}
+.macro {
+    background-image: url(/static/icons/macro.png);
+}
+/* End of Panel only icons */
+
 /* MimeType Icons */
 .build {
-    background: transparent url(/static/icons/mimetypes/build.png) no-repeat;
-    padding-left: 1.5rem;
+    background-image: url(/static/icons/mimetypes/build.png);
 }
-/* The .c calss is used in files for comments. This definition is there just to prevent overriding.*/
+/* The .c class is used in files for comments. This definition is there just to prevent overriding. */
 .icon-container.c,
 .icon.c { 
     background-image: url(/static/icons/mimetypes/c.png);
@@ -74,7 +119,9 @@ a.exclude-path {
 .css {
     background-image: url(/static/icons/mimetypes/css.png);
 }
-.diff {
+/* Prevents display of diff icon in the panel, which has its own */
+.results .diff,
+.folder-content .diff {
     background-image: url(/static/icons/mimetypes/diff.png);
 }
 .h {
