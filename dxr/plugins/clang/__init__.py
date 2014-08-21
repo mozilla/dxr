@@ -231,7 +231,7 @@ def walk_types(condensed):
             if 'type' in val and 'span' in val:
                 yield str(val['type']), val['span']
 
-    if condensed['type']:
+    if condensed.get('type'):
         for vals in condensed['type'].values():
             for val in vals:
                 yield val['name'], val['span']
