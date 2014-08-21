@@ -151,24 +151,25 @@ class TextFilter(Filter):
             # We might have to store a second trigram index to support this,
             # unlike with trilite.
             raise NotImplementedError
-        self.text = term['arg']
+        self.term = term
 
     def filter(self):
-        return {
+        positive = {
             'query': {
                 'match_phrase': {
-                    'content.trigrams': self.text
+                    'content.trigrams': self.term['arg']
                 }
             }
         }
+        return {'not': positive} if self.term['not'] else positive
 
     def highlight_content(self, result):
-        text_len = len(self.text)
+        text_len = len(self.term['arg'])
         return ((i, i + text_len) for i in
                 # We assume content is a singleton. How could it be
                 # otherwise?
                 _find_iter(result['content'][0].lower(),
-                           self.text.lower()))
+                           self.term['arg'].lower()))
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):
