@@ -422,9 +422,11 @@ class Plugin(object):
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/analysis.html.
 
-        ``mappings`` and ``analyzers`` are merged into other plugins' mappings
-        and analyzers using the algorithm described at
-        :func:`~dxr.utils.deep_update()`.
+        ``mappings`` and ``analyzers`` are recursively merged into other
+        plugins' mappings and analyzers using the algorithm described at
+        :func:`~dxr.utils.deep_update()`. This is mostly intended so you can
+        add additional kinds of indexing to fields defined in the core plugin
+        using multifields. Don't go too crazy monkeypatching the world.
 
         """
         self.filters = filters or []

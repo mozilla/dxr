@@ -1,5 +1,7 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
+from funcy import identity
+
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
 
@@ -20,9 +22,9 @@ mappings = {
                 'type': 'string',
                 'index': 'not_analyzed',  # support JS source fetching & sorting
                 'fields': {
-                    'trigrams': {
+                    'trigrams_lower': {
                         'type': 'string',
-                        'analyzer': 'trigramalyzer'  # accelerate regexes
+                        'analyzer': 'trigramalyzer_lower'  # accelerate regexes
                     }
                 }
             },
@@ -61,12 +63,11 @@ mappings = {
         'properties': {
             'path': {
                 'type': 'string',
-                # TODO: What about case-insensitive?
                 'index': 'not_analyzed',  # support sorting
                 'fields': {
-                    'trigrams': {
+                    'trigrams_lower': {
                         'type': 'string',
-                        'analyzer': 'trigramalyzer'
+                        'analyzer': 'trigramalyzer_lower'
                     }
                 }
             },
@@ -80,13 +81,17 @@ mappings = {
             },
 
             # We index content 2 ways to keep RAM use down. Naively, we should
-            # be able to pull the content.trigrams source out using our JS
-            # regex script, but in actuality, that uses much more RAM than
+            # be able to pull the content.trigrams_lower source out using our
+            # JS regex script, but in actuality, that uses much more RAM than
             # pulling just plain content, to the point of crashing.
             'content': {
                 'type': 'string',
                 'index': 'no',
                 'fields': {
+                    'trigrams_lower': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer_lower'
+                    },
                     'trigrams': {
                         'type': 'string',
                         'analyzer': 'trigramalyzer'
@@ -103,8 +108,12 @@ analyzers = {
         # A lowercase trigram analyzer. This is probably good
         # enough for accelerating regexes; we probably don't
         # need to keep a separate case-sensitive index.
-        'trigramalyzer': {
+        'trigramalyzer_lower': {
             'filter': ['lowercase'],
+            'tokenizer': 'trigram_tokenizer'
+        },
+        # And one for case-sensitive things:
+        'trigramalyzer': {
             'tokenizer': 'trigram_tokenizer'
         }
     },
@@ -147,17 +156,14 @@ class TextFilter(Filter):
 
     def __init__(self, term):
         """Store the text we're searching for."""
-        if term['case_sensitive']:
-            # We might have to store a second trigram index to support this,
-            # unlike with trilite.
-            raise NotImplementedError
         self.term = term
 
     def filter(self):
         positive = {
             'query': {
                 'match_phrase': {
-                    'content.trigrams': self.term['arg']
+                    'content.trigrams' if self.term['case_sensitive']
+                    else 'content.trigrams_lower': self.term['arg']
                 }
             }
         }
@@ -165,11 +171,13 @@ class TextFilter(Filter):
 
     def highlight_content(self, result):
         text_len = len(self.term['arg'])
+        maybe_lower = (identity if self.term['case_sensitive'] else
+                       lambda x: x.lower())
         return ((i, i + text_len) for i in
                 # We assume content is a singleton. How could it be
                 # otherwise?
-                _find_iter(result['content'][0].lower(),
-                           self.term['arg'].lower()))
+                _find_iter(maybe_lower(result['content'][0]),
+                           maybe_lower(self.term['arg'])))
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):
