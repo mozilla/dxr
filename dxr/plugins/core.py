@@ -123,6 +123,9 @@ def _find_iter(haystack, needle):
     """Return an iterable of indices at which string ``needle`` is found in
     ``haystack``.
 
+    :arg haystack: The unicode string to search within
+    :arg needle: The unicode string to search for
+
     Return only the first of overlapping occurrences.
 
     """
@@ -163,7 +166,7 @@ class TextFilter(Filter):
     def highlight(self, result, field):
         if field == 'content':
             text_len = len(self.text)
-            return ((o, o + text_len) for o in
+            return ((i, i + text_len) for i in
                     # We assume content is a singleton. How could it be
                     # otherwise?
                     _find_iter(result['content'][0].lower(),
