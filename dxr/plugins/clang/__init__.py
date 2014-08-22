@@ -219,24 +219,15 @@ def caller_needles(graph):
             in graph)
 
 
-def walk_types(condensed):
-    """Yield type, span of all types in analysis."""
-    for key, vals in condensed.items():
-        if is_mapping(vals):
-            vals = vals.values()
-        for val in vals:
-            if 'type' in val and 'span' in val:
-                yield str(val['type']), val['span']
-
-    if condensed.get('type'):
-        for vals in condensed['type'].values():
-            for val in vals:
-                yield val['name'], val['span']
-
-
 def type_needles(condensed):
     """Return needles ((c-type, type), span)."""
-    return ((('c-type', type_), span) for type_, span in walk_types(condensed))
+    return ((('c-type', o['name']), o['span']) for o in condensed['type'])
+
+
+def sig_needles(condensed):
+    """Return needles ((c-sig, type), span)."""
+    return ((('c-sig', str(o['type'])), o['span']) for o in
+            condensed['function'])
 
 
 def inherit_needles(condensed, tag, func):
@@ -330,7 +321,8 @@ def needles(condensed, inherit, graph):
         member_needles(condensed),
         overridden_needles(condensed),
         overrides_needles(condensed),
-        type_needles(condensed)
+        type_needles(condensed),
+        sig_needles(condensed)
     ))
 
 

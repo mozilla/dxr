@@ -7,7 +7,7 @@ from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                warn_needles, warn_op_needles, name_needles,
                                group_sparse_needles, callee_needles,
                                caller_needles, type_needles, child_needles,
-                               parent_needles, member_needles,
+                               parent_needles, member_needles, sig_needles,
                                overrides_needles, overridden_needles)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
@@ -327,30 +327,40 @@ def test_inherit_needles():
 
 
 def test_type_needles():
-    eq_(set(type_needles({
+    fixture = {
         'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
                       'span': DEFAULT_EXTENT}],
         'variable': [{'type': 'a',
                       'span': DEFAULT_EXTENT}],
-        'type': {
-            'struct': [{
+        'type': [
+            {
                 'name': 'foobar',
                 'qualname': 'foobar',
                 'kind': 'struct',
                 'span': DEFAULT_EXTENT
-            }],
-            'class': [{
+            },
+            {
                 'name': 'X',
                 'qualname': 'X',
                 'kind': 'class',
                 'span': DEFAULT_EXTENT
-            }]
-        }
-    })),
-        set([(('c-type', '(int**, int, int) -> int**'), DEFAULT_EXTENT),
-             (('c-type', 'a'), DEFAULT_EXTENT),
-             (('c-type', 'X'), DEFAULT_EXTENT),
+            }
+        ]
+    }
+    eq_(set(type_needles(fixture)),
+        set([(('c-type', 'X'), DEFAULT_EXTENT),
              (('c-type', 'foobar'), DEFAULT_EXTENT)]))
+
+
+def test_sig_needles():
+    fixture = {
+        'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
+                      'span': DEFAULT_EXTENT}],
+        'variable': [{'type': 'a',
+                      'span': DEFAULT_EXTENT}],
+    }
+    eq__(sig_needles(fixture),
+        [(('c-sig', '(int**, int, int) -> int**'), DEFAULT_EXTENT)])
 
 
 def test_member_needles():
