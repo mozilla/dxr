@@ -1,10 +1,10 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 import dxr.plugins
-from dxr.plugins import FILE, LINE
+from dxr.plugins import FILE, LINE, Filter
 
 
-# TODO: path and ext filters, needles for those
+# TODO: RegexFilter, ExtFilter, PathFilter, any needles for those
 
 
 mappings = {
@@ -82,7 +82,7 @@ mappings = {
             # We index content 2 ways to keep RAM use down. Naively, we should
             # be able to pull the content.trigrams source out using our JS
             # regex script, but in actuality, that uses much more RAM than
-            # pulling just plain content and crashes.
+            # pulling just plain content, to the point of crashing.
             'content': {
                 'type': 'string',
                 'index': 'no',
@@ -117,6 +117,62 @@ analyzers = {
         }
     }
 }
+
+
+def _find_iter(haystack, needle):
+    """Return an iterable of indices at which string ``needle`` is found in
+    ``haystack``.
+
+    :arg haystack: The unicode string to search within
+    :arg needle: The unicode string to search for
+
+    Return only the first of overlapping occurrences.
+
+    """
+    if needle:
+        needle_len = len(needle)
+        offset = 0
+        while True:
+            offset = haystack.find(needle, offset)
+            if offset == -1:
+                break
+            yield offset
+            offset += needle_len
+
+
+class TextFilter(Filter):
+    """Filter matching a run of plain text in a file"""
+
+    name = 'text'
+    domain = LINE
+
+    def __init__(self, term):
+        """Store the text we're searching for."""
+        if term['case_sensitive']:
+            # We might have to store a second trigram index to support this,
+            # unlike with trilite.
+            raise NotImplementedError
+        self.text = term['arg']
+
+    def filter(self):
+        return {
+            'query': {
+                'match_phrase': {
+                    'content.trigrams': self.text
+                }
+            }
+        }
+
+    def highlight(self, result, field):
+        if field == 'content':
+            text_len = len(self.text)
+            return ((i, i + text_len) for i in
+                    # We assume content is a singleton. How could it be
+                    # otherwise?
+                    _find_iter(result['content'][0].lower(),
+                               self.text.lower()))
+        else:
+            return []
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):

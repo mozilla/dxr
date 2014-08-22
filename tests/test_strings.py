@@ -2,7 +2,7 @@
 
 from nose.tools import eq_
 
-from dxr.extents import highlight_line
+from dxr.extents import highlight
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
@@ -45,16 +45,9 @@ class RepeatedResultTests(SingleFileTestCase):
                            '<b>int</b> main(<b>int</b> argc, char* argv[]) {')
 
 
-def test_highlight_line():
-    """A unit test for highlight_line() that I found handy while rewriting it
-
-    Redundant with most of the rest of these tests but runs fast, so let's keep
-    it.
-
-    """
-    source = """int main(int argc, char* argv[]) {
-            return 0;
-        }
-        """
-    eq_(highlight_line(source.splitlines()[0], [(0, 3), (9, 12)], '<b>', '</b>', 'utf-8'),
-        '<b>int</b> main(<b>int</b> argc, char* argv[]) {')
+def test_highlight():
+    """Try ``highlight()`` against overlapping and disjunct inputs."""
+    eq_(highlight('inini main(ini argc, char* argv[]) {',
+                  [(0, 3), (2, 5), (11, 14)]),
+        '<b>in</b><b>i</b><b>ni</b> main(<b>ini</b> argc, char* argv[]) {')
+    # That's not the optimal result, but it's a correct one.
