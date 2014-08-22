@@ -30,7 +30,16 @@ def is_function((_, obj)):
 
 
 def needle_filter_factory(lang, tag, desc):
-    """Default Filter for simple term matching needles."""
+    """Default Filter for simple term matching needles.
+
+    Filters for a "lang-tag" fieldname.
+    Note: matching is case-insensitive!
+
+    :param str lang: Language this filter belongs to.
+    :param str tag: ES tag filter should listen to.
+    :param str desc: Front facing description of filter.
+
+    """
     class NeedleFilter(object):
         name = tag
         domain = LINE
@@ -48,14 +57,14 @@ def needle_filter_factory(lang, tag, desc):
                             self.field_name: self.term
                         }}}}
 
-        def highlight(self, result):
+        def highlight(self, result, field):
             content = result['content']
 
             def _highlight(needle):
                 return needle['start'], needle['end'] or len(content)
 
             highlights = sorted((_highlight(needle) for needle
-                                 in content[self.field_name]
+                                 in content[field]
                                  if content['term'] == self.term),
                                 key=itemgetter('start'))
             return {'content': highlights}
