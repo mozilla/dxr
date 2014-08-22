@@ -7,7 +7,7 @@ from itertools import chain, izip, ifilter
 from functools import partial
 
 from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
-                   constantly)
+                   constantly, icat)
 
 from dxr import plugins
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
@@ -250,14 +250,11 @@ def inherit_needles(condensed, tag, func):
     :param tag: First element in the needle tuple.
 
     """
-    if isinstance(condensed['type'], list):
-        return []
     children = (izip(func(c['name']), repeat(c['span'])) for c
-                in condensed['type']['class'])
+                in condensed['type'] if c['kind'] == 'class')
 
     return imap(lambda (a, (b, c)): ((a, b), c),
-                izip(repeat('c-{0}'.format(tag)),
-                     chain.from_iterable(children)))
+                izip(repeat('c-{0}'.format(tag)), icat(children)))
 
 
 def child_needles(condensed, inherit):
