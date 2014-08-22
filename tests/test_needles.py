@@ -1,12 +1,12 @@
-from nose.tools import eq_
+from nose.tools import eq_, assert_raises
 
 
 from dxr.plugins.needles import (unsparsify, by_line, group_needles,
-                                 span_to_lines)
+                                 span_to_lines, pack)
 from dxr.plugins.utils import Extent, Position
 
-NEEDLE1 = ('x', Extent(Position(None, 0, 0), Position(None, 0, 0)))
-NEEDLE2 = ('y', Extent(Position(None, 0, 0), Position(None, 2, 0)))
+NEEDLE1 = ('x', Extent(Position(None, 0, 3), Position(None, 0, 7)))
+NEEDLE2 = ('y', Extent(Position(None, 0, 5), Position(None, 2, 7)))
 NEEDLE3 = ('z', Extent(Position(None, 0, 0), Position(None, -1, 0)))
 
 
@@ -19,30 +19,40 @@ def test_needle_smoke_test():
 
 
 def test_unsparsify():
-    eq__([], unsparsify([]))
-    eq__([], unsparsify([NEEDLE3]))
-    eq__([[('x', 0), ('y', 0)], [('y', 1)], [('y', 2)]],
-         unsparsify([NEEDLE1, NEEDLE2]))
-    eq__([[('y', 0), ('x', 0)], [('y', 1)], [('y', 2)]],
-         unsparsify([NEEDLE2, NEEDLE1]))
+    assert_raises(ValueError, unsparsify, [NEEDLE3])
+
+    output = [[pack('x', 3, 7), pack('y', 5, None)],
+              [pack('y', 0, None)],
+              [pack('y', 0, 7)]]
+
+    eq__(output, unsparsify([NEEDLE1, NEEDLE2]))
 
 
 def test_group_needles():
     eq__([], group_needles([]))
-    eq__([[('x', 0), ('y', 0)], [('y', 1)], [('y', 2)]],
-         group_needles([('x', 0), ('y', 0), ('y', 1), ('y', 2)]))
-    eq__([[('y', 0), ('x', 0)], [('y', 1)], [('y', 2)]],
-         group_needles([('y', 0), ('y', 1), ('y', 2), ('x', 0)]))
+
+    fixture = [(pack('x', 3, 7), 0), (pack('y', 5, None), 0), (pack('y', 0, None), 1),
+               (pack('y', 0, 7), 2)]
+
+    output = [[pack('x', 3, 7), pack('y', 5, None)],
+              [pack('y', 0, None)],
+              [pack('y', 0, 7)]]
+    eq__(output, group_needles(fixture))
 
 
 def test_by_line():
     eq__([], by_line([]))
-    eq__([], by_line([NEEDLE3]))
-    eq__([('x', 0), ('y', 0), ('y', 1), ('y', 2)],
+    eq__([(pack('x', 3, 7), 0),
+          (pack('y', 5, None), 0),
+          (pack('y', 0, None), 1),
+          (pack('y', 0, 7), 2)],
          by_line([NEEDLE1, NEEDLE2]))
 
 
 def test_span_to_lines():
-    eq__(span_to_lines(NEEDLE1), [('x', 0)])
-    eq__(span_to_lines(NEEDLE2), [('y', 0), ('y', 1), ('y', 2)])
-    eq__(span_to_lines(NEEDLE3), [])
+    eq__(span_to_lines(NEEDLE1), [({'term': 'x', 'start': 3, 'end': 7}, 0)])
+    eq__(span_to_lines(NEEDLE2), [({'term': 'y', 'start': 5, 'end': None}, 0),
+                                  ({'term': 'y', 'start': 0, 'end': None}, 1),
+                                  ({'term': 'y', 'start': 0, 'end': 7}, 2)])
+    assert_raises(ValueError, lambda x: list(span_to_lines(x)), [])
+
