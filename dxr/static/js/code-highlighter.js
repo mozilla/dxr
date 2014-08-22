@@ -209,8 +209,7 @@ $(function () {
                 $('.last-selected').removeClass('clicked');
             } else if (lastSelectedNum > clickedNum) {
                 //shiftclick ascending up the page
-                $('.line-number').removeClass('clicked');
-                $('code').removeClass('clicked');
+                $('.line-number, code').removeClass('clicked');
                 line.addClass('clicked');
                 selectedLineNums = $('.line-number.clicked').nextUntil($('.line-number.last-selected'));
                 selectedLineCode = $('code.clicked').nextUntil($('code.last-selected'));
@@ -230,14 +229,13 @@ $(function () {
         } else if (event.shiftKey && lastModifierKey === 'singleSelectKey') {
             //if ctrl/command was last pressed, add multihighlight class to new lines
             $('.line-number, .code code').removeClass('clicked');
-            //** $('.code code').removeClass('clicked');
             line.addClass('clicked');
             selectedLineNums = $('.line-number.last-selected').nextUntil($('.line-number.clicked'));
             selectedLineNums.addClass('multihighlight')
-                        .removeClass('highlighted');
+                            .removeClass('highlighted');
             selectedLineCode = $('code.last-selected').nextUntil($('code.clicked'));
             selectedLineCode.addClass('multihighlight')
-                        .removeClass('highlighted');
+                            .removeClass('highlighted');
             line.addClass('multihighlight');
 
         } else if (event.ctrlKey || event.metaKey) {
@@ -245,7 +243,6 @@ $(function () {
             lastModifierKey = 'singleSelectKey';
             $('.highlighted').addClass('multihighlight');
             $('.line-number, .code code').removeClass('last-selected clicked highlighted');
-            //** $('.code code').removeClass('last-selected clicked highlighted');
             if (lastSelectedNum !== clickedNum) {
                 line.toggleClass('clicked last-selected multihighlight');
             } else {
@@ -258,7 +255,6 @@ $(function () {
             lastModifierKey = null;
             //Remove existing highlights.
             $('.line-number, .code code').removeClass('last-selected highlighted multihighlight clicked');
-            //** $('.code code').removeClass('last-selected highlighted multihighlight clicked');
             //empty out single lines and ranges arrays
             rangesArray = [];
             singleLinesArray = [];
