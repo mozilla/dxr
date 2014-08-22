@@ -3,10 +3,7 @@ Downloading DXR
 
 Using git, clone the DXR repository::
 
-   git clone --recursive https://github.com/mozilla/dxr.git
-
-Remember the :option:`--recursive` option; DXR depends on the `TriLite SQLite
-extension`_, which is included in the repository as a git submodule.
+   git clone https://github.com/mozilla/dxr.git
 
 
 Booting And Building
@@ -33,7 +30,5 @@ Then, run this inside the VM::
    The Vagrant image is built for VirtualBox 4.2.0.  If your version is older,
    the image might not work as expected.
 
-
-.. _TriLite SQLite extension: https://github.com/jonasfj/trilite
 
 .. _Vagrant: http://www.vagrantup.com/

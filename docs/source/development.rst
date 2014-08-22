@@ -25,9 +25,9 @@ DXR divides into 2 halves:
    machine—by cron or a build system. It's up to deployers to come up with
    strategies that make sense for them.
 
-2. A Flask web application which lets users query those indices. The development
-   entrypoint for the web application is :program:`dxr-serve.py`, but a more
-   robust method should be used for :doc:`deployment`.
+2. A Flask web application which lets users query those indices.
+   :program:`dxr-serve.py` is a way to run the application for development
+    purposes, but a more robust method should be used for :doc:`deployment`.
 
 
 Setting Up
@@ -63,7 +63,7 @@ host and still use the VM to run DXR.
 After making changes to DXR, a build step is sometimes needed to see the
 effects of your work:
 
-Changes to C-based compiler plugins or TriLite:
+Changes to C-based compiler plugins:
     ``make`` (at the root of the project)
 
 Changes to HTML templates that are used on the client side:
@@ -71,7 +71,7 @@ Changes to HTML templates that are used on the client side:
     faster.) Alternatively, leave ``node_modules/.bin/grunt watch`` running,
     and it will take care of recompiling the templates as necessary.
 
-Changes to server-side HTML templates or the DB schema:
+Changes to server-side HTML templates or the format of the elasticsearch index:
     Run ``make`` inside :file:`tests/test_basic`.
 
 Stop :program:`dxr-serve.py`, run the build step, and then fire up the server
@@ -128,9 +128,7 @@ To run a single test... ::
     nosetests tests/test_functions.py:ReferenceTests.test_functions
 
 If you have trouble, make sure you didn't mistranscribe any colons or
-periods. Also, if you did not install :file:`libtrilite.so` globally, you'll
-need to make sure :envvar:`LD_LIBRARY_PATH` in your environment points to the
-:file:`trilite` folder.
+periods.
 
 
 The Format Version

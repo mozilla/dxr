@@ -100,14 +100,3 @@ and see what you've wrought::
 
 Surf to http://33.33.33.77:8000/ from the host machine, and poke around
 your fancy new searchable codebase.
-
-.. note::
-
-    Seeing this error? ::
-
-       Server Error
-       Database error: no such module: trilite
-
-    Run :command:`sudo ldconfig` inside the virtual machine to sort out the
-    shared library linking problem. Then, re-run :program:`dxr-serve.py`, and
-    all should work as expected.
