@@ -8,19 +8,6 @@ from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
 
 
-def indexer_exports():
-    """ Indexer files should export these, for use as __all__"""
-    return ['pre_process', 'post_process']
-
-
-def htmlifier_exports():
-    """ Htmlifier files should export these, for use as __all__"""
-    return ['htmlify', 'load']
-
-
-
-## NEW STUFF. Most of the above should go away.
-
 # Domain constants:
 FILE = 'file'  # A FILE query will be promoted to a LINE query if any other query
                # term triggers a line-based query. Thus, it's important to keep
