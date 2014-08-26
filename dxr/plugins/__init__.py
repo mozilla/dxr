@@ -15,19 +15,37 @@ FILE = 'file'  # A FILE query will be promoted to a LINE query if any other quer
 LINE = 'line'
 
 
-# This is a concrete example of a Filter. This should move to some kind of
-# "core" plugin.
-class PathFilter(object):
-    """One of these is created for each path: query term and persists through
-    the querying and highlighting phases."""
+class Filter(object):
+    """A provider of search strategy and highlighting
 
-    name = 'path'
-    domain = FILE
+    Filter classes, which roughly correspond to the items in the Filters
+    dropdown menu, tell DXR how to query the data stored in elasticsearch by
+    :meth:`~dxr.plugins.FileToIndex.needles` and
+    :meth:`~dxr.plugins.FileToIndex.needles_by_line`. An instance is created
+    for each query term whose :attr:`name` matches and persists through the
+    querying and highlighting phases.
 
-    #: Unicode or Markup (in case you want to include HTML) describing this
-    #: filter for the Filters menu. Of filters having the same name, the
-    #: description of the first one encountered will be the one used.
-    description = u'Some description for the Filters menu'
+    :ivar name: The string prefix used in a query term to activate this
+        filter. For example, if this were "path", this filter would be
+        activated for the query term "path:foo". Multiple filters can be
+        registered against a single name; they are ORed together. For example,
+        it is good practice for a language plugin to query against a language
+        specific needle (like "js-function") but register against the more
+        generic "function" here. (This allows us to do language-specific
+        queries.)
+    :ivar domain: Either LINE or FILE. LINE means this filter returns results
+        that point to specific lines of files; FILE means they point to files
+        as a whole. Default: LINE.
+    :ivar description: A description of this filter for the Filters menu:
+        unicode or Markup (in case you want to wrap examples in ``<code>``
+        tags). Of filters having the same name, the description of the first
+        one encountered will be used. An empty description will hide a filter
+        from the menu. This should probably be used only internally, by the
+        TextFilter.
+
+    """
+    domain = LINE
+    description = u''
 
     def __init__(self, term):
         """This is a good place to parse the term's arg (if it requires further
@@ -35,12 +53,13 @@ class PathFilter(object):
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
-        found set of lines (or files and folders, if this is a FILES filter).
+        found set of lines (or files and folders, if :attr:`domain` is FILES).
 
         We might even make this return a list of filter clauses, for things
         like the RegexFilter which want a bunch of match_phrases and a script.
 
         """
+        raise NotImplementedError
 
     def highlight_path(self, result):
         """Return a sorted iterable of extents that should be highlighted in
@@ -51,10 +70,8 @@ class PathFilter(object):
             for example, use the extents from a 'c-function' needle to inform
             the highlighting of the 'content' field.
 
-        It is an optimization to omit this method if no path highlighting
-        is needed.
-
         """
+        return []
 
     def highlight_content(self, result):
         """Return a sorted iterable of extents that should be highlighted in
@@ -65,26 +82,18 @@ class PathFilter(object):
             for example, use the extents from a 'c-function' needle to inform
             the highlighting of the 'content' field.
 
-        It is an optimization to omit this method if no content highlighting
-        is needed.
-
         """
+        return []
 
     # A filter can eventually grow a "kind" attr that says "structural" or
     # "text" or whatever, and we can vary the highlight color or whatever based
     # on that to make identifiers easy to pick out visually.
 
 
-class Filter(object):
-    domain = LINE
-    description = u''
-
-
 class TreeToIndex(object):
-    """Manager of data extraction from a tree at index time
-
-    A single instance of each TreeToIndex class is used for the entire indexing
-    process of a tree.
+    """A TreeToIndex performs build environment setup and teardown and serves
+    as a repository for scratch data that should persist across an entire
+    indexing run.
 
     Instances must be pickleable so as to make the journey to worker processes.
     You might also want to keep the size down. It takes on the order of 2s for
@@ -94,8 +103,7 @@ class TreeToIndex(object):
 
     """
     def __init__(self, tree):
-        """Construct.
-
+        """
         :arg tree: The configuration of the tree to index: a TreeConfig
 
         """
@@ -170,7 +178,7 @@ class TreeToIndex(object):
 
 
 class FileToSkim(object):
-    """A source of rendering data for a source file generated at request time
+    """A source of rendering data about a file, generated at request time
 
     This is appropriate for unindexed files (such as old revisions pulled out
     of a VCS) or for data so large or cheap to produce that it's a bad tradeoff
@@ -179,8 +187,7 @@ class FileToSkim(object):
 
     """
     def __init__(self, path, contents, tree, file_properties=None, line_properties=None):
-        """Construct.
-
+        """
         :arg path: The conceptual path to the file, relative to the tree's
             source folder. Such a file might not exist on disk. This is useful
             mostly as a hint for syntax coloring.
@@ -230,7 +237,10 @@ class FileToSkim(object):
         return []
 
     def refs(self):
-        """Yield an ordered list of extents and menus for each line::
+        """Provide cross references for various spans of text, accessed
+        through a context menu.
+
+        Yield an ordered list of extents and menu items for each line::
 
             (start, end, (menu, title))
 
@@ -252,7 +262,10 @@ class FileToSkim(object):
         return []
 
     def regions(self):
-        """Yield an ordered list of extents and CSS classes for each line::
+        """Yield instructions for syntax coloring and other inline formatting
+        of code.
+        
+        Yield an ordered list of extents and CSS classes for each line::
 
             (start, end, class)
 
@@ -267,7 +280,10 @@ class FileToSkim(object):
         return []
 
     def annotations_by_line(self):
-        """Yield a list of annotation maps for each line::
+        """Yield extra user-readable information about each line, hidden by
+        default: compiler warnings that occurred there, for example.
+        
+        Yield a list of annotation maps for each line::
 
             {'title': ..., 'class': ..., 'style': ...}
 
@@ -332,9 +348,10 @@ class FileToIndex(FileToSkim):
         """Return an iterable of key-value pairs of search data about the file
         as a whole: for example, modification date or file size.
 
-        If the framework encounters multiple needles of the same key (whether
-        coming from the same plugin or different ones), all unique values will
-        be retained.
+        Each pair becomes an elasticsearch property and its value. If the
+        framework encounters multiple needles of the same key (whether coming
+        from the same plugin or different ones), all unique values will be
+        retained using an elasticsearch array.
 
         """
         # We go with pairs rather than a map so we can just chain all these
@@ -348,11 +365,12 @@ class FileToIndex(FileToSkim):
         Yield an iterable of key-value pairs for each of a file's lines, one
         iterable per line, in order. The data might be data to search on or
         data stowed away for a later realtime thing to generate refs or
-        regions from.
+        regions from. In any case, each pair becomes an elasticsearch property
+        and its value.
 
         If the framework encounters multiple needles of the same key on the
         same line (whether coming from the same plugin or different ones), all
-        unique values will be retained.
+        unique values will be retained using an elasticsearch array.
 
         """
         return []
@@ -393,8 +411,7 @@ class Plugin(object):
 
     """
     def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None):
-        """Construct.
-
+        """
         :arg filters: A list of filter classes
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
@@ -432,15 +449,18 @@ class Plugin(object):
 
         :arg namespace: A namespace from which to pick components
 
-        Filters are taken to be any class whose name ends in "Filter" and
+        **Filters** are taken to be any class whose name ends in "Filter" and
         doesn't start with "_".
 
-        The tree indexer is assumed to be called "TreeToIndex". If there isn't
+        The **tree indexer** is assumed to be called "TreeToIndex". If there isn't
         one, one will be constructed which does nothing but delegate to the
         class called ``FileToIndex`` (if there is one) when ``file_to_index()``
         is called on it.
 
-        The file skimmer is assumed to be called "FileToSkim".
+        The **file skimmer** is assumed to be called "FileToSkim".
+
+        **Mappings** are pulled from ``mappings`` attribute and **analyzers**
+        from ``analyzers``.
 
         If these rules don't suit you, you can always instantiate a Plugin
         yourself.
