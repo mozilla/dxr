@@ -6,6 +6,10 @@ set -x
 
 apt-get update
 
+#configure locales:
+export LC_ALL="en_US.UTF-8"
+locale-gen en_US.UTF-8
+
 # node and npm:
 apt-get install -y npm
 # Homogenize binary name with production RHEL:
