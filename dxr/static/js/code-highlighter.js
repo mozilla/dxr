@@ -20,15 +20,13 @@ $(function () {
     function sortAsc(a, b) {
         return a - b;
     }
+    function stringToRange(a) {
+        a = a.split('-');
+        a[0] = parseInt(a[0],10);
+        a[1] = parseInt(a[1],10);
+        return a;
+    }
     function sortRangeAsc(a, b) {
-        if (typeof(a) === 'string' && typeof(a) === 'string') {
-            a = a.split('-');
-            b = b.split('-');
-            a[0] = parseInt(a[0],10);
-            a[1] = parseInt(a[1],10);
-            b[0] = parseInt(b[0],10);
-            b[1] = parseInt(b[1],10);
-        }
         // tweak in order to account for inverted ranges like 150-120
         return Math.min(a[0],a[1]) - Math.min(b[0],b[1]);
     }
@@ -43,7 +41,7 @@ $(function () {
         var singleSelected = $('.line-number.highlighted');
 
         function generateLines(selected, lines) {
-            for (var i = 0; i < selected.length; i++ ) {
+            for (var i = 0; i < selected.length; i++) {
                 lines.push(parseInt(selected[i].id, 10));
             }
             return lines;
@@ -80,19 +78,23 @@ $(function () {
     //generate the window.location.hash based on singleLinesArray and rangesArray
     function setWindowHash() {
         var windowHash = null,
+            s = null,
+            r = null,
             reCleanup = /(^#?,|,$)/;
         [singleLinesArray, rangesArray] = generateSelectedArrays(); //generates the sorted arrays
         // eliminate duplication
-        for(var s = 0; s < singleLinesArray.length; s++) {
-            for(var r = 0; r < rangesArray.length; r++) {
+        for (s = 0; s < singleLinesArray.length; s++) {
+            for (r = 0; r < rangesArray.length; r++) {
                 if (s >= rangesArray[r][0] && s <= rangesArray[r][1]) {
                     singleLinesArray.splice(s,1);
                     s--;
                 }
             }
         }
-        if (singleLinesArray.length || rangesArray.length) { windowHash = '#';}
-        for(var s = 0, r = 0; s < singleLinesArray.length || r < rangesArray.length;) {
+        if (singleLinesArray.length || rangesArray.length) {
+            windowHash = '#';
+        }
+        for (s = 0, r = 0; s < singleLinesArray.length || r < rangesArray.length;) {
             // if no ranges left or singleLine < range add singleLine to hash
             // if no singleLines left or range < singleLine add range to hash 
             if ((r == rangesArray.length) || (singleLinesArray[s] < rangesArray[r][0])) {
@@ -117,25 +119,20 @@ $(function () {
             lineStart = null,
             reRanges = /[0-9]+-[0-9]+/g,
             reCleanup = /[^0-9,]/g,
-            range = null,
             ranges = null,
             firstRange = null;
         highlights = highlights.replace(/ /g,''); // clean whitespace
         ranges = highlights.match(reRanges);
         if (ranges !== null) {
-            ranges = ranges.sort(sortRangeAsc);
+            ranges = ranges.map(stringToRange).sort(sortRangeAsc);
             //strip out multiline items like 12-15, so that all that is left are single lines
             //populate rangesArray for reuse if a user selects more ranges later
-            for (var i=0; i < ranges.length; i++) {
-                highlights = highlights.replace(ranges[i], '');
-                range = ranges[i].split('-');
-                //make sure range is comprised of integers only
-                range[0] = parseInt(range[0], 10);
-                range[1] = parseInt(range[1], 10);
-                range.sort(sortAsc);
-                // add the ordered range to the rangesArray
-                rangesArray.push(range);
+            for (var i = 0; i < ranges.length; i++) {
+                highlights = highlights.replace(ranges[i].join('-'), '');
+                ranges[i].sort(sortAsc);
             }
+            // add the ordered ranges to the rangesArray
+            rangesArray.concat(ranges);
             firstRange = rangesArray[0];
             highlights = highlights.replace(reCleanup ,''); // clean anything other than digits and commas
             highlights = highlights.replace(/,,+/g, ','); // clean multiple commas
