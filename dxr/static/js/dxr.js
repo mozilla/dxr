@@ -72,6 +72,7 @@ $(function() {
      * @param {string} html - The HTML message to be displayed
      */
     function showBubble(level, html) {
+        $('.bubble').stop();
         $('.bubble').html(html)
                     .removeClass('error warning info')
                     .addClass(level)
