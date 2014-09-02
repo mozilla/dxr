@@ -25,6 +25,9 @@ class Filter(object):
     for each query term whose :attr:`name` matches and persists through the
     querying and highlighting phases.
 
+    This is an optional base class that saves code on many filters. It also
+    serves to document the filter API.
+
     :ivar name: The string prefix used in a query term to activate this
         filter. For example, if this were "path", this filter would be
         activated for the query term "path:foo". Multiple filters can be
@@ -50,6 +53,7 @@ class Filter(object):
     def __init__(self, term):
         """This is a good place to parse the term's arg (if it requires further
         parsing) and stash it away on the instance."""
+        self._term = term
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the

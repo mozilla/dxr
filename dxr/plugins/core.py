@@ -154,30 +154,26 @@ class TextFilter(Filter):
 
     name = 'text'
 
-    def __init__(self, term):
-        """Store the text we're searching for."""
-        self.term = term
-
     def filter(self):
         positive = {
             'query': {
                 'match_phrase': {
-                    'content.trigrams' if self.term['case_sensitive']
-                    else 'content.trigrams_lower': self.term['arg']
+                    'content.trigrams' if self._term['case_sensitive']
+                    else 'content.trigrams_lower': self._term['arg']
                 }
             }
         }
-        return {'not': positive} if self.term['not'] else positive
+        return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
-        text_len = len(self.term['arg'])
-        maybe_lower = (identity if self.term['case_sensitive'] else
+        text_len = len(self._term['arg'])
+        maybe_lower = (identity if self._term['case_sensitive'] else
                        lambda x: x.lower())
         return ((i, i + text_len) for i in
                 # We assume content is a singleton. How could it be
                 # otherwise?
                 _find_iter(maybe_lower(result['content'][0]),
-                           maybe_lower(self.term['arg'])))
+                           maybe_lower(self._term['arg'])))
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):
