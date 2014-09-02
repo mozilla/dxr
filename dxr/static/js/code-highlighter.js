@@ -132,7 +132,7 @@ $(function () {
                 ranges[i].sort(sortAsc);
             }
             // add the ordered ranges to the rangesArray
-            rangesArray.concat(ranges);
+            rangesArray = rangesArray.concat(ranges);
             firstRange = rangesArray[0];
             highlights = highlights.replace(reCleanup ,''); // clean anything other than digits and commas
             highlights = highlights.replace(/,,+/g, ','); // clean multiple commas
