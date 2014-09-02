@@ -72,7 +72,9 @@ $(function() {
      * @param {string} html - The HTML message to be displayed
      */
     function showBubble(level, html) {
+        // If hideBubble() was already called, abort the hide animation:
         $('.bubble').stop();
+
         $('.bubble').html(html)
                     .removeClass('error warning info')
                     .addClass(level)
@@ -95,7 +97,7 @@ $(function() {
     /**
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
-     * 
+     *
      * @param {string} fullPath - The full path of the currently displayed file.
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
@@ -126,7 +128,7 @@ $(function() {
 
         return [iconClass, pathLines];
     }
-    
+
     var searchForm = $('#basic_search'),
         queryField = $('#query'),
         query = null,
