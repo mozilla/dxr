@@ -198,9 +198,31 @@ class Query(object):
         # Case sensitive function names
         cur.execute("""
             SELECT
-                    (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-                    functions.file_line
-                FROM functions WHERE functions.name = ? LIMIT 2
+                 (SELECT path FROM files WHERE files.id = functions.file_id) as path,
+                 functions.file_line
+              FROM functions WHERE functions.name = ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case sensitive macro names
+        cur.execute("""
+            SELECT
+                 (SELECT path FROM files WHERE files.id = macros.file_id) as path,
+                 macros.file_line
+              FROM macros WHERE macros.name = ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case sensitive typedef names
+        cur.execute("""
+            SELECT
+                 (SELECT path FROM files WHERE files.id = typedefs.file_id) as path,
+                 typedefs.file_line
+              FROM typedefs WHERE typedefs.name = ? LIMIT 2
         """, (term,))
         rows = cur.fetchall()
         if rows and len(rows) == 1:
@@ -247,6 +269,28 @@ class Query(object):
               (SELECT path FROM files WHERE files.id = functions.file_id) as path,
               functions.file_line
             FROM functions WHERE functions.name LIKE ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case insensitive macro names
+        cur.execute("""
+        SELECT
+              (SELECT path FROM files WHERE files.id = macros.file_id) as path,
+              macros.file_line
+            FROM macros WHERE macros.name LIKE ? LIMIT 2
+        """, (term,))
+        rows = cur.fetchall()
+        if rows and len(rows) == 1:
+            return (rows[0]['path'], rows[0]['file_line'])
+
+        # Case insensitive typedef names
+        cur.execute("""
+        SELECT
+              (SELECT path FROM files WHERE files.id = typedefs.file_id) as path,
+              typedefs.file_line
+            FROM typedefs WHERE typedefs.name LIKE ? LIMIT 2
         """, (term,))
         rows = cur.fetchall()
         if rows and len(rows) == 1:
