@@ -11,6 +11,7 @@ import ctypes
 
 from collections import Mapping
 from datetime import datetime
+import fnmatch
 import os
 from os import dup
 from os.path import join, dirname
@@ -182,3 +183,14 @@ def append_by_line(dest_lists, list_per_line):
 def decode_es_datetime(es_datetime):
     """Turn an elasticsearch datetime into a datetime object."""
     return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S')
+
+
+_FNMATCH_TRANSLATE_SUFFIX_LEN = len('\Z(?ms)')
+def glob_to_regex(glob):
+    """Return a regex equivalent to a shell-style glob.
+
+    Don't include the regex flags and \\Z at the end like fnmatch.translate(),
+    because we don't parse flags and we don't want to pin to the end.
+
+    """
+    return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]

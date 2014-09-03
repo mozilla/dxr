@@ -4,45 +4,17 @@ over just the returned docs, saving a lot of computation and IO.
 
 Junghoo Ch and Sridhar Rajagopalan, in "A fast regular expression indexing
 engine", descibe an intuitive method for accelerating regex searching with a
-trigram index. Russ Cox, in http://swtch.com/~rsc/regexp/regexp4.html, refines
+trigram index. This is roughly an implementation of that.
+
+Russ Cox, in http://swtch.com/~rsc/regexp/regexp4.html, refines
 that to {(1) extract use from runs of less than 3 static chars and (2) extract
 trigrams that cross the boundaries between subexpressions} by keeping track of
 prefix and suffix information while chewing through a pattern and effectively
-merging adjacent subpatterns. This is an implementation of his method.
+merging adjacent subpatterns. This is a direction we may go in the future.
 
 """
 from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
-
-
-class TrigramQuery(object):
-    """A query which matches a superset of the docs its corresponding regex
-    does. Abstract.
-
-    """
-    def __init__(self, trigrams, subassertions):
-        """I am a logical AND or OR of trigrams and subassertions.
-
-        These are divided just for implementation ease.
-
-        :arg trigrams: A list of trigram strings
-        :arg subassertions: A list of Assertions
-
-        """
-        self.trigrams = trigrams
-        self.subassertions = subassertions
-
-
-class And(TrigramQuery):
-    pass
-
-
-class Or(TrigramQuery):
-    pass
-
-
-# class None?
-# class Any?
 
 
 class RegexSummary(object):
@@ -53,7 +25,7 @@ class RegexSummary(object):
         example (s?printf) would yield {sprintf, printf}.
     :attr prefixes: The set of prefixes of strings the regex can match
     :attr suffixes: The set of suffixes of strings the regex can match
-    :attr query: A TrigramQuery that must be satisfied by any matching
+    :attr query: A TrigramTree that must be satisfied by any matching
         string, in addition to the restrictions expressed by the other
         attributes
 
@@ -116,6 +88,164 @@ def simplify_tree(tree):
 # We should parse a regex. Then go over the tree and turn things like c+ into cc*, perhaps, as it makes it easier to see trigrams to extract.
 # TODO: Parse normal regex syntax, but spit out Lucene-compatible syntax, with " escaped. And all special chars escaped even in character classes, in accordance with https://lucene.apache.org/core/4_6_0/core/org/apache/lucene/util/automaton/RegExp.html?is-external=true.
 
+# TODO: Expand positive char classes so we can get trigrams out of [sp][rne]
+# (trilite expands char classes of up to 10 chars but does nothing for larger
+# ones), and be able to get trigrams out of sp(rint) as well. Production
+# currently does that much. It is not, however, smart enough to expand
+# spr{1,3}, not spr+. An easy way would be to keep track of prefixes and
+# suffixes (and trigram-or-better infixes) for each node, then work our way up
+# the tree.
+
+
+class SubstringTree(list):
+    """A node specifying a boolean operator, with strings or more such nodes as
+    its children"""
+
+    def __init__(self, iterable=()):
+        self.extend(iterable)
+
+    def __str__(self):
+        return repr(self)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __eq__(self, other):
+        return (self.__class__ is other.__class__ and
+                super(SubstringTree, self).__eq__(other))
+
+    def simplified(self):
+        """Return a smaller but equivalent tree structure.
+
+        Simplify by turning nodes with only 1 child into mere strings and
+        removing nodes with 0.
+
+        """
+        def string_or_simplified(tree_or_string):
+            if isinstance(tree_or_string, basestring):
+                return tree_or_string
+            return tree_or_string.simplified()
+
+        def is_not_empty_tree(tree_or_string):
+            return isinstance(tree_or_string, basestring) or tree_or_string
+
+        # TODO: Think about implementing the Cox method. I now see that I'm
+        # going to have to write some kind of theorems into even the FREE
+        # method if I want to be able to extract trigrams from ab[cd]
+        # (prefixes, cross products), so I might as well use Cox's. We can
+        # code his theorems right into the visitor. I don't think it will get
+        # too messy. Low-level nodes' visitation will just cast strings to
+        # ints, etc., and high-level ones will just apply Cox theorems. Btw,
+        # http://code.ohloh.net/file?fid=rfNSbmGXJxqJhWDMLp3VaEMUlgQ&cid=
+        # eDOmLT58hyw&s=&fp=305491&mp=&projSelected=true#L0 is PG's
+        # explanation of their simplification stuff.
+        simple_children = filter(is_not_empty_tree,
+                                 (string_or_simplified(n) for n in self))
+        if len(simple_children) > 1:
+            return self.__class__(simple_children)
+        elif len(simple_children) == 1:
+            return simple_children[0]
+        else:  # Empty nodes occur at empty regex branches.
+            return self.__class__()
+
+
+class Useless(SubstringTree):
+    """This doubles as the singleton USELESS and a "ruined" Or, to which adding
+    anything yields USELESS back.
+
+    Don't construct any more of these.
+
+    """
+    def __repr__(self):
+        return 'USELESS'
+
+    def appended(self, branch):
+        return self
+
+    def extended(self, branches):
+        return self
+
+
+# Stand-in for a subpattern that's useless for producing trigrams. It is opaque
+# for our purposes, either intrinsically or just because we're not yet smart
+# enough to shatter it into a rain of ORed literals. USELESS breaks the
+# continuity between two things we *can* extract trigrams from, meaning we
+# shouldn't try making any trigrams that span the two.
+USELESS = Useless()
+
+
+class And(SubstringTree):
+    """A list of strings (or other Ands and Ors) which will all be found in
+    texts matching a given node
+
+    The strings herein are not necessarily contiguous with each other, but two
+    strings appended in succession are taken to be contiguous and are merged
+    internally.
+
+    """
+    # If we just hit a non-string, we should break the previous string of chars
+    # and start a new one:
+    string_was_interrupted = True
+
+    def __repr__(self):
+        return 'And(%s)' % super(And, self).__repr__()
+
+    def appended(self, thing):
+        """Add a string or And or Or as one of my children.
+
+        Merge it with the previous node if both are string literals. Return
+        myself. If the new thing is something useless for the purpose of
+        extracting trigrams, don't add it.
+
+        """
+        if thing is USELESS:  # TODO: Doesn't handle Ors. Why not?
+            # ANDs eat USELESSes. We can ignore it.
+            self.string_was_interrupted = True
+        elif isinstance(thing, basestring):
+            if self.string_was_interrupted:
+                self.string_was_interrupted = False
+                self.append(thing)
+            else:
+                self[-1] += thing
+        else:  # an And or Or node
+            self.string_was_interrupted = True
+            self.append(thing)
+        return self
+
+    def extended(self, things):
+        a = self
+        for t in things:
+            a = a.appended(t)
+        return a
+
+
+class Or(SubstringTree):
+    """A list of strings (or other Ands and Ors) of which one will be found in
+    all texts matching a given node"""
+
+    def __repr__(self):
+        return 'Or(%s)' % super(Or, self).__repr__()
+
+    def appended(self, branch):
+        """Add a string or And or Or as one of my children.
+
+        Return myself. If the new branch is something that makes me become
+        useless for the purpose of extracting trigrams, return USELESS.
+
+        """
+        if branch is USELESS:
+            return USELESS
+        self.append(branch)
+        return self
+
+    def extended(self, branches):
+        """Like ``appended`` but for multiple children"""
+        if USELESS in branches:
+            return USELESS
+        self.extend(branches)
+        return self
+
+
 BACKSLASH_SPECIAL_CHARS = 'AbBdDsSwWZ'
 
 # This recognizes a subset of Python's regex language, minus lookaround
@@ -166,155 +296,20 @@ regex_grammar = Grammar(r"""
     backslash_normal = ~"."
     """)
 
-# TODO: Expand positive char classes so we can get trigrams out of [sp][rne]
-# (trilite expands char classes of up to 10 chars but does nothing for larger
-# ones), and be able to get trigrams out of sp(rint) as well. Production
-# currently does that much. It is not, however, smart enough to expand
-# spr{1,3}, not spr+. An easy way would be to keep track of prefixes and
-# suffixes (and trigram-or-better infixes) for each node, then work our way up
-# the tree.
 
-
-class StringTreeNode(list):
-    """A node specifying a boolean operator, with strings or more such nodes as
-    its children"""
-
-    def __init__(self, iterable=()):
-        self.extend(iterable)
-
-    def __str__(self):
-        return repr(self)
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __eq__(self, other):
-        return (self.__class__ is other.__class__ and
-                super(StringTreeNode, self).__eq__(other))
-
-    def simplified():
-        """Return a simpler but equivalent tree structure.
-
-        Simplify by collapsing nodes with only 1 child.
-
-        """
-        # NEXT: Probably finish this. We'll need it in any case, and it makes
-        # tests shorter to write. But also think about implementing the Cox
-        # method. I now see that I'm going to have to write some kind of
-        # theorems into even the FREE method if I want to be able to extract
-        # trigrams from ab[cd] (prefixes, cross products), so I might as well
-        # use Cox's. We can code his theorems right into the visitor. I don't
-        # think it will get too messy. Low-level nodes' visitation will just
-        # cast strings to ints, etc., and high-level ones will just apply Cox
-        # theorems.
-        # Btw, http://code.ohloh.net/file?fid=rfNSbmGXJxqJhWDMLp3VaEMUlgQ&cid=eDOmLT58hyw&s=&fp=305491&mp=&projSelected=true#L0 is PG's explanation of their simplification stuff.
-        simple_children = ifilter(None, (n.simplified() for n in self))
-        if len(self) > 1:
-            return self.__class__(simple_children)
-        elif len(self) == 1:
-            raise NotiMplementedError
-        else:  # Empty nodes occur at empty regex branches.
-            return
-
-
-class Useless(StringTreeNode):
-    """This doubles as the singleton USELESS and a "ruined" Or, to which adding
-    anything yields USELESS back.
-
-    Don't construct any more of these.
-
-    """
-    def __repr__(self):
-        return 'USELESS'
-
-    def appended(self, branch):
-        return self
-
-    def extended(self, branches):
-        return self
-
-
-# Stand-in for a subpattern that's useless for producing trigrams. It is opaque
-# for our purposes, either intrinsically or just because we're not yet smart
-# enough to shatter it into a rain of ORed literals. USELESS breaks the
-# continuity between two things we *can* extract trigrams from, meaning we
-# shouldn't try making any trigrams that span the two.
-USELESS = Useless()
-
-
-class And(StringTreeNode):
-    """A list of strings (or other Ands and Ors) which will all be found in
-    texts matching a given node
-
-    The strings herein are not necessarily contiguous with each other.
-
-    """
-    # If we just hit a non-string, we should break the previous string of chars
-    # and start a new one:
-    string_was_interrupted = True
-
-    def __repr__(self):
-        return 'And(%s)' % super(And, self).__repr__()
-
-    def appended(self, thing):
-        """Add a string or And or Or as one of my children.
-
-        Merge it with the previous node if both are string literals. Return
-        myself. If the new thing is something useless for the purpose of
-        extracting trigrams, don't add it.
-
-        """
-        if thing is USELESS:  # TODO: Doesn't handle Ors. Why not?
-            # ANDs eat USELESSes. We can ignore it.
-            self.string_was_interrupted = True
-        elif isinstance(thing, basestring):
-            if self.string_was_interrupted:
-                self.string_was_interrupted = False
-                self.append(thing)
-            else:
-                self[-1] += thing
-        else:  # an And or Or node
-            self.string_was_interrupted = True
-            self.append(thing)
-        return self
-
-    def extended(self, things):
-        a = self
-        for t in things:
-            a = a.appended(t)
-        return a
-
-
-# NEXT: Simplify(), break strings into trigrams, uniquify them, and build a
-# query. Then see about exploiting some of the more opaque features of
-# regexes more intelligently.
-
-
-class Or(StringTreeNode):
-    """A list of strings (or other Ands and Ors) of which one will be found in
-    all texts matching a given node"""
-
-    def __repr__(self):
-        return 'Or(%s)' % super(Or, self).__repr__()
-
-    def appended(self, branch):
-        """Add a string or And or Or as one of my children.
-
-        Return myself. If the new branch is something that makes me become
-        useless for the purpose of extracting trigrams, return USELESS.
-
-        """
-        if branch is USELESS:
-            return USELESS
-        self.append(branch)
-        return self
-
-    def extended(self, branches):
-        """Like ``appended`` but for multiple children"""
-        if USELESS in branches:
-            return USELESS
-        self.extend(branches)
-        return self
+def _coalesce_strings(things):
+    """Merge adjacent strings in iterable ``things`` by concatenation."""
+    substrings = []
+    for t in things:
+        if isinstance(t, basestring):
+            substrings.append(t)
+        else:
+            if substrings:
+                yield ''.join(substrings)
+            yield t
+            substrings = []
+    if substrings:
+        yield ''.join(substrings)
 
 
 class TrigramTreeVisitor(NodeVisitor):
@@ -336,13 +331,13 @@ class TrigramTreeVisitor(NodeVisitor):
     # strings, but there is no text which matches a^b or a$b.
     visit_hat = visit_dollars = visit_dot = lambda self, node, children: USELESS
 
-    backslash_special_chars = {'a': '\a',
-                               'e': '\x1B',  # for PCRE compatibility
-                               'f': '\f',
-                               'n': '\n',
-                               'r': '\r',
-                               't': '\t',
-                               'v': '\v'}
+    backslash_specials = {'a': '\a',
+                          'e': '\x1B',  # for PCRE compatibility
+                          'f': '\f',
+                          'n': '\n',
+                          'r': '\r',
+                          't': '\t',
+                          'v': '\v'}
     quantifier_expansions = {'*': (0, ''),
                              '+': (1, ''),
                              '?': (0, 1)}
@@ -388,7 +383,9 @@ class TrigramTreeVisitor(NodeVisitor):
 
     def visit_quantifier(self, or_, (quantifier,)):
         """Return a tuple of (min, max), where '' means infinity."""
-        return quantifier_expansions.get(quantifier, quantifier)
+        # It'll either be in the hash, or it will have already been broken
+        # down into a tuple by visit_repeat_range.
+        return self.quantifier_expansions.get(quantifier.text, quantifier)
 
     def visit_repeat(self, repeat, (brace, repeat_range, end_brace)):
         return repeat_range

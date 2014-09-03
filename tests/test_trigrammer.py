@@ -3,19 +3,17 @@
 
 from unittest import TestCase
 
-from nose.tools import eq_, assert_raises
+from nose import SkipTest
+from nose.tools import eq_, ok_, assert_raises
 from parsimonious.exceptions import ParseError
 
-from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or
+from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, _coalesce_strings
 
-
-#def test_something():
-#    eq_(trigrams_from_regex('abc'), ['abc'])
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
-# Make sure we do the right thing when the (?i) flag is set: either generate enough trigrams to cover the case insensitivity, or use a case-folder ES index. I guess we'll use a folded trigram index, like we do now. Be sure to have the query analyzer do the ucasing, because Python is not going to get that right for Unicode.
+# Make sure we do the right thing when the (?i) flag is set: use a case-folder ES index.
 # Make sure we preserve Unicode chars.
-# Be sure to escape - if it's the last char in a character class before passing it to ES.
+# Be sure to escape "-" if it's the last char in a character class before passing it to ES. [No longer applies, since we use JS regexes.]
 
 # prefixes: abc | cba
 # suffixes: def
@@ -26,6 +24,57 @@ from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or
 # suffixes: ef cdef abef
 #              cdef abef
 # exact: Ø
+
+
+def test_coalesce_strings():
+    eq_(list(_coalesce_strings(['a', 'b', 'c'])), ['abc'])
+    eq_(list(_coalesce_strings(['a', 'b', Or(['c', 'd']), 'e'])),
+        ['ab', Or(['c', 'd']), 'e'])
+
+
+class SimplificationTests(TestCase):
+    """Tests for tree simplification, especially that which results in static
+    strings we might use in, for example, the PathFilter."""
+
+    def test_single_strings(self):
+        """These should simplify down to single strings."""
+        eq_(And(['smoo']).simplified(), 'smoo')
+        eq_(And(Or(['smoo'])).simplified(), 'smoo')
+        eq_(Or(And(['smoo'])).simplified(), 'smoo')
+
+    def test_nopes(self):
+        """These examples should not simplify down to strings."""
+        ok_(not isinstance(And(['smoo', Or(['hi'])]).simplified(), basestring))
+        eq_(Or(['smoo', 'hi']).simplified(), Or(['smoo', 'hi']))
+
+    def test_simple_strings(self):
+        """An And or Or with one child should turn into that child."""
+        eq_(visit_regex('abcd').simplified(), 'abcd')
+
+    def test_string_coalescing(self):
+        """We should be smart enough to merge these into a single string."""
+        raise SkipTest("We will need more metadata on the tree nodes (the 'exact' datum from the Cox method) to tell when it's safe to coalesce a, b, and c in the parent node after they were simplified out of lower-level children.")
+        eq_(visit_regex('(a)(b)(c)').simplified(), 'abc')
+
+    def test_not_coalescing_over_uselesses(self):
+        """Don't coalesce 2 strings that have a USELESS between them."""
+        eq_(visit_regex('ab*c').simplified(), And(['a', 'c']))
+
+    def test_big_tree(self):
+        """Try the ambitious tree (a|b)(c|d)."""
+        eq_(Or([And([Or([And(['a']), And(['b'])]),
+                     Or([And(['c']), And(['d'])])])]).simplified(),
+            And([Or(['a', 'b']),
+                 Or(['c', 'd'])]))
+
+    def test_empty(self):
+        """Pin down what empty top-level trees turn into.
+
+        I'm not sure the current state is desirable. '' is another
+        possibility, but I worry about what Or(['hi', '']) means.
+
+        """
+        eq_(Or([And()]).simplified(), Or())
 
 
 def visit_regex(regex):
