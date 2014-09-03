@@ -6,15 +6,7 @@ from unittest import TestCase
 from nose.tools import eq_, assert_raises
 from parsimonious.exceptions import ParseError
 
-from dxr.trigrammer import trigrams, regex_grammar, TrigramTreeVisitor, And, Or
-
-
-def test_trigrams():
-    eq_(list(trigrams('')), [])
-    eq_(list(trigrams('a')), [])
-    eq_(list(trigrams('ab')), [])
-    eq_(list(trigrams('abc')), ['abc'])
-    eq_(list(trigrams('abcde')), ['abc', 'bcd', 'cde'])
+from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or
 
 
 #def test_something():

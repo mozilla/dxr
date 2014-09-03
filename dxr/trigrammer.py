@@ -76,13 +76,6 @@ class RegexSummary(object):
         self.query = query
 
 
-def trigrams(s):
-    """Return an iterable of all trigrams contained in a string."""
-    # Optimization: return indices rather than actual substrings to save
-    # instantiation cost.
-    return (s[i:i + 3] for i in xrange(0, len(s) - 2))
-
-
 def summarize_regex(regex):
     """Return a RegexSummary of a regex.
 
