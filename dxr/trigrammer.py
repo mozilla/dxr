@@ -53,7 +53,7 @@ class RegexSummary(object):
         example (s?printf) would yield {sprintf, printf}.
     :attr prefixes: The set of prefixes of strings the regex can match
     :attr suffixes: The set of suffixes of strings the regex can match
-    :attr query: An TrigramQuery that must be satisfied by any matching
+    :attr query: A TrigramQuery that must be satisfied by any matching
         string, in addition to the restrictions expressed by the other
         attributes
 
@@ -118,16 +118,6 @@ def trigrammify_tree(tree):
 def simplify_tree(tree):
     """Do the node reduction to collapse branches of a string tree that aren't
     useful. Remove strings that aren't long enough to generate any trigrams."""
-
-
-def build_tree(regex):
-    """Turn a parsed regex into a tree of ANDed and ORed literal strings."""
-    op, param = regex
-    if op == 'branch':
-        mystery, alternatives = param
-        return or_(string_tree(alternatives))
-    elif op == 'literal':
-        return param
 
 
 # We should parse a regex. Then go over the tree and turn things like c+ into cc*, perhaps, as it makes it easier to see trigrams to extract.
