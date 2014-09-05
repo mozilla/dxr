@@ -77,6 +77,12 @@ class SimplificationTests(TestCase):
         """
         eq_(Or([And()]).simplified(), '')
 
+    def test_short_ngram_removal(self):
+        """Substrings shorter than 3 chars should be removed."""
+        eq_(And(['oof', 'by', 'smurf']).simplified(), And(['oof', 'smurf']))
+        eq_(Or(['', 'by', 'smurf']).simplified(), 'smurf')
+        eq_(Or([And(['', 'e', 'do']), 'hi']).simplified(), '')
+
 
 def visit_regex(regex):
     return TrigramTreeVisitor().visit(regex_grammar.parse(regex))

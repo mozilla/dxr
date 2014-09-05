@@ -17,6 +17,9 @@ from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
 
 
+NGRAM_LENGTH = 3
+
+
 class RegexSummary(object):
     """The digested result of analyzing a parsed regex
 
@@ -111,9 +114,12 @@ class SubstringTree(list):
         children, the final result is ``u''``.
 
         """
-        def string_or_simplified(tree_or_string):
+        def simplified(tree_or_string):
+            """Typewise dispatcher to turn short strings into '' and
+            recursively descend Ands and Ors"""
             if isinstance(tree_or_string, basestring):
-                return tree_or_string
+                return (tree_or_string if len(tree_or_string) >= NGRAM_LENGTH
+                        else '')
             return tree_or_string.simplified()
 
         # TODO: Think about implementing the Cox method. I now see that I'm
@@ -132,7 +138,7 @@ class SubstringTree(list):
         # adjacent strings in the found text, so a '' in an Or doesn't help us
         # narrow down the result set at all.)
         simple_children = filter(None,
-                                 (string_or_simplified(n) for n in self))
+                                 (simplified(n) for n in self))
         if len(simple_children) > 1:
             return self.__class__(simple_children)
         elif len(simple_children) == 1:
