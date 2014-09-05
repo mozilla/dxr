@@ -74,17 +74,6 @@ def trigram_query(regex):
     return summary.query
 
 
-def trigrammify_tree(tree):
-    """Explode the strings in a tree into trigrams. Return a tree whose leaves are trigrams and whose inner nodes are boolean operations. This can then be trivially turned into an ES query."""
-    # Remember that Lucene regexes are always anchored. The caller will have to add a leading .*, etc.
-    # Raise an exception somewhere, maybe in simplify_tree, if there are no trigrams.
-
-
-def simplify_tree(tree):
-    """Do the node reduction to collapse branches of a string tree that aren't
-    useful. Remove strings that aren't long enough to generate any trigrams."""
-
-
 # We should parse a regex. Then go over the tree and turn things like c+ into cc*, perhaps, as it makes it easier to see trigrams to extract.
 # TODO: Parse normal regex syntax, but spit out Lucene-compatible syntax, with " escaped. And all special chars escaped even in character classes, in accordance with https://lucene.apache.org/core/4_6_0/core/org/apache/lucene/util/automaton/RegExp.html?is-external=true.
 
