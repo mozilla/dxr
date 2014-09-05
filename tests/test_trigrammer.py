@@ -44,8 +44,8 @@ class SimplificationTests(TestCase):
 
     def test_nopes(self):
         """These examples should not simplify down to strings."""
-        ok_(not isinstance(And(['smoo', Or(['hi'])]).simplified(), basestring))
-        eq_(Or(['smoo', 'hi']).simplified(), Or(['smoo', 'hi']))
+        ok_(not isinstance(And(['smoo', Or(['him'])]).simplified(), basestring))
+        eq_(Or(['smoo', 'him']).simplified(), Or(['smoo', 'him']))
 
     def test_simple_strings(self):
         """An And or Or with one child should turn into that child."""
@@ -58,14 +58,14 @@ class SimplificationTests(TestCase):
 
     def test_not_coalescing_over_uselesses(self):
         """Don't coalesce 2 strings that have a USELESS between them."""
-        eq_(visit_regex('ab*c').simplified(), And(['a', 'c']))
+        eq_(visit_regex('arkb*cork').simplified(), And(['ark', 'cork']))
 
     def test_big_tree(self):
         """Try the ambitious tree (a|b)(c|d)."""
-        eq_(Or([And([Or([And(['a']), And(['b'])]),
-                     Or([And(['c']), And(['d'])])])]).simplified(),
-            And([Or(['a', 'b']),
-                 Or(['c', 'd'])]))
+        eq_(Or([And([Or([And(['alpha']), And(['bravo'])]),
+                     Or([And(['charlie']), And(['delta'])])])]).simplified(),
+            And([Or(['alpha', 'bravo']),
+                 Or(['charlie', 'delta'])]))
 
     def test_empty(self):
         """Pin down what empty top-level trees turn into.
