@@ -71,10 +71,11 @@ class SimplificationTests(TestCase):
         """Pin down what empty top-level trees turn into.
 
         I'm not sure the current state is desirable. '' is another
-        possibility, but I worry about what Or(['hi', '']) means.
+        possibility, but I worry about what Or(['hi', '']) means. [It means
+        "hi can occur, or not", which makes it useless.]
 
         """
-        eq_(Or([And()]).simplified(), Or())
+        eq_(Or([And()]).simplified(), '')
 
 
 def visit_regex(regex):

@@ -118,16 +118,14 @@ class SubstringTree(list):
         """Return a smaller but equivalent tree structure.
 
         Simplify by turning nodes with only 1 child into mere strings and
-        removing nodes with 0.
+        removing nodes with 0. If the top-level node ends up having 0
+        children, the final result is ``u''``.
 
         """
         def string_or_simplified(tree_or_string):
             if isinstance(tree_or_string, basestring):
                 return tree_or_string
             return tree_or_string.simplified()
-
-        def is_not_empty_tree(tree_or_string):
-            return isinstance(tree_or_string, basestring) or tree_or_string
 
         # TODO: Think about implementing the Cox method. I now see that I'm
         # going to have to write some kind of theorems into even the FREE
@@ -139,14 +137,19 @@ class SubstringTree(list):
         # http://code.ohloh.net/file?fid=rfNSbmGXJxqJhWDMLp3VaEMUlgQ&cid=
         # eDOmLT58hyw&s=&fp=305491&mp=&projSelected=true#L0 is PG's
         # explanation of their simplification stuff.
-        simple_children = filter(is_not_empty_tree,
+
+        # Filter out empty strings and empty subtrees, both of which are
+        # equally useless. (Remember, adjacent strings in an And don't mean
+        # adjacent strings in the found text, so a '' in an Or doesn't help us
+        # narrow down the result set at all.)
+        simple_children = filter(None,
                                  (string_or_simplified(n) for n in self))
         if len(simple_children) > 1:
             return self.__class__(simple_children)
         elif len(simple_children) == 1:
             return simple_children[0]
         else:  # Empty nodes occur at empty regex branches.
-            return self.__class__()
+            return u''
 
 
 class Useless(SubstringTree):
