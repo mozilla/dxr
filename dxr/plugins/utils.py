@@ -29,8 +29,9 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-def needle_filter_factory(lang, tag, desc):
-    """Default Filter for simple term matching needles.
+def route_filter(lang, tag, desc, domain=LINE):
+    """Override the NeedleFilter's routing information based on the plugin
+    language, needle tag, and description. (optionally the domain).
 
     Filters for a "lang-tag" fieldname.
     Note: matching is case-insensitive!
@@ -38,35 +39,43 @@ def needle_filter_factory(lang, tag, desc):
     :param str lang: Language this filter belongs to.
     :param str tag: ES tag filter should listen to.
     :param str desc: Front facing description of filter.
+    :param domain: Either plugins.LINE or plugins.FILE.
+    """
+    def _route_filter(cls):
+        cls.name = tag
+        cls.description = desc
+        cls.domain = LINE
+        cls.field_name = '{0}-{1}'.format(lang, tag)
+        return cls
+
+    return _route_filter
+
+
+class NeedleFilter(object):
+    """Filter for a simple needle.
+
+    Will highlight and filter based on the field_name cls attribute.
 
     """
-    class NeedleFilter(object):
-        name = tag
-        domain = LINE
-        description = desc
-        field_name = '{0}-{1}'.format(lang, tag)
+    name = ''
+    description = ''
+    domain = LINE
+    field_name = ''
 
-        def __init__(self, term):
-            self.term = term
+    def __init__(self, term):
+        self.term = term
 
-        def filter(self):
-            return {
-                'filtered': {
-                    'filter': {
-                        'term': {
-                            self.field_name: self.term
-                        }}}}
+    def filter(self):
+        # TODO use field_name to select which term to filter for
+        return {}
 
-        def highlight(self, result, field):
-            content = result['content']
+    def highlight(self, result, field):
+        content = result['content']
+        def _highlight(needle):
+            return needle['start'], needle['end'] or len(content)
 
-            def _highlight(needle):
-                return needle['start'], needle['end'] or len(content)
-
-            highlights = sorted((_highlight(needle) for needle
-                                 in content[field]
-                                 if content['term'] == self.term),
-                                key=itemgetter('start'))
-            return {'content': highlights}
-
-    return needle_filter_factory
+        highlights = sorted((_highlight(needle) for needle
+                             in content[field]
+                             if content['term'] == self.term),
+                            key=itemgetter('start'))
+        return {'content': highlights}
