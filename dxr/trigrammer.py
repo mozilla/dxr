@@ -295,21 +295,6 @@ regex_grammar = Grammar(r"""
     """)
 
 
-def _coalesce_strings(things):
-    """Merge adjacent strings in iterable ``things`` by concatenation."""
-    substrings = []
-    for t in things:
-        if isinstance(t, basestring):
-            substrings.append(t)
-        else:
-            if substrings:
-                yield ''.join(substrings)
-            yield t
-            substrings = []
-    if substrings:
-        yield ''.join(substrings)
-
-
 class TrigramTreeVisitor(NodeVisitor):
     """Visitor that converts a parsed ``regex_grammar`` tree into one suitable
     for extracting logical trigram queries from.

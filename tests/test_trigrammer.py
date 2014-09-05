@@ -7,7 +7,7 @@ from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises
 from parsimonious.exceptions import ParseError
 
-from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, _coalesce_strings
+from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or
 
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
@@ -24,12 +24,6 @@ from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, _coalesce
 # suffixes: ef cdef abef
 #              cdef abef
 # exact: Ø
-
-
-def test_coalesce_strings():
-    eq_(list(_coalesce_strings(['a', 'b', 'c'])), ['abc'])
-    eq_(list(_coalesce_strings(['a', 'b', Or(['c', 'd']), 'e'])),
-        ['ab', Or(['c', 'd']), 'e'])
 
 
 class SimplificationTests(TestCase):
