@@ -3,7 +3,7 @@
 from collections import namedtuple
 from operator import itemgetter
 
-from dxr.plugins import LINE
+from dxr.plugins import Filter
 
 
 Extent = namedtuple('Extent', ['start', 'end'])
@@ -29,7 +29,7 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-class NeedleFilter(object):
+class NeedleFilter(Filter):
     """Filter for a simple needle.
 
     Will highlight and filter based on the field_name cls attribute.
@@ -37,8 +37,6 @@ class NeedleFilter(object):
     """
     lang = ''
     name = ''
-    domain = LINE
-    description = ''
 
     def __init__(self, term):
         self.term = term
@@ -48,13 +46,5 @@ class NeedleFilter(object):
         # TODO use self.field_name to select which term to filter for
         return {}
 
-    def highlight(self, result, field):
-        content = result['content']
-        def _highlight(needle):
-            return needle['start'], needle['end'] or len(content)
-
-        highlights = sorted((_highlight(needle) for needle
-                             in content[field]
-                             if content['term'] == self.term),
-                            key=itemgetter('start'))
-        return {'content': highlights}
+    def highlight_content(self, result):
+        return []
