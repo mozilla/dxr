@@ -5,8 +5,11 @@ set -e
 set -x
 
 apt-get update
+# clean out redundant packages from vagrant base image
+apt-get autoremove -y
 
 #configure locales:
+apt-get install -y language-pack-en
 export LC_ALL="en_US.UTF-8"
 locale-gen en_US.UTF-8
 
@@ -22,21 +25,6 @@ apt-get install -y sphinx-common
 apt-get install -y libapache2-mod-wsgi python-pip
 pip install virtualenv virtualenvwrapper python-hglib nose
 cd ~vagrant/dxr
-# If it hangs here, you might have a mismatched version of the VirtualBox Guest
-# Additions. Shut down the box. Start it back up using the VB GUI. Choose
-# "Insert Guest Additions CD" from the Devices menu. On the guest, mount
-# /dev/cdrom /mnt && cd /mnt && ./VBoxLinuxAdditions.run. Shut the guest back
-# down.
-#
-# Alternately, per
-# https://github.com/TryGhost/Ghost-Vagrant#updating-virtual-box-guest-additions,
-# from the host, run...
-# 1) vagrant plugin install vagrant-vbguest
-# 2) vagrant up --no-provision
-# 3) vagrant ssh -c 'sudo apt-get -y -q purge virtualbox-guest-dkms
-#    virtualbox-guest-utils virtualbox-guest-x11'
-# 4) vagrant halt
-# 5) vagrant up --provision
 ./peep.py install -r requirements.txt
 python setup.py develop
 
@@ -83,4 +71,6 @@ apt-get install -y libsqlite3-dev sqlite3 git mercurial llvm-3.3 libclang-3.3-de
 update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
 # Install libtrilite so Apache WSGI processes can see it:
 ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
+# make sure local trilite is available
+rm /etc/ld.so.cache
 /sbin/ldconfig
