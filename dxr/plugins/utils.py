@@ -3,7 +3,7 @@
 from collections import namedtuple
 from operator import itemgetter
 
-from dxr.plugins import LINE
+from dxr.plugins import Filter
 
 
 Extent = namedtuple('Extent', ['start', 'end'])
@@ -29,44 +29,22 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-def needle_filter_factory(lang, tag, desc):
-    """Default Filter for simple term matching needles.
+class NeedleFilter(Filter):
+    """Filter for a simple needle.
 
-    Filters for a "lang-tag" fieldname.
-    Note: matching is case-insensitive!
-
-    :param str lang: Language this filter belongs to.
-    :param str tag: ES tag filter should listen to.
-    :param str desc: Front facing description of filter.
+    Will highlight and filter based on the field_name cls attribute.
 
     """
-    class NeedleFilter(object):
-        name = tag
-        domain = LINE
-        description = desc
-        field_name = '{0}-{1}'.format(lang, tag)
+    lang = ''
+    name = ''
 
-        def __init__(self, term):
-            self.term = term
+    def __init__(self, term):
+        self.term = term
+        self.field_name = '{0}-{1}'.format(self.lang, self.name)
 
-        def filter(self):
-            return {
-                'filtered': {
-                    'filter': {
-                        'term': {
-                            self.field_name: self.term
-                        }}}}
+    def filter(self):
+        # TODO use self.field_name to select which term to filter for
+        return {}
 
-        def highlight(self, result, field):
-            content = result['content']
-
-            def _highlight(needle):
-                return needle['start'], needle['end'] or len(content)
-
-            highlights = sorted((_highlight(needle) for needle
-                                 in content[field]
-                                 if content['term'] == self.term),
-                                key=itemgetter('start'))
-            return {'content': highlights}
-
-    return needle_filter_factory
+    def highlight_content(self, result):
+        return []
