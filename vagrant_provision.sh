@@ -10,8 +10,6 @@ apt-get autoremove -y
 
 #configure locales:
 apt-get install -y language-pack-en
-export LC_ALL="en_US.UTF-8"
-locale-gen en_US.UTF-8
 
 # node and npm:
 apt-get install -y npm
