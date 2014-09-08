@@ -11,7 +11,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
                    constantly, icat)
 
 from dxr import plugins
-from dxr.plugins.utils import route_filter, NeedleFilter
+from dxr.plugins.utils import NeedleFilter
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.needles import unsparsify_func
 from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
@@ -373,98 +373,193 @@ class TreeToIndex(plugins.TreeToIndex):
 # These filters get pickled because the plugins are built using futures
 
 
-@route_filter('c', 'function', Markup('Function or method definition: <code>function:foo</code>'))
-class FunctionFilter(NeedleFilter): pass
+class FunctionFilter(NeedleFilter):
+    lang = 'c'
+    name = 'function'
+    description = Markup('Function or method definition: <code>function:foo</code>')
+    def __init__(self, term):
+        super(FunctionFilter, self).__init__(term)
 
 
-@route_filter('c', 'function-ref', 'Function or method references')
-class FunctionRefFilter(NeedleFilter): pass
+class FunctionRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'function-ref'
+    description = 'Function or method references'
+    def __init__(self, term):
+        super(FunctionRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'function-decl', 'Function or method declaration')
-class FunctionDeclFilter(NeedleFilter): pass
+class FunctionDeclFilter(NeedleFilter):
+    lang = 'c'
+    name = 'function-decl'
+    description = 'Function or method declaration'
+    def __init__(self, term):
+        super(FunctionDeclFilter, self).__init__(term, )
 
 
-@route_filter('c', 'type-ref', 'Type or class references, uses, or instantiations')
-class TypeRefFilter(NeedleFilter): pass
+class TypeRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'type-ref'
+    description = 'Type or class references, uses, or instantiations'
+    def __init__(self, term):
+        super(TypeRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'type-decl', 'Type or class declaration')
-class TypeDeclFilter(NeedleFilter): pass
+class TypeDeclFilter(NeedleFilter):
+    lang = 'c'
+    name = 'type-decl'
+    description = 'Type or class declaration'
+    def __init__(self, term):
+        super(TypeDeclFilter, self).__init__(term, )
 
 
-@route_filter('c', 'type', 'Type, function, or class definition: <code>type:Stack</code>')
-class TypeFilter(NeedleFilter): pass
+class TypeFilter(NeedleFilter):
+    lang = 'c'
+    name = 'type'
+    description = 'Type, function, or class definition: <code>type:Stack</code>'
+    def __init__(self, term):
+        super(TypeFilter, self).__init__(term, )
 
 
-@route_filter('c', 'variable', 'Variable definition')
-class VariableFilter(NeedleFilter): pass
+class VariableFilter(NeedleFilter):
+    lang = 'c'
+    name = 'variable'
+    description = 'Variable definition'
+    def __init__(self, term):
+        super(VariableFilter, self).__init__(term, )
 
 
-@route_filter('c', 'variable', 'Variable uses (lvalue, rvalue, dereference, etc.)')
-class VariableRefFilter(NeedleFilter): pass
+class VariableRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'variable'
+    description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
+    def __init__(self, term):
+        super(VariableRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'Variable declaration', 'Type or class declaration')
-class VarDeclFilter(NeedleFilter): pass
+class VarDeclFilter(NeedleFilter):
+    lang = 'c'
+    name = 'Variable declaration'
+    description = 'Type or class declaration'
+    def __init__(self, term):
+        super(VarDeclFilter, self).__init__(term, )
 
 
-@route_filter('c', 'macro', 'Macro definition')
-class MacroFilter(NeedleFilter): pass
+class MacroFilter(NeedleFilter):
+    lang = 'c'
+    name = 'macro'
+    description = 'Macro definition'
+    def __init__(self, term):
+        super(MacroFilter, self).__init__(term, )
 
 
-@route_filter('c', 'macro-ref', 'Macro uses')
-class MacroRefFilter(NeedleFilter): pass
+class MacroRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'macro-ref'
+    description = 'Macro uses'
+    def __init__(self, term):
+        super(MacroRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'namespace', 'Namespace definition')
-class NamespaceFilter(NeedleFilter): pass
+class NamespaceFilter(NeedleFilter):
+    lang = 'c'
+    name = 'namespace'
+    description = 'Namespace definition'
+    def __init__(self, term):
+        super(NamespaceFilter, self).__init__(term, )
 
 
-@route_filter('c', 'namespace-ref', 'Namespace references')
-class NamespaceRefFilter(NeedleFilter): pass
+class NamespaceRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'namespace-ref'
+    description = 'Namespace references'
+    def __init__(self, term):
+        super(NamespaceRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'namespace-alias', 'Namespace alias')
-class NamespaceAliasFilter(NeedleFilter): pass
+class NamespaceAliasFilter(NeedleFilter):
+    lang = 'c'
+    name = 'namespace-alias'
+    description = 'Namespace alias'
+    def __init__(self, term):
+        super(NamespaceAliasFilter, self).__init__(term, )
 
 
-@route_filter('c', 'namespace-alias-ref', 'Namespace alias references')
-class NamespaceAliasRefFilter(NeedleFilter): pass
+class NamespaceAliasRefFilter(NeedleFilter):
+    lang = 'c'
+    name = 'namespace-alias-ref'
+    description = 'Namespace alias references'
+    def __init__(self, term):
+        super(NamespaceAliasRefFilter, self).__init__(term, )
 
 
-@route_filter('c', 'warning', 'Compiler warning messages')
-class WarningFilter(NeedleFilter): pass
+class WarningFilter(NeedleFilter):
+    lang = 'c'
+    name = 'warning'
+    description = 'Compiler warning messages'
+    def __init__(self, term):
+        super(WarningFilter, self).__init__(term, )
 
 
-@route_filter('c', 'warning-opt', 'Warning messages brought on by a given compiler command-line option')
-class WarningOptFilter(NeedleFilter): pass
+class WarningOptFilter(NeedleFilter):
+    lang = 'c'
+    name = 'warning-opt'
+    description = 'Warning messages brought on by a given compiler command-line option'
+    def __init__(self, term):
+        super(WarningOptFilter, self).__init__(term, )
 
 
-@route_filter('c', 'callee', 'Functions or methods which are called by the given one')
-class CalleeFilter(NeedleFilter): pass
+class CalleeFilter(NeedleFilter):
+    lang = 'c'
+    name = 'callee'
+    description = 'Functions or methods which are called by the given one'
+    def __init__(self, term):
+        super(CalleeFilter, self).__init__(term, )
 
 
-@route_filter('c', 'caller', Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'))
-class CallerFilter(NeedleFilter): pass
+class CallerFilter(NeedleFilter):
+    lang = 'c'
+    name = 'caller'
+    description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
+    def __init__(self, term):
+        super(CallerFilter, self).__init__(term, )
 
 
-@route_filter('c', 'child', Markup('Superclasses of a class: <code>bases:SomeSubclass</code>'))
-class ChildFilter(NeedleFilter): pass
+class ChildFilter(NeedleFilter):
+    lang = 'c'
+    name = 'child'
+    description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
+    def __init__(self, term):
+        super(ChildFilter, self).__init__(term, )
 
 
-@route_filter('c', 'parent', Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>'))
-class ParentFilter(NeedleFilter): pass
+class ParentFilter(NeedleFilter):
+    lang = 'c'
+    name = 'parent'
+    description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
+    def __init__(self, term):
+        super(ParentFilter, self).__init__(term, )
 
 
-@route_filter('c', 'member', Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>'))
-class MemberFilter(NeedleFilter): pass
+class MemberFilter(NeedleFilter):
+    lang = 'c'
+    name = 'member'
+    description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
+    def __init__(self, term):
+        super(MemberFilter, self).__init__(term, )
 
 
-@route_filter('c', 'overrides', Markup('Methods which override the given one: <code>overrides:someMethod</code>'))
-class OverridesFilter(NeedleFilter): pass
+class OverridesFilter(NeedleFilter):
+    lang = 'c'
+    name = 'overrides'
+    description = Markup('Methods which override the given one: <code>overrides:someMethod</code>')
+    def __init__(self, term):
+        super(OverridesFilter, self).__init__(term, )
 
 
-@route_filter('c', 'overridden', Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'))
-class OverriddenFilter(NeedleFilter): pass
-
+class OverriddenFilter(NeedleFilter):
+    lang = 'c'
+    name = 'overridden'
+    description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.')
+    def __init__(self, term):
+        super(OverriddenFilter, self).__init__(term, )

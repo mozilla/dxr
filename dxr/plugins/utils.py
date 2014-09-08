@@ -29,44 +29,23 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-def route_filter(lang, tag, desc, domain=LINE):
-    """Override the NeedleFilter's routing information based on the plugin
-    language, needle tag, and description. (optionally the domain).
-
-    Filters for a "lang-tag" fieldname.
-    Note: matching is case-insensitive!
-
-    :param str lang: Language this filter belongs to.
-    :param str tag: ES tag filter should listen to.
-    :param str desc: Front facing description of filter.
-    :param domain: Either plugins.LINE or plugins.FILE.
-    """
-    def _route_filter(cls):
-        cls.name = tag
-        cls.description = desc
-        cls.domain = LINE
-        cls.field_name = '{0}-{1}'.format(lang, tag)
-        return cls
-
-    return _route_filter
-
-
 class NeedleFilter(object):
     """Filter for a simple needle.
 
     Will highlight and filter based on the field_name cls attribute.
 
     """
+    lang = ''
     name = ''
-    description = ''
     domain = LINE
-    field_name = ''
+    description = ''
 
     def __init__(self, term):
         self.term = term
+        self.field_name = '{0}-{1}'.format(self.lang, self.name)
 
     def filter(self):
-        # TODO use field_name to select which term to filter for
+        # TODO use self.field_name to select which term to filter for
         return {}
 
     def highlight(self, result, field):
