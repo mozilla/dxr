@@ -249,7 +249,8 @@ BACKSLASH_SPECIAL_CHARS = 'AbBdDsSwWZ'
 # This recognizes a subset of Python's regex language, minus lookaround
 # assertions, non-greedy quantifiers, and named and other special sorts of
 # groups. Lucene doesn't support those, though we might be able to fake it
-# later via some transformation.
+# later via some transformation. [We're no longer using Lucene regexes, so it
+# doesn't matter.]
 regex_grammar = Grammar(r"""
     regexp = branch more_branches
     more_branches = another_branch*  # TODO: If I merge this into regexp, why does generic_visit() start getting called for it?
@@ -279,7 +280,7 @@ regex_grammar = Grammar(r"""
     # An unescaped ] is treated as a literal when the first char of a positive
     # or inverted character class:
     initial_class_char = "]" / class_char
-    class_char = backslash_char / ~r"[^\]]"
+    class_char = backslash_char / ~r"[^]]"
 
     char = backslash_char / literal_char
     backslash_char = "\\" backslash_operand
@@ -297,14 +298,14 @@ regex_grammar = Grammar(r"""
 
 class TrigramTreeVisitor(NodeVisitor):
     """Visitor that converts a parsed ``regex_grammar`` tree into one suitable
-    for extracting logical trigram queries from.
+    for extracting boolean substring queries from.
 
     In the returned tree, strings represent literal strings, ruling out any
     fancy meanings like "*" would have.
 
     I throw away any information that can't contribute to trigrams. In the
     future, we might throw away less, expanding things like ``[ab]`` to
-    ``OR('a', 'b')``.
+    ``Or(['a', 'b'])``.
 
     """
     visit_piece = visit_atom = visit_initial_class_char = visit_char = \
