@@ -6,8 +6,9 @@ from unittest import TestCase
 from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises
 from parsimonious.exceptions import ParseError
+from parsimonious.expressions import OneOf
 
-from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or
+from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, BadRegex
 
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
@@ -82,10 +83,21 @@ def visit_regex(regex):
     return TrigramTreeVisitor().visit(regex_grammar.parse(regex))
 
 
+def eq_simplified(regex, expected):
+    """Visit a regex, simplify it, and return whether it's equal to an
+    expected value.
+
+    Doesn't strip away shorter-than-trigram strings. That's tested for in
+    SimplificationTests.
+
+    """
+    eq_(visit_regex(regex).simplified(min_length=1), expected)
+
+
 class StringExtractionTests(TestCase):
     """Tests for our ability to extract static strings from regexes
 
-    This covers the TrigramTreeVisitor and the StringTreeNodes.
+    This covers the TrigramTreeVisitor and the SubstringTree.
 
     """
     def test_merge_literals(self):
@@ -127,21 +139,67 @@ class StringExtractionTests(TestCase):
             Or([And([Or([And(['aa']), And(['b'])]), Or([And(['c']), And(['d'])])])]))
 
 
+class ClassTests(TestCase):
+    """Tests for extracting (Ors of) strings from backet expressions."""
+
+    def test_classes(self):
+        """Exercise the enumerated case."""
+        eq_simplified('[abc]', Or(['a', 'b', 'c']))
+
+    def test_range(self):
+        """Make sure character ranges expand."""
+        eq_simplified('[a-c]', Or(['a', 'b', 'c']))
+
+    def test_big_range(self):
+        """Make sure huge character ranges get given up on, rather than
+        building humongous Ors."""
+        eq_simplified('[a-z]', '')
+
+    def test_trailing_hyphen(self):
+        """Trailing hyphens should be considered just ordinary hyphens."""
+        eq_simplified('[a-]', Or(['a', '-']))
+
+    def test_leading_bracket(self):
+        """A ] as the first char in a class should be considered ordinary."""
+        eq_simplified('[]a]', Or([']', 'a']))
+        eq_simplified('[]]', ']')
+
+    def test_ordinary_specials(self):
+        """Chars that are typically special should be ordinary within char
+        classes."""
+        eq_simplified('[$]', '$')
+
+    def test_inverted(self):
+        """We give up on inverted classes for now."""
+        eq_simplified('[^a-c]', '')
+
+    def test_multi_char_specials(self):
+        """We give up on backslash specials which expand to multiple chars,
+        for now."""
+        eq_simplified(r'[\s]', '')
+
+    def test_out_of_order_range(self):
+        """Out-of-order ranges shouldn't even appear to parse."""
+        assert_raises(BadRegex, visit_regex, '[c-a]')
+
+
 def test_parse_classes():
     """Make sure we recognize character classes."""
 
-    class_rule = regex_grammar['class']
+    class_or_inverted = OneOf(regex_grammar['inverted_class'],
+                              regex_grammar['class'],
+                              name='class_or_inverted')
 
     def parse_class(pattern):
-        class_rule.parse(pattern)
+        class_or_inverted.parse(pattern)
 
     def dont_parse_class(pattern):
         assert_raises(ParseError,
-                      class_rule.parse,
+                      class_or_inverted.parse,
                       pattern)
 
     def assert_matches(pattern, text):
-        eq_(class_rule.match(pattern).text, text)
+        eq_(class_or_inverted.match(pattern).text, text)
 
     # These should match all the way to the end:
     for pattern in ['[]]', '[^]]', r'[\d-]', r'[a\]]', r'[()[\]{}]', '[]()[{}]', '[a-zA-Z0-9]', '[abcde]']:
@@ -166,3 +224,4 @@ def test_parse_regexp():
     regex_grammar.parse(r'(hello||hi) dolly')
     regex_grammar.parse(r'|hello|hi')
     regex_grammar.parse(ur'aböut \d{2}')
+    assert_raises(ParseError, regex_grammar.parse, '[smoo')
