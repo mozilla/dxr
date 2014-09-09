@@ -30,7 +30,7 @@ setup(
                       'Jinja2>=2.6,<3.0',
                       'more-itertools>=2.2,<3.0',
                       'ordereddict>=1.1,<2.0',
-                      'parsimonious==0.5',
+                      'parsimonious==0.6',
                       'pyelasticsearch==0.7.1',
                       'Pygments>=1.6,<2.0',
                       'requests>=1.0,<2.0',

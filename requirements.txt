@@ -13,8 +13,8 @@ MarkupSafe==0.18
 # sha256: HDW0rCBs7y0kgWyJ-Jzyid09OM98RJuz-re_bUPwGx8
 ordereddict==1.1
 
-# sha256: 1DgyuiXqTOdHsKq2dcB-pGOEF6LMm5xcDLjvaClLEsA
-parsimonious==0.5
+# sha256: RPLinN6e9780jIdUsmE5pghpDZ8CPbyEnq0CRqDJXQo
+parsimonious==0.6
 
 # sha256: 33p-8L41qGMvjgz1P1yPfNdFbaokcLtaaD_u_5g9Uqg
 pyelasticsearch==0.7.1

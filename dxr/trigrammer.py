@@ -13,6 +13,8 @@ prefix and suffix information while chewing through a pattern and effectively
 merging adjacent subpatterns. This is a direction we may go in the future.
 
 """
+from itertools import chain
+
 from parsimonious import Grammar
 from parsimonious.nodes import NodeVisitor
 
@@ -106,7 +108,7 @@ class SubstringTree(list):
         return (self.__class__ is other.__class__ and
                 super(SubstringTree, self).__eq__(other))
 
-    def simplified(self):
+    def simplified(self, min_length=NGRAM_LENGTH):
         """Return a smaller but equivalent tree structure.
 
         Simplify by turning nodes with only 1 child into mere strings and
@@ -118,9 +120,9 @@ class SubstringTree(list):
             """Typewise dispatcher to turn short strings into '' and
             recursively descend Ands and Ors"""
             if isinstance(tree_or_string, basestring):
-                return (tree_or_string if len(tree_or_string) >= NGRAM_LENGTH
+                return (tree_or_string if len(tree_or_string) >= min_length
                         else '')
-            return tree_or_string.simplified()
+            return tree_or_string.simplified(min_length=min_length)
 
         # TODO: Think about implementing the Cox method. I now see that I'm
         # going to have to write some kind of theorems into even the FREE
@@ -244,6 +246,10 @@ class Or(SubstringTree):
         return self
 
 
+class BadRegex(Exception):
+    """A user-provided regular expression was invalid."""
+
+
 BACKSLASH_SPECIAL_CHARS = 'AbBdDsSwWZ'
 
 # This recognizes a subset of Python's regex language, minus lookaround
@@ -266,21 +272,25 @@ regex_grammar = Grammar(r"""
     # By making each parenthesized subexpr just a "regexp", visit_regexp can
     # assign group numbers, starting from 0, and the top-level expression
     # conveniently ends up in the conventional group 0.
-    atom = group / class / hat / dollars / dot / char  # Optimize: vacuum up any harmless sequence of chars in one regex, first: [^()[\]^$.?*+{}]+
+    atom = group / inverted_class / class / hat / dollars / dot / char  # Optimize: vacuum up any harmless sequence of chars in one regex, first: [^()[\]^$.?*+{}]+
     group = "(" regexp ")"
     hat = "^"
     dollars = "$"
     dot = "."
 
-    # Character classes are pretty complex little beasts, even though we're
-    # just scanning right over them rather than trying to pull any info out:
-    class = "[" (inverted_class_start / positive_class_start) initial_class_char class_char* "]"
-    inverted_class_start = "^"
-    positive_class_start = !"^"
+    inverted_class = "[^" class_contents "]"
+    class = "[" !"^" class_contents "]"
+
     # An unescaped ] is treated as a literal when the first char of a positive
     # or inverted character class:
-    initial_class_char = "]" / class_char
-    class_char = backslash_char / ~r"[^]]"
+    class_contents = "]"? class_items  # ['x', USELESS, ('a', 'z')]
+
+    class_items = class_item*
+    class_item = char_range / class_char
+    char_range = class_char "-" class_char  # ('a', 'z') or USELESS
+
+    # Chars like $ that are ordinarily special are not special inside classes.
+    class_char = backslash_char / ~"[^]]"  # 'x' or USELESS
 
     char = backslash_char / literal_char
     backslash_char = "\\" backslash_operand
@@ -308,12 +318,15 @@ class TrigramTreeVisitor(NodeVisitor):
     ``Or(['a', 'b'])``.
 
     """
-    visit_piece = visit_atom = visit_initial_class_char = visit_char = \
-            visit_backslash_operand = NodeVisitor.lift_child
+    unwrapped_exceptions = (BadRegex,)
+
+    visit_piece = visit_atom = visit_char = visit_class_char = \
+        visit_backslash_operand = NodeVisitor.lift_child
 
     # Not only does a ^ or a $ break up two otherwise contiguous literal
     # strings, but there is no text which matches a^b or a$b.
-    visit_hat = visit_dollars = visit_dot = lambda self, node, children: USELESS
+    visit_hat = visit_dollars = visit_dot = visit_inverted_class = \
+        lambda self, node, children: USELESS
 
     backslash_specials = {'a': '\a',
                           'e': '\x1B',  # for PCRE compatibility
@@ -321,7 +334,7 @@ class TrigramTreeVisitor(NodeVisitor):
                           'n': '\n',
                           'r': '\r',
                           't': '\t',
-                          'v': '\v'}
+                          'v': '\v'}  # TODO: What about \s and such?
     quantifier_expansions = {'*': (0, ''),
                              '+': (1, ''),
                              '?': (0, 1)}
@@ -389,10 +402,39 @@ class TrigramTreeVisitor(NodeVisitor):
     def visit_group(self, group, (paren, regexp, end_paren)):
         return regexp
 
-    def visit_class(self, class_, children):
-        # We can improve this later by breaking it into an OR or by just
-        # implementing the Cox method.
-        return USELESS
+    def visit_class(self, class_, (bracket, no_hat, contents, end_bracket)):
+        MAX_ORS = 5  # Wild guess. Tune.
+        if USELESS in contents:
+            return USELESS
+        if len(contents) > MAX_ORS:
+            return USELESS
+        if sum((1 if isinstance(x, basestring) else ord(x[1]) - ord(x[0]) + 1)
+               for x in contents) > MAX_ORS:
+            return USELESS
+        return Or(chain.from_iterable(x if isinstance(x, basestring) else
+                                      (chr(y) for y in xrange(ord(x[0]),
+                                                              ord(x[1]) + 1))
+                                      for x in contents))
+
+    def visit_class_contents(self, class_contents, (maybe_bracket,
+                                                    class_items)):
+        items = [']'] if maybe_bracket.text == ']' else []
+        items.extend(getattr(i, 'text', i) for i in class_items)
+        return items
+
+    def visit_class_items(self, class_item, items):
+        return items
+
+    def visit_class_item(self, class_item, range_or_char):
+        return range_or_char[0]
+
+    def visit_char_range(self, char_range, (start, _, end)):
+        if start is USELESS or end is USELESS:
+            return USELESS
+        if start.text > end.text:
+            raise BadRegex(u'Out-of-order character range: %s-%s' %
+                           (start.text, end.text))
+        return start.text, end.text
 
     def visit_literal_char(self, literal_char, children):
         return literal_char.text
@@ -400,6 +442,7 @@ class TrigramTreeVisitor(NodeVisitor):
     def visit_backslash_special(self, backslash_special, children):
         """Return a char if there is a char equivalent. Otherwise, return a
         BackslashSpecial."""
+        # TODO: Don't return USELESS so much.
         return self.backslash_specials.get(backslash_special.text, USELESS)
 
     def visit_backslash_char(self, backslash_char, (backslash, operand)):
