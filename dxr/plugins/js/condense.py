@@ -5,8 +5,7 @@ import subprocess
 from functools import wraps
 from itertools import chain, imap
 
-from parsimonious.grammar import Grammar
-from parsimonious.nodes import NodeVisitor
+from parsimonious import Grammar, NodeVisitor
 
 import requests
 

@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises
-from parsimonious.exceptions import ParseError
+from parsimonious import ParseError
 from parsimonious.expressions import OneOf
 
 from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, BadRegex

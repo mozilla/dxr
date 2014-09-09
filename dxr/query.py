@@ -1,8 +1,7 @@
 from itertools import chain, count, groupby
 import re
 
-from parsimonious import Grammar
-from parsimonious.nodes import NodeVisitor
+from parsimonious import Grammar, NodeVisitor
 
 from dxr.extents import highlight
 from dxr.mime import icon

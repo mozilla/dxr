@@ -15,8 +15,7 @@ merging adjacent subpatterns. This is a direction we may go in the future.
 """
 from itertools import chain
 
-from parsimonious import Grammar
-from parsimonious.nodes import NodeVisitor
+from parsimonious import Grammar, NodeVisitor
 
 
 NGRAM_LENGTH = 3
