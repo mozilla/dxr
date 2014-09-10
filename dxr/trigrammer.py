@@ -403,8 +403,15 @@ class TrigramTreeVisitor(NodeVisitor):
         return regexp
 
     def visit_class(self, class_, (bracket, no_hat, contents, end_bracket)):
+        """Return an Or of unicode chars and 2-tuples of unicode chars.
+
+        If the class has too many members, to the point where we guess the
+        expense of checking so many Or branches in ES would be greater than
+        the selectivity benefit, return USELESS.
+
+        """
         MAX_ORS = 5  # Wild guess. Tune.
-        if USELESS in contents:
+        if USELESS in contents:  # Or-ing with USELESS = USELESS.
             return USELESS
         if len(contents) > MAX_ORS:
             return USELESS
@@ -412,23 +419,28 @@ class TrigramTreeVisitor(NodeVisitor):
                for x in contents) > MAX_ORS:
             return USELESS
         return Or(chain.from_iterable(x if isinstance(x, basestring) else
-                                      (chr(y) for y in xrange(ord(x[0]),
+                                      (unichr(y) for y in xrange(ord(x[0]),
                                                               ord(x[1]) + 1))
                                       for x in contents))
 
     def visit_class_contents(self, class_contents, (maybe_bracket,
                                                     class_items)):
+        """Return a list of unicode chars, USELESS, and 2-tuples of unicode
+        chars."""
         items = [']'] if maybe_bracket.text == ']' else []
         items.extend(getattr(i, 'text', i) for i in class_items)
         return items
 
     def visit_class_items(self, class_item, items):
+        """Keep class_item from using visit_generic, which would do the wrong
+        thing."""
         return items
 
     def visit_class_item(self, class_item, range_or_char):
         return range_or_char[0]
 
     def visit_char_range(self, char_range, (start, _, end)):
+        """Return (start char, end char) bounding a char range or USELESS."""
         if start is USELESS or end is USELESS:
             return USELESS
         if start.text > end.text:
@@ -451,7 +463,7 @@ class TrigramTreeVisitor(NodeVisitor):
 
     def visit_backslash_hex(self, backslash_hex, children):
         """Return the character specified by the hex code."""
-        return chr(backslash_char.text[1:])
+        return unichr(backslash_char.text[1:])
 
     def visit_backslash_normal(self, backslash_normal, children):
         return backslash_normal.text
