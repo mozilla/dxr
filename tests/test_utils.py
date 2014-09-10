@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from nose.tools import eq_, assert_raises
 
-from dxr.utils import deep_update, append_update, append_update_by_line, append_by_line
+from dxr.utils import deep_update, append_update, append_update_by_line, append_by_line, glob_to_regex
 
 
 class DeepUpdateTests(TestCase):
@@ -81,3 +81,13 @@ def test_append_by_line():
     eq_(append_by_line([[], [6]],
                        [[5, 6], [7, 9]]),
         [[5, 6], [6, 7, 9]])
+
+
+def test_glob_to_regex():
+    """Make sure glob_to_regex() strips the right static suffix off the end of
+    the pattern fnmatch.translate() returns.
+
+    In other words, pin down the behavior of fnmatch.translate().
+
+    """
+    eq_(glob_to_regex('hi'), 'hi')

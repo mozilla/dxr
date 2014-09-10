@@ -1,9 +1,11 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 from funcy import identity
+from jinja2 import Markup
 
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
+from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, NGRAM_LENGTH
 
 
 # TODO: RegexFilter, ExtFilter, PathFilter, any needles for those
@@ -24,7 +26,11 @@ mappings = {
                 'fields': {
                     'trigrams_lower': {
                         'type': 'string',
-                        'analyzer': 'trigramalyzer_lower'  # accelerate regexes
+                        'analyzer': 'trigramalyzer_lower'  # accelerate wildcards
+                    },
+                    'trigrams': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
                     }
                 }
             },
@@ -68,7 +74,12 @@ mappings = {
                     'trigrams_lower': {
                         'type': 'string',
                         'analyzer': 'trigramalyzer_lower'
+                    },
+                    'trigrams': {
+                        'type': 'string',
+                        'analyzer': 'trigramalyzer'
                     }
+
                 }
             },
             # TODO: Use match_phrase_prefix queries on non-globbed paths,
@@ -120,8 +131,8 @@ analyzers = {
     'tokenizer': {
         'trigram_tokenizer': {
             'type': 'nGram',
-            'min_gram': 3,
-            'max_gram': 3
+            'min_gram': NGRAM_LENGTH,
+            'max_gram': NGRAM_LENGTH
             # Keeps all kinds of chars by default.
         }
     }
@@ -174,6 +185,84 @@ class TextFilter(Filter):
                 # otherwise?
                 _find_iter(maybe_lower(result['content'][0]),
                            maybe_lower(self._term['arg'])))
+
+
+def es_regex_filter(regex, raw_field, is_case_sensitive):
+    """Return an efficient ES filter to find matches to a regex.
+
+    Looks for fields of which ``regex`` matches a substring.
+
+    :arg regex: A regex pattern as a string
+    :arg raw_field: The name of an ES property to match against. The
+        lowercase-folded trigram field is assumed to be
+        raw_field.trigrams_lower, and the non-folded version
+        raw_field.trigrams.
+    :arg is_case_sensitive: Whether the match should be performed
+        case-sensitive
+
+    """
+    trigram_field = ('path.trigrams' if is_case_sensitive else
+                     'path.trigrams_lower')
+    parsed_regex = regex_grammar.parse(regex)
+    tree = TrigramTreeVisitor().visit(parsed_regex).simplified()
+
+    # If tree is a string, just do a match_phrase. Otherwise, add .* to the
+    # front and back, and build some boolean algebra.
+    if isinstance(tree, basestring):
+        return {
+            'query': {
+                'match_phrase': {
+                    trigram_field: tree
+                }
+            }
+        }
+    else:
+        # Should be fine even if the regex already starts or ends with .*:
+        js_regex = '.*%s.*' % JsRegexVisitor().visit(parsed_regex)
+        return {
+            'and': [
+                {
+                    'query': {
+                        'match_phrase': {
+                            trigram_field: blah
+                        }
+                    }
+                } for blah in blah] +
+            [
+                {
+                    'script': {
+                        'lang': 'js',
+                        'script': '(new RegExp(pattern, flags)).test(doc["%s"].value)' % raw_field,
+                        'params': {
+                            'pattern': fnmatch.translate(glob),
+                            'flags': '' if is_case_sensitive else 'i'
+                        }
+                    }
+                }
+            ]
+        }
+
+
+class PathFilter(Filter):
+    """Substring filter for paths
+
+    Pre-ES parity dictates that this simply searches for paths that have the
+    argument as a substring. We may allow anchoring and such later.
+
+    """
+    name = 'path'
+    domain = FILE
+    description = Markup('File or directory sub-path to search within. <code>*'
+                         '</code>, <code>?</code>, and <code>[...]</code> act '
+                         'as shell wildcards.')
+
+    def filter(self):
+        glob = self._term['arg']
+        positive = es_regex_filter(
+            glob_to_regex(glob),
+            'path',
+            is_case_sensitive=self._term['case_sensitive'])
+        return {'not': positive} if self._term['not'] else positive
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):
