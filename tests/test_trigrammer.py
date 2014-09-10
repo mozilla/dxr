@@ -182,6 +182,11 @@ class ClassTests(TestCase):
         """Out-of-order ranges shouldn't even appear to parse."""
         assert_raises(BadRegex, visit_regex, '[c-a]')
 
+    def test_unicode(self):
+        """Make sure unicode range bounds work."""
+        # This is a span of only a few code points: shouldn't be USELESS.
+        eq_simplified(u'[♣-♥]', Or([u'♣', u'♤', u'♥']))
+
 
 def test_parse_classes():
     """Make sure we recognize character classes."""
