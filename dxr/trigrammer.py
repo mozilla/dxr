@@ -85,7 +85,7 @@ def trigram_query(regex):
 # (trilite expands char classes of up to 10 chars but does nothing for larger
 # ones), and be able to get trigrams out of sp(rint) as well. Production
 # currently does that much. It is not, however, smart enough to expand
-# spr{1,3}, not spr+. An easy way would be to keep track of prefixes and
+# spr{1,3}, nor spr+. An easy way would be to keep track of prefixes and
 # suffixes (and trigram-or-better infixes) for each node, then work our way up
 # the tree.
 
@@ -305,7 +305,7 @@ regex_grammar = Grammar(r"""
     """)
 
 
-class TrigramTreeVisitor(NodeVisitor):
+class SubstringTreeVisitor(NodeVisitor):
     """Visitor that converts a parsed ``regex_grammar`` tree into one suitable
     for extracting boolean substring queries from.
 

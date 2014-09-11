@@ -5,7 +5,7 @@ from jinja2 import Markup
 
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
-from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, NGRAM_LENGTH
+from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH
 
 
 # TODO: RegexFilter, ExtFilter, PathFilter, any needles for those
@@ -204,7 +204,7 @@ def es_regex_filter(regex, raw_field, is_case_sensitive):
     trigram_field = ('path.trigrams' if is_case_sensitive else
                      'path.trigrams_lower')
     parsed_regex = regex_grammar.parse(regex)
-    tree = TrigramTreeVisitor().visit(parsed_regex).simplified()
+    tree = SubstringTreeVisitor().visit(parsed_regex).simplified()
 
     # If tree is a string, just do a match_phrase. Otherwise, add .* to the
     # front and back, and build some boolean algebra.

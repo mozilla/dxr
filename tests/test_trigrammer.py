@@ -8,7 +8,7 @@ from nose.tools import eq_, ok_, assert_raises
 from parsimonious import ParseError
 from parsimonious.expressions import OneOf
 
-from dxr.trigrammer import regex_grammar, TrigramTreeVisitor, And, Or, BadRegex
+from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, And, Or, BadRegex
 
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
@@ -80,7 +80,7 @@ class SimplificationTests(TestCase):
 
 
 def visit_regex(regex):
-    return TrigramTreeVisitor().visit(regex_grammar.parse(regex))
+    return SubstringTreeVisitor().visit(regex_grammar.parse(regex))
 
 
 def eq_simplified(regex, expected):
@@ -97,7 +97,7 @@ def eq_simplified(regex, expected):
 class StringExtractionTests(TestCase):
     """Tests for our ability to extract static strings from regexes
 
-    This covers the TrigramTreeVisitor and the SubstringTree.
+    This covers the SubstringTreeVisitor and the SubstringTree.
 
     """
     def test_merge_literals(self):
