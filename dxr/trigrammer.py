@@ -249,7 +249,9 @@ class BadRegex(Exception):
     """A user-provided regular expression was invalid."""
 
 
-BACKSLASH_SPECIAL_CHARS = 'AbBdDsSwWZ'
+# Sequences that represent something fancier than just a single, unchanging
+# char:
+BACKSLASH_METAS = 'AbBdDsSwWZ'
 
 # This recognizes a subset of Python's regex language, minus lookaround
 # assertions, non-greedy quantifiers, and named and other special sorts of
@@ -289,7 +291,8 @@ regex_grammar = Grammar(r"""
     char_range = class_char "-" class_char  # ('a', 'z') or USELESS
 
     # Chars like $ that are ordinarily special are not special inside classes.
-    class_char = backslash_char / ~"[^]]"  # 'x' or USELESS
+    class_char = backslash_char / literal_class_char  # 'x' or USELESS
+    literal_class_char = ~"[^]]"
 
     char = backslash_char / literal_char
     backslash_char = "\\" backslash_operand
@@ -298,7 +301,7 @@ regex_grammar = Grammar(r"""
     # Python's re parser:
     literal_char = ~r"[^^$?*+()[\]{}|.\\]"
     # Char class abbreviations and untypeable chars:
-    backslash_special = ~r"[""" + BACKSLASH_SPECIAL_CHARS + """aefnrtv]"
+    backslash_special = ~r"[""" + BACKSLASH_METAS + """aefnrtv]"
     backslash_hex = ~r"x[0-9a-fA-F]{2}"
     # Normal char with no special meaning:
     backslash_normal = ~"."
@@ -320,7 +323,7 @@ class SubstringTreeVisitor(NodeVisitor):
     unwrapped_exceptions = (BadRegex,)
 
     visit_piece = visit_atom = visit_char = visit_class_char = \
-        visit_backslash_operand = NodeVisitor.lift_child
+        visit_class_item = visit_backslash_operand = NodeVisitor.lift_child
 
     # Not only does a ^ or a $ break up two otherwise contiguous literal
     # strings, but there is no text which matches a^b or a$b.
@@ -426,7 +429,7 @@ class SubstringTreeVisitor(NodeVisitor):
                                                     class_items)):
         """Return a list of unicode chars, USELESS, and 2-tuples of unicode
         chars."""
-        items = [']'] if maybe_bracket.text == ']' else []
+        items = [']'] if maybe_bracket.text else []
         items.extend(getattr(i, 'text', i) for i in class_items)
         return items
 
@@ -434,9 +437,6 @@ class SubstringTreeVisitor(NodeVisitor):
         """Keep class_item from using visit_generic, which would do the wrong
         thing."""
         return items
-
-    def visit_class_item(self, class_item, range_or_char):
-        return range_or_char[0]
 
     def visit_char_range(self, char_range, (start, _, end)):
         """Return (start char, end char) bounding a char range or USELESS."""
@@ -466,3 +466,82 @@ class SubstringTreeVisitor(NodeVisitor):
 
     def visit_backslash_normal(self, backslash_normal, children):
         return backslash_normal.text
+
+
+class JsRegexVisitor(NodeVisitor):
+    """Visitor for computing a JS regex equivalent to the parsed DXR-flavored
+    regex.
+
+    """
+    # Everything but these just stays the same between DXR-flavored and
+    # JS-flavored regexes:
+    backslash_specials = {'a': r'\x07',
+                          'e': r'\x1B'}
+
+    def text_of_node(self, node, children):
+        return node.text
+
+    visit_piece = visit_atom = visit_class_item = visit_class_char = \
+        visit_char = visit_backslash_operand = NodeVisitor.lift_child
+
+    visit_literal_char = visit_dot = visit_dollars = visit_hat = text_of_node
+
+    # Take unnecessary backslashes away so we don't end up treading on metas
+    # that are special only in JS, like \\c."""
+    visit_backslash_normal = text_of_node
+
+    visit_regexp = visit_more_branches = visit_branch = visit_quantified = \
+        visit_class_items = lambda self, node, children: u''.join(children)
+
+    def generic_visit(self, node, children):
+        """We ignore some nodes and handle them higher up the tree."""
+        return node
+
+    def visit_another_branch(self, another_branch, (pipe, branch)):
+        return u'|{0}'.format(branch)
+
+    def visit_quantifier(self, quantifier, children):
+        """All quantifiers are the same in JS as in DXR-flavored regexes."""
+        return quantifier.text
+
+    def visit_group(self, group, (paren, regexp, end_paren)):
+        return u'({0})'.format(regexp)
+
+    def visit_inverted_class(self, class_, (bracket_and_hat,
+                                            contents,
+                                            end_bracket)):
+        return u'[^{0}]'.format(u''.join(contents))
+
+    def visit_class(self, class_, (bracket, no_hat, contents, end_bracket)):
+        return u'[{0}]'.format(u''.join(contents))
+
+    def visit_class_contents(self, class_contents, (maybe_bracket,
+                                                    class_items)):
+        bracket = u']' if maybe_bracket.text else u''
+        return bracket + u''.join(class_items)
+
+    def visit_char_range(self, char_range, (start, _, end)):
+        return u'{0}-{1}'.format(start, end)
+
+    def visit_literal_class_char(self, literal_class_char, children):
+        """Turn a boring, normal class char into text."""
+        return literal_class_char.text
+
+    def visit_backslash_char(self, backslash_char, (backslash, operand)):
+        """We reapply the backslash at lower-level nodes than this so we don't
+        accidentally preserve backslashes on chars that don't need them, like
+        c.
+
+        That would be bad for c, because \\c is special in JS (but not in
+        DXR-flavored regexes.
+
+        """
+        return operand
+
+    def visit_backslash_special(self, backslash_special, children):
+        """Return the unchanged char (without the backslash)."""
+        return u'\\' + self.backslash_specials.get(backslash_special.text,
+                                                  backslash_special.text)
+
+    def visit_backslash_hex(self, backslash_hex, children):
+        return u'\\' + backslash_hex.text

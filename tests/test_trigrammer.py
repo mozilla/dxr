@@ -8,7 +8,7 @@ from nose.tools import eq_, ok_, assert_raises
 from parsimonious import ParseError
 from parsimonious.expressions import OneOf
 
-from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, And, Or, BadRegex
+from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, And, Or, BadRegex, JsRegexVisitor
 
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
@@ -138,6 +138,11 @@ class StringExtractionTests(TestCase):
         eq_(visit_regex('(aa|b)(c|d)'),
             Or([And([Or([And(['aa']), And(['b'])]), Or([And(['c']), And(['d'])])])]))
 
+    def test_wildcards(self):
+        """Wildcards should be stripped off as useless."""
+        eq_simplified('.*abc.*', 'abc')
+
+
 
 class ClassTests(TestCase):
     """Tests for extracting (Ors of) strings from backet expressions."""
@@ -230,3 +235,42 @@ def test_parse_regexp():
     regex_grammar.parse(r'|hello|hi')
     regex_grammar.parse(ur'aböut \d{2}')
     assert_raises(ParseError, regex_grammar.parse, '[smoo')
+
+    # This isn't supported yet, so it's better to throw an error than to
+    # quietly misinterpret the user's intent:
+    assert_raises(ParseError, regex_grammar.parse, '(?:hi)')
+
+
+def js_eq(regex, expected):
+    """Assert that taking a regex apart into an AST and then building a JS
+    regex from it matches the expected result.
+
+    :arg regex: A string representing a regex pattern
+    :arg expected: What to compare the reconstructed regex against
+
+    """
+    eq_(JsRegexVisitor().visit(regex_grammar.parse(regex)), expected)
+
+
+def test_js_visitor():
+    """Make sure we can render out JS regexes from parse trees."""
+    # Ones that are the same as the input:
+    for pattern in [
+            'hello',
+            u'♥',
+            r'(See|Hear|Feel)\s{2}Dick\s(run){3,6}!',  # backslash metas, ors, {}s
+            r'\v* ?\t+',  # backslash specials, more quantifiers
+            '',
+            'matches$^nothing',
+            '[^inver-ted-][]cla-ss]',
+            r'\x41'
+            ]:
+        yield js_eq, pattern, pattern
+
+    # Ones that are different from the input:
+    for pattern, new_pattern in [
+            (r'\cA', 'cA'),  # \c has a special meaning in JS but not in Python.
+            (r'\\cA', '\\cA'),  # Keep literal backslashes.
+            (r'\Q', 'Q')  # Strip backslashes from boring literals.
+            ]:
+        yield js_eq, pattern, new_pattern
