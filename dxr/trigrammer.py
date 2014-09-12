@@ -259,6 +259,9 @@ class BadRegex(Exception):
 # Sequences that represent something fancier than just a single, unchanging
 # char:
 BACKSLASH_METAS = 'AbBdDsSwWZ'
+# Single chars that have to be backslashed in regexes lest they mean something
+# else:
+NONLITERALS = r'][^$?*+(){}|\.'
 
 # This recognizes a subset of Python's regex language, minus lookaround
 # assertions, non-greedy quantifiers, and named and other special sorts of
@@ -306,9 +309,11 @@ regex_grammar = Grammar(r"""
     backslash_operand = backslash_special / backslash_hex / backslash_normal
     # We require escaping ]{} even though these are tolerated unescaped by
     # Python's re parser:
-    literal_char = ~r"[^^$?*+()[\]{}|.\\]"
+    literal_char = ~r"[^""" +
+        # \ inside a Python regex char class is an escape char. Escape it:
+        NONLITERALS.replace('\\', r'\\') + r"""]"
     # Char class abbreviations and untypeable chars:
-    backslash_special = ~r"[""" + BACKSLASH_METAS + """aefnrtv]"
+    backslash_special = ~r"[""" + BACKSLASH_METAS + r"""aefnrtv]"
     backslash_hex = ~r"x[0-9a-fA-F]{2}"
     # Normal char with no special meaning:
     backslash_normal = ~"."
@@ -491,10 +496,6 @@ class JsRegexVisitor(NodeVisitor):
 
     visit_literal_char = visit_dot = visit_dollars = visit_hat = text_of_node
 
-    # Take unnecessary backslashes away so we don't end up treading on metas
-    # that are special only in JS, like \\c."""
-    visit_backslash_normal = text_of_node
-
     visit_regexp = visit_more_branches = visit_branch = visit_quantified = \
         visit_class_items = lambda self, node, children: u''.join(children)
 
@@ -550,6 +551,12 @@ class JsRegexVisitor(NodeVisitor):
 
     def visit_backslash_hex(self, backslash_hex, children):
         return u'\\' + backslash_hex.text
+
+    def visit_backslash_normal(self, backslash_normal, children):
+        """Take unnecessary backslashes away so we don't end up treading on
+        metas that are special only in JS, like \\c."""
+        char = backslash_normal.text
+        return ur'\{0}'.format(char) if char in NONLITERALS else char
 
 
 class PythonRegexVisitor(JsRegexVisitor):
