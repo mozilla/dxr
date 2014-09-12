@@ -8,7 +8,8 @@ from nose.tools import eq_, ok_, assert_raises
 from parsimonious import ParseError
 from parsimonious.expressions import OneOf
 
-from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, And, Or, BadRegex, JsRegexVisitor
+from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, And, Or,
+                            BadRegex, JsRegexVisitor, PythonRegexVisitor)
 
 
 # Make sure we don't have have both "ab" and "abc" both as possible prefixes. This is equivalent to just "ab".
@@ -274,3 +275,12 @@ def test_js_visitor():
             (r'\Q', 'Q')  # Strip backslashes from boring literals.
             ]:
         yield js_eq, pattern, new_pattern
+
+
+def test_python_visitor():
+    """Make sure we can render out Python regexes from parse trees.
+
+    There's just one difference from JS so far.
+
+    """
+    eq_(PythonRegexVisitor().visit(regex_grammar.parse(r'\a')), r'\a')

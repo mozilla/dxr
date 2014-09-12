@@ -2,6 +2,13 @@
 of the docs matching the regex are returned. You can then run the actual regex
 over just the returned docs, saving a lot of computation and IO.
 
+We support a subset of the PCRE regex language at the moment, lacking
+lookarounds and noncapturing parens. We can add those later after we decide
+the consequences they have for substring extraction. We may be selective about
+what we support in order to avoid regex-based DOS attacks, but, aside from
+that, DXR's flavor of regex should approach some more popular flavor as
+closely as possible.
+
 Junghoo Ch and Sridhar Rajagopalan, in "A fast regular expression indexing
 engine", descibe an intuitive method for accelerating regex searching with a
 trigram index. This is roughly an implementation of that.
@@ -469,11 +476,9 @@ class SubstringTreeVisitor(NodeVisitor):
 
 
 class JsRegexVisitor(NodeVisitor):
-    """Visitor for computing a JS regex equivalent to the parsed DXR-flavored
-    regex.
+    """Visitor for converting a parsed DXR-flavored regex to a JS equivalent"""
 
-    """
-    # Everything but these just stays the same between DXR-flavored and
+    # All specials but these just stay the same between DXR-flavored and
     # JS-flavored regexes:
     backslash_specials = {'a': r'\x07',
                           'e': r'\x1B'}
@@ -541,7 +546,24 @@ class JsRegexVisitor(NodeVisitor):
     def visit_backslash_special(self, backslash_special, children):
         """Return the unchanged char (without the backslash)."""
         return u'\\' + self.backslash_specials.get(backslash_special.text,
-                                                  backslash_special.text)
+                                                   backslash_special.text)
 
     def visit_backslash_hex(self, backslash_hex, children):
         return u'\\' + backslash_hex.text
+
+
+class PythonRegexVisitor(JsRegexVisitor):
+    """Visitor for converting a parsed DXR-flavored regex to a Python
+    equivalent, for highlighting
+
+    There's really only one spot where Python's regex language (or at least
+    the parts whose functionality is implemented by DXR's flavor so far)
+    differ from JS's: Python's understands \a natively. There are other
+    differences, like Python's tolerance for unescaped ], {, and } in contrast
+    to our insistence at backslash-escaping them, but those differences go in
+    the other direction and so don't matter when translating from DXR to
+    Python.
+
+    """
+    # Python supports the rest of the escape sequences natively.
+    backslash_specials = {'e': r'\x1B'}
