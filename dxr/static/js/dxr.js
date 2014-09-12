@@ -401,7 +401,7 @@ $(function() {
 
             oneFewerRequest();
 
-            // A newer response already arrived and is displayed. Don't both complaining about this old one.
+            // A newer response already arrived and is displayed. Don't bother complaining about this old one.
             if (myRequestNumber < displayedRequestNumber)
                 return;
 
