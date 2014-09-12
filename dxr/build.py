@@ -213,12 +213,21 @@ def index_tree(tree, es, verbose=False):
                 settings={
                     'settings': {
                         'index': {
-                            'number_of_shards': 10,  # wild guess
+                            'number_of_shards': 1,  # Fewer should be faster, assuming enough RAM.
                             'number_of_replicas': 1  # fairly arbitrary
                         },
                         # Default analyzers and mappings are in the core plugin.
                         'analysis': reduce(deep_update, (p.analyzers for p in
-                                           tree.enabled_plugins.values()), {})
+                                           tree.enabled_plugins.values()), {}),
+
+                        # DXR indices are immutable once built. Turn the
+                        # refresh interval down to keep the segment count low
+                        # while indexing. It will make for less merging later.
+                        # We could also simply call "optimize" after we're
+                        # done indexing, but it is unthrottled; we'd have to
+                        # use shard allocation to do the indexing on one box
+                        # and then move it elsewhere for actual use.
+                        'refresh_interval': '1m'
                     },
                     'mappings': reduce(deep_update, (p.mappings for p in
                                        tree.enabled_plugins.values()), {})
@@ -237,6 +246,9 @@ def index_tree(tree, es, verbose=False):
             with new_pool() as pool:
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool, es)
+
+            # Don't wait for the (long) refresh interval:
+            es.refresh(index=index)
         except Exception:
             # If anything went wrong, delete the index, because we're not
             # going to have a way of returning its name if we raise an
