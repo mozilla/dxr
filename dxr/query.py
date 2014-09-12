@@ -276,6 +276,18 @@ query_grammar = Grammar(ur'''
 
 
 class QueryVisitor(NodeVisitor):
+    """Visitor that turns a parsed query into a list of dicts, one for each
+    term.
+
+    'path:ns*.cpp', for example, might become this::
+
+        [{'name': 'path',
+          'arg': 'ns*.cpp',
+          'qualified': False,
+          'not': False,
+          'case_sensitive': False}]
+
+    """
     visit_positive_term = NodeVisitor.lift_child
 
     def __init__(self, is_case_sensitive=False):

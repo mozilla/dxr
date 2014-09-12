@@ -115,7 +115,7 @@ class SubstringTree(list):
                 super(SubstringTree, self).__eq__(other))
 
     def simplified(self, min_length=NGRAM_LENGTH):
-        """Return a smaller but equivalent tree structure.
+        """Return a smaller but equivalent tree structure or a string.
 
         Simplify by turning nodes with only 1 child into mere strings and
         removing nodes with 0. If the top-level node ends up having 0

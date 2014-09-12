@@ -53,7 +53,7 @@ class BasicTests(DxrInstanceTestCase):
                   "line": "$(CXX) -o $@ $^"},
                 {"line_number": 4,
                   "line": "clean:"}],
-              "icon": "mimetypes/unknown"}])
+              "icon": "unknown"}])
 
     def test_case_insensitive_extents(self):
         """Test case-insensitive free-text searching with extents.
@@ -80,4 +80,4 @@ class BasicTests(DxrInstanceTestCase):
         eq_(self.search_results('path:makefile'),
             [{"path": "makefile",
               "lines": [],
-              "icon": "mimetypes/unknown"}])
+              "icon": "unknown"}])
