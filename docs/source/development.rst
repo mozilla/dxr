@@ -314,6 +314,15 @@ API
 <http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping
 -types.html>`__ is also outlined in the ES documentation.
 
+.. warning::
+
+    Since a FILE-domain query will be promoted to a LINE query if any other
+    query term triggers a line-based query, it's important to keep field names
+    and semantics the same between lines and files. In other words, a LINE
+    mapping should generally be a superset of a FILE mapping. Otherwise, ES
+    will guess mappings for the undeclared fields, and surprising search
+    results will likely ensue.
+
 Analyzers
 =========
 

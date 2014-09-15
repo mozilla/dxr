@@ -9,9 +9,7 @@ from pkg_resources import iter_entry_points
 
 
 # Domain constants:
-FILE = 'file'  # A FILE query will be promoted to a LINE query if any other query
-               # term triggers a line-based query. Thus, it's important to keep
-               # field names and semantics the same between lines and files.
+FILE = 'file'
 LINE = 'line'
 
 
@@ -423,7 +421,11 @@ class Plugin(object):
             plugin's ES-destined data. A dict with keys for each doctype and
             values reflecting the structure described at
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
-            current/indices-put-mapping.html.
+            current/indices-put-mapping.html. Since a FILE-domain query will
+            be promoted to a LINE query if any other query term triggers a
+            line-based query, it's important to keep field names and semantics
+            the same between lines and files. In other words, a LINE mapping
+            should generally be a superset of a FILE mapping.
         :arg analyzers: Analyzer, tokenizer, and token and char filter
             definitions for the elasticsearch mappings. A dict with keys
             "analyzer", "tokenizer", etc., following the structure outlined at
