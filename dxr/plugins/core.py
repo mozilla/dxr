@@ -11,6 +11,22 @@ from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH
 # TODO: RegexFilter, ExtFilter, PathFilter, any needles for those
 
 
+PATH_MAPPING = {  # path/to/a/folder/filename.cpp
+    'type': 'string',
+    'index': 'not_analyzed',  # support JS source fetching & sorting
+    'fields': {
+        'trigrams_lower': {
+            'type': 'string',
+            'analyzer': 'trigramalyzer_lower'  # accelerate wildcards
+        },
+        'trigrams': {
+            'type': 'string',
+            'analyzer': 'trigramalyzer'
+        }
+    }
+}
+
+
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
@@ -20,20 +36,7 @@ mappings = {
         },
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
-            'path': {  # path/to/a/folder/filename.cpp
-                'type': 'string',
-                'index': 'not_analyzed',  # support JS source fetching & sorting
-                'fields': {
-                    'trigrams_lower': {
-                        'type': 'string',
-                        'analyzer': 'trigramalyzer_lower'  # accelerate wildcards
-                    },
-                    'trigrams': {
-                        'type': 'string',
-                        'analyzer': 'trigramalyzer'
-                    }
-                }
-            },
+            'path': PATH_MAPPING,
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
@@ -67,25 +70,11 @@ mappings = {
             'enabled': False
         },
         'properties': {
-            'path': {
-                'type': 'string',
-                'index': 'not_analyzed',  # support sorting
-                'fields': {
-                    'trigrams_lower': {
-                        'type': 'string',
-                        'analyzer': 'trigramalyzer_lower'
-                    },
-                    'trigrams': {
-                        'type': 'string',
-                        'analyzer': 'trigramalyzer'
-                    }
-
-                }
-            },
-            # TODO: Use match_phrase_prefix queries on non-globbed paths,
-            # analyzing them with the path analyzer, for max perf. Perfect!
-            # Otherwise, fall back to trigram-accelerated substring or wildcard
-            # matching.
+            'path': PATH_MAPPING,
+            # TODO: After the query language refresh, use match_phrase_prefix
+            # queries on non-globbed paths, analyzing them with the path
+            # analyzer, for max perf. Perfect! Otherwise, fall back to trigram-
+            # accelerated substring or wildcard matching.
 
             'number': {
                 'type': 'integer'
