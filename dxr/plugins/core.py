@@ -33,6 +33,22 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 }
 
 
+PATH_MAPPING = {  # path/to/a/folder/filename.cpp
+    'type': 'string',
+    'index': 'not_analyzed',  # support JS source fetching & sorting
+    'fields': {
+        'trigrams_lower': {
+            'type': 'string',
+            'analyzer': 'trigramalyzer_lower'  # accelerate wildcards
+        },
+        'trigrams': {
+            'type': 'string',
+            'analyzer': 'trigramalyzer'
+        }
+    }
+}
+
+
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
