@@ -3,7 +3,7 @@
 from funcy import identity
 from jinja2 import Markup
 
-from dxr.exceptions import BadQuery
+from dxr.exceptions import BadTerm
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
@@ -161,11 +161,14 @@ class TextFilter(Filter):
     name = 'text'
 
     def filter(self):
+        text = self._term['arg']
+        if len(text) < NGRAM_LENGTH:
+            return {}
         positive = {
             'query': {
                 'match_phrase': {
                     'content.trigrams' if self._term['case_sensitive']
-                    else 'content.trigrams_lower': self._term['arg']
+                    else 'content.trigrams_lower': text
                 }
             }
         }
@@ -228,7 +231,7 @@ def es_regex_filter(regex, raw_field, is_case_sensitive):
     # If tree is a string, just do a match_phrase. Otherwise, add .* to the
     # front and back, and build some boolean algebra.
     if isinstance(substrings, basestring) and len(substrings) < NGRAM_LENGTH:
-        raise BadQuery('Regexps need 3 literal characters in a row for speed.')
+        raise BadTerm('Regexps need 3 literal characters in a row for speed.')
         # We could alternatively consider doing an unaccelerated Lucene regex
         # query at this point. It would be slower but tolerable on a
         # moz-central-sized codebase: perhaps 500ms rather than 80.

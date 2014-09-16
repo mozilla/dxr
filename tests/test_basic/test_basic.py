@@ -81,3 +81,15 @@ class BasicTests(DxrInstanceTestCase):
             [{"path": "makefile",
               "lines": [],
               "icon": "unknown"}])
+
+    def test_filter_punting(self):
+        """Make sure filters can opt out of filtration--in this case, due to
+        terms shorter than trigrams. Make sure even opted-out filters get a
+        chance to highlight.
+
+        """
+        # Test a bigram that should be highlighted and one that shouldn't.
+        self.found_line_eq(
+            'argc gv qq',
+            'int main(int <b>argc</b>, char* ar<b>gv</b>[]){',
+            4)

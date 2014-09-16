@@ -1,8 +1,8 @@
 """Exceptions, broken out into a leaf module to ward off circular imports"""
 
 
-class BadQuery(Exception):
-    """A user error made the query unrunnable."""
+class BadTerm(Exception):
+    """A user error made it impossible to filter on a term."""
 
     def __init__(self, reason):
         """Construct.

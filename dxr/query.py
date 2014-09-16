@@ -63,8 +63,11 @@ class Query(object):
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
 
-        # An ORed-together ball for each term's filters:
-        ors = [{'or': [f.filter() for f in t]} for t in filters]
+        # An ORed-together ball for each term's filters, omitting filters that
+        # punt by returning {} and ors that contain nothing but punts:
+        ors = filter(None, [filter(None, (f.filter() for f in t))
+                            for t in filters])
+        ors = [{'or': x} for x in ors]
 
         if not is_line_query:
             # Don't show folders yet in search results. I don't think the JS
