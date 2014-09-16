@@ -264,14 +264,15 @@ def test_js_visitor():
             '',
             'matches$^nothing',
             '[^inver-ted-][]cla-ss]',
-            r'\x41'
+            r'\x41',
+            r'hork\.cpp',
+            r'\\cA'  # Keep literal backslashes.
             ]:
         yield js_eq, pattern, pattern
 
     # Ones that are different from the input:
     for pattern, new_pattern in [
             (r'\cA', 'cA'),  # \c has a special meaning in JS but not in Python.
-            (r'\\cA', '\\cA'),  # Keep literal backslashes.
             (r'\Q', 'Q')  # Strip backslashes from boring literals.
             ]:
         yield js_eq, pattern, new_pattern

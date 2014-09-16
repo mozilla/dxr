@@ -3,12 +3,18 @@
 from funcy import identity
 from jinja2 import Markup
 
+from dxr.exceptions import BadQuery
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
-from dxr.trigrammer import regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH
+from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
+                            And, JsRegexVisitor)
+from dxr.utils import glob_to_regex
 
 
-# TODO: RegexFilter, ExtFilter, PathFilter, any needles for those
+__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter']
+
+
+# TODO: RegexFilter, ExtFilter, any needles for those
 
 
 mappings = {
@@ -187,10 +193,34 @@ class TextFilter(Filter):
                            maybe_lower(self._term['arg'])))
 
 
+def boolean_filter_tree(substrings, trigram_field):
+    """Return a (probably nested) ES filter clause expressing the boolean
+    constraints embodied in ``substrings``.
+
+    :arg substrings: A SubstringTree
+    :arg trigram_field: The ES property under which a trigram index of the
+        field to match is stored
+
+    """
+    if isinstance(substrings, basestring):
+        return {
+            'query': {
+                'match_phrase': {
+                    trigram_field: substrings
+                }
+            }
+        }
+    return {
+        'and' if isinstance(substrings, And) else 'or':
+            [boolean_filter_tree(x, trigram_field) for x in substrings]
+    }
+
+
 def es_regex_filter(regex, raw_field, is_case_sensitive):
     """Return an efficient ES filter to find matches to a regex.
 
-    Looks for fields of which ``regex`` matches a substring.
+    Looks for fields of which ``regex`` matches a substring. (^ and $ do
+    anchor the pattern to the beginning or end of the field, however.)
 
     :arg regex: A regex pattern as a string
     :arg raw_field: The name of an ES property to match against. The
@@ -201,40 +231,31 @@ def es_regex_filter(regex, raw_field, is_case_sensitive):
         case-sensitive
 
     """
-    trigram_field = ('path.trigrams' if is_case_sensitive else
-                     'path.trigrams_lower')
+    trigram_field = ('%s.trigrams' if is_case_sensitive else
+                     '%s.trigrams_lower') % raw_field
     parsed_regex = regex_grammar.parse(regex)
-    tree = SubstringTreeVisitor().visit(parsed_regex).simplified()
+    substrings = SubstringTreeVisitor().visit(parsed_regex).simplified()
 
     # If tree is a string, just do a match_phrase. Otherwise, add .* to the
     # front and back, and build some boolean algebra.
-    if isinstance(tree, basestring):
-        return {
-            'query': {
-                'match_phrase': {
-                    trigram_field: tree
-                }
-            }
-        }
+    if isinstance(substrings, basestring) and len(substrings) < NGRAM_LENGTH:
+        raise BadQuery('Regexps need 3 literal characters in a row for speed.')
+        # We could alternatively consider doing an unaccelerated Lucene regex
+        # query at this point. It would be slower but tolerable on a
+        # moz-central-sized codebase: perhaps 500ms rather than 80.
     else:
         # Should be fine even if the regex already starts or ends with .*:
-        js_regex = '.*%s.*' % JsRegexVisitor().visit(parsed_regex)
+        js_regex = JsRegexVisitor().visit(parsed_regex)
         return {
             'and': [
-                {
-                    'query': {
-                        'match_phrase': {
-                            trigram_field: blah
-                        }
-                    }
-                } for blah in blah] +
-            [
+                boolean_filter_tree(substrings, trigram_field),
                 {
                     'script': {
                         'lang': 'js',
+                        # test() tests for containment, not matching:
                         'script': '(new RegExp(pattern, flags)).test(doc["%s"].value)' % raw_field,
                         'params': {
-                            'pattern': fnmatch.translate(glob),
+                            'pattern': js_regex,
                             'flags': '' if is_case_sensitive else 'i'
                         }
                     }
