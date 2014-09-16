@@ -20,6 +20,7 @@ for it. We recommend VirtualBox.
 Once you've installed VirtualBox and Vagrant, run these commands in DXR's
 top-level directory::
 
+   vagrant plugin install vagrant-vbguest
    vagrant up
    vagrant ssh
 
@@ -30,10 +31,14 @@ Then, run this inside the VM::
 
 .. note::
 
-   The Vagrant image is built for VirtualBox 4.2.0.  If your version is older,
+   The Vagrant image is built for VirtualBox 4.2.0 or newer.  If your version is older,
    the image might not work as expected.
 
+   Your Vagrant version may require a specific vbguest plugin installation method.
+   If you receive errors about the plugin visit the vbguest_ plugin page.
 
 .. _TriLite SQLite extension: https://github.com/jonasfj/trilite
 
 .. _Vagrant: http://www.vagrantup.com/
+
+.. _vbguest: https://github.com/dotless-de/vagrant-vbguest

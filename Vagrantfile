@@ -18,13 +18,14 @@ end
 CONF = _config
 MOUNT_POINT = '/home/vagrant/dxr'
 
-
 Vagrant::Config.run do |config|
-    config.vm.box = "saucy64"
-    config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
+    config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+    config.vm.box = "ubuntu/trusty64"
 
     Vagrant.configure("1") do |config|
         config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
+        # Make sure guest additions are up to date!
+        config.vbguest.auto_update = true
     end
 
     Vagrant.configure("2") do |config|
