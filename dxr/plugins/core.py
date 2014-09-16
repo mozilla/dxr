@@ -7,7 +7,7 @@ from dxr.exceptions import BadTerm
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
-                            And, JsRegexVisitor)
+                            And, JsRegexVisitor, es_regex_filter, NoTrigrams)
 from dxr.utils import glob_to_regex
 
 
@@ -185,77 +185,6 @@ class TextFilter(Filter):
                            maybe_lower(self._term['arg'])))
 
 
-def boolean_filter_tree(substrings, trigram_field):
-    """Return a (probably nested) ES filter clause expressing the boolean
-    constraints embodied in ``substrings``.
-
-    :arg substrings: A SubstringTree
-    :arg trigram_field: The ES property under which a trigram index of the
-        field to match is stored
-
-    """
-    if isinstance(substrings, basestring):
-        return {
-            'query': {
-                'match_phrase': {
-                    trigram_field: substrings
-                }
-            }
-        }
-    return {
-        'and' if isinstance(substrings, And) else 'or':
-            [boolean_filter_tree(x, trigram_field) for x in substrings]
-    }
-
-
-def es_regex_filter(regex, raw_field, is_case_sensitive):
-    """Return an efficient ES filter to find matches to a regex.
-
-    Looks for fields of which ``regex`` matches a substring. (^ and $ do
-    anchor the pattern to the beginning or end of the field, however.)
-
-    :arg regex: A regex pattern as a string
-    :arg raw_field: The name of an ES property to match against. The
-        lowercase-folded trigram field is assumed to be
-        raw_field.trigrams_lower, and the non-folded version
-        raw_field.trigrams.
-    :arg is_case_sensitive: Whether the match should be performed
-        case-sensitive
-
-    """
-    trigram_field = ('%s.trigrams' if is_case_sensitive else
-                     '%s.trigrams_lower') % raw_field
-    parsed_regex = regex_grammar.parse(regex)
-    substrings = SubstringTreeVisitor().visit(parsed_regex).simplified()
-
-    # If tree is a string, just do a match_phrase. Otherwise, add .* to the
-    # front and back, and build some boolean algebra.
-    if isinstance(substrings, basestring) and len(substrings) < NGRAM_LENGTH:
-        raise BadTerm('Regexps need 3 literal characters in a row for speed.')
-        # We could alternatively consider doing an unaccelerated Lucene regex
-        # query at this point. It would be slower but tolerable on a
-        # moz-central-sized codebase: perhaps 500ms rather than 80.
-    else:
-        # Should be fine even if the regex already starts or ends with .*:
-        js_regex = JsRegexVisitor().visit(parsed_regex)
-        return {
-            'and': [
-                boolean_filter_tree(substrings, trigram_field),
-                {
-                    'script': {
-                        'lang': 'js',
-                        # test() tests for containment, not matching:
-                        'script': '(new RegExp(pattern, flags)).test(doc["%s"].value)' % raw_field,
-                        'params': {
-                            'pattern': js_regex,
-                            'flags': '' if is_case_sensitive else 'i'
-                        }
-                    }
-                }
-            ]
-        }
-
-
 class PathFilter(Filter):
     """Substring filter for paths
 
@@ -271,10 +200,14 @@ class PathFilter(Filter):
 
     def filter(self):
         glob = self._term['arg']
-        positive = es_regex_filter(
-            glob_to_regex(glob),
-            'path',
-            is_case_sensitive=self._term['case_sensitive'])
+        try:
+            positive = es_regex_filter(
+                glob_to_regex(glob),
+                'path',
+                is_case_sensitive=self._term['case_sensitive'])
+        except NoTrigrams:
+            raise BadTerm('Path globs need at 3 literal characters in a row '
+                          'for speed.')
         return {'not': positive} if self._term['not'] else positive
 
 
