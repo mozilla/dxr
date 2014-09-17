@@ -1,6 +1,6 @@
 """Tests for emission of high-level markup, as by templates"""
 
-from dxr.testing import DxrInstanceTestCase
+from dxr.testing import DxrInstanceTestCase, run
 
 from nose.tools import eq_, ok_
 
@@ -21,3 +21,10 @@ class MarkupTests(DxrInstanceTestCase):
         response = self.client().get('/code/source/')
         ok_('&folder&' not in response.data)
         ok_('&amp;folder&amp;' in response.data)
+
+    def test_analytics_snippet_empty( self ):
+        """Make sure google analytics snippet doesn't show up
+        in when the key isn't configured"""
+        response = self.client().get( '/code/source' )
+        ok_( '.google-analytics.com' not in response.data )
+
