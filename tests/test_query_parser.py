@@ -18,7 +18,7 @@ class VisitorTests(TestCase):
         """Test the overall structure."""
         eq_(self.visit('regexp:(?i)snork'),
             [{'arg': '(?i)snork',
-              'type': 'regexp',
+              'name': 'regexp',
               'not': False,
               'case_sensitive': False,
               'qualified': False}])
