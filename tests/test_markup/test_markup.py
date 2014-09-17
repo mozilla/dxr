@@ -1,6 +1,6 @@
 """Tests for emission of high-level markup, as by templates"""
 
-from dxr.testing import DxrInstanceTestCase, run
+from dxr.testing import DxrInstanceTestCase
 
 from nose.tools import eq_, ok_
 
