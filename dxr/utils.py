@@ -28,20 +28,16 @@ import dxr
 TEMPLATE_DIR = 'static/templates'
 
 _template_env = None
-def load_template_env(temp_folder):
+def load_template_env():
     """Load template environment (lazily)"""
     global _template_env
     if not _template_env:
         # Cache folder for jinja2
-        tmpl_cache = os.path.join(temp_folder, 'jinja2_cache')
-        if not os.path.isdir(tmpl_cache):
-            os.mkdir(tmpl_cache)
         # Create jinja2 environment
         _template_env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(
                         join(dirname(dxr.__file__), TEMPLATE_DIR)),
                 auto_reload=False,
-                bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache),
                 autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
         )
     return _template_env

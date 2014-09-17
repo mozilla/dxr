@@ -110,7 +110,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
 
     # Lay down config file:
     _fill_and_write_template(
-        load_template_env(config.temp_folder),
+        load_template_env(),
         'config.py.jinja',
         join(config.target_folder, 'config.py'),
         dict(trees=repr(OrderedDict((t.name, t.description)
@@ -522,7 +522,7 @@ def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
     path = '(no file yet)'
     try:
         es = ElasticSearch(tree.config.es_hosts)
-        jinja_env = load_template_env(tree.config.temp_folder)
+        jinja_env = load_template_env()
         for path in paths:
             index_file(tree, tree_indexers, path, es, index, jinja_env)
     except Exception as exc:
