@@ -86,6 +86,12 @@ Here are the options that can live in the ``[DXR]`` section:
 ``wwwroot``
     URL path prefix to the root of DXR's web app. Default: ``/``
 
+``google_analytics_key``
+  Google analytics key. If set, the analytics snippet will added automatically
+  to every page. 
+  
+
+
 (Refer to the Plugin Configuration section for plugin keys available
 here).
 
