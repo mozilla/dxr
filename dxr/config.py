@@ -33,7 +33,7 @@ class Config(object):
             'skip_stages':      "",
             'default_tree':     "",
             'filter_language':  "C",
-            'ga_key': False
+            'google_analytics_key': "" 
         }, dict_type=OrderedDict)
         parser.read(configfile)
 
@@ -52,7 +52,7 @@ class Config(object):
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
         self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
-        self.ga_key           = parser.get('DXR', 'ga_key',           False, override)
+        self.google_analytics_key = parser.get('DXR', 'google_analytics_key', False, override)
 
         # Set configfile
         self.configfile       = configfile

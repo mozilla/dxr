@@ -56,13 +56,13 @@ def search(tree):
     config = current_app.config
     www_root = config['WWW_ROOT']
     trees = config['TREES']
-    ga_key = config['GA_KEY']
+    google_analytics_key = config['GOOGLE_ANALYTICS_KEY']
 
     # Arguments for the template:
     arguments = {
         # Common template variables
         'wwwroot': www_root,
-        'ga_key': ga_key,
+        'google_analytics_key': google_analytics_key,
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''
