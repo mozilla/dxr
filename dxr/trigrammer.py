@@ -603,13 +603,13 @@ def boolean_filter_tree(substrings, trigram_field):
     }
 
 
-def es_regex_filter(regex, raw_field, is_case_sensitive):
+def es_regex_filter(parsed_regex, raw_field, is_case_sensitive):
     """Return an efficient ES filter to find matches to a regex.
 
     Looks for fields of which ``regex`` matches a substring. (^ and $ do
     anchor the pattern to the beginning or end of the field, however.)
 
-    :arg regex: A regex pattern as a string
+    :arg parsed_regex: A regex pattern as an AST from regex_grammar
     :arg raw_field: The name of an ES property to match against. The
         lowercase-folded trigram field is assumed to be
         raw_field.trigrams_lower, and the non-folded version
@@ -620,7 +620,6 @@ def es_regex_filter(regex, raw_field, is_case_sensitive):
     """
     trigram_field = ('%s.trigrams' if is_case_sensitive else
                      '%s.trigrams_lower') % raw_field
-    parsed_regex = regex_grammar.parse(regex)
     substrings = SubstringTreeVisitor().visit(parsed_regex).simplified()
 
     # If tree is a string, just do a match_phrase. Otherwise, add .* to the

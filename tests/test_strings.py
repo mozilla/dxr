@@ -51,3 +51,27 @@ def test_highlight():
                   [(0, 3), (2, 5), (11, 14)]),
         '<b>in</b><b>i</b><b>ni</b> main(<b>ini</b> argc, char* argv[]) {')
     # That's not the optimal result, but it's a correct one.
+
+
+class RegexpTests(SingleFileTestCase):
+    """Tests for the registration and flow of the RegexpFilter itself.
+
+    test_trigrammer tests the bazillion corner cases of regex translation.
+
+    """
+    source = """// Which of us is the beaver?
+        // The paddle-shaped tail is a dead giveaway.
+        // We know it's you, Shahad.
+        """ + MINIMAL_MAIN
+
+    def test_case_sensitive(self):
+        self.found_line_eq('regexp:" ?The ?"',
+                           '//<b> The </b>paddle-shaped tail is a dead giveaway.',
+                           is_case_sensitive=True)
+
+    def test_case_insensitive(self):
+        self.found_lines_eq(
+            'regexp:sha[a-z]+d',
+            [('// The paddle-<b>shaped</b> tail is a dead giveaway.', 2),
+             ("// We know it's you, <b>Shahad</b>.", 3)],
+            is_case_sensitive=False)

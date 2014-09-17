@@ -1,20 +1,24 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
+import re
+
 from funcy import identity
 from jinja2 import Markup
+from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
 import dxr.plugins
 from dxr.plugins import FILE, LINE, Filter
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
-                            And, JsRegexVisitor, es_regex_filter, NoTrigrams)
+                            And, JsRegexVisitor, es_regex_filter, NoTrigrams,
+                            PythonRegexVisitor)
 from dxr.utils import glob_to_regex
 
 
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter']
 
 
-# TODO: RegexFilter, ExtFilter, any needles for those
+# TODO: ExtFilter, any needles for that
 
 
 PATH_MAPPING = {  # path/to/a/folder/filename.cpp
@@ -92,7 +96,7 @@ mappings = {
             # pulling just plain content, to the point of crashing.
             'content': {
                 'type': 'string',
-                'index': 'no',
+                'index': 'not_analyzed',  # support JS source fetching
                 'fields': {
                     'trigrams_lower': {
                         'type': 'string',
@@ -202,13 +206,54 @@ class PathFilter(Filter):
         glob = self._term['arg']
         try:
             positive = es_regex_filter(
-                glob_to_regex(glob),
+                regex_grammar.parse(glob_to_regex(glob)),
                 'path',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
             raise BadTerm('Path globs need at 3 literal characters in a row '
                           'for speed.')
         return {'not': positive} if self._term['not'] else positive
+
+
+class RegexpFilter(Filter):
+    """Regular expression filter for file content"""
+
+    name = 'regexp'
+    description = Markup(r'Regular expression. Examples: '
+                         r'<code>regexp:(?i)\bs?printf</code> '
+                         r'<code>regexp:"(three|3) mice"</code>')
+
+    def __init__(self, term):
+        """Compile the Python equivalent of the regex so we don't have to lean
+        on the regex cache during highlighting.
+
+        Python's regex cache is naive: after it hits 100, it just clears: no
+        LRU.
+
+        """
+        super(RegexpFilter, self).__init__(term)
+        try:
+            self._parsed_regex = regex_grammar.parse(term['arg'])
+        except ParseError:
+            raise BadTerm('Invalid regex')
+        self._compiled_regex = (
+                re.compile(PythonRegexVisitor().visit(self._parsed_regex),
+                           flags=0 if self._term['case_sensitive'] else re.I))
+
+    def filter(self):
+        try:
+            positive = es_regex_filter(
+                self._parsed_regex,
+                'content',
+                is_case_sensitive=self._term['case_sensitive'])
+        except NoTrigrams:
+            raise BadTerm('Regexes need at 3 literal characters in a row for '
+                          'speed.')
+        return {'not': positive} if self._term['not'] else positive
+
+    def highlight_content(self, result):
+        return (m.span() for m in
+                self._compiled_regex.finditer(result['content'][0]))
 
 
 class TreeToIndex(dxr.plugins.TreeToIndex):

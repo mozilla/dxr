@@ -50,7 +50,12 @@ class Filter(object):
 
     def __init__(self, term):
         """This is a good place to parse the term's arg (if it requires further
-        parsing) and stash it away on the instance."""
+        parsing) and stash it away on the instance.
+
+        Raise :class:`~dxr.exceptions.BadTerm` to complain to the user: for
+        instance, about an unparseable term.
+
+        """
         self._term = term
 
     def filter(self):
@@ -269,7 +274,7 @@ class FileToSkim(object):
     def regions(self):
         """Yield instructions for syntax coloring and other inline formatting
         of code.
-        
+
         Yield an ordered list of extents and CSS classes for each line::
 
             (start, end, class)
@@ -287,7 +292,7 @@ class FileToSkim(object):
     def annotations_by_line(self):
         """Yield extra user-readable information about each line, hidden by
         default: compiler warnings that occurred there, for example.
-        
+
         Yield a list of annotation maps for each line::
 
             {'title': ..., 'class': ..., 'style': ...}

@@ -69,7 +69,7 @@ class TestCase(unittest.TestCase):
                              is_case_sensitive=is_case_sensitive),
             set(filenames))
 
-    def found_line_eq(self, query, content, line):
+    def found_line_eq(self, query, content, line, is_case_sensitive=True):
         """Assert that a query returns a single file and single matching line
         and that its line number and content are as expected, modulo leading
         and trailing whitespace.
@@ -79,12 +79,15 @@ class TestCase(unittest.TestCase):
         zillion dereferences in your test.
 
         """
-        self.found_lines_eq(query, [(content, line)])
+        self.found_lines_eq(query,
+                            [(content, line)],
+                            is_case_sensitive=is_case_sensitive)
 
-    def found_lines_eq(self, query, success_lines):
+    def found_lines_eq(self, query, success_lines, is_case_sensitive=True):
         """Assert that a query returns a single file and that the highlighted
         lines are as expected, modulo leading and trailing whitespace."""
-        results = self.search_results(query)
+        results = self.search_results(query,
+                                      is_case_sensitive=is_case_sensitive)
         num_results = len(results)
         eq_(num_results, 1, msg='Query passed to found_lines_eq() returned '
                                  '%s files, not one.' % num_results)
@@ -218,7 +221,7 @@ build_command = $CXX -o main main.cpp
                  .replace('&quot;', '"')
                  .replace('&amp;', '&'))
 
-    def found_line_eq(self, query, content, line=None):
+    def found_line_eq(self, query, content, line=None, is_case_sensitive=True):
         """A specialization of ``found_line_eq`` that computes the line number
         if not given
 
@@ -230,7 +233,8 @@ build_command = $CXX -o main main.cpp
         if not line:
             line = self.source.count( '\n', 0, self.source.index(
                 self._source_for_query(content))) + 1
-        super(SingleFileTestCase, self).found_line_eq(query, content, line)
+        super(SingleFileTestCase, self).found_line_eq(
+                query, content, line, is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):
