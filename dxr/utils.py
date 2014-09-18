@@ -178,7 +178,11 @@ def append_by_line(dest_lists, list_per_line):
 
 def decode_es_datetime(es_datetime):
     """Turn an elasticsearch datetime into a datetime object."""
-    return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S')
+    try:
+        return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S')
+    except ValueError:
+        # For newer ES versions
+        return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S.%f')
 
 
 _FNMATCH_TRANSLATE_SUFFIX_LEN = len('\Z(?ms)')
