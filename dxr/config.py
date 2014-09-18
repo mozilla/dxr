@@ -39,7 +39,6 @@ class Config(object):
             'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     "",
-            'filter_language':  "C",
             'es_hosts':         'http://127.0.0.1:9200/',
             'es_index':         'dxr_{format}_{tree}_{unique}',
             'es_alias':         'dxr_{format}_{tree}',
@@ -59,7 +58,6 @@ class Config(object):
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
-        self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
         self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
         self.es_index         = parser.get('DXR', 'es_index', False, override)
         self.es_alias         = parser.get('DXR', 'es_alias', False, override)

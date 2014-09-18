@@ -45,10 +45,6 @@ Here are the options that can live in the ``[DXR]`` section:
 ``enabled_plugins``
     Names of plugins to enable. Default: ``*``
 
-``filter_lang``
-    The default programming language for this instance. Only filters registered
-    for this language will be used. Default: ``C``
-
 ``generated_date``
     The "generated on" date stamped at the bottom of every DXR web page, in
     RFC-822 (also known as RFC 2822) format. Default: the time the indexing run

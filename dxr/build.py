@@ -119,7 +119,6 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
              default_tree=repr(config.default_tree),
-             filter_language=repr(config.filter_language),
              es_hosts=repr(config.es_hosts),
              es_aliases=repr(dict((name, alias) for
                                   name, alias, index in indices))))
@@ -494,7 +493,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                               t.description)
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,
-             'filters': filter_menu_items(tree.config.filter_language),
+             'filters': filter_menu_items(),
 
              # File template variables:
              'paths_and_names': linked_pathname(rel_path, tree.name),

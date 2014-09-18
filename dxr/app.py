@@ -152,7 +152,7 @@ def search(tree):
     if error:
         return render_template('error.html', **arguments), status_code or 500
     else:
-        arguments['filters'] = filter_menu_items(config['FILTER_LANGUAGE'])
+        arguments['filters'] = filter_menu_items()
         return render_template('search.html', **arguments)
 
 
@@ -201,7 +201,7 @@ def browse(tree, path=''):
                 for t_name, t_description in config['TREES'].iteritems()],
             generated_date=config['GENERATED_DATE'],
             paths_and_names=linked_pathname(path, tree),
-            filters=filter_menu_items(config['FILTER_LANGUAGE']),
+            filters=filter_menu_items(),
             # Autofocus only at the root of each tree:
             should_autofocus_query=path == '',
 

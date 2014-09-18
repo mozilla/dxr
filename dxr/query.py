@@ -405,8 +405,11 @@ class QueryVisitor(NodeVisitor):
         return visited_children or node
 
 
-def filter_menu_items(language):
+def filter_menu_items():
     """Return the additional template variables needed to render filter.html."""
+    # TODO: Take a 'tree' arg, and return only filters registered by plugins
+    # enabled on that tree. For this, we'll have to either add enabled plugins
+    # per tree to the request-time config file or unify configs at last.
     return (dict(name=name, description=filters[0].description) for
             name, filters in
             FILTERS_NAMED.iteritems() if filters[0].description)
