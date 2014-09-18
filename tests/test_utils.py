@@ -1,8 +1,9 @@
 from unittest import TestCase
+from datetime import datetime
 
 from nose.tools import eq_, assert_raises
 
-from dxr.utils import deep_update, append_update, append_update_by_line, append_by_line, glob_to_regex
+from dxr.utils import deep_update, append_update, append_update_by_line, append_by_line, glob_to_regex, decode_es_datetime
 
 
 class DeepUpdateTests(TestCase):
@@ -91,3 +92,8 @@ def test_glob_to_regex():
 
     """
     eq_(glob_to_regex('hi'), 'hi')
+
+
+def test_decode_es_datetime():
+    eq_(datetime(1992, 6, 27, 0, 0), decode_es_datetime("1992-06-27T00:00:00"))
+    eq_(datetime(1992, 6, 27, 0, 0, 0), decode_es_datetime("1992-06-27T00:00:00.0"))
