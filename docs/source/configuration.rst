@@ -35,14 +35,6 @@ Here are the options that can live in the ``[DXR]`` section:
     :file:`/tmp` volume and to avoid collisions between concurrent indexing
     runs
 
-``directory_index``
-    Filename for directory index files in the generated static HTML. Default:
-    ``.dxr-directory-index.html``
-
-    Resist the temptation to use ``index.html`` for ``directory_index``. Any
-    indexed file with the same name would then shadow the directory index,
-    confusing users.
-
 ``disabled_plugins``
     Names of plugins to disable. Default: empty
 

@@ -118,7 +118,6 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
                                                     key=attrgetter('name')))),
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
-             directory_index=repr(config.directory_index),
              default_tree=repr(config.default_tree),
              filter_language=repr(config.filter_language),
              es_hosts=repr(config.es_hosts),

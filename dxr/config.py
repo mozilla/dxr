@@ -35,7 +35,6 @@ class Config(object):
             'wwwroot':          "/",
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
-            'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
             'disable_workers':  "",
             'skip_stages':      "",
@@ -56,7 +55,6 @@ class Config(object):
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
-        self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)

@@ -163,7 +163,7 @@ def browse(tree, path=''):
     tree_folder = _tree_folder(tree)
     try:
         return send_from_directory(tree_folder, _html_file_path(tree_folder, path))
-    except NotFound as exc:
+    except NotFound as exc:  # It was a folder or a path not found on disk.
         config = current_app.config
 
         # It's a folder (or nonexistent), not a file. Serve it out of ES.
@@ -238,9 +238,12 @@ def parallel(tree, path=''):
 
     """
     tree_folder = _tree_folder(tree)
-    disk_path = _html_file_path(tree_folder, path)
+    try:
+        disk_path = _html_file_path(tree_folder, path)
+    except NotFound:
+        disk_path = None  # A folder was found.
     www_root = current_app.config['WWW_ROOT']
-    if isfile(join(tree_folder, disk_path)):
+    if disk_path is None or isfile(join(tree_folder, disk_path)):
         return redirect('{root}/{tree}/source/{path}'.format(
             root=www_root,
             tree=tree,
@@ -259,7 +262,8 @@ def _tree_folder(tree):
 
 def _html_file_path(tree_folder, url_path):
     """Return the on-disk path, relative to the tree folder, of the HTML file
-    that should be served when a certain path is browsed to.
+    that should be served when a certain path is browsed to. If a path to a
+    folder, raise NotFound.
 
     :arg tree_folder: The on-disk path to the tree's folder in the instance
     :arg url_path: The URL path browsed to, rooted just inside the tree
@@ -269,8 +273,8 @@ def _html_file_path(tree_folder, url_path):
 
     """
     if isdir(join(tree_folder, url_path)):
-        # It's a bare directory. Add the index file to the end:
-        return join(url_path, current_app.config['DIRECTORY_INDEX'])
+        # It's a bare directory. We generate these listings at request time now.
+        raise NotFound
     else:
         # It's a file. Add the .html extension:
         return url_path + '.html'
