@@ -83,7 +83,7 @@ def search(tree):
     if tree in trees:
         arguments['tree'] = tree
 
-        # Parse the search query
+        # Parse the search query:
         qtext = querystring.get('q', '')
         is_case_sensitive = querystring.get('case') == 'true'
         q = Query(partial(current_app.es.search,
@@ -103,19 +103,17 @@ def search(tree):
                      tree,
                      path,
                      qtext,
-                     '&case=true' if is_case_sensitive else '', line))
+                     '&case=true' if is_case_sensitive else '',
+                     line))
 
         # Return multiple results:
         template = 'search.html'
-        results = list(q.results(offset, limit))
-
-        # Search template variables:
         arguments['query'] = qtext
         arguments['search_url'] = url_for('.search',
                                           tree=arguments['tree'],
                                           q=qtext,
                                           redirect='false')
-        arguments['results'] = results
+        arguments['results'] = list(q.results(offset, limit))
         arguments['offset'] = offset
         arguments['limit'] = limit
         arguments['is_case_sensitive'] = is_case_sensitive
@@ -143,9 +141,7 @@ def search(tree):
 
         # Tuples are encoded as lists in JSON, and these are not real
         # easy to unpack or read in Javascript. So for ease of use, we
-        # convert to dictionaries before returning the json results.
-        # If further discrepancies are introduced, please document them in
-        # templating.mkd.
+        # convert to dictionaries.
         arguments['results'] = [
             {'icon': icon,
              'path': path,
