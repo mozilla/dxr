@@ -472,7 +472,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                   'is_folder': False})
 
     # Index all the lines, attaching the file-wide needles to each line as well:
-    if is_text:
+    if is_text and needles_by_line:  # If it's an empty file (no lines), don't
+                                     # bother ES. It hates empty dicts.
         es.bulk_index(index,
                       LINE_DOCTYPE,
                       (merge(n, needles) for n in needles_by_line),
