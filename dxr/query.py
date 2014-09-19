@@ -65,8 +65,8 @@ class Query(object):
 
         # An ORed-together ball for each term's filters, omitting filters that
         # punt by returning {} and ors that contain nothing but punts:
-        ors = filter(None, [filter(None, (f.filter() for f in t))
-                            for t in filters])
+        ors = filter(None, [filter(None, (f.filter() for f in term))
+                            for term in filters])
         ors = [{'or': x} for x in ors]
 
         if not is_line_query:
@@ -74,25 +74,29 @@ class Query(object):
             # is able to handle them.
             ors.append({'term': {'is_folder': False}})
 
-        results = self.es_search(
-            {
-                'query': {
-                    'filtered': {
-                        'query': {
-                            'match_all': {}
-                        },
-                        'filter': {
-                            'and': ors
-                        }
+        if ors:
+            query = {
+                'filtered': {
+                    'query': {
+                        'match_all': {}
+                    },
+                    'filter': {
+                        'and': ors
                     }
-                },
-                'sort': ['path', 'number'] if is_line_query else ['path'],
-                'from': offset,
-                'size': limit
-            },
+                }
+            }
+        else:
+            query = {
+                'match_all': {}
+            }
+
+        results = self.es_search(
+            {'query': query,
+             'sort': ['path', 'number'] if is_line_query else ['path'],
+             'from': offset,
+             'size': limit},
             doc_type=LINE if is_line_query else FILE)['hits']['hits']
         results = [r['_source'] for r in results]
-
 
         path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
                              if hasattr(f, 'highlight_path')]

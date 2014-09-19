@@ -101,6 +101,13 @@ class TestCase(unittest.TestCase):
                                       is_case_sensitive=is_case_sensitive)
         eq_(results, [])
 
+    def search_response(self, query, is_case_sensitive=True):
+        """Return the raw response of a JSON search query."""
+        return self.client().get(
+            '/code/search?q=%s&redirect=false&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'),
+            headers={'Accept': 'application/json'})
+
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
 
@@ -120,9 +127,8 @@ class TestCase(unittest.TestCase):
           ]
 
         """
-        response = self.client().get(
-            '/code/search?format=json&q=%s&redirect=false&case=%s' %
-            (quote(query), 'true' if is_case_sensitive else 'false'))
+        response = self.search_response(query,
+                                        is_case_sensitive=is_case_sensitive)
         return json.loads(response.data)['results']
 
     @classmethod

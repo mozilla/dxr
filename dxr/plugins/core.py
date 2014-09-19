@@ -210,7 +210,7 @@ class PathFilter(Filter):
                 'path',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
-            raise BadTerm('Path globs need at 3 literal characters in a row '
+            raise BadTerm('Path globs need at least 3 literal characters in a row '
                           'for speed.')
         return {'not': positive} if self._term['not'] else positive
 
@@ -235,7 +235,7 @@ class RegexpFilter(Filter):
         try:
             self._parsed_regex = regex_grammar.parse(term['arg'])
         except ParseError:
-            raise BadTerm('Invalid regex')
+            raise BadTerm('Invalid regex.')
         self._compiled_regex = (
                 re.compile(PythonRegexVisitor().visit(self._parsed_regex),
                            flags=0 if self._term['case_sensitive'] else re.I))
@@ -247,8 +247,8 @@ class RegexpFilter(Filter):
                 'content',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
-            raise BadTerm('Regexes need at 3 literal characters in a row for '
-                          'speed.')
+            raise BadTerm('Regexes need at least 3 literal characters in a '
+                          'row for speed.')
         return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
