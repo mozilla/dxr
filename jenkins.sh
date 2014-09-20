@@ -9,7 +9,7 @@ if [ ! "$VBGUEST" ]; then
   vagrant plugin install vagrant-vbguest
 fi;
 
-/opt/vagrant/bin/vagrant box remove ubuntu/trusty/64
+/opt/vagrant/bin/vagrant box remove ubuntu/trusty64
 
 /opt/vagrant/bin/vagrant up
 /opt/vagrant/bin/vagrant ssh -c 'sudo adduser vagrant docker'
