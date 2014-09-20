@@ -12,6 +12,10 @@ extension`_, which is included in the repository as a git submodule.
 Booting And Building
 ====================
 
+
+Vagrant Environment
+-------------------
+
 DXR runs only on Linux at the moment (and possibly other UNIX-like operating
 systems). The easiest way to get things set up is to use the included,
 preconfigured Vagrant_ VM. You'll need Vagrant and a virtualization provider
@@ -36,6 +40,11 @@ Then, run this inside the VM::
 
    Your Vagrant version may require a specific vbguest plugin installation method.
    If you receive errors about the plugin visit the vbguest_ plugin page.
+
+Docker environment
+------------------
+
+Stub Docker documentation once a build works
 
 .. _TriLite SQLite extension: https://github.com/jonasfj/trilite
 

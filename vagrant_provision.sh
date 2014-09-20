@@ -26,6 +26,9 @@ cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop
 
+# Docker
+apt-get install -y docker.io
+
 # Apache:
 apt-get install -y apache2-dev apache2
 mkdir -p /etc/apache2/sites-enabled
