@@ -20,7 +20,7 @@ MOUNT_POINT = '/home/vagrant/dxr'
 
 Vagrant::Config.run do |config|
     config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
-    config.vm.box = "ubuntu/trusty64"
+    config.vm.box = "dxr/trusty64"
 
     Vagrant.configure("1") do |config|
         config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
