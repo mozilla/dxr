@@ -3,5 +3,5 @@
 set -e
 set -x
 
-cd dxr
-docker build . && docker run -i -t -p 8000:8000 -v $PWD:/dxr $(docker images -q |head -n 1) /bin/bash /dxr/build.sh
+cd /home/vagrant/dxr
+docker build . && docker run -i -t -p 8000:8000 -v /home/vagrant/dxr:/dxr $(docker images -q |head -n 1) /bin/bash /tmp/dxr-docker-build.sh

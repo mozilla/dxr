@@ -20,6 +20,9 @@ ADD peep.py /tmp/peep.py
 RUN ["/usr/bin/python", "/tmp/peep.py", "install", "-r", "/tmp/requirements.txt"]
 RUN ["/bin/rm", "/tmp/requirements.txt", "/tmp/peep.py"]
 
+# Add docker build script
+ADD dxr-docker-build.sh /usr/local/bin/dxr-docker-build.sh
+
 # Install llvm-config alternative
 RUN ["update-alternatives", "--install", "/usr/local/bin/llvm-config", "llvm-config", "/usr/bin/llvm-config-3.3", "0"]
 
