@@ -8,7 +8,7 @@ from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
 import dxr.plugins
-from dxr.plugins import FILE, LINE, Filter
+from dxr.plugins import FILE, LINE, Filter, negatable
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
                             PythonRegexVisitor)
@@ -164,11 +164,12 @@ class TextFilter(Filter):
 
     name = 'text'
 
+    @negatable
     def filter(self):
         text = self._term['arg']
         if len(text) < NGRAM_LENGTH:
             return {}
-        positive = {
+        return {
             'query': {
                 'match_phrase': {
                     'content.trigrams' if self._term['case_sensitive']
@@ -176,7 +177,6 @@ class TextFilter(Filter):
                 }
             }
         }
-        return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
         text_len = len(self._term['arg'])
@@ -202,17 +202,17 @@ class PathFilter(Filter):
                          '</code>, <code>?</code>, and <code>[...]</code> act '
                          'as shell wildcards.')
 
+    @negatable
     def filter(self):
         glob = self._term['arg']
         try:
-            positive = es_regex_filter(
+            return es_regex_filter(
                 regex_grammar.parse(glob_to_regex(glob)),
                 'path',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
             raise BadTerm('Path globs need at 3 literal characters in a row '
                           'for speed.')
-        return {'not': positive} if self._term['not'] else positive
 
 
 class RegexpFilter(Filter):
@@ -240,16 +240,16 @@ class RegexpFilter(Filter):
                 re.compile(PythonRegexVisitor().visit(self._parsed_regex),
                            flags=0 if self._term['case_sensitive'] else re.I))
 
+    @negatable
     def filter(self):
         try:
-            positive = es_regex_filter(
+            return es_regex_filter(
                 self._parsed_regex,
                 'content',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
             raise BadTerm('Regexes need at 3 literal characters in a row for '
                           'speed.')
-        return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
         return (m.span() for m in
