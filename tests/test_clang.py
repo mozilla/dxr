@@ -1,6 +1,7 @@
 from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
+from funcy import first
 
 from dxr.plugins.utils import Extent, Position, FuncSig, Call
 from dxr.plugins.clang import (TreeToIndex, FileToIndex,
@@ -8,7 +9,8 @@ from dxr.plugins.clang import (TreeToIndex, FileToIndex,
                                group_sparse_needles, callee_needles,
                                caller_needles, type_needles, child_needles,
                                parent_needles, member_needles, sig_needles,
-                               overrides_needles, overridden_needles)
+                               overrides_needles, overridden_needles,
+                               kind_getter)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
@@ -388,3 +390,12 @@ def test_group_sparse_needles():
     n3 = ('x', 'not None')
     sparse_needles = [n1, n2, n3, n2, n2]
     eq_(group_sparse_needles(sparse_needles), ([n2, n2, n2], [n1, n3]))
+
+
+def test_kind_getter():
+    csv = get_csv("""
+    ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
+    ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
+    """)
+    eq__(first(kind_getter('ref', 'function')(csv))['kind'], 'function')
+    eq__(first(kind_getter('ref', 'variable')(csv))['kind'], 'variable')

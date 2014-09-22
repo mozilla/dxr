@@ -8,7 +8,7 @@ from functools import partial
 
 from jinja2 import Markup
 from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
-                   constantly, icat)
+                   constantly, icat, autocurry)
 
 from dxr import plugins
 from dxr.plugins.utils import NeedleFilter
@@ -65,32 +65,31 @@ class FileToIndex(plugins.FileToIndex):
         return self._needles_by_line
 
     @unsparsify_func
-    def refs_by_line(self):
+    def refs(self):
         """ Generate reference menus """
         # We'll need this argument for all queries here
         # Extents for functions defined here
-        itemgetter2 = lambda x, y: compose(itemgetter(y), itemgetter(x))
-        type_getter = lambda x: compose(chain, dict.values, itemgetter(x))
+        silent_itemgetter = lambda y: lambda x: x.get(y, [])
         return chain(
             self._common_ref(create_menu=function_menu,
-                             view=itemgetter2('ref', 'function')),
+                             view=kind_getter('ref', 'function')),
             self._common_ref(create_menu=variable_menu,
-                             view=itemgetter2('ref', 'variable')),
+                             view=kind_getter('ref', 'variable')),
             self._common_ref(create_menu=type_menu,
-                             view=type_getter('type')),
+                             view=silent_itemgetter('type')),
             self._common_ref(create_menu=type_menu,
-                             view=type_getter('decldef')),
+                             view=silent_itemgetter('decldef')),
             self._common_ref(create_menu=type_menu,
-                             view=itemgetter('typedefs')),
+                             view=silent_itemgetter('typedefs')),
             self._common_ref(create_menu=namespace_menu,
-                             view=itemgetter('namespace')),
+                             view=silent_itemgetter('namespace')),
             self._common_ref(create_menu=namespace_alias_menu,
-                             view=itemgetter('namespace_aliases')),
+                             view=silent_itemgetter('namespace_aliases')),
             self._common_ref(create_menu=macro_menu,
-                             view=itemgetter('macro'),
-                             get_val=itemgetter('text')),
+                             view=silent_itemgetter('macro'),
+                             get_val=silent_itemgetter('text')),
             self._common_ref(create_menu=include_menu,
-                             view=itemgetter('include'))
+                             view=silent_itemgetter('include'))
         )
 
     @unsparsify_func
@@ -149,6 +148,12 @@ class FileToIndex(plugins.FileToIndex):
             links.append(('macro', name, "#%s" % line))
         if links:
             yield 100, "Macros", links
+
+
+@autocurry
+def kind_getter(field, kind, condensed):
+    """Reach into a field and filter based on the kind."""
+    return (ref for ref in condensed.get(field) if ref['kind'] == kind)
 
 
 def pluck2(key1, key2, mappings):
