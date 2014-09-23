@@ -146,7 +146,6 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
         results = list(query.results(offset, limit))
     except BadTerm as exc:
         return render_template('error.html',
-                               results=[],
                                error_html=exc.reason,
                                **template_vars), 400
 
