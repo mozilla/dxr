@@ -12,6 +12,7 @@ from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
 from dxr.build import linked_pathname
+from dxr.exceptions import BadTerm
 from dxr.mime import icon
 from dxr.plugins import FILE
 from dxr.query import Query, filter_menu_items
@@ -60,100 +61,105 @@ def index():
 
 @dxr_blueprint.route('/<tree>/search')
 def search(tree):
-    """Search by regex, caller, superclass, or whatever."""
-    # TODO: This function still does too much.
-    querystring = request.values
+    """Normalize params, and dispatch between JSON- and HTML-returning
+    searches, based on Accept header.
 
-    offset = non_negative_int(querystring.get('offset'), 0)
-    limit = min(non_negative_int(querystring.get('limit'), 100), 1000)
-
+    """
+    # Normalize querystring params:
     config = current_app.config
-    www_root = config['WWW_ROOT']
-    trees = config['TREES']
+    if tree not in config['TREES']:
+        raise NotFound('No such tree as %s' % tree)
+    req = request.values
+    query_text = req.get('q', '')
+    offset = non_negative_int(req.get('offset'), 0)
+    limit = min(non_negative_int(req.get('limit'), 100), 1000)
+    is_case_sensitive = req.get('case') == 'true'
 
-    # Arguments for the template:
-    arguments = {
-        # Common template variables
-        'wwwroot': www_root,
-        'generated_date': config['GENERATED_DATE']}
-
-    error = ''
-    status_code = None
-
-    if tree in trees:
-        arguments['tree'] = tree
-
-        # Parse the search query:
-        qtext = querystring.get('q', '')
-        is_case_sensitive = querystring.get('case') == 'true'
-        q = Query(partial(current_app.es.search,
+    # Make a Query:
+    query = Query(partial(current_app.es.search,
                           index=config['ES_ALIASES'][tree]),
-                  qtext,
+                  query_text,
                   is_case_sensitive=is_case_sensitive)
 
-        # Try for a direct result:
-        if querystring.get('redirect') == 'true':
-            result = q.direct_result()
-            if result:
-                path, line = result
-                # TODO: Does this escape qtext properly?
-                return redirect(
-                    '%s/%s/source/%s?from=%s%s#%i' %
-                    (www_root,
-                     tree,
-                     path,
-                     qtext,
-                     '&case=true' if is_case_sensitive else '',
-                     line))
+    # Fire off one of the two search routines:
+    searcher = _search_json if _request_wants_json() else _search_html
+    return searcher(query, tree, query_text, is_case_sensitive, offset, limit, config)
 
-        # Return multiple results:
-        template = 'search.html'
-        arguments['query'] = qtext
-        arguments['search_url'] = url_for('.search',
-                                          tree=arguments['tree'],
-                                          q=qtext,
-                                          redirect='false')
-        arguments['results'] = list(q.results(offset, limit))
-        arguments['offset'] = offset
-        arguments['limit'] = limit
-        arguments['is_case_sensitive'] = is_case_sensitive
-        arguments['tree_tuples'] = [
-                (t,
-                 url_for('.search',
-                         tree=t,
-                         q=qtext,
-                         **({'case': 'true'} if is_case_sensitive else {})),
-                 description)
-                for t, description in trees.iteritems()]
-    else:
-        arguments['tree'] = trees.keys()[0]
-        error = "Tree '%s' is not a valid tree." % tree
-        status_code = 404
 
-    if error:
-        arguments['error'] = error
+def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
+    """Do a normal search, and return the results as JSON."""
+    try:
+        # Convert to dicts for ease of manipulation in JS:
+        results = [{'icon': icon,
+                    'path': path,
+                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
+                   for icon, path, lines in query.results(offset, limit)]
+    except BadTerm as exc:
+        return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
-    if querystring.get('format') == 'json':
-        if error:
-            # Return a non-OK code so the live search doesn't try to replace
-            # the results with our empty ones:
-            return jsonify(arguments), status_code or 500
+    return jsonify({
+        'wwwroot': config['WWW_ROOT'],
+        'tree': tree,
+        'results': results,
+        'tree_tuples': _tree_tuples(config['TREES'], tree, query_text, is_case_sensitive)})
 
-        # Tuples are encoded as lists in JSON, and these are not real
-        # easy to unpack or read in Javascript. So for ease of use, we
-        # convert to dictionaries.
-        arguments['results'] = [
-            {'icon': icon,
-             'path': path,
-             'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
-                for icon, path, lines in arguments['results']]
-        return jsonify(arguments)
 
-    if error:
-        return render_template('error.html', **arguments), status_code or 500
-    else:
-        arguments['filters'] = filter_menu_items()
-        return render_template('search.html', **arguments)
+def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, config):
+    """Search a few different ways, and return the results as HTML.
+
+    Try a "direct search" (for exact identifier matches, etc.). If that
+    doesn't work, fall back to a normal search.
+
+    """
+    should_redirect = request.values.get('redirect') == 'true'
+
+    # Try for a direct result:
+    if should_redirect:  # always true in practice?
+        result = query.direct_result()
+        if result:
+            path, line = result
+            # TODO: Does this escape query_text properly?
+            return redirect(
+                '%s/%s/source/%s?from=%s%s#%i' %
+                (config['WWW_ROOT'],
+                 tree,
+                 path,
+                 query_text,
+                 '&case=true' if is_case_sensitive else '',
+                 line))
+
+    # Try a normal search:
+    template_vars = {
+            'filters': filter_menu_items(),
+            'generated_date': config['GENERATED_DATE'],
+            'is_case_sensitive': is_case_sensitive,
+            'query': query_text,
+            'search_url': url_for('.search',
+                                  tree=tree,
+                                  q=query_text,
+                                  redirect='false'),
+            'tree': tree,
+            'tree_tuples': _tree_tuples(config['TREES'], tree, query_text, is_case_sensitive),
+            'wwwroot': config['WWW_ROOT']}
+
+    try:
+        results = list(query.results(offset, limit))
+    except BadTerm as exc:
+        return render_template('error.html',
+                               error_html=exc.reason,
+                               **template_vars), 400
+
+    return render_template('search.html', results=results, **template_vars)
+
+
+def _tree_tuples(trees, tree, query_text, is_case_sensitive):
+    return [(t,
+             url_for('.search',
+                     tree=t,
+                     q=query_text,
+                     **({'case': 'true'} if is_case_sensitive else {})),
+             description)
+            for t, description in trees.iteritems()]
 
 
 @dxr_blueprint.route('/<tree>/source/')
@@ -278,3 +284,19 @@ def _html_file_path(tree_folder, url_path):
     else:
         # It's a file. Add the .html extension:
         return url_path + '.html'
+
+
+def _request_wants_json():
+    """Return whether the current request prefers JSON.
+
+    Why check if json has a higher quality than HTML and not just go with the
+    best match? Because some browsers accept on */* and we don't want to
+    deliver JSON to an ordinary browser.
+
+    """
+    # From http://flask.pocoo.org/snippets/45/
+    best = request.accept_mimetypes.best_match(['application/json',
+                                                'text/html'])
+    return (best == 'application/json' and
+            request.accept_mimetypes[best] >
+                    request.accept_mimetypes['text/html'])

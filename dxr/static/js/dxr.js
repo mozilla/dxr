@@ -181,7 +181,6 @@ $(function() {
         var params = {};
         params.q = query;
         params.redirect = false;
-        params.format = 'json';
         params['case'] = isCaseSensitive;
         params.limit = limit;
         params.offset = offset;
@@ -317,7 +316,6 @@ $(function() {
         data.wwwroot = dxr.wwwroot;
         data.tree = dxr.tree;
         data.top_of_tree = dxr.wwwroot + '/' + data.tree + '/source/';
-        data.trees = data.trees;
 
         var params = {
             q: data.query,
@@ -396,18 +394,17 @@ $(function() {
             }
             oneFewerRequest();
         })
-        .fail(function(jqxhr, textStatus, error) {
-            var errorMessage = 'An error occurred. Please try again.';
-
+        .fail(function(jqxhr) {
             oneFewerRequest();
 
             // A newer response already arrived and is displayed. Don't bother complaining about this old one.
             if (myRequestNumber < displayedRequestNumber)
                 return;
 
-            if (error)
-                errorMessage += ' (' + error + ')';
-            showBubble('error', errorMessage);
+            if (jqxhr.responseJSON)
+                showBubble(jqxhr.responseJSON.error_level, jqxhr.responseJSON.error_html);
+            else
+                showBubble('error', 'An error occurred. Please try again.');
         });
     }
 

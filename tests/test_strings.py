@@ -21,15 +21,12 @@ class StringTests(SingleFileTestCase):
         self.found_line_eq('void -"int"', '<b>void</b> main_idea() {')
 
     def test_empty_quotes(self):
-        """An effectively empty query should not filter the results at all.
-
-        It also should not trigger the trilite bug in which empty extents
-        queries hang: https://github.com/jonasfj/trilite/issues/6.
-
-        """
+        """An effectively empty query should not filter the results at all."""
         eq_(len(self.found_files('"')), 1)
         eq_(len(self.found_files('""')), 1)
-        eq_(len(self.found_files('regexp:""')), 1)
+
+        # Regex too short to run:
+        eq_(self.search_response('regexp:""').status_code, 400)
 
 
 class RepeatedResultTests(SingleFileTestCase):

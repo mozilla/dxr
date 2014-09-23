@@ -8,7 +8,8 @@ class BadTerm(Exception):
         """Construct.
 
         :arg reason: User-readble error message telling the user what is
-            wrong and how to fix it. Can be Unicode or Markup.
+            wrong and how to fix it. Should be Markup. Will be treated as HTML
+            by the JS.
 
         """
         self.reason = reason

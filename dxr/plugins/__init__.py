@@ -62,8 +62,11 @@ class Filter(object):
         """Return the ES filter clause that applies my restrictions to the
         found set of lines (or files and folders, if :attr:`domain` is FILES).
 
-        To do no filtration, return ``{}``. To do no filtration and complain
-        to the user about it, raise :class:`~dxr.exceptions.BadTerm`.
+        To quietly do no filtration, return ``{}``. This would be suitable for
+        ``path:*``, for example.
+
+        To do no filtration and complain to the user about it, raise
+        :class:`~dxr.exceptions.BadTerm`.
 
         We might even make this return a list of filter clauses, for things
         like the RegexFilter which want a bunch of match_phrases and a script.
