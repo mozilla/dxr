@@ -64,7 +64,6 @@ class FileToIndex(plugins.FileToIndex):
     def needles_by_line(self):
         return self._needles_by_line
 
-    @unsparsify_func
     def refs(self):
         """ Generate reference menus """
         # We'll need this argument for all queries here
@@ -114,7 +113,7 @@ class FileToIndex(plugins.FileToIndex):
             src, line, _ = start
             if src is not None:
                 menu = jump_definition(self.tree, src, line) + menu
-            yield (start, end, (menu, get_val(prop))), prop['span']
+            yield start, end, (menu, get_val(prop))
 
     def links(self):
         # For each type add a section with members
