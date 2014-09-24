@@ -182,7 +182,14 @@ def _load_csv(csv_path, only_impl=False):
 
 
 def load_csv(csv_root, fpath=None, only_impl=False):
-    """Given a path to a build csv, return a dict representing the analysis."""
+    """Return a dict representing an analysis of a source file.
+
+    :arg csv_root: A path to the folder containing the CSVs emitted by the
+        compiler plugin
+    :arg fpath: A path to the file to analyze, relative to the tree's source
+        folder
+
+    """
     hashed_fname = '*' if fpath is None else sha1(fpath).hexdigest()
     csv_paths = glob('{0}.*.csv'.format(path.join(csv_root, hashed_fname)))
 
