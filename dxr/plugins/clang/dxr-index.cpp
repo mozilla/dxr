@@ -204,7 +204,7 @@ public:
         buffer += ":";
         buffer += line;
         buffer += ":";
-        buffer += column;
+        buffer += column - 1;  // Make 0-based.
       }
     }
     return buffer;
