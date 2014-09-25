@@ -1,5 +1,6 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
+from os.path import splitext
 import re
 
 from funcy import identity
@@ -8,7 +9,7 @@ from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
 import dxr.plugins
-from dxr.plugins import FILE, LINE, Filter
+from dxr.plugins import FILE, LINE, Filter, negatable
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
                             PythonRegexVisitor)
@@ -37,6 +38,12 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 }
 
 
+EXT_MAPPING = {
+    'type': 'string',
+    'index': 'not_analyzed'
+}
+
+
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
@@ -47,6 +54,8 @@ mappings = {
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
             'path': PATH_MAPPING,
+
+            'ext': EXT_MAPPING,
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
@@ -81,6 +90,7 @@ mappings = {
         },
         'properties': {
             'path': PATH_MAPPING,
+            'ext': EXT_MAPPING,
             # TODO: After the query language refresh, use match_phrase_prefix
             # queries on non-globbed paths, analyzing them with the path
             # analyzer, for max perf. Perfect! Otherwise, fall back to trigram-
@@ -164,11 +174,12 @@ class TextFilter(Filter):
 
     name = 'text'
 
+    @negatable
     def filter(self):
         text = self._term['arg']
         if len(text) < NGRAM_LENGTH:
             return {}
-        positive = {
+        return {
             'query': {
                 'match_phrase': {
                     'content.trigrams' if self._term['case_sensitive']
@@ -176,7 +187,6 @@ class TextFilter(Filter):
                 }
             }
         }
-        return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
         text_len = len(self._term['arg'])
@@ -202,17 +212,34 @@ class PathFilter(Filter):
                          '</code>, <code>?</code>, and <code>[...]</code> act '
                          'as shell wildcards.')
 
+    @negatable
     def filter(self):
         glob = self._term['arg']
         try:
-            positive = es_regex_filter(
+            return es_regex_filter(
                 regex_grammar.parse(glob_to_regex(glob)),
                 'path',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
             raise BadTerm('Path globs need at least 3 literal characters in a row '
                           'for speed.')
-        return {'not': positive} if self._term['not'] else positive
+
+
+class ExtFilter(Filter):
+    """Case-sensitive filter for exact matching on file extensions"""
+
+    name = 'ext'
+    domain = FILE
+    description = Markup('Filename extension: <code>ext:cpp</code>. Always '
+                         'case-sensitive.')
+
+    @negatable
+    def filter(self):
+        extension = self._term['arg']
+        return {
+            'term': {'ext': extension[1:] if extension.startswith('.')
+                            else extension}
+        }
 
 
 class RegexpFilter(Filter):
@@ -240,16 +267,16 @@ class RegexpFilter(Filter):
                 re.compile(PythonRegexVisitor().visit(self._parsed_regex),
                            flags=0 if self._term['case_sensitive'] else re.I))
 
+    @negatable
     def filter(self):
         try:
-            positive = es_regex_filter(
+            return es_regex_filter(
                 self._parsed_regex,
                 'content',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
-            raise BadTerm('Regexes need at least 3 literal characters in a '
+            raise BadTerm('Regexes need at least 3 literal characters in a  '
                           'row for speed.')
-        return {'not': positive} if self._term['not'] else positive
 
     def highlight_content(self, result):
         return (m.span() for m in
@@ -270,7 +297,9 @@ class FileToIndex(dxr.plugins.FileToIndex):
     def needles(self):
         """Fill out path (and path.trigrams)."""
         yield 'path', self.path
-        # TODO: Add extension as a separate field (and to the mapping)?
+        extension = splitext(self.path)[1]
+        if extension:
+            yield 'ext', extension[1:]  # skip the period
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""

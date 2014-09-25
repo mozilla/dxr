@@ -120,8 +120,8 @@ class Query(object):
                         for line in lines])
         else:
             for file in results:
-                yield (icon(file['path']),
-                       highlight(file['path'],
+                yield (icon(file['path'][0]),
+                       highlight(file['path'][0],
                                  chain.from_iterable(
                                      h(file) for h in path_highlighters)),
                        [])

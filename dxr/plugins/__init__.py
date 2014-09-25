@@ -1,6 +1,6 @@
 """The DXR plugin architecture"""
 
-from functools import partial
+from functools import partial, wraps
 from os.path import join
 from inspect import isclass
 
@@ -101,6 +101,18 @@ class Filter(object):
     # A filter can eventually grow a "kind" attr that says "structural" or
     # "text" or whatever, and we can vary the highlight color or whatever based
     # on that to make identifiers easy to pick out visually.
+
+
+def negatable(filter_method):
+    """Wraps an ES "not" around a ``Filter.filter()`` method iff the term is
+    negated.
+
+    """
+    @wraps(filter_method)
+    def maybe_negate(self):
+        positive = filter_method(self)
+        return {'not': positive} if self._term['not'] else positive
+    return maybe_negate
 
 
 class TreeToIndex(object):

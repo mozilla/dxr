@@ -462,12 +462,14 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     if is_text:  # conditional until we figure out how to display binary files
         es.index(index,
                  FILE_DOCTYPE,
-                 {'path': rel_path,
-                  'folder': folder_name,
-                  'name': file_name,
-                  'size': file_info.st_size,
-                  'modified': datetime.fromtimestamp(file_info.st_mtime),
-                  'is_folder': False})
+                 # Hard-code the keys that are hard-coded in the browse()
+                 # controller. Merge with the pluggable ones from needles:
+                 dict(folder=folder_name,
+                      name=file_name,
+                      size=file_info.st_size,
+                      modified=datetime.fromtimestamp(file_info.st_mtime),
+                      is_folder=False,
+                      **needles))
 
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text and needles_by_line:  # If it's an empty file (no lines), don't
