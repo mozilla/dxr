@@ -1,14 +1,3 @@
-import ctypes
-
-# Load the trilite plugin.
-#
-# If you ``import sqlite3`` before doing this, it's likely that the system
-# version of sqlite will be loaded, and then trilite, if built against a
-# different version, will fail to load. If you're having trouble getting
-# trilite to load, make sure you're not importing sqlite3 beforehand. Afterward
-# is fine.
-#ctypes.CDLL('libtrilite.so').load_trilite_extension()
-
 from collections import Mapping
 from datetime import datetime
 import fnmatch
@@ -103,20 +92,6 @@ def browse_url(tree, www_root, path):
     # TODO: Stop punting on path components that actually have '/' in them
     # once we define a consistent handling of escapes in build.py. Same for
     # search_url().
-
-
-def connect_db(dir):
-    """Return the database connection for a tree.
-
-    :arg dir: The directory containing the .dxr-xref.sqlite file
-
-    """
-    conn = sqlite3.connect(join(dir, ".dxr-xref.sqlite"))
-    conn.text_factory = str
-    conn.execute("PRAGMA synchronous=off")
-    conn.execute("PRAGMA page_size=32768")
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def deep_update(dest, source):
