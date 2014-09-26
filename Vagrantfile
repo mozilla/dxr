@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
         v.name = "DXR_VM"
         v.customize ["modifyvm", :id, "--memory", CONF['memory']]
         v.customize ["setextradata", :id,
-            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+            "VBoxInternal2/SharedFoldersEnableSymlinksCreate//home/vagrant/dxr", "1"]
     end
 
     is_jenkins = ENV['USER'] == 'jenkins'
