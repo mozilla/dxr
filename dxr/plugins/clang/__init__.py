@@ -11,8 +11,8 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
                    constantly, icat, autocurry)
 
 from dxr import plugins
-from dxr.plugins.utils import NeedleFilter
 from dxr.plugins import LINE
+from dxr.plugins.utils import ExactMatchExtentFilterBase
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.needles import unsparsify_func, group_needles, by_line
 from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
@@ -404,125 +404,126 @@ class TreeToIndex(plugins.TreeToIndex):
 # These filters get pickled because the plugins are built using futures
 
 
-class CNeedleFilter(NeedleFilter):
+class _CFilter(ExactMatchExtentFilterBase):
+    """Exact-match filter for structural entities in C or C++"""
     lang = 'c'
 
 
-class FunctionFilter(CNeedleFilter):
+class FunctionFilter(_CFilter):
     name = 'function'
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
-class FunctionRefFilter(CNeedleFilter):
+class FunctionRefFilter(_CFilter):
     name = 'function-ref'
     description = 'Function or method references'
 
 
-class FunctionDeclFilter(CNeedleFilter):
+class FunctionDeclFilter(_CFilter):
     name = 'function-decl'
     description = 'Function or method declaration'
 
 
-class TypeRefFilter(CNeedleFilter):
+class TypeRefFilter(_CFilter):
     name = 'type-ref'
     description = 'Type or class references, uses, or instantiations'
 
 
-class TypeDeclFilter(CNeedleFilter):
+class TypeDeclFilter(_CFilter):
     name = 'type-decl'
     description = 'Type or class declaration'
 
 
-class TypeFilter(CNeedleFilter):
+class TypeFilter(_CFilter):
     name = 'type'
     description = 'Type, function, or class definition: <code>type:Stack</code>'
 
 
-class VariableFilter(CNeedleFilter):
+class VariableFilter(_CFilter):
     name = 'variable'
     description = 'Variable definition'
 
 
-class VariableRefFilter(CNeedleFilter):
+class VariableRefFilter(_CFilter):
     name = 'variable'
     description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
 
 
-class VarDeclFilter(CNeedleFilter):
+class VarDeclFilter(_CFilter):
     name = 'Variable declaration'
     description = 'Type or class declaration'
 
 
-class MacroFilter(CNeedleFilter):
+class MacroFilter(_CFilter):
     name = 'macro'
     description = 'Macro definition'
 
 
-class MacroRefFilter(CNeedleFilter):
+class MacroRefFilter(_CFilter):
     name = 'macro-ref'
     description = 'Macro uses'
 
 
-class NamespaceFilter(CNeedleFilter):
+class NamespaceFilter(_CFilter):
     name = 'namespace'
     description = 'Namespace definition'
 
 
-class NamespaceRefFilter(CNeedleFilter):
+class NamespaceRefFilter(_CFilter):
     name = 'namespace-ref'
     description = 'Namespace references'
 
 
-class NamespaceAliasFilter(CNeedleFilter):
+class NamespaceAliasFilter(_CFilter):
     name = 'namespace-alias'
     description = 'Namespace alias'
 
 
-class NamespaceAliasRefFilter(CNeedleFilter):
+class NamespaceAliasRefFilter(_CFilter):
     name = 'namespace-alias-ref'
     description = 'Namespace alias references'
 
 
-class WarningFilter(CNeedleFilter):
+class WarningFilter(_CFilter):
     name = 'warning'
     description = 'Compiler warning messages'
 
 
-class WarningOptFilter(CNeedleFilter):
+class WarningOptFilter(_CFilter):
     name = 'warning-opt'
     description = 'Warning messages brought on by a given compiler command-line option'
 
 
-class CalleeFilter(CNeedleFilter):
+class CalleeFilter(_CFilter):
     name = 'callee'
     description = 'Functions or methods which are called by the given one'
 
 
-class CallerFilter(CNeedleFilter):
+class CallerFilter(_CFilter):
     name = 'caller'
     description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
 
 
-class ChildFilter(CNeedleFilter):
+class ChildFilter(_CFilter):
     name = 'child'
     description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
 
 
-class ParentFilter(CNeedleFilter):
+class ParentFilter(_CFilter):
     name = 'parent'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
 
 
-class MemberFilter(CNeedleFilter):
+class MemberFilter(_CFilter):
     name = 'member'
     description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
 
 
-class OverridesFilter(CNeedleFilter):
+class OverridesFilter(_CFilter):
     name = 'overrides'
     description = Markup('Methods which override the given one: <code>overrides:someMethod</code>')
 
 
-class OverriddenFilter(CNeedleFilter):
+class OverriddenFilter(_CFilter):
     name = 'overridden'
     description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.')

@@ -1,6 +1,5 @@
 from dxr.testing import DxrInstanceTestCase
 
-from nose import SkipTest
 from nose.tools import eq_, ok_
 
 
@@ -20,7 +19,6 @@ class BasicTests(DxrInstanceTestCase):
 
     def test_structural_and(self):
         """Try ANDing a structural with a text filter."""
-        raise SkipTest
         self.found_line_eq(
             'function:main int',
             '<b>int</b> <b>main</b>(<b>int</b> argc, char* argv[]){',

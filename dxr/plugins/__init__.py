@@ -75,7 +75,7 @@ class Filter(object):
         raise NotImplementedError
 
     def highlight_path(self, result):
-        """Return a sorted iterable of extents that should be highlighted in
+        """Return an unsorted iterable of extents that should be highlighted in
         the ``path`` field of a search result.
 
         :arg result: A mapping representing properties from a search result,
@@ -87,7 +87,7 @@ class Filter(object):
         return []
 
     def highlight_content(self, result):
-        """Return a sorted iterable of extents that should be highlighted in
+        """Return an unsorted iterable of extents that should be highlighted in
         the ``content`` field of a search result.
 
         :arg result: A mapping representing properties from a search result,
