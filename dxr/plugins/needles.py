@@ -25,10 +25,21 @@ def unsparsify(span_needles):
 
 
 def group_needles(line_needles):
-    """Group line needles by line. [(_, line)] -> [[_]]."""
-    grouped_needles = sorted(group_by(itemgetter(1), line_needles).iteritems(),
-                             key=itemgetter(0))
-    return [map(itemgetter(0), ndl) for ndl in pluck(1, grouped_needles)]
+    """Group line needles by line, and return a list of needles for each line,
+    up to the last line with any needles::
+
+        [(a, 1), (b, 4), (c, 4)] -> [[a], [], [], [b, c]]
+
+    """
+    # Jam all the needles of a file into a hash by line number:
+    line_map = group_by(itemgetter(1), line_needles)  # {line: needles}
+    last_line = max(line_map.iterkeys()) + 1 if line_map else 1
+
+    # Pull out the needles for each line, stripping off the line number
+    # elements of the tuples and producing a blank list for missing lines.
+    # (The defaultdict returned from group_by takes care of the latter.)
+    return [[pair for (pair, _) in line_map[line_num]]
+            for line_num in xrange(1, last_line)]
 
 
 def by_line(span_needles):
@@ -40,8 +51,13 @@ def by_line(span_needles):
     return imapcat(span_to_lines, span_needles)
 
 
-def pack(val, start, end):
-    return {'term': val, 'start': start, 'end': end}
+def pack((key, value), start, end):
+    """Transform a key/value pair, along with start and end columns, to a
+    key/value pair that can be stored in ES.
+
+    """
+    return key, {'value': value, 'start': start, 'end': end}
+
 
 def span_to_lines((val, span)):
     """Expand (_, span:Extent) into [((_, line_span), line:int)].
@@ -58,7 +74,7 @@ def span_to_lines((val, span)):
     else:
         yield pack(val, span.start.col, None), span.start.row
 
-        # Really with we could use yield from
+        # Really wish we could use yield from
         for row in xrange(span.start.row + 1, span.end.row):
             yield (pack(val, 0, None), row)
 

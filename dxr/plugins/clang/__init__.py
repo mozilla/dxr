@@ -12,14 +12,40 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
 
 from dxr import plugins
 from dxr.plugins.utils import NeedleFilter
+from dxr.plugins import LINE
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
-from dxr.plugins.needles import unsparsify_func
+from dxr.plugins.needles import unsparsify_func, group_needles, by_line
 from dxr.plugins.clang.menu import (function_menu, variable_menu, type_menu,
                                     namespace_menu, namespace_alias_menu,
                                     macro_menu, include_menu)
 
 
 PLUGIN_NAME = 'clang'
+
+
+mapping = {
+    LINE: {
+        'properties': {
+            'c-function': {
+                'type': 'object',
+                'properties': {
+                    'value': {
+                        'type': 'string',
+                        'index': 'not_analyzed',  # TODO: case-insensitive
+                    },
+                    'start': {
+                        'type': 'integer',
+                        'index': 'no'  # just for highlighting
+                    },
+                    'end': {
+                        'type': 'integer',
+                        'index': 'no'
+                    }
+                }
+            },
+        }
+    }
+}
 
 
 def jump_definition(tree, path, line):
@@ -58,11 +84,10 @@ class FileToIndex(plugins.FileToIndex):
                                                        graph)
 
     def needles(self):
-        return self._needles
+        return self._needles  # Are there ever any of these?
 
-    @unsparsify_func
     def needles_by_line(self):
-        return self._needles_by_line
+        return group_needles(by_line(self._needles_by_line))
 
     def refs(self):
         """ Generate reference menus """
@@ -94,7 +119,7 @@ class FileToIndex(plugins.FileToIndex):
     @unsparsify_func
     def annotations_by_line(self):
         icon = "background-image: url('{0}/static/icons/warning.png');".format(
-            self.tree.config.wwwroot)
+            self.tree.config.wwwroot)  # TODO: DRY
         getter = itemgetter('msg', 'opt', 'span')
         for msg, opt, span in imap(getter, self.condensed.get('warnings', [])):
             if opt:
@@ -287,7 +312,8 @@ def member_needles(condensed):
 
 def _over_needles(condensed, tag, name_key, get_span):
     return ((('c-{0}'.format(tag), func['override'][name_key]), get_span(func))
-            for func in condensed['function'] if name_key in func['override'])
+            for func in condensed['function']
+            if name_key in func.get('override', []))
 
 def overrides_needles(condensed):
     """Return needles of methods which override the given one."""
