@@ -44,7 +44,7 @@ class NeedleFilter(Filter):
 
     def filter(self):
         # TODO use self.field_name to select which term to filter for
-        return {}
+        return None
 
     def highlight_content(self, result):
         return []

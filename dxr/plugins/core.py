@@ -178,7 +178,7 @@ class TextFilter(Filter):
     def filter(self):
         text = self._term['arg']
         if len(text) < NGRAM_LENGTH:
-            return {}
+            return None
         return {
             'query': {
                 'match_phrase': {

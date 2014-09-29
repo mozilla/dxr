@@ -62,7 +62,7 @@ class Filter(object):
         """Return the ES filter clause that applies my restrictions to the
         found set of lines (or files and folders, if :attr:`domain` is FILES).
 
-        To quietly do no filtration, return ``{}``. This would be suitable for
+        To quietly do no filtration, return None. This would be suitable for
         ``path:*``, for example.
 
         To do no filtration and complain to the user about it, raise
