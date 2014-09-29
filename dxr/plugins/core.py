@@ -9,7 +9,7 @@ from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
 import dxr.plugins
-from dxr.plugins import FILE, LINE, Filter, negatable
+from dxr.plugins import FILE, LINE, Filter, negatable, direct_search
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
                             PythonRegexVisitor)
@@ -306,3 +306,60 @@ class FileToIndex(dxr.plugins.FileToIndex):
         for number, text in enumerate(self.contents.splitlines(), 1):
             yield [('number', number),
                    ('content', text)]
+
+
+# Match file name and line number: filename:n. Strip leading slashes because
+# we don't have any in the index.
+FILE_LINE_RE = re.compile("^/?(.+):([1-9][0-9]*)$")
+
+
+def _file_and_line(term):
+    """Return the pathname or filename and line number from a term with text
+    in the format filename:line_num. Return None if the term isn't in that
+    format.
+
+    """
+    match = FILE_LINE_RE.match(term['arg'])
+    if match:
+        return match.group(1), int(match.group(2))
+
+
+@direct_search(priority=100)
+def direct_path_and_line(term):
+    """If the user types path:line_num, jump him right to that line.
+
+    "path" can be any contiguous sequence of complete path segments; to match
+    fee/fi/fo/fum.cpp, any of the following would work:
+
+    * /fee/fi/fo/fum.cpp
+    * fo/fum.cpp
+    * fum.cpp
+
+    """
+    try:
+        path, line = _file_and_line(term)
+    except TypeError:
+        return None
+
+    if path.startswith('/'):
+        # If path start with a /, the user is explicitly requesting a match
+        # starting at the root level.
+        path = path[1:]  # Leading slashes aren't stored in the index.
+        regex = '^{0}$'  # Insist it start at the beginning.
+    else:
+        regex = '(/|^){0}$'  # Start at any path segment.
+
+    try:
+        trigram_clause = es_regex_filter(
+                regex_grammar.parse(regex.format(re.escape(path))),
+                'path',
+                term['case_sensitive'])
+    except NoTrigrams:
+        return None
+
+    return {
+        'and': [
+            trigram_clause,
+            {'term': {'number': line}}
+        ]
+    }
