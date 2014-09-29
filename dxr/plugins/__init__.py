@@ -2,10 +2,15 @@
 
 from functools import partial, wraps
 from os.path import join
-from inspect import isclass
+from inspect import isclass, isfunction
 
 from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
+
+
+__all__ = ['Filter', 'negatable', 'TreeToIndex', 'FileToSkim', 'FileToIndex',
+           'Plugin', 'all_plugins', 'FILE', 'LINE', 'direct_search',
+           'filters_from_namespace', 'direct_searchers_from_namespace']
 
 
 # Domain constants:
@@ -113,6 +118,19 @@ def negatable(filter_method):
         positive = filter_method(self)
         return {'not': positive} if self._term['not'] else positive
     return maybe_negate
+
+
+def direct_search(priority):
+    """Mark a function as being a direct search provider.
+
+    :arg priority: A priority to attach to the function. Direct searchers are
+        called in order of increasing priority.
+
+    """
+    def decorator(searcher):
+        searcher.direct_search_priority = priority
+        return searcher
+    return decorator
 
 
 class TreeToIndex(object):
@@ -435,7 +453,7 @@ class Plugin(object):
     otherwise.
 
     """
-    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None):
+    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None, direct_searchers=None):
         """
         :arg filters: A list of filter classes
         :arg tree_to_index: A :class:`TreeToIndex` subclass
@@ -454,6 +472,17 @@ class Plugin(object):
             "analyzer", "tokenizer", etc., following the structure outlined at
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/analysis.html.
+        :arg direct_searchers: Functions that provide direct search
+            capability. Each must take a single query term of type 'text',
+            return an ES filter clause to run against LINEs, and have a
+            ``direct_search_priority`` attribute. Filters are tried in order
+            of increasing priority. Return None from a direct searcher to skip
+            it.
+
+            .. note::
+
+                A more general approach may replace direct search in the
+                future.
 
         ``mappings`` and ``analyzers`` are recursively merged into other
         plugins' mappings and analyzers using the algorithm described at
@@ -463,6 +492,7 @@ class Plugin(object):
 
         """
         self.filters = filters or []
+        self.direct_searchers = direct_searchers or []
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
@@ -506,7 +536,8 @@ class Plugin(object):
                    tree_to_index=tree_to_index,
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),
-                   analyzers=namespace.get('analyzers'))  # any other settings needed?
+                   analyzers=namespace.get('analyzers'),
+                   direct_searchers=direct_searchers_from_namespace(namespace))
 
 
 def filters_from_namespace(namespace):
@@ -520,6 +551,17 @@ def filters_from_namespace(namespace):
             not k.startswith('_') and
             k.endswith('Filter') and
             v is not Filter]
+
+
+def direct_searchers_from_namespace(namespace):
+    """Return a list of the direct search functions defined in a namespace.
+
+    A direct search function is one that has a ``direct_search_priority``
+    attribute.
+
+    """
+    return [v for v in namespace.itervalues()
+            if hasattr(v, 'direct_search_priority') and isfunction(v)]
 
 
 def all_plugins():
