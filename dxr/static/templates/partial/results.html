@@ -18,10 +18,10 @@
       {% for entry in result.lines %}
       <tr>
         <td class="left-column">
-<a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-{{ entry.line_number }}
-</a>
-	</td>
+          <a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+            {{ entry.line_number }}
+          </a>
+        </td>
         <td>
 <a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
 <code aria-labelledby="{{ entry.line_number }}">{{ entry.line|safe }}</code>
