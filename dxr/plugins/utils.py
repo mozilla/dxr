@@ -8,7 +8,7 @@ from dxr.plugins import Filter, negatable
 
 Extent = namedtuple('Extent', ['start', 'end'])  # 0-based
 # Note that if offset is a Maybe Int, if not present it's None
-Position = namedtuple('Position', ['offset', 'row', 'col'])  # all fields 0-based
+Position = namedtuple('Position', ['offset', 'row', 'col'])  # offset & col 0-based, row 1-based
 Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
 
 
