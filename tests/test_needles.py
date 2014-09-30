@@ -1,7 +1,7 @@
 from nose.tools import eq_, assert_raises
 
 from dxr.plugins.needles import (unsparsify, by_line, group_needles,
-                                 span_to_lines, pack)
+                                 span_to_lines, key_object_pair)
 from dxr.plugins.utils import Extent, Position
 
 
@@ -25,9 +25,10 @@ def test_needle_smoke_test():
 def test_unsparsify():
     assert_raises(ValueError, unsparsify, [NEEDLE3])
 
-    output = [[pack(KV1, 3, 7), pack(KV2, 5, None)],
-              [pack(KV2, 0, None)],
-              [pack(KV2, 0, 7)]]
+    # Test 2 overlapping dense needles:
+    output = [[key_object_pair(KV1, 3, 7), key_object_pair(KV2, 5, None)],  # the overlap.
+              [key_object_pair(KV2, 0, None)],  # just the second one,
+              [key_object_pair(KV2, 0, 7)]]     # extending beyond the first
 
     list_eq(unsparsify([NEEDLE1, NEEDLE2]), output)
 
@@ -43,10 +44,10 @@ def test_group_needles():
 def test_by_line():
     list_eq(by_line([]), [])
     list_eq(by_line([NEEDLE1, NEEDLE2]),
-            [(pack(KV1, 3, 7), 1),
-             (pack(KV2, 5, None), 1),
-             (pack(KV2, 0, None), 2),
-             (pack(KV2, 0, 7), 3)])
+            [(key_object_pair(KV1, 3, 7), 1),
+             (key_object_pair(KV2, 5, None), 1),
+             (key_object_pair(KV2, 0, None), 2),
+             (key_object_pair(KV2, 0, 7), 3)])
 
 
 def test_span_to_lines():

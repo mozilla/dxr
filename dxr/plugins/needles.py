@@ -12,10 +12,10 @@ def unsparsify_func(call):
 
 
 def unsparsify(span_needles):
-    """Transform a sparse needle list [(key, val, span:Extent)]
-    into proper dense needle format [[(key, (val, line_span))]].
+    """Transform a sparse needle list [(key, val, span:Extent)] into the
+    line-by-line format the plugin API expects: [[(key, (val, line_span))]].
 
-    line_span has shape: (col1, col2)
+    line_span has the shape (col1, col2).
 
     In the dense format, the index, i, specifies the line number from the file.
                          the list at i are all the (key, val) for that line.
@@ -51,31 +51,35 @@ def by_line(span_needles):
     return imapcat(span_to_lines, span_needles)
 
 
-def pack((key, value), start, end):
+def key_object_pair((k, v), start, end):
     """Transform a key/value pair, along with start and end columns, to a
-    key/value pair that can be stored in ES.
+    key/multi-propertied-object pair that can be stored in ES and then used
+    to support searching and highlighting.
 
     """
-    return key, {'value': value, 'start': start, 'end': end}
+    return k, {'value': v, 'start': start, 'end': end}
 
 
-def span_to_lines((val, span)):
-    """Expand (_, span:Extent) into [((_, line_span), line:int)].
+def span_to_lines((kv, span)):
+    """Expand ((k, v), span:Extent) into [(((k, v), line_span), line:int)].
 
     line_span has shape: (col1, col2)
 
     """
     if span.end.row == span.start.row:
-        yield pack(val, span.start.col, span.end.col), span.start.row
+        yield key_object_pair(kv, span.start.col, span.end.col), span.start.row
 
     elif span.end.row < span.start.row:
         raise ValueError("end.row < start.row")
 
     else:
-        yield pack(val, span.start.col, None), span.start.row
+        # TODO: There are a lot of Nones used as slice bounds below. Do we
+        # ever translate them back into char offsets? If not, does the
+        # highlighter or anything else choke on them?
+        yield key_object_pair(kv, span.start.col, None), span.start.row
 
         # Really wish we could use yield from
         for row in xrange(span.start.row + 1, span.end.row):
-            yield (pack(val, 0, None), row)
+            yield (key_object_pair(kv, 0, None), row)
 
-        yield (pack(val, 0, span.end.col), span.end.row)
+        yield (key_object_pair(kv, 0, span.end.col), span.end.row)
