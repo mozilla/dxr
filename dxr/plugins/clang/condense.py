@@ -119,13 +119,12 @@ def process_override(props):
 
 def group_loc_name(base, props):
     """Group the loc and name fields into a base field."""
-    root = '{0}'.format(base)
     name, loc = '{0}name'.format(base), '{0}loc'.format(base)
 
     @without(name, loc)
     def _group_loc_name(props):
         src, row, col = props[loc].split(':')
-        props[root] = {'loc': (src, Position(None, int(row), int(col))),
+        props[base] = {'loc': (src, Position(None, int(row), int(col))),
                        'name': props[name]}
         return props
     return _group_loc_name(props)
