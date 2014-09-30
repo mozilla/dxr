@@ -86,8 +86,9 @@ class FileToIndex(plugins.FileToIndex):
     def needles(self):
         return self._needles  # Are there ever any of these?
 
+    @unsparsify_func
     def needles_by_line(self):
-        return group_needles(by_line(self._needles_by_line))
+        return self._needles_by_line
 
     def refs(self):
         """ Generate reference menus """
