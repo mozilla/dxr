@@ -36,7 +36,7 @@
               {%- set is_first_or_only = loop.first or paths|length == 1 -%}
               {%- set is_dir = not loop.last -%}
               {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
-  
+
               {%- include 'path_line.html' -%}
             {%- endfor -%}
           </td>
@@ -44,7 +44,9 @@
         {% for number, line in lines %}
         <tr>
           <td class="left-column">
-            {{ number }}
+            <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+              {{ number }}
+            </a>
           </td>
           <td>
 <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
