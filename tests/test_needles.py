@@ -52,9 +52,9 @@ def test_by_line():
 
 def test_span_to_lines():
     list_eq(span_to_lines(NEEDLE1),
-            [(('x', {'value': 'v1', 'start': 3, 'end': 7}), 1)])
+            [((('x', 'v1'), 3, 7), 1)])
     list_eq(span_to_lines(NEEDLE2),
-            [(('y', {'value': 'v2', 'start': 5, 'end': None}), 1),
-             (('y', {'value': 'v2', 'start': 0, 'end': None}), 2),
-             (('y', {'value': 'v2', 'start': 0, 'end': 7}), 3)])
+            [((('y', 'v2'), 5, None), 1),
+             ((('y', 'v2'), 0, None), 2),
+             ((('y', 'v2'), 0, 7), 3)])
     assert_raises(ValueError, lambda x: list(span_to_lines(x)), [])
