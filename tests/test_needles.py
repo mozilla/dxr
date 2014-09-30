@@ -34,17 +34,10 @@ def test_unsparsify():
 
 def test_group_needles():
     list_eq(group_needles([]), [])
-
-    fixture = [(pack(KV1, 3, 7), 1),
-               (pack(KV2, 5, None), 1),
-               (pack(KV2, 0, None), 2),
-               (pack(KV2, 0, 7), 3)]
-
-    output = [[pack(KV1, 3, 7),
-               pack(KV2, 5, None)],
-              [pack(KV2, 0, None)],
-              [pack(KV2, 0, 7)]]
-    list_eq(group_needles(fixture), output)
+    list_eq(group_needles([('A', 1), ('B', 1), ('C', 2), ('D', 3)]),
+                          [['A', 'B'],
+                           ['C'],
+                           ['D']])
 
 
 def test_by_line():
