@@ -441,17 +441,17 @@ class TypeFilter(_CFilter):
 
 
 class VariableFilter(_CFilter):
-    name = 'variable'
+    name = 'var'
     description = 'Variable definition'
 
 
 class VariableRefFilter(_CFilter):
-    name = 'variable'
+    name = 'var-ref'
     description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
 
 
 class VarDeclFilter(_CFilter):
-    name = 'Variable declaration'
+    name = 'var-decl'
     description = 'Type or class declaration'
 
 
@@ -496,22 +496,22 @@ class WarningOptFilter(_CFilter):
 
 
 class CalleeFilter(_CFilter):
-    name = 'callee'
+    name = 'called-by'
     description = 'Functions or methods which are called by the given one'
 
 
 class CallerFilter(_CFilter):
-    name = 'caller'
+    name = 'callers'
     description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
 
 
 class ChildFilter(_CFilter):
-    name = 'child'
+    name = 'bases'
     description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
 
 
 class ParentFilter(_CFilter):
-    name = 'parent'
+    name = 'derived'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
 
 
