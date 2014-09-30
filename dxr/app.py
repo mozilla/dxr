@@ -39,7 +39,7 @@ def make_app(instance_path):
 @dxr_blueprint.route('/')
 def index():
     config = current_app.config
-    wwwroot = config['WWW_ROOT']    
+    wwwroot = config['WWW_ROOT']
     tree = config['DEFAULT_TREE']
     return redirect('%s/%s/source/' % (wwwroot, tree))
 
@@ -56,11 +56,13 @@ def search(tree):
     config = current_app.config
     www_root = config['WWW_ROOT']
     trees = config['TREES']
+    google_analytics_key = config['GOOGLE_ANALYTICS_KEY']
 
     # Arguments for the template:
     arguments = {
         # Common template variables
         'wwwroot': www_root,
+        'google_analytics_key': google_analytics_key,
         'generated_date': config['GENERATED_DATE']}
 
     error = warning = ''

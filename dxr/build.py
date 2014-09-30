@@ -113,6 +113,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
              generated_date=repr(config.generated_date),
              directory_index=repr(config.directory_index),
              default_tree=repr(config.default_tree),
+             google_analytics_key=repr(config.google_analytics_key),
              filter_language=repr(config.filter_language)))
 
     # Create jinja cache folder in target folder
@@ -346,7 +347,8 @@ def build_folder(tree, conn, folder, indexed_files, indexed_folders):
          'filters': filter_menu_items(tree.config.filter_language),
          # Autofocus only at the root of each tree:
          'should_autofocus_query': folder == '',
-
+         # google analytics, if enabled
+         'google_analytics_key': tree.config.google_analytics_key,
          # Folder template variables:
          'name': name,
          'path': folder,
@@ -552,6 +554,9 @@ def htmlify(tree, conn, icon, path, text, dst_path, plugins):
                         for t in tree.config.sorted_tree_order],
         'generated_date': tree.config.generated_date,
         'filters': filter_menu_items(tree.config.filter_language),
+
+        # google analytics
+        'google_analytics_key': tree.config.google_analytics_key,
 
         # Set file template variables
         'paths_and_names': linked_pathname(path, tree.name),
