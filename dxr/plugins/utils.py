@@ -3,12 +3,12 @@
 from collections import namedtuple
 from operator import itemgetter
 
-from dxr.plugins import Filter
+from dxr.plugins import Filter, negatable
 
 
-Extent = namedtuple('Extent', ['start', 'end'])
+Extent = namedtuple('Extent', ['start', 'end'])  # 0-based
 # Note that if offset is a Maybe Int, if not present it's None
-Position = namedtuple('Position', ['offset', 'row', 'col'])
+Position = namedtuple('Position', ['offset', 'row', 'col'])  # offset & col 0-based, row 1-based
 Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
 
 
@@ -29,22 +29,34 @@ def is_function((_, obj)):
     return hasattr(type_, 'input') and hasattr(type_, 'output')
 
 
-class NeedleFilter(Filter):
-    """Filter for a simple needle.
+class ExactMatchExtentFilterBase(Filter):
+    """Filter for a compound needle which tries to find an exact match on a
+    'value' subproperty and highlights based on 'start' and 'end'
+    subproperties, which contain column bounds.
 
     Will highlight and filter based on the field_name cls attribute.
 
     """
-    lang = ''
-    name = ''
-
     def __init__(self, term):
-        self.term = term
-        self.field_name = '{0}-{1}'.format(self.lang, self.name)
+        """Expects ``self.lang`` to be a language identifier, to separate
+        structural needles form those of other languages and allow for an
+        eventual "lang:" metafilter.
 
+        """
+        super(ExactMatchExtentFilterBase, self).__init__(term)
+        self._needle = '{0}-{1}'.format(self.lang, self.name)
+
+    @negatable
     def filter(self):
-        # TODO use self.field_name to select which term to filter for
-        return {}
+        # TODO: case, fully qualified
+        return {
+            'term': {'{0}.value'.format(self._needle): self._term['arg']}
+        }
 
     def highlight_content(self, result):
-        return []
+        # TODO: Update for case, qualified, etc.
+        if self._term['not']:
+            return []
+        return ((entity['start'], entity['end'])
+                for entity in result[self._needle]
+                if entity['value'] == self._term['arg'])

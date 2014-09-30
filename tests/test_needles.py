@@ -1,58 +1,60 @@
 from nose.tools import eq_, assert_raises
 
-
 from dxr.plugins.needles import (unsparsify, by_line, group_needles,
-                                 span_to_lines, pack)
+                                 span_to_lines, key_object_pair)
 from dxr.plugins.utils import Extent, Position
 
-NEEDLE1 = ('x', Extent(Position(None, 0, 3), Position(None, 0, 7)))
-NEEDLE2 = ('y', Extent(Position(None, 0, 5), Position(None, 2, 7)))
-NEEDLE3 = ('z', Extent(Position(None, 0, 0), Position(None, -1, 0)))
+
+KV1 = ('x', 'v1')
+KV2 = ('y', 'v2')
+KV3 = ('z', 'v3')
+
+NEEDLE1 = (KV1, Extent(Position(None, 1, 3), Position(None, 1, 7)))
+NEEDLE2 = (KV2, Extent(Position(None, 1, 5), Position(None, 3, 7)))
+NEEDLE3 = (KV3, Extent(Position(None, 1, 0), Position(None, 0, 0)))
 
 
-def eq__(lis1, lis2):
-    eq_(list(lis1), list(lis2))
+def list_eq(result, expected):
+    eq_(list(result), list(expected))
 
 
 def test_needle_smoke_test():
-    eq__(unsparsify([]), [])
+    list_eq(unsparsify([]), [])
 
 
 def test_unsparsify():
     assert_raises(ValueError, unsparsify, [NEEDLE3])
 
-    output = [[pack('x', 3, 7), pack('y', 5, None)],
-              [pack('y', 0, None)],
-              [pack('y', 0, 7)]]
+    # Test 2 overlapping dense needles:
+    output = [[key_object_pair(KV1, 3, 7), key_object_pair(KV2, 5, None)],  # the overlap.
+              [key_object_pair(KV2, 0, None)],  # just the second one,
+              [key_object_pair(KV2, 0, 7)]]     # extending beyond the first
 
-    eq__(output, unsparsify([NEEDLE1, NEEDLE2]))
+    list_eq(unsparsify([NEEDLE1, NEEDLE2]), output)
 
 
 def test_group_needles():
-    eq__([], group_needles([]))
-
-    fixture = [(pack('x', 3, 7), 0), (pack('y', 5, None), 0), (pack('y', 0, None), 1),
-               (pack('y', 0, 7), 2)]
-
-    output = [[pack('x', 3, 7), pack('y', 5, None)],
-              [pack('y', 0, None)],
-              [pack('y', 0, 7)]]
-    eq__(output, group_needles(fixture))
+    list_eq(group_needles([]), [])
+    list_eq(group_needles([('A', 1), ('B', 1), ('C', 2), ('D', 3)]),
+                          [['A', 'B'],
+                           ['C'],
+                           ['D']])
 
 
 def test_by_line():
-    eq__([], by_line([]))
-    eq__([(pack('x', 3, 7), 0),
-          (pack('y', 5, None), 0),
-          (pack('y', 0, None), 1),
-          (pack('y', 0, 7), 2)],
-         by_line([NEEDLE1, NEEDLE2]))
+    list_eq(by_line([]), [])
+    list_eq(by_line([NEEDLE1, NEEDLE2]),
+            [(key_object_pair(KV1, 3, 7), 1),
+             (key_object_pair(KV2, 5, None), 1),
+             (key_object_pair(KV2, 0, None), 2),
+             (key_object_pair(KV2, 0, 7), 3)])
 
 
 def test_span_to_lines():
-    eq__(span_to_lines(NEEDLE1), [({'term': 'x', 'start': 3, 'end': 7}, 0)])
-    eq__(span_to_lines(NEEDLE2), [({'term': 'y', 'start': 5, 'end': None}, 0),
-                                  ({'term': 'y', 'start': 0, 'end': None}, 1),
-                                  ({'term': 'y', 'start': 0, 'end': 7}, 2)])
+    list_eq(span_to_lines(NEEDLE1),
+            [((('x', 'v1'), 3, 7), 1)])
+    list_eq(span_to_lines(NEEDLE2),
+            [((('y', 'v2'), 5, None), 1),
+             ((('y', 'v2'), 0, None), 2),
+             ((('y', 'v2'), 0, 7), 3)])
     assert_raises(ValueError, lambda x: list(span_to_lines(x)), [])
-

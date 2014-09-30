@@ -19,6 +19,8 @@ def highlight(content, extents):
     def chunks():
         chars_before = None
         for start, end in fix_extents_overlap(sorted(extents)):
+            if start > end:
+                raise ValueError('Extent start was after its end.')
             yield cgi.escape(content[chars_before:start])
             yield u'<b>'
             yield cgi.escape(content[start:end])

@@ -58,7 +58,14 @@ def process_loc(props):
     """Return extent based on loc and extent."""
     row, col = map(int, props['loc'].split(':')[1:])
     start, end = map(int, props['extent'].split(':'))
-    props['span'] = Extent(Position(start, row, col), Position(end, row, col))
+
+    # TODO: This assumes the extent doesn't span lines. If it did, row would
+    # have to change sometimes. Is this a problem, or do all extents pulled
+    # out of CSVs stay each within one line? If they don't, we'll need to pass
+    # the file text in here or something.
+    props['span'] = Extent(Position(start, row, col),
+                           Position(end, row, col + end - start))
+
     return props
 
 
@@ -182,7 +189,14 @@ def _load_csv(csv_path, only_impl=False):
 
 
 def load_csv(csv_root, fpath=None, only_impl=False):
-    """Given a path to a build csv, return a dict representing the analysis."""
+    """Return a dict representing an analysis of a source file.
+
+    :arg csv_root: A path to the folder containing the CSVs emitted by the
+        compiler plugin
+    :arg fpath: A path to the file to analyze, relative to the tree's source
+        folder
+
+    """
     hashed_fname = '*' if fpath is None else sha1(fpath).hexdigest()
     csv_paths = glob('{0}.*.csv'.format(path.join(csv_root, hashed_fname)))
 
