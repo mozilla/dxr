@@ -5,7 +5,6 @@ import os
 from os import dup, fdopen
 from os.path import join
 from itertools import izip
-import sqlite3
 from sys import stdout
 from urllib import quote, quote_plus
 
