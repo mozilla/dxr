@@ -32,17 +32,6 @@ def load_template_env():
     return _template_env
 
 
-_next_id = 1
-def next_global_id():
-    """Source of unique ids"""
-    #TODO Please stop using this, it makes distribution and parallelization hard
-    # Also it's just stupid!!! When whatever SQL database we use supports this
-    global _next_id
-    n = _next_id
-    _next_id += 1
-    return n
-
-
 def open_log(config_or_tree, name, use_stdout=False):
     """Return a writable file-like object representing a log file.
 
