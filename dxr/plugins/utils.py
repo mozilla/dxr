@@ -18,17 +18,6 @@ class FuncSig(namedtuple('FuncSig', ['inputs', 'output'])):
             tuple(self.inputs), self.output).replace("'", '').replace('"', '')
 
 
-def _process_ctype(type_):
-    return type_
-
-
-def is_function((_, obj)):
-    if '!type' not in obj:
-        return False
-    type_ = obj['!type']
-    return hasattr(type_, 'input') and hasattr(type_, 'output')
-
-
 class ExactMatchExtentFilterBase(Filter):
     """Filter for a compound needle which tries to find an exact match on a
     'value' subproperty and highlights based on 'start' and 'end'
