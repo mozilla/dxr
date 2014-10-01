@@ -1,6 +1,6 @@
 """Tests for handling failed builds"""
 
-from dxr.build import BuildError
+from dxr.exceptions import BuildError
 from dxr.testing import SingleFileTestCase, CommandFailure
 
 

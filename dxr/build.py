@@ -24,6 +24,7 @@ from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
 import dxr
 from dxr.config import Config, FORMAT
+from dxr.exceptions import BuildError
 from dxr.mime import is_text, icon
 from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
 from dxr.query import filter_menu_items
@@ -36,12 +37,6 @@ except ImportError:
     from itertools import izip
     def compress(data, selectors):
         return (d for d, s in izip(data, selectors) if s)
-
-
-class BuildError(Exception):
-    """Catch-all error for expected kinds of failures during indexing"""
-    # This could be refined better, have params added, etc., but it beats
-    # calling sys.exit, which is what was happening before.
 
 
 def linked_pathname(path, tree_name):

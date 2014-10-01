@@ -13,3 +13,9 @@ class BadTerm(Exception):
 
         """
         self.reason = reason
+
+
+class BuildError(Exception):
+    """Catch-all error for expected kinds of failures during indexing"""
+    # This could be refined better, have params added, etc., but it beats
+    # calling sys.exit, which is what was happening before.
