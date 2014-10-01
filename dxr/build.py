@@ -6,7 +6,7 @@ import json
 from operator import attrgetter
 import os
 from os import stat, mkdir
-from os.path import islink, relpath, join, split
+from os.path import dirname, islink, relpath, join, split
 import shutil
 import subprocess
 import sys
@@ -17,17 +17,18 @@ from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from funcy import merge, chunks, first, suppress
+import jinja2
 from jinja2 import Markup
 from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
+import dxr
 from dxr.config import Config, FORMAT
 from dxr.mime import is_text, icon
 from dxr.plugins import LINE as LINE_DOCTYPE, FILE as FILE_DOCTYPE
 from dxr.query import filter_menu_items
-from dxr.utils import (load_template_env, open_log, browse_url,
-                       deep_update, append_update, append_update_by_line,
-                       append_by_line)
+from dxr.utils import (open_log, browse_url, deep_update, append_update,
+                       append_update_by_line, append_by_line, TEMPLATE_DIR)
 
 try:
     from itertools import compress
@@ -969,3 +970,19 @@ def build_lines(text, refs, regions):
                                   # that in html_lines().
     remove_overlapping_refs(tags)
     return html_lines(balanced_tags(tags), text.__getslice__)
+
+
+_template_env = None
+def load_template_env():
+    """Load template environment (lazily)"""
+    global _template_env
+    if not _template_env:
+        # Cache folder for jinja2
+        # Create jinja2 environment
+        _template_env = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(
+                        join(dirname(dxr.__file__), TEMPLATE_DIR)),
+                auto_reload=False,
+                autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
+        )
+    return _template_env

@@ -2,34 +2,15 @@ from collections import Mapping
 from datetime import datetime
 import fnmatch
 import os
-from os import dup
-from os.path import join, dirname
+from os import dup, fdopen
+from os.path import join
 from itertools import izip
 import sqlite3
 from sys import stdout
 from urllib import quote, quote_plus
 
-import jinja2
-
-import dxr
-
 
 TEMPLATE_DIR = 'static/templates'
-
-_template_env = None
-def load_template_env():
-    """Load template environment (lazily)"""
-    global _template_env
-    if not _template_env:
-        # Cache folder for jinja2
-        # Create jinja2 environment
-        _template_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(
-                        join(dirname(dxr.__file__), TEMPLATE_DIR)),
-                auto_reload=False,
-                autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
-        )
-    return _template_env
 
 
 def open_log(config_or_tree, name, use_stdout=False):
@@ -43,8 +24,8 @@ def open_log(config_or_tree, name, use_stdout=False):
 
     """
     if use_stdout:
-        return os.fdopen(dup(stdout.fileno()), 'w')
-    return open(os.path.join(config_or_tree.log_folder, name), 'w', 1)
+        return fdopen(dup(stdout.fileno()), 'w')
+    return open(join(config_or_tree.log_folder, name), 'w', 1)
 
 
 def non_negative_int(s, default):
@@ -59,6 +40,7 @@ def non_negative_int(s, default):
     return default
 
 
+# TODO: Obsolete this and browse_url in favor of Flask's url_for.
 def search_url(www_root, tree, query, **query_string_params):
     """Return the URL to the search endpoint."""
     ret = '%s/%s/search?q=%s' % (www_root,
