@@ -74,6 +74,7 @@ def type_menu(tree, type_):
     })
     return menu
 
+
 def typedef_menu(tree, typedef):
     """Build menu for typedef."""
     qualname = typedef['qualname']
@@ -85,6 +86,7 @@ def typedef_menu(tree, typedef):
         'icon': 'reference'
     })
     return menu
+
 
 def variable_menu(tree, variable):
     """Build menu for a variable."""
@@ -104,6 +106,7 @@ def variable_menu(tree, variable):
     })
     return menu
 
+
 def namespace_menu(tree, namespace):
     """Build menu for a namespace."""
     qualname = namespace['qualname']
@@ -121,6 +124,7 @@ def namespace_menu(tree, namespace):
         'icon': 'reference'
     })
     return menu
+
 
 def namespace_alias_menu(tree, namespace_alias):
     """Build menu for a namespace."""

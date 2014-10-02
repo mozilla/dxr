@@ -2,7 +2,7 @@
 
 from nose.tools import eq_
 
-from dxr.extents import highlight
+from dxr.query import highlight
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 

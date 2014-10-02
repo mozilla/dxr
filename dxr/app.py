@@ -16,7 +16,7 @@ from dxr.exceptions import BadTerm
 from dxr.mime import icon
 from dxr.plugins import FILE
 from dxr.query import Query, filter_menu_items
-from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime  # Make sure we load trilite before possibly importing the wrong version of sqlite3.
+from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime
 
 
 # Look in the 'dxr' package for static files, etc.:

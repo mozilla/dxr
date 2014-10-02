@@ -1,8 +1,8 @@
 """The DXR plugin architecture"""
 
 from functools import partial, wraps
-from os.path import join
 from inspect import isclass, isfunction
+from os.path import join
 
 from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
