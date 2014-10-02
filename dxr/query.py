@@ -1,4 +1,5 @@
 from itertools import chain, count, groupby
+from operator import itemgetter
 import re
 
 from parsimonious import Grammar, NodeVisitor
@@ -8,13 +9,6 @@ from dxr.mime import icon
 from dxr.plugins import all_plugins, LINE, FILE
 from dxr.utils import append_update
 
-# TODO: Some kind of UI feedback for bad regexes
-# TODO: Special argument files-only to just search for file names
-
-
-# Pattern for matching a file and line number filename:n
-_line_number = re.compile("^.*:[0-9]+$")
-
 
 # A dict mapping a filter name to a list of all filters having that name,
 # across all plugins
@@ -22,6 +16,25 @@ FILTERS_NAMED = append_update(
     {},
     ((f.name, f) for f in
      chain.from_iterable(p.filters for p in all_plugins().itervalues())))
+
+
+def _direct_searchers():
+    """Return a list of all direct searchers, ordered by priority, then plugin
+    name, then finally by function name.
+
+    This is meant to at least yield a stable order if priorities are not
+    unique.
+
+    """
+    sortables = []
+    for plugin_name, plugin in all_plugins().iteritems():
+        for s in plugin.direct_searchers:
+            sortables.append((s, (s.direct_search_priority, plugin_name, s.__name__)))
+    sortables.sort(key=itemgetter(1))
+    return [searcher for searcher, _ in sortables]
+
+
+DIRECT_SEARCHERS = _direct_searchers()
 
 
 class Query(object):
@@ -35,14 +48,16 @@ class Query(object):
         self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(query_grammar.parse(querystr))
 
     def single_term(self):
-        """Return the single textual term comprising the query.
+        """Return the single, non-negated textual term in the query.
 
         If there is more than one term in the query or if the single term is a
         non-textual one, return None.
 
         """
-        if len(self.terms) == 1 and self.terms[0]['name'] == 'text':
-            return self.terms[0]['arg']
+        if len(self.terms) == 1:
+            term = self.terms[0]
+            if term['name'] == 'text' and not term['not']:
+                return term
 
     def results(self, offset=0, limit=100):
         """Return search results as an iterable of these::
@@ -138,144 +153,29 @@ class Query(object):
         term = self.single_term()
         if not term:
             return None
-        cur = self.conn.cursor()
 
-        line_number = -1
-        if _line_number.match(term):
-            parts = term.split(":")
-            if len(parts) == 2:
-                term = parts[0]
-                line_number = int(parts[1])
-
-        # See if we can find only one file match
-        cur.execute("""
-            SELECT path FROM files WHERE
-                path = :term
-                OR path LIKE :termPre
-            LIMIT 2
-        """, {"term": term,
-              "termPre": "%/" + term})
-
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            if line_number >= 0:
-                return (rows[0]['path'], line_number)
-            return (rows[0]['path'], 1)
-
-        # Case sensitive type matching
-        cur.execute("""
-            SELECT
-                (SELECT path FROM files WHERE files.id = types.file_id) as path,
-                types.file_line
-              FROM types WHERE types.name = ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case sensitive function names
-        cur.execute("""
-            SELECT
-                 (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-                 functions.file_line
-              FROM functions WHERE functions.name = ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case sensitive macro names
-        cur.execute("""
-            SELECT
-                 (SELECT path FROM files WHERE files.id = macros.file_id) as path,
-                 macros.file_line
-              FROM macros WHERE macros.name = ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case sensitive typedef names
-        cur.execute("""
-            SELECT
-                 (SELECT path FROM files WHERE files.id = typedefs.file_id) as path,
-                 typedefs.file_line
-              FROM typedefs WHERE typedefs.name = ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Try fully qualified names
-        if '::' in term:
-            # Case insensitive type matching
-            cur.execute("""
-                SELECT
-                      (SELECT path FROM files WHERE files.id = types.file_id) as path,
-                      types.file_line
-                    FROM types WHERE types.qualname LIKE ? LIMIT 2
-            """, (term,))
-            rows = cur.fetchall()
-            if rows and len(rows) == 1:
-                return (rows[0]['path'], rows[0]['file_line'])
-
-            # Case insensitive function names
-            cur.execute("""
-            SELECT
-                  (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-                  functions.file_line
-                FROM functions WHERE functions.qualname LIKE ? LIMIT 2
-            """, (term + '%',))  # Trailing % to eat "(int x)" etc.
-            rows = cur.fetchall()
-            if rows and len(rows) == 1:
-                return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case insensitive type matching
-        cur.execute("""
-        SELECT
-              (SELECT path FROM files WHERE files.id = types.file_id) as path,
-              types.file_line
-            FROM types WHERE types.name LIKE ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case insensitive function names
-        cur.execute("""
-        SELECT
-              (SELECT path FROM files WHERE files.id = functions.file_id) as path,
-              functions.file_line
-            FROM functions WHERE functions.name LIKE ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case insensitive macro names
-        cur.execute("""
-        SELECT
-              (SELECT path FROM files WHERE files.id = macros.file_id) as path,
-              macros.file_line
-            FROM macros WHERE macros.name LIKE ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Case insensitive typedef names
-        cur.execute("""
-        SELECT
-              (SELECT path FROM files WHERE files.id = typedefs.file_id) as path,
-              typedefs.file_line
-            FROM typedefs WHERE typedefs.name LIKE ? LIMIT 2
-        """, (term,))
-        rows = cur.fetchall()
-        if rows and len(rows) == 1:
-            return (rows[0]['path'], rows[0]['file_line'])
-
-        # Okay we've got nothing
-        return None
+        for searcher in DIRECT_SEARCHERS:
+            clause = searcher(term)
+            if clause:
+                results = self.es_search(
+                    {
+                        'query': {
+                            'filtered': {
+                                'query': {
+                                    'match_all': {}
+                                },
+                                'filter': clause
+                            }
+                        },
+                        'size': 2
+                    },
+                    doc_type=LINE)['hits']['hits']
+                if len(results) == 1:
+                    result = results[0]['_source']
+                    # Everything is stored as arrays in ES. Pull it all out:
+                    return result['path'][0], result['number'][0]
+                elif len(results) > 1:
+                    return None
 
 
 query_grammar = Grammar(ur'''

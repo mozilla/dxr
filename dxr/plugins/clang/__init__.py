@@ -134,12 +134,16 @@ class FileToIndex(plugins.FileToIndex):
 
     def _common_ref(self, create_menu, view, get_val=constantly(None)):
         for prop in view(self.condensed):
-            start, end = prop['span']
-            menu = create_menu(self.tree, prop)
-            src, line, _ = start
-            if src is not None:
-                menu = jump_definition(self.tree, src, line) + menu
-            yield start, end, (menu, get_val(prop))
+            if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this.
+                start, end = prop['span']
+                menu = create_menu(self.tree, prop)
+
+                # TODO:
+                # if we can look up the target of this reference:
+                #     menu = jump_definition(self.tree, target_path, start.row) + menu
+                if start.offset is None or end.offset is None:
+                    raise NotImplementedError("Fix this logic. It's full of holes. We must return a file-wide offset, but Position.offset was None.")
+                yield start.offset, end.offset, (menu, get_val(prop))
 
     def links(self):
         # For each type add a section with members
@@ -358,11 +362,6 @@ def needles(condensed, inherit, graph):
 
 
 class TreeToIndex(plugins.TreeToIndex):
-    def __init__(self, tree):
-        super(TreeToIndex, self).__init__(tree)
-        self.tree = tree
-        self._inherit, self._temp_folder = None, None
-
     def environment(self, vars_):
         """Setup environment variables for inspecting clang as runtime
 
@@ -393,7 +392,7 @@ class TreeToIndex(plugins.TreeToIndex):
 
     def post_build(self):
         condensed = load_csv(self._temp_folder, fpath=None, only_impl=True)
-        self.inherit = build_inheritance(condensed)
+        self._inherit = build_inheritance(condensed)
 
     def file_to_index(self, path, contents):
         return FileToIndex(os.path.join(

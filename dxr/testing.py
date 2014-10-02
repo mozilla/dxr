@@ -108,6 +108,20 @@ class TestCase(unittest.TestCase):
                     (quote(query), 'true' if is_case_sensitive else 'false'),
             headers={'Accept': 'application/json'})
 
+    def direct_result_eq(self, query, path, line_number, is_case_sensitive=True):
+        """Assert that a direct result exists and takes the user to the given
+        path at the given line number."""
+        response = self.client().get(
+            '/code/search?q=%s&redirect=true&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'))
+        eq_(response.status_code, 302)
+        location = response.headers['Location']
+        # Location is something like
+        # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
+        eq_(location[:location.index('?')],
+            'http://localhost/code/source/' + path)
+        eq_(int(location[location.index('#') + 1:]), line_number)
+
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
 
@@ -241,6 +255,10 @@ build_command = $CXX -o main main.cpp
                 self._source_for_query(content))) + 1
         super(SingleFileTestCase, self).found_line_eq(
                 query, content, line, is_case_sensitive=is_case_sensitive)
+
+    def direct_result_eq(self, query, line_number, is_case_sensitive=True):
+        """Assume the filename "main.cpp"."""
+        return super(SingleFileTestCase, self).direct_result_eq(query, 'main.cpp', line_number, is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):
