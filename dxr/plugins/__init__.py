@@ -116,7 +116,7 @@ def negatable(filter_method):
     @wraps(filter_method)
     def maybe_negate(self):
         positive = filter_method(self)
-        return {'not': positive} if self._term['not'] else positive
+        return {'not': positive} if positive and self._term['not'] else positive
     return maybe_negate
 
 
