@@ -7,7 +7,7 @@ from warnings import catch_warnings
 
 from nose.tools import eq_
 
-from dxr.build import (line_boundaries, remove_overlapping_refs, Region, LINE,
+from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, build_lines, tag_boundaries,
                        html_lines, nesting_order, balanced_tags_with_empties)
 
