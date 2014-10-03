@@ -5,8 +5,9 @@ import re
 
 from parsimonious import Grammar, NodeVisitor
 
+from dxr.filters import LINE, FILE
 from dxr.mime import icon
-from dxr.plugins import all_plugins, LINE, FILE
+from dxr.plugins import all_plugins
 from dxr.utils import append_update
 
 

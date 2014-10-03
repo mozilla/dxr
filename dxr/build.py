@@ -21,9 +21,9 @@ from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 import dxr
 from dxr.config import Config, FORMAT
 from dxr.exceptions import BuildError
+from dxr.filters import LINE, FILE
 from dxr.lines import build_lines
 from dxr.mime import is_text, icon
-from dxr.plugins.base import LINE, FILE
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, browse_url, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)

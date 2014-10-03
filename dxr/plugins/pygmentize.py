@@ -5,7 +5,7 @@ from pygments.lexer import inherit
 from pygments.token import Token, Comment
 from pygments.util import ClassNotFound
 
-import dxr.plugins
+import dxr.indexers
 
 
 token_classes = {Token.Comment.Preproc: 'p'}
@@ -81,7 +81,7 @@ def _lexer_for_filename(filename):
     return lexer
 
 
-class FileToIndex(dxr.plugins.FileToIndex):
+class FileToIndex(dxr.indexers.FileToIndex):
     """Emitter of CSS classes for syntax-highlit regions"""
 
     def regions(self):

@@ -14,7 +14,7 @@ from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    pluck, first, remove)
 from toposort import toposort_flatten
 
-from dxr.plugins.utils import FuncSig, Position, Extent, Call
+from dxr.indexers import FuncSig, Position, Extent, Call
 
 
 POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',

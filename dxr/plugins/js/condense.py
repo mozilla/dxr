@@ -9,7 +9,7 @@ from parsimonious import Grammar, NodeVisitor
 
 import requests
 
-from dxr.plugins.utils import FuncSig, Extent, Position, symbols, functions
+from dxr.indexers import FuncSig, Extent, Position, symbols, functions
 
 
 class ExtentVisitor(NodeVisitor):

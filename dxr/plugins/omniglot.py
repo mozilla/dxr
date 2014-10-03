@@ -4,7 +4,7 @@ from os.path import relpath
 import subprocess
 import urlparse
 
-import dxr.plugins
+import dxr.indexers
 
 """Omniglot - Speaking all commonly-used version control systems.
 At present, this plugin is still under development, so not all features are
@@ -240,7 +240,7 @@ class Perforce(VCS):
 every_vcs = [Mercurial, Git, Perforce]
 
 
-class TreeToIndex(dxr.plugins.TreeToIndex):
+class TreeToIndex(dxr.indexers.TreeToIndex):
     def pre_build(self):
         """Find all the relevant VCS dirs in the project, and put them in
         ``self.source_repositories``. Put the most-local-first order of its
@@ -279,7 +279,7 @@ class TreeToIndex(dxr.plugins.TreeToIndex):
                            self.source_repositories)
 
 
-class FileToIndex(dxr.plugins.FileToIndex):
+class FileToIndex(dxr.indexers.FileToIndex):
     """Adder of blame and external links to items under version control"""
 
     def __init__(self, path, contents, tree, lookup_order, source_repositories):

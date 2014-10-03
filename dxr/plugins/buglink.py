@@ -1,11 +1,11 @@
 import cgi
 import re
 
-import dxr.plugins
 from dxr.config import MissingOptionError
+import dxr.indexers
 
 
-class TreeToIndex(dxr.plugins.TreeToIndex):
+class TreeToIndex(dxr.indexers.TreeToIndex):
     def __init__(self, tree):
         # Get bug tracker name
         if hasattr(tree, 'plugin_buglink_name'):
@@ -29,7 +29,7 @@ class TreeToIndex(dxr.plugins.TreeToIndex):
         return FileToIndex(path, contents, self.bug_finder_re, self.name, self.url)
 
 
-class FileToIndex(dxr.plugins.FileToIndex):
+class FileToIndex(dxr.indexers.FileToIndex):
     def __init__(self, path, contents, regex, tracker_name, url_template):
         super(FileToIndex, self).__init__(path, contents)
         self.regex = regex

@@ -1,6 +1,6 @@
 from jinja2 import Markup
 
-from dxr.plugins.utils import ExactMatchExtentFilterBase
+from dxr.filters import ExactMatchExtentFilterBase
 
 
 class _CFilter(ExactMatchExtentFilterBase):

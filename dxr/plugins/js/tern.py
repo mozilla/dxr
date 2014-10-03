@@ -1,7 +1,7 @@
 from itertools import chain
 
 
-from dxr.plugins.needles import unsparsify
+from dxr.indexers import unsparsify
 from dxr.plugins.clang.condense import functions, symbols, properties
 
 

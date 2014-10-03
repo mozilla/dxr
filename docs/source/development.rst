@@ -225,17 +225,17 @@ indexers, filters, and skimmers.
 Tree Indexers
 =============
 
-.. autoclass:: dxr.plugins.TreeToIndex
+.. autoclass:: dxr.indexers.TreeToIndex
    :members:
 
 File Indexers
 =============
 
-.. autoclass:: dxr.plugins.FileToIndex
+.. autoclass:: dxr.indexers.FileToIndex
    :members:
 
 FileToIndex also has all the methods of its superclass,
-:class:`~dxr.plugins.FileToSkim`.
+:class:`~dxr.indexers.FileToSkim`.
 
 File Skimmers
 =============
@@ -244,21 +244,21 @@ File Skimmers
 
     The code that will call skimmers isn't in place yet.
 
-.. autoclass:: dxr.plugins.FileToSkim
+.. autoclass:: dxr.indexers.FileToSkim
    :members:
 
 Filters
 =======
 
-.. autoclass:: dxr.plugins.Filter
+.. autoclass:: dxr.filters.Filter
    :members:
 
 Mappings
 ========
 
 When you're laying down data to search upon, it's generally not enough just to
-write :meth:`~dxr.plugins.FileToIndex.needles` or
-:meth:`~dxr.plugins.FileToIndex.needles_by_line` implementations. If you want
+write :meth:`~dxr.indexers.FileToIndex.needles` or
+:meth:`~dxr.indexers.FileToIndex.needles_by_line` implementations. If you want
 to search case-insensitively, for example, you'll need elasticsearch to fold
 your data to lowercase. (Don't fall into the trap of doing this in Python; the
 Lucene machinery behind ES is better at the complexities of Unicode.) The way

@@ -8,8 +8,9 @@ from jinja2 import Markup
 from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
-import dxr.plugins
-from dxr.plugins import FILE, LINE, Filter, negatable, direct_search
+from dxr.filters import Filter, negatable, FILE, LINE
+import dxr.indexers
+from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
                             PythonRegexVisitor)
@@ -283,7 +284,7 @@ class RegexpFilter(Filter):
                 self._compiled_regex.finditer(result['content'][0]))
 
 
-class TreeToIndex(dxr.plugins.TreeToIndex):
+class TreeToIndex(dxr.indexers.TreeToIndex):
     def environment(self, vars):
         vars['source_folder'] = self.tree.source_folder
         vars['build_folder'] = self.tree.object_folder
@@ -293,7 +294,7 @@ class TreeToIndex(dxr.plugins.TreeToIndex):
         return FileToIndex(path, contents, self.tree)
 
 
-class FileToIndex(dxr.plugins.FileToIndex):
+class FileToIndex(dxr.indexers.FileToIndex):
     def needles(self):
         """Fill out path (and path.trigrams)."""
         yield 'path', self.path

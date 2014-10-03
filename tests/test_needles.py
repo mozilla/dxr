@@ -1,8 +1,7 @@
 from nose.tools import eq_, assert_raises
 
-from dxr.plugins.needles import (unsparsify, by_line, group_needles,
-                                 span_to_lines, key_object_pair)
-from dxr.plugins.utils import Extent, Position
+from dxr.indexers import (unsparsify, by_line, group_needles, span_to_lines,
+                          key_object_pair, Extent, Position)
 
 
 KV1 = ('x', 'v1')

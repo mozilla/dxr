@@ -13,8 +13,8 @@ from werkzeug.exceptions import NotFound
 
 from dxr.build import linked_pathname
 from dxr.exceptions import BadTerm
+from dxr.filters import FILE
 from dxr.mime import icon
-from dxr.plugins import FILE
 from dxr.query import Query, filter_menu_items
 from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime
 

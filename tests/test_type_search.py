@@ -1,7 +1,7 @@
 from nose.tools import eq_
 
 from dxr.plugins.clang.condense import c_type_sig
-from dxr.plugins.utils import FuncSig
+from dxr.indexers import FuncSig
 
 
 def test_type_structure():

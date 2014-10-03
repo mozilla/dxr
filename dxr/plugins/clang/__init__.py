@@ -9,8 +9,9 @@ from functools import partial
 from funcy import (merge, imap, group_by, is_mapping, repeat,
                    constantly, icat, autocurry)
 
-from dxr import plugins
-from dxr.plugins import LINE
+from dxr.filters import LINE
+import dxr.indexers
+from dxr.indexers import unsparsify_func, group_needles, by_line
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 # Stop doing the following, and construct a Plugin explicitly. But you'll have
 # to solve a wicked circular import first.
@@ -23,7 +24,6 @@ from dxr.plugins.clang.filters import (FunctionFilter, FunctionRefFilter, Functi
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu)
-from dxr.plugins.needles import unsparsify_func, group_needles, by_line
 
 
 PLUGIN_NAME = 'clang'
@@ -79,7 +79,7 @@ def _members(condensed, key, id_):
         yield 'method', name, "#%s" % line
 
 
-class FileToIndex(plugins.FileToIndex):
+class FileToIndex(dxr.indexers.FileToIndex):
     """C and CXX File Indexer using Clang Plugin."""
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
@@ -367,7 +367,7 @@ def needles(condensed, inherit, graph):
     ))
 
 
-class TreeToIndex(plugins.TreeToIndex):
+class TreeToIndex(dxr.indexers.TreeToIndex):
     def environment(self, vars_):
         """Setup environment variables for inspecting clang as runtime
 
