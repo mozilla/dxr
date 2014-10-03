@@ -4,13 +4,11 @@ from nose.tools import eq_
 from funcy import first
 
 from dxr.indexers import Extent, Position, FuncSig, Call
-from dxr.plugins.clang import (TreeToIndex, FileToIndex,
-                               warn_needles, warn_op_needles, name_needles,
-                               group_sparse_needles, callee_needles,
-                               caller_needles, type_needles, child_needles,
-                               parent_needles, member_needles, sig_needles,
-                               overrides_needles, overridden_needles,
-                               kind_getter)
+from dxr.plugins.clang.indexers import (
+     TreeToIndex, FileToIndex, warn_needles, warn_op_needles, name_needles,
+     group_sparse_needles, callee_needles, caller_needles, type_needles,
+     child_needles, parent_needles, member_needles, sig_needles,
+     overrides_needles, overridden_needles, kind_getter)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)

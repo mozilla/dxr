@@ -22,7 +22,7 @@ setup(
     scripts=['bin/dxr-build.py', 'bin/dxr-serve.py'],
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
                                   'buglink = dxr.plugins.buglink',
-                                  'clang = dxr.plugins.clang',
+                                  'clang = dxr.plugins.clang:plugin',
                                   'omniglot = dxr.plugins.omniglot',
                                   'pygmentize = dxr.plugins.pygmentize']},
     install_requires=['Flask>=0.9',
