@@ -1,4 +1,4 @@
-"""Tests for searches involving wildcards (*, ?)"""
+"""Tests for function searches involving wildcards (*, ?)"""
 
 # Skip tests whose functionality isn't implemented on the es branch yet. Unskip
 # before merging to master.
