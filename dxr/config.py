@@ -36,6 +36,7 @@ class Config(object):
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
+            'google_analytics_key': "",
             'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     "",
@@ -55,6 +56,7 @@ class Config(object):
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
+        self.google_analytics_key = parser.get('DXR', 'google_analytics_key', False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)

@@ -104,6 +104,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
                                                     key=attrgetter('name')))),
              wwwroot=repr(config.wwwroot),
              generated_date=repr(config.generated_date),
+             google_analytics_key=repr(config.google_analytics_key),
              default_tree=repr(config.default_tree),
              es_hosts=repr(config.es_hosts),
              es_aliases=repr(dict((name, alias) for
@@ -481,6 +482,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                               t.description)
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,
+             'google_analytics_key': tree.config.google_analytics_key,
              'filters': filter_menu_items(),
 
              # File template variables:

@@ -74,6 +74,10 @@ Here are the options that can live in the ``[DXR]`` section:
 ``wwwroot``
     URL path prefix to the root of DXR's web app. Default: ``/``
 
+``google_analytics_key``
+  Google analytics key. If set, the analytics snippet will added automatically
+  to every page. 
+
 ``es_hosts``
     A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
     include port numbers. Default: http://127.0.0.1:9200/. Remember that you

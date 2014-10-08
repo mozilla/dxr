@@ -132,6 +132,7 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
     template_vars = {
             'filters': filter_menu_items(),
             'generated_date': config['GENERATED_DATE'],
+            'google_analytics_key': config['GOOGLE_ANALYTICS_KEY'],
             'is_case_sensitive': is_case_sensitive,
             'query': query_text,
             'search_url': url_for('.search',
@@ -206,6 +207,7 @@ def browse(tree, path=''):
                  t_description)
                 for t_name, t_description in config['TREES'].iteritems()],
             generated_date=config['GENERATED_DATE'],
+            google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
             paths_and_names=linked_pathname(path, tree),
             filters=filter_menu_items(),
             # Autofocus only at the root of each tree:
