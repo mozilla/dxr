@@ -1,5 +1,5 @@
-all: main
-main: main.o main2.o
+all: code
+code: main.o main2.o
 	$(CXX) -o $@ $^
 clean:
-	$(RM) main main.o main2.o
+	$(RM) code main.o main2.o
