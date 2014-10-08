@@ -262,7 +262,6 @@ To update to a new version of DXR...
 1. Update your DXR clone::
 
     git pull origin master
-    git submodule update
 
 2. Delete your old virtual env::
 

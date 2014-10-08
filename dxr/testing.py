@@ -10,6 +10,7 @@ import unittest
 from urllib2 import quote
 
 from nose.tools import eq_
+from pyelasticsearch import ElasticSearch
 
 try:
     from nose.tools import assert_in
@@ -19,9 +20,7 @@ except ImportError:
         ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
 from dxr.app import make_app
-
-
-# ---- This crap is very temporary: ----
+from dxr.build import build_instance
 
 
 class CommandFailure(Exception):
@@ -47,9 +46,6 @@ def run(command):
     return output
 
 
-# ---- More permanent stuff: ----
-
-
 class TestCase(unittest.TestCase):
     """Abstract container for general convenience functions for DXR tests"""
 
@@ -73,7 +69,7 @@ class TestCase(unittest.TestCase):
                              is_case_sensitive=is_case_sensitive),
             set(filenames))
 
-    def found_line_eq(self, query, content, line):
+    def found_line_eq(self, query, content, line, is_case_sensitive=True):
         """Assert that a query returns a single file and single matching line
         and that its line number and content are as expected, modulo leading
         and trailing whitespace.
@@ -83,12 +79,15 @@ class TestCase(unittest.TestCase):
         zillion dereferences in your test.
 
         """
-        self.found_lines_eq(query, [(content, line)])
+        self.found_lines_eq(query,
+                            [(content, line)],
+                            is_case_sensitive=is_case_sensitive)
 
-    def found_lines_eq(self, query, success_lines):
+    def found_lines_eq(self, query, success_lines, is_case_sensitive=True):
         """Assert that a query returns a single file and that the highlighted
         lines are as expected, modulo leading and trailing whitespace."""
-        results = self.search_results(query)
+        results = self.search_results(query,
+                                      is_case_sensitive=is_case_sensitive)
         num_results = len(results)
         eq_(num_results, 1, msg='Query passed to found_lines_eq() returned '
                                  '%s files, not one.' % num_results)
@@ -101,6 +100,27 @@ class TestCase(unittest.TestCase):
         results = self.search_results(query,
                                       is_case_sensitive=is_case_sensitive)
         eq_(results, [])
+
+    def search_response(self, query, is_case_sensitive=True):
+        """Return the raw response of a JSON search query."""
+        return self.client().get(
+            '/code/search?q=%s&redirect=false&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'),
+            headers={'Accept': 'application/json'})
+
+    def direct_result_eq(self, query, path, line_number, is_case_sensitive=True):
+        """Assert that a direct result exists and takes the user to the given
+        path at the given line number."""
+        response = self.client().get(
+            '/code/search?q=%s&redirect=true&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'))
+        eq_(response.status_code, 302)
+        location = response.headers['Location']
+        # Location is something like
+        # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
+        eq_(location[:location.index('?')],
+            'http://localhost/code/source/' + path)
+        eq_(int(location[location.index('#') + 1:]), line_number)
 
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
@@ -121,10 +141,24 @@ class TestCase(unittest.TestCase):
           ]
 
         """
-        response = self.client().get(
-            '/code/search?format=json&q=%s&redirect=false&case=%s' %
-            (quote(query), 'true' if is_case_sensitive else 'false'))
+        response = self.search_response(query,
+                                        is_case_sensitive=is_case_sensitive)
         return json.loads(response.data)['results']
+
+    @classmethod
+    def _es(cls):
+        return ElasticSearch('http://127.0.0.1:9200/')
+
+    @classmethod
+    def _delete_es_indices(cls):
+        """Delete anything that is named like a DXR test index.
+
+        Yes, this is scary as hell but very expedient. Won't work if
+        ES's action.destructive_requires_name is set to true.
+
+        """
+        # When you delete an index, any alias to it goes with it.
+        cls._es().delete_index('dxr_test_*')
 
 
 class DxrInstanceTestCase(TestCase):
@@ -143,10 +177,12 @@ class DxrInstanceTestCase(TestCase):
         cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
         chdir(cls._config_dir_path)
         run('make')
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
         chdir(cls._config_dir_path)
+        cls._delete_es_indices()
         run('make clean')
 
 
@@ -176,6 +212,8 @@ enabled_plugins = pygmentize clang
 temp_folder = {config_dir_path}/temp
 target_folder = {config_dir_path}/target
 nb_jobs = 4
+es_index = dxr_test_{{format}}_{{tree}}_{{unique}}
+es_alias = dxr_test_{{format}}_{{tree}}
 
 [code]
 source_folder = {config_dir_path}/code
@@ -184,11 +222,13 @@ build_command = $CXX -o main main.cpp
 """.format(config_dir_path=cls._config_dir_path))
 
         chdir(cls._config_dir_path)
-        run('dxr-build.py')
+        build_instance(os.path.join(cls._config_dir_path, 'dxr.config'))
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
         if cls.should_delete_instance:
+            cls._delete_es_indices()
             rmtree(cls._config_dir_path)
         else:
             print 'Not deleting instance in %s.' % cls._config_dir_path
@@ -201,7 +241,7 @@ build_command = $CXX -o main main.cpp
                  .replace('&quot;', '"')
                  .replace('&amp;', '&'))
 
-    def found_line_eq(self, query, content, line=None):
+    def found_line_eq(self, query, content, line=None, is_case_sensitive=True):
         """A specialization of ``found_line_eq`` that computes the line number
         if not given
 
@@ -213,7 +253,12 @@ build_command = $CXX -o main main.cpp
         if not line:
             line = self.source.count( '\n', 0, self.source.index(
                 self._source_for_query(content))) + 1
-        super(SingleFileTestCase, self).found_line_eq(query, content, line)
+        super(SingleFileTestCase, self).found_line_eq(
+                query, content, line, is_case_sensitive=is_case_sensitive)
+
+    def direct_result_eq(self, query, line_number, is_case_sensitive=True):
+        """Assume the filename "main.cpp"."""
+        return super(SingleFileTestCase, self).direct_result_eq(query, 'main.cpp', line_number, is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):

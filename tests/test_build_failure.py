@@ -1,5 +1,6 @@
 """Tests for handling failed builds"""
 
+from dxr.exceptions import BuildError
 from dxr.testing import SingleFileTestCase, CommandFailure
 
 
@@ -11,7 +12,7 @@ class BuildFailureTests(SingleFileTestCase):
         """Make sure a failed build returns a non-zero status code."""
         try:
             super(BuildFailureTests, cls).setup_class()
-        except CommandFailure:
+        except BuildError:
             pass
         else:
             raise AssertionError('A failed build returned an exit code of 0.')

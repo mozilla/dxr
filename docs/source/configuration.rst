@@ -35,14 +35,6 @@ Here are the options that can live in the ``[DXR]`` section:
     :file:`/tmp` volume and to avoid collisions between concurrent indexing
     runs
 
-``directory_index``
-    Filename for directory index files in the generated static HTML. Default:
-    ``.dxr-directory-index.html``
-
-    Resist the temptation to use ``index.html`` for ``directory_index``. Any
-    indexed file with the same name would then shadow the directory index,
-    confusing users.
-
 ``disabled_plugins``
     Names of plugins to disable. Default: empty
 
@@ -52,10 +44,6 @@ Here are the options that can live in the ``[DXR]`` section:
 
 ``enabled_plugins``
     Names of plugins to enable. Default: ``*``
-
-``filter_lang``
-    The default programming language for this instance. Only filters registered
-    for this language will be used. Default: ``C``
 
 ``generated_date``
     The "generated on" date stamped at the bottom of every DXR web page, in
@@ -89,8 +77,28 @@ Here are the options that can live in the ``[DXR]`` section:
 ``google_analytics_key``
   Google analytics key. If set, the analytics snippet will added automatically
   to every page. 
-  
 
+``es_hosts``
+    A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
+    include port numbers. Default: http://127.0.0.1:9200/. Remember that you
+    can split whitespace-delimited things across lines in an ini file by
+    leading with spaces.
+
+``es_index``
+    A ``format()``-style template for coming up with elasticsearch index
+    names. The variable ``{tree}`` will be replaced with the tree name,
+    ``{format}`` will be replaced with the format version, and ``{unique}``
+    will be replaced with a unique ID to keep a tree's new index from
+    colliding with the old one. The unique ID includes a random number and the
+    build hosts's MAC address so errant concurrent builds on different hosts
+    at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
+
+``es_alias``
+    A ``format()``-style template for coming up with elasticsearch alias
+    names. These live in the same namespace as indices, so don't pave over any
+    index name you're already using. The variables ``{format}`` and ``{tree}``
+    will be substituted, and their meanings are as in ``es_index``. Default:
+    ``dxr_{format}_{tree}``.
 
 (Refer to the Plugin Configuration section for plugin keys available
 here).

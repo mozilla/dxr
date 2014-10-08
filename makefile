@@ -1,4 +1,4 @@
-PLUGINS ?= clang pygmentize
+PLUGINS ?= clang
 
 BUILD_PLUGINS = $(PLUGINS:%=build-plugin-%)
 CHECK_PLUGINS = $(PLUGINS:%=check-plugin-%)
@@ -7,25 +7,15 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test: build
-	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:`pwd`/trilite python2 setup.py test
+	python2 setup.py test
 
-build: $(BUILD_PLUGINS) trilite templates
-
-check: $(CHECK_PLUGINS) trilite
-
-clean: $(CLEAN_PLUGINS) trilite-clean
+build: $(BUILD_PLUGINS) templates
 
 node:
 	npm install
 
 templates: node
 	node_modules/.bin/grunt precompile
-
-trilite:
-	$(MAKE) -C trilite/ release
-
-trilite-clean:
-	$(MAKE) -C trilite/ clean
 
 $(BUILD_PLUGINS):
 	$(MAKE) -C $(@:build-plugin-%=dxr/plugins/%) build
@@ -40,4 +30,4 @@ $(CLEAN_PLUGINS):
 .PHONY: $(BUILD_PLUGINS)
 .PHONY: $(CHECK_PLUGINS)
 .PHONY: $(CLEAN_PLUGINS)
-.PHONY: all build check clean test trilite trilite-clean
+.PHONY: all build check clean test

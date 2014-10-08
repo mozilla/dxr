@@ -1,0 +1,1 @@
+"""Tests specific to the clang plugin"""

@@ -1,3 +1,0 @@
-build:
-check:
-clean:

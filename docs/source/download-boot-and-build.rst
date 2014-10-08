@@ -3,10 +3,7 @@ Downloading DXR
 
 Using git, clone the DXR repository::
 
-   git clone --recursive https://github.com/mozilla/dxr.git
-
-Remember the :option:`--recursive` option; DXR depends on the `TriLite SQLite
-extension`_, which is included in the repository as a git submodule.
+   git clone https://github.com/mozilla/dxr.git
 
 
 Booting And Building
@@ -36,8 +33,6 @@ Then, run this inside the VM::
 
    Your Vagrant version may require a specific vbguest plugin installation method.
    If you receive errors about the plugin visit the vbguest_ plugin page.
-
-.. _TriLite SQLite extension: https://github.com/jonasfj/trilite
 
 .. _Vagrant: http://www.vagrantup.com/
 

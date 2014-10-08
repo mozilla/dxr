@@ -1,6 +1,6 @@
 /* icons */
-.folder-icon {
-    background: transparent url(/static/icons/folder.png) .5em 7px no-repeat;
+.icon.folder {
+    background: transparent url(/static/icons/mimetypes/folder.png) .5em 7px no-repeat;
     padding: .5em .5em .5em 30px;  /* 30px = 16px icon + 7px padding above + a little more whitespace */
 }
 .folder-content {

@@ -18,21 +18,15 @@ end
 CONF = _config
 MOUNT_POINT = '/home/vagrant/dxr'
 
-Vagrant::Config.run do |config|
+Vagrant.configure("2") do |config|
     config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
     config.vm.box = "ubuntu/trusty64"
 
-    Vagrant.configure("1") do |config|
-        config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
-        # Make sure guest additions are up to date!
-        config.vbguest.auto_update = true
-    end
-
-    Vagrant.configure("2") do |config|
-        config.vm.provider "virtualbox" do |v|
-          v.name = "DXR_VM"
-          v.customize ["modifyvm", :id, "--memory", CONF['memory']]
-        end
+    config.vm.provider "virtualbox" do |v|
+        v.name = "DXR_VM"
+        v.customize ["modifyvm", :id, "--memory", CONF['memory']]
+        v.customize ["setextradata", :id,
+            "VBoxInternal2/SharedFoldersEnableSymlinksCreate//home/vagrant/dxr", "1"]
     end
 
     is_jenkins = ENV['USER'] == 'jenkins'
@@ -42,27 +36,15 @@ Vagrant::Config.run do |config|
         # parallelize jobs.
 
         # Add to /etc/hosts: 33.33.33.77 dxr
-        config.vm.network :hostonly, "33.33.33.77"
-
-        config.vm.forward_port 80, 8000
-    end
-
-    Vagrant.configure("1") do |config|
-        # Enable symlinks, which trilite uses during build:
-        config.vm.customize ["setextradata", :id,
-            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
-    end
-
-    Vagrant.configure("2") do |config|
-        v.customize ["setextradata", :id,
-            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+        config.vm.network "private_network", ip: "33.33.33.77"
+        config.vm.network "forwarded_port", guest: 80, host: 8000
     end
 
     if CONF['boot_mode'] == 'gui'
         config.vm.boot_mode = :gui
     end
 
-    config.vm.share_folder("vagrant-root", MOUNT_POINT, ".")
+    config.vm.synced_folder ".", MOUNT_POINT
 
     config.vm.provision "shell", path: "vagrant_provision.sh"
 end
