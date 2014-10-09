@@ -19,26 +19,54 @@ from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
 PLUGIN_NAME = 'clang'
 
 
+# An unanlyzed string property that points to a value that can be exact- or
+# prefix-matched against and carries start/end bounds for highlighting:
+UNANALYZED_EXTENT_NEEDLE = {
+    'type': 'object',
+    'properties': {
+        'value': {
+            'type': 'string',
+            'index': 'not_analyzed',  # TODO: case-insensitive
+        },
+        'start': {
+            'type': 'integer',
+            'index': 'no'  # just for highlighting
+        },
+        'end': {
+            'type': 'integer',
+            'index': 'no'
+        }
+    }
+}
+
+
 mappings = {
     LINE: {
         'properties': {
-            'c-function': {
-                'type': 'object',
-                'properties': {
-                    'value': {
-                        'type': 'string',
-                        'index': 'not_analyzed',  # TODO: case-insensitive
-                    },
-                    'start': {
-                        'type': 'integer',
-                        'index': 'no'  # just for highlighting
-                    },
-                    'end': {
-                        'type': 'integer',
-                        'index': 'no'
-                    }
-                }
-            },
+            'c-function': UNANALYZED_EXTENT_NEEDLE,
+            'c-function-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-function-decl': UNANALYZED_EXTENT_NEEDLE,
+            'c-type-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-type-decl': UNANALYZED_EXTENT_NEEDLE,
+            'c-type': UNANALYZED_EXTENT_NEEDLE,
+            'c-var': UNANALYZED_EXTENT_NEEDLE,
+            'c-var-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-var-decl': UNANALYZED_EXTENT_NEEDLE,
+            'c-macro': UNANALYZED_EXTENT_NEEDLE,
+            'c-macro-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-namespace': UNANALYZED_EXTENT_NEEDLE,
+            'c-namespace-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-namespace-alias': UNANALYZED_EXTENT_NEEDLE,
+            'c-namespace-alias-ref': UNANALYZED_EXTENT_NEEDLE,
+            'c-warning': UNANALYZED_EXTENT_NEEDLE,
+            'c-warning-opt': UNANALYZED_EXTENT_NEEDLE,
+            'c-called-by': UNANALYZED_EXTENT_NEEDLE,
+            'c-callers': UNANALYZED_EXTENT_NEEDLE,
+            'c-bases': UNANALYZED_EXTENT_NEEDLE,
+            'c-derived': UNANALYZED_EXTENT_NEEDLE,
+            'c-member': UNANALYZED_EXTENT_NEEDLE,
+            'c-overrides': UNANALYZED_EXTENT_NEEDLE,
+            'c-overridden': UNANALYZED_EXTENT_NEEDLE
         }
     }
 }
