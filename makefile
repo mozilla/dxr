@@ -9,10 +9,13 @@ all: build
 test: build
 	python2 setup.py test
 
-build: $(BUILD_PLUGINS) templates
+build: $(BUILD_PLUGINS) templates pycs
 
 node:
 	npm install
+
+pycs:
+	find . -name "*.pyc" -exec rm -f {} \;
 
 templates: node
 	node_modules/.bin/grunt precompile
