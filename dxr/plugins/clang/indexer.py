@@ -5,7 +5,7 @@ import dxr.schema
 import os, sys
 import re, urllib
 from dxr.languages import language_schema
-
+csv.field_size_limit(sys.maxsize)
 
 PLUGIN_NAME   = 'clang'
 

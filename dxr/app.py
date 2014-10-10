@@ -172,7 +172,15 @@ def search(tree):
 def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees."""
     tree_folder = _tree_folder(tree)
-    return send_from_directory(tree_folder, _html_file_path(tree_folder, path))
+    disk_path = _html_file_path(tree_folder, path)
+    gzip_path = disk_path+'.gz'
+    print gzip_path
+    if isfile(join(tree_folder,gzip_path)):
+    	response = send_from_directory(tree_folder, gzip_path)
+    	response.headers['Content-Encoding'] = 'gzip'
+    	return response
+    else:
+	return send_from_directory(tree_folder, _html_file_path(tree_folder, path))
 
 
 @dxr_blueprint.route('/<tree>/')
