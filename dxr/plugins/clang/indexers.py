@@ -120,11 +120,12 @@ class FileToIndex(FileToIndexBase):
         # Extents for functions defined here
         silent_itemgetter = lambda y: lambda x: x.get(y, [])
         return chain(
-            # TODO: Do we need to do something with refs here?
+            # TODO: Also add menus for refs to things. I think there's a refs
+            # key in self.condensed.
             self._common_ref(create_menu=function_menu,
                              view=silent_itemgetter('function')),
             self._common_ref(create_menu=variable_menu,
-                             view=kind_getter('ref', 'variable')),
+                             view=silent_itemgetter('variable')),
             self._common_ref(create_menu=type_menu,
                              view=silent_itemgetter('type')),
             self._common_ref(create_menu=type_menu,

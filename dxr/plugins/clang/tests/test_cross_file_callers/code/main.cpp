@@ -1,5 +1,6 @@
 #include "extern.c"
 
 int main(int argc, char* argv[]) {
-  return another_file();
+  int a = another_file();
+  return a;
 }
