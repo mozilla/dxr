@@ -120,8 +120,9 @@ class FileToIndex(FileToIndexBase):
         # Extents for functions defined here
         silent_itemgetter = lambda y: lambda x: x.get(y, [])
         return chain(
+            # TODO: Do we need to do something with refs here?
             self._common_ref(create_menu=function_menu,
-                             view=kind_getter('ref', 'function')),
+                             view=silent_itemgetter('function')),
             self._common_ref(create_menu=variable_menu,
                              view=kind_getter('ref', 'variable')),
             self._common_ref(create_menu=type_menu,
