@@ -2,7 +2,6 @@
 the js plugin.
 
 """
-
 import csv
 from hashlib import sha1
 from os import path

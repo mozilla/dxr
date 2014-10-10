@@ -1,3 +1,5 @@
+"""Unit tests for clang plugin"""
+
 from mock import MagicMock
 from nose import SkipTest
 from nose.tools import eq_
