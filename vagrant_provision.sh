@@ -34,6 +34,21 @@ cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop
 
+# A few debugging tools:
+pip install pdbpp nose-progressive
+if [ ! -e ~vagrant/.pdbrc.py ]; then
+    cat >~vagrant/.pdbrc.py <<THEEND
+from pdb import DefaultConfig
+
+
+class Config(DefaultConfig):
+   #highlight = False
+   current_line_color = 43
+   sticky_by_default = True
+   bg = 'light'
+THEEND
+fi
+
 # Apache:
 apt-get install -y apache2-dev apache2
 mkdir -p /etc/apache2/sites-enabled
