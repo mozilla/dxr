@@ -33,4 +33,4 @@ $(CLEAN_PLUGINS):
 .PHONY: $(BUILD_PLUGINS)
 .PHONY: $(CHECK_PLUGINS)
 .PHONY: $(CLEAN_PLUGINS)
-.PHONY: all build check clean test
+.PHONY: all build check clean test pycs node
