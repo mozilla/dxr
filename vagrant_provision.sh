@@ -72,8 +72,10 @@ a2dissite 000-default
 
 # DXR itself:
 # pkg-config is so (trilite's?) make clean works.
-apt-get install -y git llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config
-update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
+apt-get install -y git llvm-3.5 libclang-3.5-dev clang-3.5 pkg-config
+# --force overrides any older-version LLVM alternative lying around, letting
+# us upgrade by provisioning rather than destroying the whole box:
+update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
 
 # Elasticsearch:
 apt-get install -y openjdk-7-jdk elasticsearch
