@@ -3,6 +3,7 @@ enabled_plugins     = pygmentize clang
 temp_folder         = PWD/temp
 target_folder       = PWD/target
 nb_jobs             = 4
+wwwroot = /dxr 
 
 [code]
 source_folder       = PWD/code
