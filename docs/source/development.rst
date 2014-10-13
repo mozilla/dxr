@@ -387,3 +387,8 @@ Why is my copy of DXR acting erratic, failing at searches, making requests for J
     do that in development; use ``python setup.py develop`` instead. Otherwise,
     you will end up with various files copied into your virtualenv, and your
     edits to the originals will have no effect.
+
+How can I use pdb to debug indexing?
+    In the DXR config file for the tree you're building, add ``disable_workers
+    = true`` to the ``[DXR]`` section. That will keep DXR from spawning
+    multiple worker processes, something pdb doesn't tolerate well.
