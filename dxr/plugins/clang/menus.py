@@ -141,9 +141,9 @@ def function_menu(tree, func):
     return menu
 
 
-def declaration_menu(tree, path, row):
-    """Return a one-item menu for jumping directly to something's declaration."""
-    return [{'html': "Jump to declaration",
+def definition_menu(tree, path, row):
+    """Return a one-item menu for jumping directly to something's definition."""
+    return [{'html': "Jump to definition",
              'title': "Jump to the definition in '%s'" % basename(path),
              'href': quote('{www_root}/{tree}/source/{path}#{row}'.format(
                                www_root=tree.config.wwwroot,

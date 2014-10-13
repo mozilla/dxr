@@ -13,8 +13,8 @@ from dxr.indexers import unsparsify_func, group_needles, by_line
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
-                                     macro_menu, include_menu,
-                                     declaration_menu)
+                                     macro_menu, include_menu, typedef_menu,
+                                     definition_menu)
 
 
 PLUGIN_NAME = 'clang'
@@ -104,41 +104,35 @@ class FileToIndex(FileToIndexBase):
         return self._needles_by_line
 
     def refs(self):
-        # We'll need this argument for all queries here
-        # Extents for functions defined here
-        silent_itemgetter = lambda y: lambda x: x.get(y, [])
-        def chained(*callables):
-            """Return a single, chained iterable of the iterables that come
-            from calling each of ``callables`` on something."""
-            return lambda condensed: chain.from_iterable(c(condensed) for c in
-                                                         callables)
-        return chain(
-            self._refs_from_view(menu_maker=function_menu,
-                                 view=chained(silent_itemgetter('function'),
-                                              # Refs are not structured much
-                                              # like functions, but they have a
-                                              # qualname key, which is all that
-                                              # function_menu() requires.
-                                              kind_getter('ref', 'function'))),
-            self._refs_from_view(menu_maker=variable_menu,
-                                 view=chained(silent_itemgetter('variable'),
-                                              kind_getter('ref', 'variable'))),
-            self._refs_from_view(menu_maker=type_menu,
-                                 view=silent_itemgetter('type')),
-            self._refs_from_view(menu_maker=type_menu,
-                                 view=silent_itemgetter('decldef')),
-            self._refs_from_view(menu_maker=type_menu,
-                                 view=silent_itemgetter('typedefs')),
-            self._refs_from_view(menu_maker=namespace_menu,
-                                 view=silent_itemgetter('namespace')),
-            self._refs_from_view(menu_maker=namespace_alias_menu,
-                                 view=silent_itemgetter('namespace_aliases')),
-            self._refs_from_view(menu_maker=macro_menu,
-                                 view=silent_itemgetter('macro'),
-                                 tooltip=silent_itemgetter('text')),
-            self._refs_from_view(menu_maker=include_menu,
-                                 view=silent_itemgetter('include'))
-        )
+        def silent_itemgetter(y):
+            return lambda x: x.get(y, [])
+
+        # Refs are not structured much like functions, but they have a
+        # qualname key, which is all that function_menu() requires, so we can
+        # just chain kind_getters together with other getters.
+        #
+        # Menu makers and the thing-getters over which they run:
+        menus_and_views = [
+                (function_menu, [silent_itemgetter('function'),
+                                 kind_getter('ref', 'function')]),
+                (variable_menu, [silent_itemgetter('variable'),
+                                 kind_getter('ref', 'variable')]),
+                (type_menu, [silent_itemgetter('type'),
+                             kind_getter('ref', 'type')]),
+                (type_menu, [silent_itemgetter('decldef')]),
+                (typedef_menu, [silent_itemgetter('typedef'),
+                                kind_getter('ref', 'typedef')]),
+                (namespace_menu, [silent_itemgetter('namespace'),
+                                  kind_getter('ref', 'namespace')]),
+                (namespace_alias_menu, [silent_itemgetter('namespace_alias'),
+                                        kind_getter('ref', 'namespace_alias')]),
+                (macro_menu,
+                 [silent_itemgetter('macro'), kind_getter('ref', 'macro')],
+                 silent_itemgetter('text')),
+                (include_menu, [silent_itemgetter('include')])]
+
+        return chain.from_iterable(self._refs_from_view(*mv) for mv in
+                                   menus_and_views)
 
     @unsparsify_func
     def annotations_by_line(self):
@@ -155,25 +149,25 @@ class FileToIndex(FileToIndexBase):
             }
             yield annotation, span
 
-    def _refs_from_view(self, menu_maker, view, tooltip=constantly(None)):
+    def _refs_from_view(self, menu_maker, views, tooltip=constantly(None)):
         """Return an iterable of (start, end, (menu, tooltip)), running
         ``menu_maker`` across each item that comes of applying ``view`` to
-        ``self.condensed`` and adding "Jump to declaration" where applicable.
+        ``self.condensed`` and adding "Jump to definition" where applicable.
 
         :arg menu_maker: A function that takes a tree and an item from
             ``view()`` and returns a ref menu
-        :arg view: A function that takes self.condensed and returns an
-            iterable of things to call ``menu_maker()`` on
+        :arg views: An iterable of functions that take self.condensed and
+            return an iterable of things to call ``menu_maker()`` on
         :arg tooltip: A function that takes one of those things from the
             iterable and emits a value to be shown in the mouseover of the ref
 
         """
-        for prop in view(self.condensed):
+        for prop in chain.from_iterable(v(self.condensed) for v in views):
             if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this. [Marcell says no.]
                 if 'declloc' in prop:  # if we can look up the target of this ref
-                    menu = declaration_menu(self.tree,
-                                            path=prop['declloc'][0],
-                                            row=prop['declloc'][1].row)
+                    menu = definition_menu(self.tree,
+                                           path=prop['declloc'][0],
+                                           row=prop['declloc'][1].row)
                 else:
                     menu = []
 
