@@ -13,7 +13,8 @@ from dxr.indexers import unsparsify_func, group_needles, by_line
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
-                                     macro_menu, include_menu)
+                                     macro_menu, include_menu,
+                                     declaration_menu)
 
 
 PLUGIN_NAME = 'clang'
@@ -172,13 +173,17 @@ class FileToIndex(FileToIndexBase):
 
         """
         for prop in view(self.condensed):
-            if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this.
-                menu = create_menu(self.tree, prop)
+            if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this. [Marcell says no.]
+                if 'declloc' in prop:  # if we can look up the target of this ref
+                    menu = declaration_menu(self.tree,
+                                            path=prop['declloc'][0],
+                                            row=prop['declloc'][1].row)
+                else:
+                    menu = []
+
+                menu.extend(create_menu(self.tree, prop))
                 start, end = prop['span']
 
-                # TODO:
-                # if we can look up the target of this reference:
-                #     menu = jump_definition(self.tree, target_path, start.row) + menu
                 if start.offset is None or end.offset is None:
                     raise NotImplementedError("Fix this logic. It's full of holes. We must return a file-wide offset, but Position.offset was None.")
                 yield start.offset, end.offset, (menu, get_val(prop))

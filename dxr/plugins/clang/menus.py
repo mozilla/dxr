@@ -1,5 +1,8 @@
 """All menu constructors for the C/CXX refs."""
 
+from os.path import basename
+from urllib import quote
+
 from dxr.utils import search_url
 
 
@@ -136,3 +139,15 @@ def function_menu(tree, func):
                      'href': search(tree, "+overrides:%s" % quote(qualname)),
                      'icon': 'method'})
     return menu
+
+
+def declaration_menu(tree, path, row):
+    """Return a one-item menu for jumping directly to something's declaration."""
+    return [{'html': "Jump to declaration",
+             'title': "Jump to the definition in '%s'" % basename(path),
+             'href': quote('{www_root}/{tree}/source/{path}#{row}'.format(
+                               www_root=tree.config.wwwroot,
+                               tree=tree.name,
+                               path=path,
+                               row=row)),
+             'icon': 'jump'}]
