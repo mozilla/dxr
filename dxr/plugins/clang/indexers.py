@@ -143,7 +143,7 @@ class FileToIndex(FileToIndexBase):
                              view=silent_itemgetter('namespace_aliases')),
             self._common_ref(create_menu=macro_menu,
                              view=silent_itemgetter('macro'),
-                             get_val=silent_itemgetter('text')),
+                             tooltip=silent_itemgetter('text')),
             self._common_ref(create_menu=include_menu,
                              view=silent_itemgetter('include'))
         )
@@ -163,12 +163,12 @@ class FileToIndex(FileToIndexBase):
             }
             yield annotation, span
 
-    def _common_ref(self, create_menu, view, get_val=constantly(None)):
+    def _common_ref(self, create_menu, view, tooltip=constantly(None)):
         """
 
         :arg view: A function that takes self.condensed and returns an
             iterable of things to call ``create_menu()`` on
-        :arg get_val: A function that takes one of those things from the
+        :arg tooltip: A function that takes one of those things from the
             iterable and emits a value to be shown in the mouseover of the ref
 
         """
@@ -186,7 +186,7 @@ class FileToIndex(FileToIndexBase):
 
                 if start.offset is None or end.offset is None:
                     raise NotImplementedError("Fix this logic. It's full of holes. We must return a file-wide offset, but Position.offset was None.")
-                yield start.offset, end.offset, (menu, get_val(prop))
+                yield start.offset, end.offset, (menu, tooltip(prop))
 
     def links(self):
         # For each type add a section with members
