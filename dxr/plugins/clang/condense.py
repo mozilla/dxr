@@ -1,5 +1,8 @@
-"""Mirrors the intermediate representation of tern's condense output used by
-the js plugin.
+"""Representation of a compiler-emitted CSV as a hash
+
+Mirrors the intermediate representation of tern's condense output used by
+the js plugin. [Actually, has diverged somewhat. There may not be a good
+reason to keep this IR.]
 
 """
 import csv

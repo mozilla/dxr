@@ -98,7 +98,8 @@ def _members(condensed, key, id_):
 
 
 class FileToIndex(FileToIndexBase):
-    """C and CXX File Indexer using Clang Plugin."""
+    """C and C++ indexer using clang compiler plugin"""
+
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
@@ -120,10 +121,13 @@ class FileToIndex(FileToIndexBase):
         # Extents for functions defined here
         silent_itemgetter = lambda y: lambda x: x.get(y, [])
         return chain(
-            # TODO: Also add menus for refs to things. I think there's a refs
-            # key in self.condensed.
             self._common_ref(create_menu=function_menu,
                              view=silent_itemgetter('function')),
+            # Refs are not structured much like functions, but they have a
+            # qualname key, which is all that function_menu() requires.
+            self._common_ref(create_menu=function_menu,
+                             view=kind_getter('ref', 'function')),
+
             self._common_ref(create_menu=variable_menu,
                              view=silent_itemgetter('variable')),
             self._common_ref(create_menu=type_menu,
@@ -159,10 +163,18 @@ class FileToIndex(FileToIndexBase):
             yield annotation, span
 
     def _common_ref(self, create_menu, view, get_val=constantly(None)):
+        """
+
+        :arg view: A function that takes self.condensed and returns an
+            iterable of things to call ``create_menu()`` on
+        :arg get_val: A function that takes one of those things from the
+            iterable and emits a value to be shown in the mouseover of the ref
+
+        """
         for prop in view(self.condensed):
             if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this.
-                start, end = prop['span']
                 menu = create_menu(self.tree, prop)
+                start, end = prop['span']
 
                 # TODO:
                 # if we can look up the target of this reference:

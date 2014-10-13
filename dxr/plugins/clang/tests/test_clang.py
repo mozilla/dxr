@@ -32,15 +32,17 @@ def test_smoke_test_csv():
 
 def test_ref():
     csv = get_csv("""
-        ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",extent,0:0
-        ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",extent,0:0
+        ref,declloc,"x:0:0",loc,"x:0:0",kind,"function",qualname,"another_file()",extent,0:0
+        ref,declloc,"x:0:0",loc,"x:0:0",kind,"variable",qualname,"main(int, char **)::a",extent,0:0
     """)
     eq_(csv['ref'][0], {'declloc': DEFAULT_LOC,
                         'kind': 'function',
-                        'span': DEFAULT_EXTENT})
+                        'span': DEFAULT_EXTENT,
+                        'qualname': 'another_file()'})
     eq_(csv['ref'][1], {'declloc': DEFAULT_LOC,
                         'kind': 'variable',
-                        'span': DEFAULT_EXTENT})
+                        'span': DEFAULT_EXTENT,
+                        'qualname': 'main(int, char **)::a'})
 
 
 def test_function():
