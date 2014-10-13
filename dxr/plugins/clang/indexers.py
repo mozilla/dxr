@@ -73,19 +73,6 @@ mappings = {
 }
 
 
-def jump_definition(tree, path, line):
-    """ Add a jump to definition to the menu """
-    url = '{0}/{1}/source/{2}#{3}'.format(
-        tree.config.wwwroot, tree.name, path, line)
-
-    return {
-        'html':   "Jump to definition",
-        'title':  "Jump to the definition in '%s'" % os.path.basename(path),
-        'href':   url,
-        'icon':   'jump'
-    }
-
-
 def _members(condensed, key, id_):
     """Fetch member {{key}} given a type id."""
     pred = lambda x: id_ == x['qualname']
