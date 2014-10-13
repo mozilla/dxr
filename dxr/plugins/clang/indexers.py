@@ -104,20 +104,25 @@ class FileToIndex(FileToIndexBase):
         return self._needles_by_line
 
     def refs(self):
-        """ Generate reference menus """
         # We'll need this argument for all queries here
         # Extents for functions defined here
         silent_itemgetter = lambda y: lambda x: x.get(y, [])
+        def chained(*callables):
+            """Return a single, chained iterable of the iterables that come
+            from calling each of ``callables`` on something."""
+            return lambda condensed: chain.from_iterable(c(condensed) for c in
+                                                         callables)
         return chain(
             self._refs_from_view(menu_maker=function_menu,
-                                 view=silent_itemgetter('function')),
-            # Refs are not structured much like functions, but they have a
-            # qualname key, which is all that function_menu() requires.
-            self._refs_from_view(menu_maker=function_menu,
-                                 view=kind_getter('ref', 'function')),
-
+                                 view=chained(silent_itemgetter('function'),
+                                              # Refs are not structured much
+                                              # like functions, but they have a
+                                              # qualname key, which is all that
+                                              # function_menu() requires.
+                                              kind_getter('ref', 'function'))),
             self._refs_from_view(menu_maker=variable_menu,
-                                 view=silent_itemgetter('variable')),
+                                 view=chained(silent_itemgetter('variable'),
+                                              kind_getter('ref', 'variable'))),
             self._refs_from_view(menu_maker=type_menu,
                                  view=silent_itemgetter('type')),
             self._refs_from_view(menu_maker=type_menu,
