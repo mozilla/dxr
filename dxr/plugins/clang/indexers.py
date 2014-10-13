@@ -109,30 +109,30 @@ class FileToIndex(FileToIndexBase):
         # Extents for functions defined here
         silent_itemgetter = lambda y: lambda x: x.get(y, [])
         return chain(
-            self._common_ref(create_menu=function_menu,
-                             view=silent_itemgetter('function')),
+            self._refs_from_view(menu_maker=function_menu,
+                                 view=silent_itemgetter('function')),
             # Refs are not structured much like functions, but they have a
             # qualname key, which is all that function_menu() requires.
-            self._common_ref(create_menu=function_menu,
-                             view=kind_getter('ref', 'function')),
+            self._refs_from_view(menu_maker=function_menu,
+                                 view=kind_getter('ref', 'function')),
 
-            self._common_ref(create_menu=variable_menu,
-                             view=silent_itemgetter('variable')),
-            self._common_ref(create_menu=type_menu,
-                             view=silent_itemgetter('type')),
-            self._common_ref(create_menu=type_menu,
-                             view=silent_itemgetter('decldef')),
-            self._common_ref(create_menu=type_menu,
-                             view=silent_itemgetter('typedefs')),
-            self._common_ref(create_menu=namespace_menu,
-                             view=silent_itemgetter('namespace')),
-            self._common_ref(create_menu=namespace_alias_menu,
-                             view=silent_itemgetter('namespace_aliases')),
-            self._common_ref(create_menu=macro_menu,
-                             view=silent_itemgetter('macro'),
-                             tooltip=silent_itemgetter('text')),
-            self._common_ref(create_menu=include_menu,
-                             view=silent_itemgetter('include'))
+            self._refs_from_view(menu_maker=variable_menu,
+                                 view=silent_itemgetter('variable')),
+            self._refs_from_view(menu_maker=type_menu,
+                                 view=silent_itemgetter('type')),
+            self._refs_from_view(menu_maker=type_menu,
+                                 view=silent_itemgetter('decldef')),
+            self._refs_from_view(menu_maker=type_menu,
+                                 view=silent_itemgetter('typedefs')),
+            self._refs_from_view(menu_maker=namespace_menu,
+                                 view=silent_itemgetter('namespace')),
+            self._refs_from_view(menu_maker=namespace_alias_menu,
+                                 view=silent_itemgetter('namespace_aliases')),
+            self._refs_from_view(menu_maker=macro_menu,
+                                 view=silent_itemgetter('macro'),
+                                 tooltip=silent_itemgetter('text')),
+            self._refs_from_view(menu_maker=include_menu,
+                                 view=silent_itemgetter('include'))
         )
 
     @unsparsify_func
@@ -150,11 +150,15 @@ class FileToIndex(FileToIndexBase):
             }
             yield annotation, span
 
-    def _common_ref(self, create_menu, view, tooltip=constantly(None)):
-        """
+    def _refs_from_view(self, menu_maker, view, tooltip=constantly(None)):
+        """Return an iterable of (start, end, (menu, tooltip)), running
+        ``menu_maker`` across each item that comes of applying ``view`` to
+        ``self.condensed`` and adding "Jump to declaration" where applicable.
 
+        :arg menu_maker: A function that takes a tree and an item from
+            ``view()`` and returns a ref menu
         :arg view: A function that takes self.condensed and returns an
-            iterable of things to call ``create_menu()`` on
+            iterable of things to call ``menu_maker()`` on
         :arg tooltip: A function that takes one of those things from the
             iterable and emits a value to be shown in the mouseover of the ref
 
@@ -168,7 +172,7 @@ class FileToIndex(FileToIndexBase):
                 else:
                     menu = []
 
-                menu.extend(create_menu(self.tree, prop))
+                menu.extend(menu_maker(self.tree, prop))
                 start, end = prop['span']
 
                 if start.offset is None or end.offset is None:
