@@ -160,14 +160,13 @@ def test_impl():
 
 def test_decldef():
     csv = get_csv("""
-        decldef,qualname,"Queue::Queue<T>(int)",declloc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
+        decldef,qualname,"Queue::Queue<T>(int)",loc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
     """)
     eq_(csv['decldef'][0], {
         'qualname': 'Queue::Queue<T>(int)',
-        'declloc': DEFAULT_LOC,
+        'span': DEFAULT_EXTENT,
         'defloc': DEFAULT_LOC,
-        'kind': 'function',
-        'extent': Extent(0, 0)
+        'kind': 'function'
     })
 
 
