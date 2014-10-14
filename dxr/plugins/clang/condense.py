@@ -90,7 +90,6 @@ def process_declloc(props):
 def process_defloc(props):
     """Return Position based on defloc and extent."""
     props['defloc'] = _process_loc(props['defloc'])
-    props['extent'] = Extent(*map(int, props['extent'].split(':')))
     return props
 
 

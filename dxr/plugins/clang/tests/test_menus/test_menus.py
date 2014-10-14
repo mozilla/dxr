@@ -133,3 +133,10 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/source/extern.c#5'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3Anumba'})
+
+    def test_decldef(self):
+        """Make sure prototypes, declarations, and such get menus."""
+        menu_on(self.page('extern.c'),
+                'MyClass',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%3AMyClass'})

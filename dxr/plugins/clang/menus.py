@@ -1,4 +1,4 @@
-"""All menu constructors for the C/CXX refs."""
+"""All menu constructors for the C/C++ refs."""
 
 from os.path import basename
 
@@ -46,8 +46,8 @@ def type_menu(tree, type):
              'href': search(tree, "+type-decl:%s" % quote(qualname)),
              'icon': 'reference'}]
     if kind == 'class' or kind == 'struct':
-        menu.append({'html': "Find sub classes",
-                     'title': "Find sub classes of this class",
+        menu.append({'html': "Find subclasses",
+                     'title': "Find subclasses of this class",
                      'href': search(tree, "+derived:%s" % quote(qualname)),
                      'icon': 'type'})
         menu.append({'html': "Find base classes",

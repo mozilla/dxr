@@ -9,3 +9,8 @@ numba another_file() {
 }
 
 int var = 5;
+
+class MyClass;
+class MyClass
+{
+};

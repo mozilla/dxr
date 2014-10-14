@@ -349,7 +349,7 @@ public:
 
     beginRecord("decldef", decl->getLocation());
     recordValue("qualname", getQualifiedName(*def));
-    recordValue("declloc", locationToString(decl->getLocation()));
+    recordValue("loc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
       recordValue("kind", kind);
