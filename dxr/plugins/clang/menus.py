@@ -1,7 +1,6 @@
 """All menu constructors for the C/CXX refs."""
 
 from os.path import basename
-from urllib import quote
 
 from dxr.utils import search_url, browse_url
 

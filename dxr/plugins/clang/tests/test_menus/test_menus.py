@@ -70,19 +70,27 @@ def menu_on(haystack, text, *menu_items):
 
 
 class MenuTests(DxrInstanceTestCase):
-    def main_page(self):
-        return self.client().get('/code/source/main.cpp').data
+    def page(self, path):
+        """Return the text of a source page."""
+        return self.client().get('/code/source/%s' % path).data
 
     def test_includes(self):
         """Make sure #include cross references are linked."""
-        menu_on(self.main_page(),
+        menu_on(self.page('main.cpp'),
                 '"extern.c"',
                 {'href': '/code/source/extern.c'})
 
     def test_functions(self):
+        """Make sure functions are found and have a representative sane menu item."""
+        menu_on(self.page('extern.c'),
+                'another_file',
+                {'html': 'Find declarations',
+                 'href': '/code/search?q=%2Bfunction-decl%3Aanother_file%28%29'})
+
+    def test_function_refs(self):
         """Make sure definitions are found and a representative qualname-using
         search is properly constructed."""
-        menu_on(self.main_page(),
+        menu_on(self.page('main.cpp'),
                 'another_file',
                 {'html': 'Jump to definition',
                  'href': '/code/source/extern.c#1'},
@@ -90,9 +98,17 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/search?q=%2Bcallers%3Aanother_file%28%29'})
 
     def test_variables(self):
+        """Make sure var declarations are found and have a representative sane
+        menu item."""
+        menu_on(self.page('main.cpp'),
+                'var',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bvar-ref%3Avar'})
+
+    def test_variable_refs(self):
         """Make sure definitions are found and a representative qualname-using
         search is properly constructed."""
-        menu_on(self.main_page(),
+        menu_on(self.page('main.cpp'),
                 'var',
                 {'html': 'Jump to definition',
                  'href': '/code/source/extern.c#5'},
