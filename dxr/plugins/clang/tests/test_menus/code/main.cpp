@@ -1,6 +1,6 @@
 #include "extern.c"
 
 int main(int argc, char* argv[]) {
-  int a = another_file();
+  numba a = another_file();
   return var;
 }

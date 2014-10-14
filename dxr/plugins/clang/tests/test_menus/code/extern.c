@@ -1,4 +1,10 @@
-int another_file() {
+// We define most things in this file and reference them in main.cpp. That
+// way, menu_on(), which favors the first instance of a menu-having string in
+// a file, is targetable to either definitions or refs.
+
+typedef int numba;
+
+numba another_file() {
   return 5;
 }
 

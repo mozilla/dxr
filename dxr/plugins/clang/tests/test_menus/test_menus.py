@@ -70,6 +70,11 @@ def menu_on(haystack, text, *menu_items):
 
 
 class MenuTests(DxrInstanceTestCase):
+    """Generally, the tests herein make sure the definition of the referenced
+    thing is found (for refs) and that the qualname is extracted properly (by
+    testing a representative search menuitem).
+
+    """
     def page(self, path):
         """Return the text of a source page."""
         return self.client().get('/code/source/%s' % path).data
@@ -93,7 +98,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.page('main.cpp'),
                 'another_file',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#1'},
+                 'href': '/code/source/extern.c#7'},
                 {'html': 'Find callers',
                  'href': '/code/search?q=%2Bcallers%3Aanother_file%28%29'})
 
@@ -111,6 +116,20 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.page('main.cpp'),
                 'var',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#5'},
+                 'href': '/code/source/extern.c#11'},
                 {'html': 'Find declarations',
                  'href': '/code/search?q=%2Bvar-decl%3Avar'})
+
+    def test_type(self):
+        menu_on(self.page('extern.c'),
+                'numba',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%3Anumba'})
+
+    def test_type_ref(self):
+        menu_on(self.page('main.cpp'),
+                'numba',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#5'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%3Anumba'})
