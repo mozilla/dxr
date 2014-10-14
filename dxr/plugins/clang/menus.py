@@ -39,10 +39,9 @@ def macro_menu(tree, macro):
              'icon': 'reference'}]
 
 
-def type_menu(tree, type_):
+def type_menu(tree, type):
     """Return menu for type reference."""
-    qualname, kind = type_['qualname'], type_['kind']
-    # Things we can do with qualname
+    qualname, kind = type['qualname'], type['kind']
     menu = [{'html': "Find declarations",
              'title': "Find declarations of this class",
              'href': search(tree, "+type-decl:%s" % quote(qualname)),
