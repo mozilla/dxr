@@ -1106,6 +1106,7 @@ public:
     beginRecord("include", hashLoc);
     recordValue("source_path", source->realname);
     recordValue("target_path", target->realname);
+    recordValue("loc", locationToString(targetBegin));
     printExtent(targetBegin, targetEnd);
     *out << std::endl;
   }

@@ -64,7 +64,8 @@ def process_loc(props):
     # TODO: This assumes the extent doesn't span lines. If it did, row would
     # have to change sometimes. Is this a problem, or do all extents pulled
     # out of CSVs stay each within one line? If they don't, we'll need to pass
-    # the file text in here or something.
+    # the file text in here or, more easily and efficiently, improve the
+    # compiler plugin.
     props['span'] = Extent(Position(start, row, col),
                            Position(end, row, col + end - start))
 

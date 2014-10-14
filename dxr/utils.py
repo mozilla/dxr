@@ -39,7 +39,7 @@ def non_negative_int(s, default):
     return default
 
 
-# TODO: Obsolete this and browse_url in favor of Flask's url_for.
+# TODO: Obsolete this and parallel_url in favor of Flask's url_for.
 def search_url(www_root, tree, query, **query_string_params):
     """Return the URL to the search endpoint."""
     ret = '%s/%s/search?q=%s' % (www_root,
@@ -52,7 +52,7 @@ def search_url(www_root, tree, query, **query_string_params):
     return ret
 
 
-def browse_url(tree, www_root, path):
+def parallel_url(tree, www_root, path):
     """Return a URL that will redirect to a given path in a given tree."""
     return quote_plus('{www_root}/{tree}/parallel/{path}'.format(
                           www_root=www_root,
@@ -62,6 +62,13 @@ def browse_url(tree, www_root, path):
     # TODO: Stop punting on path components that actually have '/' in them
     # once we define a consistent handling of escapes in build.py. Same for
     # search_url().
+
+
+def browse_url(tree, www_root, path):
+    return quote('{www_root}/{tree}/source/{path}'.format(
+            www_root=www_root,
+            tree=tree,
+            path=path))
 
 
 def deep_update(dest, source):

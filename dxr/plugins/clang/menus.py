@@ -3,7 +3,7 @@
 from os.path import basename
 from urllib import quote
 
-from dxr.utils import search_url
+from dxr.utils import search_url, browse_url
 
 
 def quote(qualname):
@@ -20,11 +20,14 @@ def search(tree, query):
 
 def include_menu(tree, include):
     """Return menu for include reference."""
-    (path, _, _), _ = include['span']
-    return {'html': 'Jump to file',
-            'title': 'Jump to what is included here.',
-            'href': tree.config.wwwroot + '/' + tree.name + '/source/' + path,
-            'icon': 'jump'}
+    # TODO: Check against the ignore patterns, and don't link to files we
+    # won't build pages for.
+    return [{'html': 'Jump to file',
+             'title': 'Jump to what is included here.',
+             'href': browse_url(tree.name,
+                                tree.config.wwwroot,
+                                include['target_path']),
+             'icon': 'jump'}]
 
 
 def macro_menu(tree, macro):
@@ -145,9 +148,7 @@ def definition_menu(tree, path, row):
     """Return a one-item menu for jumping directly to something's definition."""
     return [{'html': "Jump to definition",
              'title': "Jump to the definition in '%s'" % basename(path),
-             'href': quote('{www_root}/{tree}/source/{path}#{row}'.format(
-                               www_root=tree.config.wwwroot,
-                               tree=tree.name,
-                               path=path,
-                               row=row)),
+             'href': browse_url(tree.name,
+                                tree.config.wwwroot,
+                                path) + '#{0}'.format(row),
              'icon': 'jump'}]

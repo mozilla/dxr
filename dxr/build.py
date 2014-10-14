@@ -25,7 +25,7 @@ from dxr.filters import LINE, FILE
 from dxr.lines import build_lines
 from dxr.mime import is_text, icon
 from dxr.query import filter_menu_items
-from dxr.utils import (open_log, browse_url, deep_update, append_update,
+from dxr.utils import (open_log, parallel_url, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)
 
 
@@ -478,7 +478,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              'wwwroot': tree.config.wwwroot,
              'tree': tree.name,
              'tree_tuples': [(t.name,
-                              browse_url(t.name, tree.config.wwwroot, rel_path),
+                              parallel_url(t.name, tree.config.wwwroot, rel_path),
                               t.description)
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,

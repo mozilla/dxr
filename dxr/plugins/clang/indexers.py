@@ -130,7 +130,6 @@ class FileToIndex(FileToIndexBase):
                  [silent_itemgetter('macro'), kind_getter('ref', 'macro')],
                  silent_itemgetter('text')),
                 (include_menu, [silent_itemgetter('include')])]
-
         return chain.from_iterable(self._refs_from_view(*mv) for mv in
                                    menus_and_views)
 
