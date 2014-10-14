@@ -2,5 +2,5 @@
 
 int main(int argc, char* argv[]) {
   int a = another_file();
-  return a;
+  return var;
 }
