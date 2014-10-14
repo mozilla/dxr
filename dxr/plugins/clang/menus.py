@@ -33,10 +33,10 @@ def include_menu(tree, include):
 def macro_menu(tree, macro):
     """Return menu for macro reference."""
     name = macro['name']
-    return {'html': "Find references",
-            'title': "Find references to macros with this name",
-            'href': search(tree, "+macro-ref:%s" % name),
-            'icon': 'reference'}
+    return [{'html': "Find references",
+             'title': "Find references to macros with this name",
+             'href': search(tree, "+macro-ref:%s" % name),
+             'icon': 'reference'}]
 
 
 def type_menu(tree, type_):
