@@ -236,7 +236,7 @@ def group_sparse_needles(needles_):
 def _name_needles(condensed, key, name_key):
     """Helper function for name_needles.
 
-    :param name_key: key to access the name of a property.
+    :param name_key: key to access the name of a property
 
     """
     names = (('c-{0}'.format(key.replace('_', '-')), props[name_key])
@@ -247,16 +247,17 @@ def _name_needles(condensed, key, name_key):
 def name_needles(condensed, key, ):
     """Return needles ((c-key, name), span).
 
-    :param key: name of entry in condensed to get names from.
+    :param key: name of entry in condensed to get names from
 
     """
-    return chain(_name_needles(condensed, key, "name"),
-                 _name_needles(condensed, key, "qualname"))
+    return chain(_name_needles(condensed, key, 'name'),
+                 _name_needles(condensed, key, 'qualname'))
 
 
 def spans(condensed, key):
     """Return list of spans from condensed.
-    :arg key: name of entry in condensed to get spans from.
+
+    :arg key: name of entry in condensed to get spans from
     """
     return imap(itemgetter('span'), condensed[key])
 
@@ -301,7 +302,7 @@ def inherit_needles(condensed, tag, func):
 
     :type func: str -> iterable
     :param func: Map node name to an iterable of other node names.
-    :param tag: First element in the needle tuple.
+    :param tag: First element in the needle tuple
 
     """
     children = (izip(func(c['name']), repeat(c['span'])) for c
@@ -330,7 +331,6 @@ def parent_needles(condensed, inherit):
     def get_parents(name):
         return (parent for parent, children in inherit.items()
                 if name in children)
-
 
     return inherit_needles(condensed, 'parent', get_parents)
 
