@@ -217,16 +217,6 @@ def kind_getter(field, kind, condensed):
     return (ref for ref in condensed.get(field) if ref['kind'] == kind)
 
 
-def pluck2(key1, key2, mappings):
-    """Plucks a pair of keys from mappings.
-
-    This is a generalization of funcy's pluck function.
-    (k1, k2, {k: v}) -> [(v1, v2)]
-
-    """
-    return imap(itemgetter(key1, key2), mappings)
-
-
 def group_sparse_needles(needles_):
     """Return a pair of iterators (file_needles, line_needles)."""
     needles_ = group_by(lambda x: 'file' if x[1] is None else 'line', needles_)
