@@ -314,21 +314,12 @@ class FuncSig(namedtuple('FuncSig', ['inputs', 'output'])):
 
 
 @decorator
-def unsparsify_func(call):
-    return unsparsify(call())
-
-
-def unsparsify(span_needles):
+def unsparsify(call):
     """Transform a sparse needle list [(key, val, span:Extent)] into the
-    line-by-line format the plugin API expects: [[(key, (val, line_span))]].
-
-    line_span has the shape (col1, col2).
-
-    In the dense format, the index, i, specifies the line number from the file.
-                         the list at i are all the (key, val) for that line.
+    line-by-line format needles_by_line expects: [[(key, val)]].
 
     """
-    return group_needles(by_line(span_needles))
+    return group_needles(by_line(call()))
 
 
 def group_needles(line_needles):

@@ -18,18 +18,18 @@ def list_eq(result, expected):
 
 
 def test_needle_smoke_test():
-    list_eq(unsparsify([]), [])
+    list_eq(unsparsify(lambda: [])(), [])
 
 
 def test_unsparsify():
-    assert_raises(ValueError, unsparsify, [NEEDLE3])
+    assert_raises(ValueError, unsparsify(lambda: [NEEDLE3]))
 
     # Test 2 overlapping dense needles:
     output = [[key_object_pair(KV1, 3, 7), key_object_pair(KV2, 5, None)],  # the overlap.
               [key_object_pair(KV2, 0, None)],  # just the second one,
               [key_object_pair(KV2, 0, 7)]]     # extending beyond the first
 
-    list_eq(unsparsify([NEEDLE1, NEEDLE2]), output)
+    list_eq(unsparsify(lambda: [NEEDLE1, NEEDLE2])(), output)
 
 
 def test_group_needles():

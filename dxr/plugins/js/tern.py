@@ -20,10 +20,11 @@ def property_needles_sparse(condensed):
             in properties(condensed))
 
 
+@unsparsify
 def get_needles(condensed):
     """From a condensed output, return all needles for the plugin interface."""
     sparse_needles = chain(function_needles_sparse(condensed),
                            symbol_needles_sparse(condensed),
                            property_needles_sparse(condensed))
 
-    return unsparsify(sparse_needles)
+    return sparse_needles

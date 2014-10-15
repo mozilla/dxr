@@ -9,7 +9,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 
 from dxr.filters import LINE
 from dxr.indexers import FileToIndex as FileToIndexBase, TreeToIndex as TreeToIndexBase
-from dxr.indexers import unsparsify_func, group_needles, by_line
+from dxr.indexers import unsparsify, group_needles, by_line
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
@@ -82,7 +82,7 @@ class FileToIndex(FileToIndexBase):
         self.inherit = inherit
         self.condensed = load_csv(*os.path.split(path))
 
-    @unsparsify_func
+    @unsparsify
     def needles_by_line(self):
         return needles(self.condensed,
                        self.inherit,
@@ -118,7 +118,7 @@ class FileToIndex(FileToIndexBase):
         return chain.from_iterable(self._refs_from_view(*mv) for mv in
                                    menus_and_views)
 
-    @unsparsify_func
+    @unsparsify
     def annotations_by_line(self):
         icon = "background-image: url('{0}/static/icons/warning.png');".format(
             self.tree.config.wwwroot)  # TODO: DRY
