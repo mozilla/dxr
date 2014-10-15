@@ -128,11 +128,11 @@ class MenuTests(DxrInstanceTestCase):
 
     def test_type_ref(self):
         menu_on(self.page('main.cpp'),
-                'numba',
+                'MyClass',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#5'},
-                {'html': 'Find references',
-                 'href': '/code/search?q=%2Btype-ref%3Anumba'})
+                 'href': '/code/source/extern.c#14'},
+                {'html': 'Find declarations',
+                 'href': '/code/search?q=%2Btype-decl%3AMyClass'})
 
     def test_decldef(self):
         """Make sure prototypes, declarations, and such get menus."""
@@ -140,3 +140,17 @@ class MenuTests(DxrInstanceTestCase):
                 'MyClass',
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3AMyClass'})
+
+    def test_typedef(self):
+        menu_on(self.page('extern.c'),
+                'numba',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%3Anumba'})
+
+    def test_typedef_ref(self):
+        menu_on(self.page('main.cpp'),
+                'numba',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#5'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%3Anumba'})
