@@ -19,3 +19,5 @@ namespace Space {
   void foo() {}
 }
 namespace Bar = Space;
+
+#define MACRO "polo"

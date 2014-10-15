@@ -54,7 +54,7 @@ def menu_on(haystack, text, *menu_items):
     # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
     # compiling the entirety of lxml to run pyquery.
     match = re.search(
-            '<a data-menu="([^"]+)">' + re.escape(cgi.escape(text)) + '</a>',
+            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
             haystack)
     if match:
         found_items = json.loads(match.group(1).replace('&quot;', '"')
@@ -183,3 +183,17 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/source/extern.c#21'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bnamespace-alias-ref%3ABar'})
+
+    def test_macro(self):
+        menu_on(self.page('extern.c'),
+                'MACRO',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bmacro-ref%3AMACRO'})
+
+    def test_macro_ref(self):
+        menu_on(self.page('main.cpp'),
+                'MACRO',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#23'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bmacro-ref%3AMACRO'})

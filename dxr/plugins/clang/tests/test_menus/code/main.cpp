@@ -6,5 +6,8 @@ int main(int argc, char* argv[]) {
 
   Space::foo();
   Bar::foo();
+
+  MACRO;
+
   return var;
 }
