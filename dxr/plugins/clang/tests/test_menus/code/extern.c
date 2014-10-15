@@ -14,3 +14,7 @@ class MyClass;
 class MyClass
 {
 };
+
+namespace Space {
+  void foo() {}
+}

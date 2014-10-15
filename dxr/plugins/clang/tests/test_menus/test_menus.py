@@ -83,7 +83,8 @@ class MenuTests(DxrInstanceTestCase):
         """Make sure #include cross references are linked."""
         menu_on(self.page('main.cpp'),
                 '"extern.c"',
-                {'href': '/code/source/extern.c'})
+                {'html': 'Jump to file',
+                 'href': '/code/source/extern.c'})
 
     def test_functions(self):
         """Make sure functions are found and have a representative sane menu item."""
@@ -154,3 +155,17 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/source/extern.c#5'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3Anumba'})
+
+    def test_namespace(self):
+        menu_on(self.page('extern.c'),
+                'Space',
+                {'html': 'Find definitions',
+                 'href': '/code/search?q=%2Bnamespace%3ASpace'})
+
+    def test_namespace_ref(self):
+        menu_on(self.page('main.cpp'),
+                'Space',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#18'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bnamespace-ref%3ASpace'})
