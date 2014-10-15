@@ -6,11 +6,11 @@ from nose.tools import eq_
 from funcy import first
 
 from dxr.indexers import Extent, Position, FuncSig, Call
-from dxr.plugins.clang.indexers import (
-     TreeToIndex, FileToIndex, warn_needles, warn_op_needles, name_needles,
-     group_sparse_needles, callee_needles, caller_needles, type_needles,
-     child_needles, parent_needles, member_needles, sig_needles,
-     overrides_needles, overridden_needles, kind_getter)
+from dxr.plugins.clang.indexers import TreeToIndex, FileToIndex, kind_getter
+from dxr.plugins.clang.needles import (warn_needles, warn_op_needles,
+    name_needles, callee_needles, caller_needles, type_needles, child_needles,
+    parent_needles, member_needles, sig_needles, overrides_needles,
+    overridden_needles)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
@@ -383,14 +383,6 @@ def test_override_needles():
     eq__(overridden_needles({
         'function': [{'override': {'name': 'x', 'span': DEFAULT_EXTENT}}],
     }), [(('c-overridden', 'x'), DEFAULT_EXTENT)])
-
-
-def test_group_sparse_needles():
-    n1 = (None, 'not None')
-    n2 = ('blah', None)
-    n3 = ('x', 'not None')
-    sparse_needles = [n1, n2, n3, n2, n2]
-    eq_(group_sparse_needles(sparse_needles), ([n2, n2, n2], [n1, n3]))
 
 
 def test_kind_getter():

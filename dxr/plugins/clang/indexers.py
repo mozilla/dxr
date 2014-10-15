@@ -81,16 +81,12 @@ class FileToIndex(FileToIndexBase):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
         self.condensed = load_csv(*os.path.split(path))
-        graph = call_graph(self.condensed, inherit)
-        self._needles, self._needles_by_line = needles(
-                self.condensed, inherit, graph)
-
-    def needles(self):
-        return self._needles  # Are there ever any of these?
 
     @unsparsify_func
     def needles_by_line(self):
-        return self._needles_by_line
+        return needles(self.condensed,
+                       self.inherit,
+                       call_graph(self.condensed, self.inherit))
 
     def refs(self):
         def silent_itemgetter(y):

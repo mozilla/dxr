@@ -5,15 +5,6 @@ from functools import partial
 from funcy import imap, group_by, is_mapping, repeat, icat
 
 
-def group_sparse_needles(needles):
-    """Return a pair of iterators (file_needles, line_needles)."""
-    needles = group_by(lambda x: 'file' if x[1] is None else 'line', needles)
-    if needles['file']:
-        import pdb;pdb.set_trace()
-
-    return needles['file'], needles['line']
-
-
 def _name_needles(condensed, key, name_key):
     """Helper function for name_needles.
 
