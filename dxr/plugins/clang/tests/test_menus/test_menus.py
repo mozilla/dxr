@@ -169,3 +169,17 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/source/extern.c#18'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bnamespace-ref%3ASpace'})
+
+    def test_namespace_alias(self):
+        menu_on(self.page('extern.c'),
+                'Bar',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bnamespace-alias-ref%3ABar'})
+
+    def test_namespace_alias_ref(self):
+        menu_on(self.page('main.cpp'),
+                'Bar',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#21'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bnamespace-alias-ref%3ABar'})

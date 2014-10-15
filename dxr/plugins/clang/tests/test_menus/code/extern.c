@@ -18,3 +18,4 @@ class MyClass
 namespace Space {
   void foo() {}
 }
+namespace Bar = Space;
