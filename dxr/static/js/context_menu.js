@@ -129,6 +129,11 @@ $(function() {
                 endIndex = selectedTxtString.length;
             }
 
+            // If the offset is beyond the last word, no word was clicked on.
+            if (offset === endIndex) {
+                return;
+            }
+
             word = selectedTxtString.substr(startIndex, endIndex - startIndex);
 
             // No word was clicked on, nothing to search.
