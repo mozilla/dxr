@@ -18,7 +18,7 @@ from dxr.utils import glob_to_regex
 
 
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
-           'RegexpFilter]
+           'RegexpFilter']
 
 
 PATH_MAPPING = {  # path/to/a/folder/filename.cpp
