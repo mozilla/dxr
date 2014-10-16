@@ -131,6 +131,11 @@ $(function() {
 
             word = selectedTxtString.substr(startIndex, endIndex - startIndex);
 
+            // No word was clicked on, nothing to search.
+            if (word === '') {
+                return;
+            }
+
             // Build the Object needed for the context-menu template.
             var contextMenu = {},
                 menuItems = [{
