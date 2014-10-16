@@ -17,10 +17,8 @@ from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
 from dxr.utils import glob_to_regex
 
 
-__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter']
-
-
-# TODO: ExtFilter, any needles for that
+__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
+           'RegexpFilter]
 
 
 PATH_MAPPING = {  # path/to/a/folder/filename.cpp

@@ -286,7 +286,9 @@ class FileToIndex(FileToSkim):
 
         If the framework encounters multiple needles of the same key on the
         same line (whether coming from the same plugin or different ones), all
-        unique values will be retained using an elasticsearch array.
+        unique values will be retained using an elasticsearch array. Values
+        may be dicts, in which case common keys get merged by
+        :func:`~dxr.utils.append_update()`.
 
         """
         return []
