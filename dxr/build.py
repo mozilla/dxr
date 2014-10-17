@@ -159,6 +159,20 @@ def index_tree(tree, es, verbose=False):
         return [future.result() for future in
                 show_progress(futures, message='Running %s.' % method_name)]
 
+    def delete_index_quietly(es, index):
+        """Delete an index, and ignore any not-found error.
+
+        This cannot be done inline in the except clause below, because, even
+        if we catch this exception, it spoils the exception info in that
+        scope, making the bare ``raise`` raise the not-found error rather than
+        whatever went wrong earlier.
+
+        """
+        try:
+            es.delete_index(index)
+        except ElasticHttpNotFoundError:
+            pass
+
     print "Processing tree '%s'." % tree.name
 
     # Note starting time
@@ -234,12 +248,11 @@ def index_tree(tree, es, verbose=False):
 
             # Don't wait for the (long) refresh interval:
             es.refresh(index=index)
-        except Exception:
+        except Exception as exc:
             # If anything went wrong, delete the index, because we're not
             # going to have a way of returning its name if we raise an
             # exception.
-            with suppress(ElasticHttpNotFoundError):
-                es.delete_index(index)
+            delete_index_quietly(es, index)
             raise
 
     print " - Finished processing '%s' in %s." % (tree.name,
