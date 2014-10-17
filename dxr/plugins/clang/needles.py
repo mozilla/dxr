@@ -62,11 +62,6 @@ def caller_needles(graph):
             in graph)
 
 
-def type_needles(condensed):
-    """Return needles ((c-type, type), span)."""
-    return ((('c-type', o['name']), o['span']) for o in condensed['type'])
-
-
 def sig_needles(condensed):
     """Return needles ((c-sig, type), span)."""
     return ((('c-sig', str(o['type'])), o['span']) for o in
@@ -152,7 +147,6 @@ def overridden_needles(condensed):
 #     return chain(
 #         name_needles(condensed, 'function'),
 #         name_needles(condensed, 'variable'),
-#         name_needles(condensed, 'typedef'),
 #         name_needles(condensed, 'macro'),
 #         name_needles(condensed, 'namespace'),
 #         name_needles(condensed, 'namespace_alias'),
@@ -165,12 +159,11 @@ def overridden_needles(condensed):
 #         member_needles(condensed),
 #         overridden_needles(condensed),
 #         overrides_needles(condensed),
-#         type_needles(condensed),
 #         sig_needles(condensed),
 #         # TODO: Add ref needles. Should be easy.
 #     )
 
-def symbol_needles(condensed, kind):
+def symbol_needles(condensed, kind, condensed_key=None):
     """Return needles for a kind of thing that has a name and qualname.
 
     :arg kind: The main part of the needle name ("function" in "c_function")
@@ -181,10 +174,10 @@ def symbol_needles(condensed, kind):
     return (('c_{0}'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
-            for f in condensed[kind])
+            for f in condensed[condensed_key or kind])
 
 
-def ref_needles(condensed, kind):
+def ref_needles(condensed, kind, condensed_key=None):
     """Return needles for references to a certain kind of thing.
 
     References are assumed to have names and qualnames.
@@ -194,10 +187,11 @@ def ref_needles(condensed, kind):
         stored in ``condensed['refs']``
 
     """
-    return [('c_{0}_ref'.format(kind),
+    condensed_key = condensed_key or kind
+    return (('c_{0}_ref'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
-            for f in condensed['ref'] if f['kind'] == kind]
+            for f in condensed['ref'] if f['kind'] == condensed_key)
 
 
 def warning_needles(condensed):
@@ -208,4 +202,13 @@ def needles(condensed, _1, _2):
     return group_by_line(with_start_and_end(split_into_lines(chain(
             symbol_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
+
+            # Classes:
+            symbol_needles(condensed, 'type'),
+            ref_needles(condensed, 'type'),
+
+            # Typedefs:
+            symbol_needles(condensed, 'type', condensed_key='typedef'),
+            ref_needles(condensed, 'type', condensed_key='typedef'),
+
             warning_needles(condensed)))))

@@ -8,7 +8,7 @@ from funcy import first
 from dxr.indexers import Extent, Position, FuncSig, Call
 from dxr.plugins.clang.indexers import TreeToIndex, FileToIndex, kind_getter
 from dxr.plugins.clang.needles import (warn_needles, warn_op_needles,
-    name_needles, callee_needles, caller_needles, type_needles, child_needles,
+    name_needles, callee_needles, caller_needles, child_needles,
     parent_needles, member_needles, sig_needles, overrides_needles,
     overridden_needles)
 
@@ -327,32 +327,6 @@ def test_inherit_needles():
                  (('c-parent', 'Z'), DEFAULT_EXTENT)]
     eq_(len(list(parent_needles(csv, INHERIT))), len(p_needles))
     eq_(set(parent_needles(csv, INHERIT)), set(p_needles))
-
-
-def test_type_needles():
-    fixture = {
-        'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
-                      'span': DEFAULT_EXTENT}],
-        'variable': [{'type': 'a',
-                      'span': DEFAULT_EXTENT}],
-        'type': [
-            {
-                'name': 'foobar',
-                'qualname': 'foobar',
-                'kind': 'struct',
-                'span': DEFAULT_EXTENT
-            },
-            {
-                'name': 'X',
-                'qualname': 'X',
-                'kind': 'class',
-                'span': DEFAULT_EXTENT
-            }
-        ]
-    }
-    eq_(set(type_needles(fixture)),
-        set([(('c-type', 'X'), DEFAULT_EXTENT),
-             (('c-type', 'foobar'), DEFAULT_EXTENT)]))
 
 
 def test_sig_needles():
