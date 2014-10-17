@@ -173,12 +173,12 @@ def overridden_needles(condensed):
 def symbol_needles(condensed, kind):
     """Return needles for a kind of thing that has a name and qualname.
 
-    :arg kind: The main part of the needle name ("function" in "c-function")
+    :arg kind: The main part of the needle name ("function" in "c_function")
         and the key under which the interesting things are stored in
         ``condensed``
 
     """
-    return (('c-{0}'.format(kind),
+    return (('c_{0}'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
             for f in condensed[kind])
@@ -190,18 +190,18 @@ def ref_needles(condensed, kind):
     References are assumed to have names and qualnames.
 
     :arg kind: The main part of the needle name ("function" in
-        "c-function-ref") and the key under which the interesting things are
+        "c_function_ref") and the key under which the interesting things are
         stored in ``condensed['refs']``
 
     """
-    return [('c-{0}-ref'.format(kind),
+    return [('c_{0}_ref'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
             for f in condensed['ref'] if f['kind'] == kind]
 
 
 def warning_needles(condensed):
-    return (('c-warning', {'name': w['msg']}, w['span']) for w in condensed['warning'])
+    return (('c_warning', {'name': w['msg']}, w['span']) for w in condensed['warning'])
 
 
 def needles(condensed, _1, _2):

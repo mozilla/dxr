@@ -25,7 +25,7 @@ class _SymbolFilter(Filter):
 
         """
         super(_SymbolFilter, self).__init__(term)
-        self._needle = '{0}-{1}'.format(self.lang, self.name)
+        self._needle = '{0}_{1}'.format(self.lang, self.name.replace('-', '_'))
 
     def _term_filter(self, field):
         """Return a term filter clause that does a case-sensitive match
