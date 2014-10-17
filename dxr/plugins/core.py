@@ -128,12 +128,19 @@ analyzers = {
         # enough for accelerating regexes; we probably don't
         # need to keep a separate case-sensitive index.
         'trigramalyzer_lower': {
+            'type': 'custom',
             'filter': ['lowercase'],
             'tokenizer': 'trigram_tokenizer'
         },
         # And one for case-sensitive things:
         'trigramalyzer': {
+            'type': 'custom',
             'tokenizer': 'trigram_tokenizer'
+        },
+        'lowercase': {  # Not used here but defined for plugins' use
+            'type': 'custom',
+            'filter': ['lowercase'],
+            'tokenizer': 'keyword'
         }
     },
     'tokenizer': {

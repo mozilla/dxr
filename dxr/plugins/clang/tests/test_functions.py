@@ -1,9 +1,6 @@
 """Tests for searches about functions"""
 
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
 from nose import SkipTest
-raise SkipTest
 
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
@@ -22,14 +19,41 @@ class DefinitionTests(SingleFileTestCase):
           printf("%s\n", getHello());
           return 0;
         }
+
+        namespace Space {
+          void foo() {}
+        }
         """
 
-    def test_definition(self):
-        """Try searching for function declarations."""
+    def test_names(self):
+        """Try searching for function names case-sensitively."""
         self.found_line_eq(
             'function:main', 'int <b>main</b>(int argc, char* argv[]) {')
         self.found_line_eq(
             'function:getHello', 'const char* <b>getHello</b>() {')
+        self.found_nothing(
+            'function:getHELLO')
+
+    def test_names_caseless(self):
+        """Try searching for function names case-insensitively."""
+        self.found_line_eq(
+            'function:MAIN',
+            'int <b>main</b>(int argc, char* argv[]) {',
+            is_case_sensitive=False)
+
+    def test_qualnames_unqualified(self):
+        """Qualnames should be found when searching unqualified as well."""
+        self.found_line_eq(
+            'function:Space::foo()', 'void <b>foo</b>() {}')
+
+    def test_qualnames_caseless(self):
+        """Case-insensitive qualified searches should remain case-sensitive.
+
+        I guess. This is really more of a marker to show that I knew about
+        this behavior and didn't expressly condemn it.
+
+        """
+        self.found_nothing('+function:SPACE::FOO()', is_case_sensitive=False)
 
 
 class TemplateClassMemberReferenceTests(SingleFileTestCase):
@@ -56,6 +80,7 @@ class TemplateClassMemberReferenceTests(SingleFileTestCase):
 
     def test_function_decl(self):
         """Try searching for function declaration."""
+        raise SkipTest('Not implemented on ES branch yet')
         self.found_line_eq('+function-decl:Foo::bar()', 'void <b>bar</b>();')
 
     def test_function(self):
@@ -65,6 +90,7 @@ class TemplateClassMemberReferenceTests(SingleFileTestCase):
 
     def test_function_ref(self):
         """Try searching for function references."""
+        raise SkipTest('Not implemented on ES branch yet')
         self.found_lines_eq('+function-ref:Foo::bar()',
                             [('Foo&lt;int&gt;().<b>bar</b>();', 16)])
 
@@ -104,6 +130,7 @@ class PrototypeParamTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_prototype_params(self):
+        raise SkipTest('Not implemented on ES branch yet')
         # I have no idea what this tests.
         self.found_line_eq(
             '+var:prototype_parameter_function(int)::prototype_parameter',

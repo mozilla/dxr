@@ -4,6 +4,8 @@ from functools import partial
 
 from funcy import imap, group_by, is_mapping, repeat, icat
 
+from dxr.indexers import group_by_line, with_start_and_end, split_into_lines
+
 
 def _name_needles(condensed, key, name_key):
     """Helper function for name_needles.
@@ -144,26 +146,42 @@ def overridden_needles(condensed):
                  _overriden_needles(name_key='qualname'))
 
 
-def needles(condensed, inherit, graph):
-    """Return all C plugin needles."""
+# def needles(condensed, inherit, graph):
+#     """Return all C plugin needles."""
+#
+#     return chain(
+#         name_needles(condensed, 'function'),
+#         name_needles(condensed, 'variable'),
+#         name_needles(condensed, 'typedef'),
+#         name_needles(condensed, 'macro'),
+#         name_needles(condensed, 'namespace'),
+#         name_needles(condensed, 'namespace_alias'),
+#         warn_needles(condensed),
+#         warn_op_needles(condensed),
+#         callee_needles(graph),
+#         caller_needles(graph),
+#         parent_needles(condensed, inherit),
+#         child_needles(condensed, inherit),
+#         member_needles(condensed),
+#         overridden_needles(condensed),
+#         overrides_needles(condensed),
+#         type_needles(condensed),
+#         sig_needles(condensed),
+#         # TODO: Add ref needles. Should be easy.
+#     )
+def function_needles(condensed):
+    """Return (key, value dict, Extent)."""
+    return (('c-function',
+             {'name': f['name'], 'qualname': f['qualname']},
+             f['span'])
+            for f in condensed['function'])
 
-    return chain(
-        name_needles(condensed, 'function'),
-        name_needles(condensed, 'variable'),
-        name_needles(condensed, 'typedef'),
-        name_needles(condensed, 'macro'),
-        name_needles(condensed, 'namespace'),
-        name_needles(condensed, 'namespace_alias'),
-        warn_needles(condensed),
-        warn_op_needles(condensed),
-        callee_needles(graph),
-        caller_needles(graph),
-        parent_needles(condensed, inherit),
-        child_needles(condensed, inherit),
-        member_needles(condensed),
-        overridden_needles(condensed),
-        overrides_needles(condensed),
-        type_needles(condensed),
-        sig_needles(condensed),
-        # TODO: Add ref needles. Should be easy.
-    )
+
+def warning_needles(condensed):
+    return (('c-warning', {'name': w['msg']}, w['span']) for w in condensed['warning'])
+
+
+def needles(condensed, _1, _2):
+    return group_by_line(with_start_and_end(split_into_lines(chain(
+            function_needles(condensed),
+            warning_needles(condensed)))))

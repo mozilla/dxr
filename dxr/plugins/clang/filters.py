@@ -1,128 +1,200 @@
+from funcy import identity
 from jinja2 import Markup
 
-from dxr.filters import ExactMatchExtentFilterBase
+from dxr.filters import Filter, negatable
 
 
-class _CFilter(ExactMatchExtentFilterBase):
-    """Exact-match filter for structural entities in C or C++"""
+class _SymbolFilter(Filter):
+    """An exact-match filter for named symbols
+
+    This filter assumes an object-shaped needle value with a 'name'
+    subproperty (containing the symbol name), a 'name.lower' folded to
+    lowercase, and 'qualname' and 'qualname.lower' (doing the same for
+    fully-qualified name). Highlights are based on 'start' and 'end'
+    subproperties, which contain column bounds.
+
+    Derives the needle name from the ``name`` cls attribute.
+
+    """
     lang = 'c'
 
+    def __init__(self, term):
+        """Expects ``self.lang`` to be a language identifier, to separate
+        structural needles from those of other languages and allow for an
+        eventual "lang:" metafilter.
 
-class FunctionFilter(_CFilter):
+        """
+        super(_SymbolFilter, self).__init__(term)
+        self._needle = '{0}-{1}'.format(self.lang, self.name)
+
+    def _term_filter(self, field):
+        """Return a term filter clause that does a case-sensitive match
+        against the given field.
+
+        """
+        return {
+            'term': {'{needle}.{field}'.format(
+                        needle=self._needle,
+                        field=field):
+                     self._term['arg']}
+        }
+
+    @negatable
+    def filter(self):
+        """Find functions by their name or qualname.
+
+        "+" searches look at just qualnames, but non-"+" searches look at both
+        names and qualnames. All comparisons against qualnames are
+        case-sensitive, because, if you're being that specific, that's
+        probably what you want.
+
+        """
+        if self._term['qualified']:
+            return self._term_filter('qualname')
+        else:
+            if self._term['case_sensitive']:
+                name_filter = self._term_filter('name')
+            else:
+                # term filters have no query analysis phase. We must use a
+                # match query, which is an analyzer pass + a term filter:
+                name_filter = {
+                    'query': {
+                        'match': {
+                            '{needle}.name.lower'.format(needle=self._needle):
+                                self._term['arg']
+                        }
+                    }
+                }
+            return {'or': [name_filter,
+                           self._term_filter('qualname')]}
+
+    def highlight_content(self, result):
+        # TODO: Update for case, qualified, etc.
+        if self._term['not']:
+            return []
+        maybe_lower = (identity if self._term['case_sensitive'] else
+                       unicode.lower)
+        return ((entity['start'], entity['end'])
+                for entity in result[self._needle]
+                if maybe_lower(entity['name']) == maybe_lower(self._term['arg'])
+                or entity['qualname'] == self._term['arg'])
+
+
+class FunctionFilter(_SymbolFilter):
     name = 'function'
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
-class FunctionRefFilter(_CFilter):
+class FunctionRefFilter(_SymbolFilter):
     name = 'function-ref'
     description = 'Function or method references'
 
 
-class FunctionDeclFilter(_CFilter):
+class FunctionDeclFilter(_SymbolFilter):
     name = 'function-decl'
     description = 'Function or method declaration'
 
 
-class TypeRefFilter(_CFilter):
+class TypeRefFilter(_SymbolFilter):
     name = 'type-ref'
     description = 'Type or class references, uses, or instantiations'
 
 
-class TypeDeclFilter(_CFilter):
+class TypeDeclFilter(_SymbolFilter):
     name = 'type-decl'
     description = 'Type or class declaration'
 
 
-class TypeFilter(_CFilter):
+class TypeFilter(_SymbolFilter):
     name = 'type'
     description = 'Type, function, or class definition: <code>type:Stack</code>'
 
 
-class VariableFilter(_CFilter):
+class VariableFilter(_SymbolFilter):
     name = 'var'
     description = 'Variable definition'
 
 
-class VariableRefFilter(_CFilter):
+class VariableRefFilter(_SymbolFilter):
     name = 'var-ref'
     description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
 
 
-class VarDeclFilter(_CFilter):
+class VarDeclFilter(_SymbolFilter):
     name = 'var-decl'
     description = 'Type or class declaration'
 
 
-class MacroFilter(_CFilter):
+class MacroFilter(_SymbolFilter):
     name = 'macro'
     description = 'Macro definition'
 
 
-class MacroRefFilter(_CFilter):
+class MacroRefFilter(_SymbolFilter):
     name = 'macro-ref'
     description = 'Macro uses'
 
 
-class NamespaceFilter(_CFilter):
+class NamespaceFilter(_SymbolFilter):
     name = 'namespace'
     description = 'Namespace definition'
 
 
-class NamespaceRefFilter(_CFilter):
+class NamespaceRefFilter(_SymbolFilter):
     name = 'namespace-ref'
     description = 'Namespace references'
 
 
-class NamespaceAliasFilter(_CFilter):
+class NamespaceAliasFilter(_SymbolFilter):
     name = 'namespace-alias'
     description = 'Namespace alias'
 
 
-class NamespaceAliasRefFilter(_CFilter):
+class NamespaceAliasRefFilter(_SymbolFilter):
     name = 'namespace-alias-ref'
     description = 'Namespace alias references'
 
 
-class WarningFilter(_CFilter):
+class WarningFilter(_SymbolFilter):
     name = 'warning'
     description = 'Compiler warning messages'
 
 
-class WarningOptFilter(_CFilter):
+class WarningOptFilter(_SymbolFilter):
     name = 'warning-opt'
     description = 'Warning messages brought on by a given compiler command-line option'
 
 
-class CalleeFilter(_CFilter):
+class CalleeFilter(_SymbolFilter):
     name = 'called-by'
     description = 'Functions or methods which are called by the given one'
 
 
-class CallerFilter(_CFilter):
+class CallerFilter(_SymbolFilter):
     name = 'callers'
     description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
 
 
-class ChildFilter(_CFilter):
+class ChildFilter(_SymbolFilter):
     name = 'bases'
     description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
 
 
-class ParentFilter(_CFilter):
+class ParentFilter(_SymbolFilter):
     name = 'derived'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
 
 
-class MemberFilter(_CFilter):
+class MemberFilter(_SymbolFilter):
     name = 'member'
     description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
 
 
-class OverridesFilter(_CFilter):
+class OverridesFilter(_SymbolFilter):
     name = 'overrides'
     description = Markup('Methods which override the given one: <code>overrides:someMethod</code>')
 
 
-class OverriddenFilter(_CFilter):
+class OverriddenFilter(_SymbolFilter):
     name = 'overridden'
     description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.')

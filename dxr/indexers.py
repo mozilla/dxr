@@ -384,3 +384,69 @@ def span_to_lines((kv, span)):
             yield (kv, 0, None), row
 
         yield (kv, 0, span.end.col), span.end.row
+
+
+
+
+def split_into_lines(triples):
+    """Split a bunch of (key, mapping, extent) triples into more triples
+    than those, with each one contained in a line.
+
+    """
+    def _split_one((key, mapping, extent)):
+        """Split a single triple into one or more, each spanning at most one
+        line.
+
+        """
+        if extent.end.row == extent.start.row:
+            yield key, mapping, extent
+        elif extent.end.row < extent.start.row:
+            raise ValueError('Bad Extent: end.row < start.row')
+        else:
+            # TODO: There are a lot of Nones used as slice bounds below. Do we
+            # ever translate them back into char offsets? If not, does the
+            # highlighter or anything else choke on them?
+            yield key, mapping, Extent(Position(row=extent.start.row,
+                                                col=extent.start.col),
+                                       Position(row=extent.start.row,
+                                                col=None))
+
+            # Really wish we could use yield from
+            for row in xrange(extent.start.row + 1, extent.end.row):
+                yield key, mapping, Extent(Position(row=row,
+                                                    col=0),
+                                           Position(row=row,
+                                                    col=None))
+
+            yield key, mapping, Extent(Position(row=extent.end.row,
+                                                col=0),
+                                       Position(row=extent.end.row,
+                                                col=extent.end.col))
+
+    return imapcat(_split_one, triples)
+
+
+def with_start_and_end(triples):
+    """Add 'start' and 'end' column keys to the value mappings of one-line
+    triples, and yield them back.
+
+    """
+    for key, mapping, extent in triples:
+        mapping['start'] = extent.start.col
+        mapping['end'] = extent.end.col
+        yield key, mapping, extent
+
+
+def group_by_line(triples):
+    """Yield iterables of (key, value mapping), one for each line."""
+    # Jam all the triples of a file into a hash by line number:
+    line_map = group_by(lambda (k, v, extent): extent.start.row, triples)  # {line: triples}
+    last_line = max(line_map.iterkeys()) + 1 if line_map else 1
+
+    # Pull out the needles for each line, stripping off the extents and
+    # producing a blank list for missing lines. (The defaultdict returned from
+    # group_by takes care of the latter.)
+    return [[(k, v) for (k, v, e) in line_map[line_num]]
+            for line_num in xrange(1, last_line)]
+
+    # If this has to be generic so we can use it on annotations_by_line as well, pass in a key function that extracts the line number and maybe another that constructs the return value.

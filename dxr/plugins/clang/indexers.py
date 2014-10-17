@@ -22,13 +22,24 @@ PLUGIN_NAME = 'clang'
 
 
 # An unanlyzed string property that points to a value that can be exact- or
-# prefix-matched against and carries start/end bounds for highlighting:
-UNANALYZED_EXTENT_NEEDLE = {
+# prefix-matched against and carries start/end bounds for highlighting. Has
+# both a name and a qualname.
+SYMBOL_NEEDLE = {
     'type': 'object',
     'properties': {
-        'value': {
+        'name': {
             'type': 'string',
-            'index': 'not_analyzed',  # TODO: case-insensitive
+            'index': 'not_analyzed',
+            'fields': {
+                'lower': {
+                    'type': 'string',
+                    'analyzer': 'lowercase'
+                }
+            }
+        },
+        'qualname': {
+            'type': 'string',
+            'index': 'not_analyzed'
         },
         'start': {
             'type': 'integer',
@@ -45,30 +56,30 @@ UNANALYZED_EXTENT_NEEDLE = {
 mappings = {
     LINE: {
         'properties': {
-            'c-function': UNANALYZED_EXTENT_NEEDLE,
-            'c-function-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-function-decl': UNANALYZED_EXTENT_NEEDLE,
-            'c-type-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-type-decl': UNANALYZED_EXTENT_NEEDLE,
-            'c-type': UNANALYZED_EXTENT_NEEDLE,
-            'c-var': UNANALYZED_EXTENT_NEEDLE,
-            'c-var-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-var-decl': UNANALYZED_EXTENT_NEEDLE,
-            'c-macro': UNANALYZED_EXTENT_NEEDLE,
-            'c-macro-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-namespace': UNANALYZED_EXTENT_NEEDLE,
-            'c-namespace-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-namespace-alias': UNANALYZED_EXTENT_NEEDLE,
-            'c-namespace-alias-ref': UNANALYZED_EXTENT_NEEDLE,
-            'c-warning': UNANALYZED_EXTENT_NEEDLE,
-            'c-warning-opt': UNANALYZED_EXTENT_NEEDLE,
-            'c-called-by': UNANALYZED_EXTENT_NEEDLE,
-            'c-callers': UNANALYZED_EXTENT_NEEDLE,
-            'c-bases': UNANALYZED_EXTENT_NEEDLE,
-            'c-derived': UNANALYZED_EXTENT_NEEDLE,
-            'c-member': UNANALYZED_EXTENT_NEEDLE,
-            'c-overrides': UNANALYZED_EXTENT_NEEDLE,
-            'c-overridden': UNANALYZED_EXTENT_NEEDLE
+            'c-function': SYMBOL_NEEDLE,
+            'c-function-ref': SYMBOL_NEEDLE,
+            'c-function-decl': SYMBOL_NEEDLE,
+            'c-type-ref': SYMBOL_NEEDLE,
+            'c-type-decl': SYMBOL_NEEDLE,
+            'c-type': SYMBOL_NEEDLE,
+            'c-var': SYMBOL_NEEDLE,
+            'c-var-ref': SYMBOL_NEEDLE,
+            'c-var-decl': SYMBOL_NEEDLE,
+            'c-macro': SYMBOL_NEEDLE,
+            'c-macro-ref': SYMBOL_NEEDLE,
+            'c-namespace': SYMBOL_NEEDLE,
+            'c-namespace-ref': SYMBOL_NEEDLE,
+            'c-namespace-alias': SYMBOL_NEEDLE,
+            'c-namespace-alias-ref': SYMBOL_NEEDLE,
+            'c-warning': SYMBOL_NEEDLE,
+            'c-warning-opt': SYMBOL_NEEDLE,
+            'c-called-by': SYMBOL_NEEDLE,
+            'c-callers': SYMBOL_NEEDLE,
+            'c-bases': SYMBOL_NEEDLE,
+            'c-derived': SYMBOL_NEEDLE,
+            'c-member': SYMBOL_NEEDLE,
+            'c-overrides': SYMBOL_NEEDLE,
+            'c-overridden': SYMBOL_NEEDLE
         }
     }
 }
@@ -82,7 +93,6 @@ class FileToIndex(FileToIndexBase):
         self.inherit = inherit
         self.condensed = load_csv(*os.path.split(path))
 
-    @unsparsify
     def needles_by_line(self):
         return needles(self.condensed,
                        self.inherit,
