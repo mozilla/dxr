@@ -211,4 +211,7 @@ def needles(condensed, _1, _2):
             symbol_needles(condensed, 'type', condensed_key='typedef'),
             ref_needles(condensed, 'type', condensed_key='typedef'),
 
+            symbol_needles(condensed, 'var', condensed_key='variable'),
+            ref_needles(condensed, 'var', condensed_key='variable'),
+
             warning_needles(condensed)))))

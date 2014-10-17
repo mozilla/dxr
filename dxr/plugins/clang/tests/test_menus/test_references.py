@@ -22,3 +22,11 @@ class ReferenceTests(DxrInstanceTestCase):
                 '<b>numba</b> a = another_file();',
                 4)
         self.found_line_eq('type-ref:MyClass', '<b>MyClass</b> c;', 5)
+
+    def test_var(self):
+        """Test var-refs.
+
+        Plain old var: queries are covered in test_c_vardecl.
+
+        """
+        self.found_line_eq('var-ref:var', 'return <b>var</b>;', 12)

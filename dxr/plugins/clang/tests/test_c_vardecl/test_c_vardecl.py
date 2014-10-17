@@ -1,7 +1,4 @@
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
 from nose import SkipTest
-raise SkipTest
 
 from dxr.testing import DxrInstanceTestCase
 
@@ -11,6 +8,7 @@ class CVarDeclTests(DxrInstanceTestCase):
 
     def test_decl(self):
         """Search for C variable declaration."""
+        raise SkipTest('var-decl is not implemented on the ES branch yet.')
         self.found_line_eq('var-decl:global', u'extern int <b>global</b>;', 5)
 
     def test_defn(self):

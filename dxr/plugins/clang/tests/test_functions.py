@@ -130,7 +130,6 @@ class PrototypeParamTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_prototype_params(self):
-        raise SkipTest('Not implemented on ES branch yet')
         # I have no idea what this tests.
         self.found_line_eq(
             '+var:prototype_parameter_function(int)::prototype_parameter',
