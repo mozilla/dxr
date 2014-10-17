@@ -169,20 +169,35 @@ def overridden_needles(condensed):
 #         sig_needles(condensed),
 #         # TODO: Add ref needles. Should be easy.
 #     )
-def function_needles(condensed):
-    """Return (key, value dict, Extent)."""
-    return (('c-function',
+
+def symbol_needles(condensed, kind):
+    """Return needles for a kind of thing that has a name and qualname.
+
+    :arg kind: The main part of the needle name ("function" in "c-function")
+        and the key under which the interesting things are stored in
+        ``condensed``
+
+    """
+    return (('c-{0}'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
-            for f in condensed['function'])
+            for f in condensed[kind])
 
 
-def function_ref_needles(condensed):
-    """Return (key, value dict, Extent)."""
-    return [('c-function-ref',
+def ref_needles(condensed, kind):
+    """Return needles for references to a certain kind of thing.
+
+    References are assumed to have names and qualnames.
+
+    :arg kind: The main part of the needle name ("function" in
+        "c-function-ref") and the key under which the interesting things are
+        stored in ``condensed['refs']``
+
+    """
+    return [('c-{0}-ref'.format(kind),
              {'name': f['name'], 'qualname': f['qualname']},
-             f['span'])  # NEXT: Make the clang plugin emit name.
-            for f in condensed['ref'] if f['kind'] == 'function']
+             f['span'])
+            for f in condensed['ref'] if f['kind'] == kind]
 
 
 def warning_needles(condensed):
@@ -191,6 +206,6 @@ def warning_needles(condensed):
 
 def needles(condensed, _1, _2):
     return group_by_line(with_start_and_end(split_into_lines(chain(
-            function_needles(condensed),
-            function_ref_needles(condensed),
+            symbol_needles(condensed, 'function'),
+            ref_needles(condensed, 'function'),
             warning_needles(condensed)))))
