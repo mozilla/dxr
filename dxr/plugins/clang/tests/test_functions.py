@@ -90,7 +90,7 @@ class TemplateClassMemberReferenceTests(SingleFileTestCase):
 
     def test_function_ref(self):
         """Try searching for function references."""
-        raise SkipTest('Not implemented on ES branch yet')
+        raise SkipTest('The template params ("<int>") get into the qualified name. We do not want them in there; we want to search out all uses of the function, regardless of parametrization.')
         self.found_lines_eq('+function-ref:Foo::bar()',
                             [('Foo&lt;int&gt;().<b>bar</b>();', 16)])
 

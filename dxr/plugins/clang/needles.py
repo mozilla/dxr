@@ -177,6 +177,14 @@ def function_needles(condensed):
             for f in condensed['function'])
 
 
+def function_ref_needles(condensed):
+    """Return (key, value dict, Extent)."""
+    return [('c-function-ref',
+             {'name': f['name'], 'qualname': f['qualname']},
+             f['span'])  # NEXT: Make the clang plugin emit name.
+            for f in condensed['ref'] if f['kind'] == 'function']
+
+
 def warning_needles(condensed):
     return (('c-warning', {'name': w['msg']}, w['span']) for w in condensed['warning'])
 
@@ -184,4 +192,5 @@ def warning_needles(condensed):
 def needles(condensed, _1, _2):
     return group_by_line(with_start_and_end(split_into_lines(chain(
             function_needles(condensed),
+            function_ref_needles(condensed),
             warning_needles(condensed)))))

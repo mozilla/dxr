@@ -720,6 +720,7 @@ public:
     recordValue("loc", locationToString(refLoc));
     if (kind)
       recordValue("kind", kind);
+    recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
     printExtent(refLoc, end);
     *out << std::endl;
