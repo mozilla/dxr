@@ -277,7 +277,7 @@ def _html_file_path(tree_folder, url_path):
     :arg url_path: The URL path browsed to, rooted just inside the tree
 
     If you provide a path to a non-existent file or folder, I will happily
-    return a path which has no corresponding filesystem entity.
+    return a path which has no corresponding FS entity.
 
     """
     if isdir(join(tree_folder, url_path)):

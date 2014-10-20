@@ -114,9 +114,8 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     for _, alias, index in indices:
         swap_alias(alias, index, es)
 
-    # Deploy script should immediately move new filesystem dirs into
-    # place. There's a little race here; it will go away once we
-    # dispense with filesystem artifacts.
+    # Deploy script should immediately move new FS dirs into place. There's a
+    # little race here; it will go away once we dispense with FS artifacts.
 
 
 def swap_alias(alias, index, es):
@@ -261,8 +260,7 @@ def index_tree(tree, es, verbose=False):
 
     return index
 
-    # For each tree, flop the ES alias for this format version (pulled
-    # from the config) to the new index, and delete the old one first.
+    # For each tree, flop the ES alias for this format version (pulled from the config) to the new index, and delete the old one first.
 
     # This is temporarily asymmetrical: it flops the index but leave it to the
     # caller to flop the static HTML. This asymmetry will go away when the
@@ -290,10 +288,7 @@ def save_scribbles(obj, method):
 
 
 def create_skeleton(config):
-    """Make the non-tree-specific filesystem artifacts needed to do
-    the build.
-
-    """
+    """Make the non-tree-specific FS artifacts needed to do the build."""
 
     skip_indexing = 'index' in config.skip_stages
 
