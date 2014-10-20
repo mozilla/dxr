@@ -81,7 +81,9 @@ $(function () {
             s = null,
             r = null,
             reCleanup = /(^#?,|,$)/;
-        [singleLinesArray, rangesArray] = generateSelectedArrays(); //generates the sorted arrays
+        var selectedArray = generateSelectedArrays(); // generates sorted arrays
+        var singleLinesArray = selectedArray[0];
+        var rangesArray = selectedArray[1];
         // eliminate duplication
         for (s = 0; s < singleLinesArray.length; s++) {
             for (r = 0; r < rangesArray.length; r++) {
