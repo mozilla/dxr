@@ -133,10 +133,10 @@ To assure yourself that everything has built correctly, you can run the tests::
 Installation
 ============
 
-Once you've built it, install DXR in the activated virtualenv. This is an
-optional step, but it lets you call the :program:`dxr-index.py` and
-:program:`dxr-build.py` commands without specifying their full paths, as long as
-the env is activated. ::
+Once you've built it, install DXR in the activated virtualenv. This is
+an optional step, but it lets you call the :program:`dxr-build.py` and
+:program:`dxr-serve.py` commands without specifying their full paths,
+as long as the env is activated. ::
 
     python setup.py install
 
