@@ -165,8 +165,8 @@ class DxrInstanceTestCase(TestCase):
     """Test case which builds an actual DXR instance that lives on the
     filesystem and then runs its tests
 
-    This is suitable for complex tests with many files where the FS is the
-    least confusing place to express them.
+    This is suitable for complex tests with many files where the
+    filesystem is the least confusing place to express them.
 
     """
     @classmethod
@@ -189,9 +189,10 @@ class DxrInstanceTestCase(TestCase):
 class SingleFileTestCase(TestCase):
     """Container for tests that need only a single source file
 
-    You can express the source as a string rather than creating a whole bunch
-    of files in the FS. I'll slam it down into a temporary DXR instance and
-    then kick off the usual build process, deleting the instance afterward.
+    You can express the source as a string rather than creating a
+    whole bunch of files in the filesystem. I'll slam it down into a
+    temporary DXR instance and then kick off the usual build process,
+    deleting the instance afterward.
 
     """
     # Set this to False in a subclass to keep the generated instance around and
@@ -200,7 +201,7 @@ class SingleFileTestCase(TestCase):
 
     @classmethod
     def setup_class(cls):
-        """Create a temporary DXR instance on the FS, and build it."""
+        """Create a temporary DXR instance on the filesystem, and build it."""
         cls._config_dir_path = mkdtemp()
         code_path = os.path.join(cls._config_dir_path, 'code')
         mkdir(code_path)
