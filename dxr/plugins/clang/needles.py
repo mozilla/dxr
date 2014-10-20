@@ -145,11 +145,7 @@ def overridden_needles(condensed):
 #     """Return all C plugin needles."""
 #
 #     return chain(
-#         name_needles(condensed, 'function'),
-#         name_needles(condensed, 'variable'),
 #         name_needles(condensed, 'macro'),
-#         name_needles(condensed, 'namespace'),
-#         name_needles(condensed, 'namespace_alias'),
 #         warn_needles(condensed),
 #         warn_op_needles(condensed),
 #         callee_needles(graph),
@@ -213,5 +209,11 @@ def needles(condensed, _1, _2):
 
             symbol_needles(condensed, 'var', condensed_key='variable'),
             ref_needles(condensed, 'var', condensed_key='variable'),
+
+            symbol_needles(condensed, 'namespace'),
+            ref_needles(condensed, 'namespace'),
+
+            symbol_needles(condensed, 'namespace_alias'),
+            ref_needles(condensed, 'namespace_alias'),
 
             warning_needles(condensed)))))

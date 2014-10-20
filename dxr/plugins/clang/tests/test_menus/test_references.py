@@ -6,6 +6,8 @@ from dxr.testing import DxrInstanceTestCase
 
 
 class ReferenceTests(DxrInstanceTestCase):
+    """Any reference searches not tested here are tested elsewhere."""
+
     def test_function(self):
         self.found_lines_eq(
                 'function-ref:foo',
