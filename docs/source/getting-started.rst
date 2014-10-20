@@ -12,7 +12,7 @@ The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
 2. Tell DXR how to build it.
-3. Run :program:`dxr-index.py` to build and index your code.
+3. Run :program:`dxr-build.py` to build and index your code.
 4. Run :program:`dxr-serve.py` to present a web-based search interface.
 
 But first, we have some installation to do.
@@ -39,7 +39,7 @@ place is adjacent to your source directory.
    Be sure to replace the placeholder paths in the above config.
 
 By building your project with clang and under the control of
-:program:`dxr-index.py`, DXR gets a chance to interpose a custom compiler
+:program:`dxr-build.py`, DXR gets a chance to interpose a custom compiler
 plugin that emits analysis data. It then processes that into an index.
 
 If you have a non-C++ project and simply want to index it as text, the

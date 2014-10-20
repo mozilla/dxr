@@ -138,8 +138,8 @@ def swap_alias(alias, index, es):
 
 
 def index_tree(tree, es, verbose=False):
-    """Index a single tree into ES and the FS, and return the name of the new
-    ES index.
+    """Index a single tree into ES and the filesystem, and return the
+    name of the new ES index.
 
     """
     def new_pool():
