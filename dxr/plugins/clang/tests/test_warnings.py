@@ -1,10 +1,5 @@
 """Tests for searches about warnings"""
 
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
-from nose import SkipTest
-raise SkipTest
-
 import commands
 import re
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
@@ -23,7 +18,8 @@ class TautWarningTests(SingleFileTestCase):
 
     def test_warning(self):
         self.found_line_eq(
-            'warning:"* always false"', 'if (<b>x</b> &lt; 0)')
+            'warning:"comparison of unsigned expression < 0 is always false"',
+            'if (<b>x</b> &lt; 0)')
 
     def test_warning_opt(self):
         self.found_line_eq(
@@ -52,10 +48,12 @@ class MultipleOnSameLineWarningTests(SingleFileTestCase):
 
     def test_warning(self):
         if self._clang_at_least(3.4):
+            # TODO: See what this says in >=3.4, and update it.
             self.found_line_eq(
                 'warning:"logical not *"', 'if (!x <b>&lt;</b> 3)')
         self.found_line_eq(
-            'warning:"* always true"', 'if (<b>!x</b> &lt; 3)')
+            'warning:"comparison of constant 3 with expression of type \'bool\' is always true"',
+            'if (<b>!x</b> &lt; 3)')
 
     def test_warning_opt(self):
         if self._clang_at_least(3.4):

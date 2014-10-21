@@ -38,18 +38,6 @@ def spans(condensed, key):
     return imap(itemgetter('span'), condensed[key])
 
 
-def warn_needles(condensed):
-    """Return needles (('c-warning', msg), span)."""
-    return izip((('c-warning', props['msg']) for props
-                 in condensed['warning']), spans(condensed, 'warning'))
-
-
-def warn_op_needles(condensed):
-    """Return needles (('c-warning-opt', opt), span)."""
-    return izip((('c-warning-opt', props['opt']) for props
-                 in condensed['warning']), spans(condensed, 'warning'))
-
-
 def callee_needles(graph):
     """Return needles (('c-callee', callee name), span)."""
     return ((('c-callee', call.callee[0]), call.callee[1]) for call
@@ -146,7 +134,6 @@ def overridden_needles(condensed):
 #
 #     return chain(
 #         name_needles(condensed, 'macro'),
-#         warn_op_needles(condensed),
 #         callee_needles(graph),
 #         caller_needles(graph),
 #         parent_needles(condensed, inherit),
@@ -158,7 +145,7 @@ def overridden_needles(condensed):
 #         # TODO: Add ref needles. Should be easy.
 #     )
 
-def symbol_needles(condensed, kind, condensed_key=None):
+def qualified_needles(condensed, kind, condensed_key=None):
     """Return needles for a kind of thing that has a name and qualname.
 
     :arg kind: The main part of the needle name ("function" in "c_function")
@@ -190,29 +177,37 @@ def ref_needles(condensed, kind, condensed_key=None):
 
 
 def warning_needles(condensed):
-    return (('c_warning', {'name': w['msg']}, w['span']) for w in condensed['warning'])
+    return [('c_warning', {'name': w['msg']}, w['span']) for w in
+            condensed['warning']]
+
+
+def warning_opt_needles(condensed):
+    """Return needles about the command-line options that call forth warnings."""
+    return [('c_warning_opt', {'name': w['opt']}, w['span']) for w in
+            condensed['warning']]
 
 
 def needles(condensed, _1, _2):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
-            symbol_needles(condensed, 'function'),
+            qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
 
             # Classes:
-            symbol_needles(condensed, 'type'),
+            qualified_needles(condensed, 'type'),
             ref_needles(condensed, 'type'),
 
             # Typedefs:
-            symbol_needles(condensed, 'type', condensed_key='typedef'),
+            qualified_needles(condensed, 'type', condensed_key='typedef'),
             ref_needles(condensed, 'type', condensed_key='typedef'),
 
-            symbol_needles(condensed, 'var', condensed_key='variable'),
+            qualified_needles(condensed, 'var', condensed_key='variable'),
             ref_needles(condensed, 'var', condensed_key='variable'),
 
-            symbol_needles(condensed, 'namespace'),
+            qualified_needles(condensed, 'namespace'),
             ref_needles(condensed, 'namespace'),
 
-            symbol_needles(condensed, 'namespace_alias'),
+            qualified_needles(condensed, 'namespace_alias'),
             ref_needles(condensed, 'namespace_alias'),
 
-            warning_needles(condensed)))))
+            warning_needles(condensed),
+            warning_opt_needles(condensed)))))

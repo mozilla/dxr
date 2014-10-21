@@ -7,7 +7,7 @@ from funcy import first
 
 from dxr.indexers import Extent, Position, FuncSig, Call
 from dxr.plugins.clang.indexers import TreeToIndex, FileToIndex, kind_getter
-from dxr.plugins.clang.needles import (warn_needles, warn_op_needles,
+from dxr.plugins.clang.needles import (
     name_needles, callee_needles, caller_needles, child_needles,
     parent_needles, member_needles, sig_needles, overrides_needles,
     overridden_needles)
@@ -268,15 +268,6 @@ def test_name_needles():
          [(('c-key', 'x'), 'SPAN!!!')])
     eq__(name_needles({'key_2': [{'qualname': 'x', 'span': 'SPAN!'}]}, 'key_2'),
          [(('c-key-2', 'x'), 'SPAN!')])
-
-
-def test_warn_needles():
-    fixture = {'warning': [{'msg': 'hi', 'opt': '-oh-hi',
-                            'span': DEFAULT_EXTENT}]}
-    eq__(warn_needles(fixture),
-         [(('c-warning', 'hi'), DEFAULT_EXTENT)])
-    eq__(warn_op_needles(fixture),
-         [(('c-warning-opt', '-oh-hi'), DEFAULT_EXTENT)])
 
 
 def test_call_needles():
