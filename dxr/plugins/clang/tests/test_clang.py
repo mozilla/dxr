@@ -7,9 +7,8 @@ from funcy import first
 from dxr.indexers import Extent, Position, FuncSig, Call
 from dxr.plugins.clang.indexers import TreeToIndex, FileToIndex, kind_getter
 from dxr.plugins.clang.needles import (
-    name_needles, callee_needles, caller_needles, child_needles,
-    parent_needles, member_needles, sig_needles, overrides_needles,
-    overridden_needles)
+    callee_needles, caller_needles, child_needles, parent_needles,
+    member_needles, sig_needles, overrides_needles, overridden_needles)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
                                         call_graph, c_type_sig)
@@ -256,17 +255,6 @@ def test_FileToIndex():
 
 def eq__(l1, l2):
     eq_(list(l1), list(l2))
-
-
-def test_name_needles():
-    eq__(name_needles({'key': [{'name': 'x', 'span': 'SPAN!!!'}]}, 'key'),
-         [(('c-key', 'x'), 'SPAN!!!')])
-    eq__(name_needles({'key_2': [{'name': 'x', 'span': 'SPAN!'}]}, 'key_2'),
-         [(('c-key-2', 'x'), 'SPAN!')])
-    eq__(name_needles({'key': [{'qualname': 'x', 'span': 'SPAN!!!'}]}, 'key'),
-         [(('c-key', 'x'), 'SPAN!!!')])
-    eq__(name_needles({'key_2': [{'qualname': 'x', 'span': 'SPAN!'}]}, 'key_2'),
-         [(('c-key-2', 'x'), 'SPAN!')])
 
 
 def test_call_needles():
