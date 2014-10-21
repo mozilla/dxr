@@ -226,7 +226,7 @@ def _members(condensed, key, id_):
 
 class TreeToIndex(TreeToIndexBase):
     def environment(self, vars_):
-        """Setup environment variables for inspecting clang as runtime
+        """Set up environment variables to trigger analysis dumps from clang.
 
         We'll store all the havested metadata in the plugins temporary folder.
 

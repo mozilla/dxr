@@ -28,15 +28,17 @@ class TreeToIndex(object):
         self.tree = tree
 
     def environment(self, vars):
-        """Return a dict of environment variables to do the build under.
+        """Return environment variables to add to the build environment.
 
-        This is where environment variables are commonly twiddled to activate
-        and parametrize compiler plugins which dump analysis data.
+        This is where the environment is commonly twiddled to activate and
+        parametrize compiler plugins which dump analysis data.
 
         :arg vars: A dict of the already-set variables. You can make decisions
             based on these.
 
-        You may return a new dict or scribble on ``vars`` and return it.
+        You may return a new dict or scribble on ``vars`` and return it. In
+        either case, the returned dict is merged into those from other plugins,
+        with later plugins taking precedence in case of conflicting keys.
 
         """
         return vars
