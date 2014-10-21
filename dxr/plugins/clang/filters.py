@@ -170,7 +170,7 @@ class VariableRefFilter(_QualifiedNameFilter):
 
 class VarDeclFilter(_QualifiedNameFilter):
     name = 'var-decl'
-    description = 'Type or class declaration'
+    description = 'Variable declaration'
 
 
 class MacroFilter(_NameFilter):
