@@ -437,7 +437,7 @@ def with_start_and_end(triples):
         yield key, mapping, extent
 
 
-def group_by_line(triples):
+def iterable_per_line(triples):
     """Yield iterables of (key, value mapping), one for each line."""
     # Jam all the triples of a file into a hash by line number:
     line_map = group_by(lambda (k, v, extent): extent.start.row, triples)  # {line: triples}

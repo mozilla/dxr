@@ -4,7 +4,7 @@ from functools import partial
 
 from funcy import imap, group_by, is_mapping, repeat, icat
 
-from dxr.indexers import group_by_line, with_start_and_end, split_into_lines
+from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
 
 
 def _name_needles(condensed, key, name_key):
@@ -146,7 +146,6 @@ def overridden_needles(condensed):
 #
 #     return chain(
 #         name_needles(condensed, 'macro'),
-#         warn_needles(condensed),
 #         warn_op_needles(condensed),
 #         callee_needles(graph),
 #         caller_needles(graph),
@@ -195,7 +194,7 @@ def warning_needles(condensed):
 
 
 def needles(condensed, _1, _2):
-    return group_by_line(with_start_and_end(split_into_lines(chain(
+    return iterable_per_line(with_start_and_end(split_into_lines(chain(
             symbol_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
 
