@@ -102,7 +102,6 @@ def overridden_needles(condensed):
 #     """Return all C plugin needles."""
 #
 #     return chain(
-#         name_needles(condensed, 'macro'),
 #         callee_needles(graph),
 #         caller_needles(graph),
 #         parent_needles(condensed, inherit),
@@ -113,35 +112,38 @@ def overridden_needles(condensed):
 #         sig_needles(condensed),
 #     )
 
-def qualified_needles(condensed, kind, condensed_key=None):
+def qualified_needles(condensed, needle_name, kind=None):
     """Return needles for a kind of thing that has a name and qualname.
 
-    :arg kind: The main part of the needle name ("function" in "c_function")
-        and the key under which the interesting things are stored in
-        ``condensed``
+    :arg needle_name: The main part of the needle name ("function" in
+        "c_function") and the key under which the interesting things are
+        stored in ``condensed``
 
     """
-    return (('c_{0}'.format(kind),
+    return (('c_{0}'.format(needle_name),
              {'name': f['name'], 'qualname': f['qualname']},
              f['span'])
-            for f in condensed[condensed_key or kind])
+            for f in condensed[kind or needle_name])
 
 
-def ref_needles(condensed, kind, condensed_key=None):
+def ref_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
     """Return needles for references to a certain kind of thing.
 
     References are assumed to have names and qualnames.
 
-    :arg kind: The main part of the needle name ("function" in
-        "c_function_ref") and the key under which the interesting things are
-        stored in ``condensed['refs']``
+    :arg needle_name: The main part of the needle name ("function" in
+        "c_function_ref")
+    :arg kind: The key under which the interesting things are
+        stored in ``condensed['refs']``. Defaults to the value of
+        ``needle_name``.
+    :arg keys: The keys that should be in the final needle value
 
     """
-    condensed_key = condensed_key or kind
-    return (('c_{0}_ref'.format(kind),
-             {'name': f['name'], 'qualname': f['qualname']},
+    kind = kind or needle_name
+    return (('c_{0}_ref'.format(needle_name),
+             dict((k, f[k]) for k in keys),
              f['span'])
-            for f in condensed['ref'] if f['kind'] == condensed_key)
+            for f in condensed['ref'] if f['kind'] == kind)
 
 
 def warning_needles(condensed):
@@ -155,6 +157,11 @@ def warning_opt_needles(condensed):
             condensed['warning']]
 
 
+def macro_needles(condensed):
+    return [('c_macro', {'name': m['name']}, m['span']) for m in
+            condensed['macro']]
+
+
 def needles(condensed, _1, _2):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
@@ -165,17 +172,20 @@ def needles(condensed, _1, _2):
             ref_needles(condensed, 'type'),
 
             # Typedefs:
-            qualified_needles(condensed, 'type', condensed_key='typedef'),
-            ref_needles(condensed, 'type', condensed_key='typedef'),
+            qualified_needles(condensed, 'type', kind='typedef'),
+            ref_needles(condensed, 'type', kind='typedef'),
 
-            qualified_needles(condensed, 'var', condensed_key='variable'),
-            ref_needles(condensed, 'var', condensed_key='variable'),
+            qualified_needles(condensed, 'var', kind='variable'),
+            ref_needles(condensed, 'var', kind='variable'),
 
             qualified_needles(condensed, 'namespace'),
             ref_needles(condensed, 'namespace'),
 
             qualified_needles(condensed, 'namespace_alias'),
             ref_needles(condensed, 'namespace_alias'),
+
+            macro_needles(condensed),
+            ref_needles(condensed, 'macro', keys=('name',)),
 
             warning_needles(condensed),
             warning_opt_needles(condensed)))))
