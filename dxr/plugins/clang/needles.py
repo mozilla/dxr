@@ -7,37 +7,6 @@ from funcy import imap, group_by, is_mapping, repeat, icat
 from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
 
 
-def _name_needles(condensed, key, name_key):
-    """Helper function for name_needles.
-
-    :param name_key: key to access the name of a property
-
-    """
-    names = (('c-{0}'.format(key.replace('_', '-')), props[name_key])
-             for props in condensed[key] if name_key in props)
-    # How are names and spans(...) going to align? spans() doesn't do the "if name_key in props" bit.
-    return izip(names, spans(condensed, key))
-
-
-def name_needles(condensed, key, ):
-    """Return needles ((c-key, name), span).
-
-    :param key: name of entry in condensed to get names from
-
-    """
-    return chain(_name_needles(condensed, key, 'name'),
-                 _name_needles(condensed, key, 'qualname'))
-
-
-def spans(condensed, key):
-    """Return list of spans from condensed.
-
-    :arg key: name of entry in condensed to get spans from
-
-    """
-    return imap(itemgetter('span'), condensed[key])
-
-
 def callee_needles(graph):
     """Return needles (('c-callee', callee name), span)."""
     return ((('c-callee', call.callee[0]), call.callee[1]) for call
@@ -142,7 +111,6 @@ def overridden_needles(condensed):
 #         overridden_needles(condensed),
 #         overrides_needles(condensed),
 #         sig_needles(condensed),
-#         # TODO: Add ref needles. Should be easy.
 #     )
 
 def qualified_needles(condensed, kind, condensed_key=None):
