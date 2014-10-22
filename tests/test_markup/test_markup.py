@@ -22,7 +22,20 @@ class MarkupTests(DxrInstanceTestCase):
         ok_('&folder&' not in response.data)
         ok_('&amp;folder&amp;' in response.data)
 
-    def test_analytics_snippet_empty( self ):
+    def test_folder_links(self):
+        """Make sure folders link to the right places, not just to their first
+        chars."""
+        response = self.client().get('/code/source/')
+        ok_('<a href="/code/source/%26folder%26" class="icon folder">&amp;folder&amp;</a>'
+            in response.data)
+
+    def test_file_links(self):
+        """Make sure files link to the right places."""
+        response = self.client().get('/code/source/%26folder%26')
+        ok_('<a href="/code/source/%26folder%26/README.mkd" class="icon unknown">README.mkd</a>'
+            in response.data)
+
+    def test_analytics_snippet_empty(self):
         """Make sure google analytics snippet doesn't show up
         in when the key isn't configured"""
         response = self.client().get( '/code/source' )

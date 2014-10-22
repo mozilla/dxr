@@ -557,7 +557,7 @@ def index_files(tree, tree_indexers, index, pool, es):
         superfolder_path, folder_name = split(rel_path)
 #        indexer.index({
         es.index(index, FILE, {
-            'path': rel_path,
+            'path': [rel_path],  # array for consistency with non-folder file docs
             'folder': superfolder_path,
             'name': folder_name,
             'is_folder': True})
