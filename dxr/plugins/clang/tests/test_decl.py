@@ -34,7 +34,6 @@ class FunctionDeclarationTests(SingleFileTestCase):
 
     def test_function(self):
         """Try searching for function declarations."""
-        raise SkipTest("Not yet implemented in ES branch")
         self.found_line_eq(
             'function-decl:foo', 'void <b>foo</b>();')
 
