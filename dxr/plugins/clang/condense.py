@@ -19,6 +19,10 @@ from toposort import toposort_flatten
 from dxr.indexers import FuncSig, Position, Extent, Call
 
 
+class UselessLine(Exception):
+    """A CSV line isn't suitable for getting anything useful out of."""
+
+
 POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',
                        'type', 'impl', 'decldef', 'typedef', 'warning',
                        'namespace', 'namespace_alias', 'include'])
@@ -58,6 +62,15 @@ def process_function(props):
 @without('loc', 'extent')
 def process_loc(props):
     """Return extent based on loc and extent."""
+    if 'extent' not in props:
+        # This happens with some macros which call other macros, like this:
+        #   #define ID2(x) (x)
+        #   #define ID(x) ID2(x)
+        # In the second line, ID2 will get a macro ref line, but it will lack
+        # an extent because the SourceLocation of ID2 will not be .isValid().
+        # We never got that right, even in the SQLite implementation.
+        raise UselessLine('Found a line with "loc" but without "extent".')
+
     row, col = map(int, props['loc'].split(':')[1:])
     start, end = map(int, props['extent'].split(':'))
 
@@ -140,27 +153,32 @@ HANDLERS = {
 
 
 def process_fields(kind, fields):
-    """Return new fields dict based on the current contents.
+    """Return new fields dict based on a single row of a CSV file.
+
+    Return {} if this row is useless and should be ignored.
 
     :arg kind: the ast node type specified by the csv file.
 
     """
     fields = HANDLERS.get(kind, identity)(fields)
 
-    if 'loc' in fields:
-        fields = process_loc(fields)
+    try:
+        if 'loc' in fields:
+            fields = process_loc(fields)
 
-    if 'scopeloc' in fields:
-        fields = process_scope(fields)
+        if 'scopeloc' in fields:
+            fields = process_scope(fields)
 
-    if 'overrideloc' in fields:
-        fields = process_override(fields)
+        if 'overrideloc' in fields:
+            fields = process_override(fields)
 
-    if 'declloc' in fields:
-        fields = process_declloc(fields)
+        if 'declloc' in fields:
+            fields = process_declloc(fields)
 
-    if 'defloc' in fields:
-        fields = process_defloc(fields)
+        if 'defloc' in fields:
+            fields = process_defloc(fields)
+    except UselessLine:
+        return {}
 
     return fields
 
@@ -174,7 +192,7 @@ def process((kind, vals)):
         (kind, {dict of remaining fields as key/value pairs})
 
     """
-    mapping = map(lambda v: process_fields(kind, v[1]), vals)
+    mapping = filter(None, imap(lambda v: process_fields(kind, v[1]), vals))
     return kind, mapping
 
 
