@@ -113,56 +113,56 @@ def overridden_needles(condensed):
 #     )
 
 
-def qualified_needles(condensed, needle_name, kind=None):
-    """Return needles for a kind of thing that has a name and qualname.
+def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', 'qualname')):
+    """Return an iterable of needles computed from the condensed representation.
 
-    :arg needle_name: The main part of the needle name ("function" in
+    Each needle is a (needle name, needle value dict, Extent) triple.
+
+    :arg name: The main part of the needle name ("function" in
         "c_function") and the key under which the interesting things are
+    :arg suffix: The ending of the needle name ("_ref" in "c_var_ref")
         stored in ``condensed``
+    :arg kind: The key under which the interesting things are stored in
+         ``condensed``. Defaults to the value of ``name``.
+    :arg subkind: The value of the 'kind' key to insist on in things found
+        within ``condensed[kind]``. None for no insistence.
+    :arg keys: The keys that should be in the final needle value
 
     """
-    return (('c_{0}'.format(needle_name),
-             {'name': f['name'], 'qualname': f['qualname']},
-             f['span'])
-            for f in condensed[kind or needle_name])
+    kind = kind or name
+    matches_subkind = (lambda entity: entity['kind'] == subkind if subkind
+                       else lambda entity: True)
+    return [('c_{0}{1}'.format(name, suffix),
+             dict((k, entity[k]) for k in keys),
+             entity['span'])
+            for entity in condensed[kind] if matches_subkind(entity)]
 
 
-def ref_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
+def qualified_needles(condensed, name, kind=None):
+    """Return needles for a top-level kind of thing that has a name and qualname."""
+    return needles(condensed, name, kind=kind)
+
+
+def ref_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
     """Return needles for references to a certain kind of thing.
 
     References are assumed to have names and qualnames.
 
-    :arg needle_name: The main part of the needle name ("function" in
-        "c_function_ref")
-    :arg kind: The key under which the interesting things are stored in
-         ``condensed['refs']``. Defaults to the value of ``needle_name``.
-    :arg keys: The keys that should be in the final needle value
+    :arg subkind: The value of the 'kind' key to insist on in things within
+        :``condensed['ref']``. Defaults to ``name``.
 
     """
-    kind = kind or needle_name
-    return (('c_{0}_ref'.format(needle_name),
-             dict((k, f[k]) for k in keys),
-             f['span'])
-            for f in condensed['ref'] if f['kind'] == kind)
+    subkind = subkind or name
+    return needles(condensed, name, suffix='_ref', kind='ref', subkind=subkind, keys=keys)
 
 
-def decl_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
+def decl_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
     """Return needles for declarations of things.
 
     Things are assumed to have names and qualnames.
 
-    :arg needle_name: The main part of the needle name ("function" in
-        "c_function_decl")
-    :arg kind: The key under which the interesting things are stored in
-         ``condensed['decldef']``. Defaults to the value of ``needle_name``.
-    :arg keys: The keys that should be in the final needle value
-
     """
-    kind = kind or needle_name
-    return (('c_{0}_decl'.format(needle_name),
-             dict((k, f[k]) for k in keys),
-             f['span'])
-            for f in condensed['decldef'] if f['kind'] == kind)
+    return needles(condensed, name, suffix='_decl', kind='decldef', subkind=subkind, keys=keys)
 
 
 def warning_needles(condensed):
@@ -181,7 +181,7 @@ def macro_needles(condensed):
             condensed['macro']]
 
 
-def needles(condensed, _1, _2):
+def all_needles(condensed, _1, _2):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
@@ -192,10 +192,10 @@ def needles(condensed, _1, _2):
 
             # Typedefs:
             qualified_needles(condensed, 'type', kind='typedef'),
-            ref_needles(condensed, 'type', kind='typedef'),
+            ref_needles(condensed, 'type', subkind='typedef'),
 
             qualified_needles(condensed, 'var', kind='variable'),
-            ref_needles(condensed, 'var', kind='variable'),
+            ref_needles(condensed, 'var', subkind='variable'),
 
             qualified_needles(condensed, 'namespace'),
             ref_needles(condensed, 'namespace'),
@@ -206,7 +206,7 @@ def needles(condensed, _1, _2):
             macro_needles(condensed),
             ref_needles(condensed, 'macro', keys=('name',)),
 
-            decl_needles(condensed, 'var', kind='variable'),
+            decl_needles(condensed, 'var', subkind='variable'),
             decl_needles(condensed, 'function'),
             decl_needles(condensed, 'type'),
 

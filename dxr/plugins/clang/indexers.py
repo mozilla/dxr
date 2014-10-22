@@ -8,14 +8,15 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
                    constantly, icat, autocurry)
 
 from dxr.filters import LINE
-from dxr.indexers import FileToIndex as FileToIndexBase, TreeToIndex as TreeToIndexBase
-from dxr.indexers import unsparsify, group_needles, by_line
+from dxr.indexers import (FileToIndex as FileToIndexBase,
+                          TreeToIndex as TreeToIndexBase,
+                          unsparsify)
 from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu, typedef_menu,
                                      definition_menu)
-from dxr.plugins.clang.needles import needles
+from dxr.plugins.clang.needles import all_needles
 
 
 PLUGIN_NAME = 'clang'
@@ -94,9 +95,9 @@ class FileToIndex(FileToIndexBase):
         self.condensed = load_csv(*os.path.split(path))
 
     def needles_by_line(self):
-        return needles(self.condensed,
-                       self.inherit,
-                       call_graph(self.condensed, self.inherit))
+        return all_needles(self.condensed,
+                           self.inherit,
+                           call_graph(self.condensed, self.inherit))
 
     def refs(self):
         def silent_itemgetter(y):
