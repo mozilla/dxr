@@ -1,11 +1,10 @@
 """Unit tests for clang plugin"""
 
-from mock import MagicMock
-from nose.tools import eq_
 from funcy import first
+from nose.tools import eq_
 
 from dxr.indexers import Extent, Position, FuncSig, Call
-from dxr.plugins.clang.indexers import TreeToIndex, FileToIndex, kind_getter
+from dxr.plugins.clang.indexers import kind_getter
 from dxr.plugins.clang.needles import (
     callee_needles, caller_needles, child_needles, parent_needles,
     member_needles, sig_needles, overrides_needles, overridden_needles)
@@ -243,14 +242,6 @@ def test_callgraph():
     """)
     g = call_graph(csv)
     eq_(len(set(g.keys())), 6)
-
-
-def smoke_test_tree():
-    TreeToIndex('test')
-
-
-def test_FileToIndex():
-    FileToIndex('', '', MagicMock(), {})
 
 
 def eq__(l1, l2):

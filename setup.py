@@ -37,7 +37,7 @@ setup(
                       'funcy>=1.0,<2.0',
                       'toposort>=1.0,<2.0',
                   ],
-    tests_require=['nose>=1.3.0,<2.0', 'mock>=1.0,<2.0'],
+    tests_require=['nose>=1.3.0,<2.0'],
     test_suite='nose.collector',
     url='https://github.com/mozilla/dxr',
     include_package_data=True,
