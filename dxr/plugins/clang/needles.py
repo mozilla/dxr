@@ -112,6 +112,7 @@ def overridden_needles(condensed):
 #         sig_needles(condensed),
 #     )
 
+
 def qualified_needles(condensed, needle_name, kind=None):
     """Return needles for a kind of thing that has a name and qualname.
 
@@ -133,9 +134,8 @@ def ref_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
 
     :arg needle_name: The main part of the needle name ("function" in
         "c_function_ref")
-    :arg kind: The key under which the interesting things are
-        stored in ``condensed['refs']``. Defaults to the value of
-        ``needle_name``.
+    :arg kind: The key under which the interesting things are stored in
+         ``condensed['refs']``. Defaults to the value of ``needle_name``.
     :arg keys: The keys that should be in the final needle value
 
     """
@@ -144,6 +144,25 @@ def ref_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
              dict((k, f[k]) for k in keys),
              f['span'])
             for f in condensed['ref'] if f['kind'] == kind)
+
+
+def decl_needles(condensed, needle_name, kind=None, keys=('name', 'qualname')):
+    """Return needles for declarations of things.
+
+    Things are assumed to have names and qualnames.
+
+    :arg needle_name: The main part of the needle name ("function" in
+        "c_function_decl")
+    :arg kind: The key under which the interesting things are stored in
+         ``condensed['decldef']``. Defaults to the value of ``needle_name``.
+    :arg keys: The keys that should be in the final needle value
+
+    """
+    kind = kind or needle_name
+    return (('c_{0}_decl'.format(needle_name),
+             dict((k, f[k]) for k in keys),
+             f['span'])
+            for f in condensed['decldef'] if f['kind'] == kind)
 
 
 def warning_needles(condensed):
@@ -186,6 +205,8 @@ def needles(condensed, _1, _2):
 
             macro_needles(condensed),
             ref_needles(condensed, 'macro', keys=('name',)),
+
+            decl_needles(condensed, 'var', kind='variable'),
 
             warning_needles(condensed),
             warning_opt_needles(condensed)))))

@@ -275,6 +275,7 @@ public:
     out = &f->info;
     *out << name;
   }
+
   void recordValue(const char *key, std::string value, bool needQuotes=false) {
     *out << "," << key << ",\"";
     int start = 0;
@@ -348,6 +349,7 @@ public:
       return;
 
     beginRecord("decldef", decl->getLocation());
+    recordValue("name", decl->getNameAsString());
     recordValue("qualname", getQualifiedName(*def));
     recordValue("loc", locationToString(decl->getLocation()));
     recordValue("defloc", locationToString(def->getLocation()));

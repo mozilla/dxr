@@ -1,9 +1,6 @@
 """Tests for searches for declarations"""
 
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
 from nose import SkipTest
-raise SkipTest
 
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
@@ -20,6 +17,7 @@ class TypeDeclarationTests(SingleFileTestCase):
 
     def test_type(self):
         """Try searching for type declarations."""
+        raise SkipTest("Not yet implemented in ES branch")
         self.found_line_eq(
             'type-decl:MyClass', 'class <b>MyClass</b>;')
 
@@ -36,6 +34,7 @@ class FunctionDeclarationTests(SingleFileTestCase):
 
     def test_function(self):
         """Try searching for function declarations."""
+        raise SkipTest("Not yet implemented in ES branch")
         self.found_line_eq(
             'function-decl:foo', 'void <b>foo</b>();')
 
