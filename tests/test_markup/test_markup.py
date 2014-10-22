@@ -38,6 +38,5 @@ class MarkupTests(DxrInstanceTestCase):
     def test_analytics_snippet_empty(self):
         """Make sure google analytics snippet doesn't show up
         in when the key isn't configured"""
-        response = self.client().get( '/code/source' )
-        ok_( '.google-analytics.com' not in response.data )
-
+        response = self.client().get('/code/source/')
+        ok_('.google-analytics.com' not in response.data)
