@@ -221,7 +221,9 @@ def browse(tree, path=''):
                  f['name'],
                  decode_es_datetime(f['modified']) if 'modified' in f else None,
                  f.get('size'),
-                 url_for('.browse', tree=tree, path=f['path'][0]))
+                 url_for('.browse', tree=tree,
+                 path=f['path'][0] if isinstance(f['path'], list)
+                  else f['path']))
                 for f in files_and_folders])
 
 
