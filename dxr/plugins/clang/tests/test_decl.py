@@ -1,7 +1,5 @@
 """Tests for searches for declarations"""
 
-from nose import SkipTest
-
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
@@ -17,7 +15,6 @@ class TypeDeclarationTests(SingleFileTestCase):
 
     def test_type(self):
         """Try searching for type declarations."""
-        raise SkipTest("Not yet implemented in ES branch")
         self.found_line_eq(
             'type-decl:MyClass', 'class <b>MyClass</b>;')
 

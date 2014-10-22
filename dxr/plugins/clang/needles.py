@@ -208,6 +208,7 @@ def needles(condensed, _1, _2):
 
             decl_needles(condensed, 'var', kind='variable'),
             decl_needles(condensed, 'function'),
+            decl_needles(condensed, 'type'),
 
             warning_needles(condensed),
             warning_opt_needles(condensed)))))
