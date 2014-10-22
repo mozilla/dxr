@@ -139,7 +139,6 @@ HANDLERS = {
 }
 
 
-@autocurry
 def process_fields(kind, fields):
     """Return new fields dict based on the current contents.
 
@@ -167,8 +166,15 @@ def process_fields(kind, fields):
 
 
 def process((kind, vals)):
-    """Process row from csv output."""
-    mapping = map(compose(process_fields(kind), itemgetter(1)), vals)
+    """Process all rows of a given kind from a CSV file.
+
+    :arg kind: The (consistent) value of the first field of the rows
+    :arg vals: An iterable of tuples representing the contents of each row::
+
+        (kind, {dict of remaining fields as key/value pairs})
+
+    """
+    mapping = map(lambda v: process_fields(kind, v[1]), vals)
     return kind, mapping
 
 
