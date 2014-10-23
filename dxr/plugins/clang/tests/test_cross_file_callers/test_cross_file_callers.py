@@ -1,5 +1,9 @@
-"""Tests for calls that span files"""
+"""Tests for calls that span files.
 
+These used to be a problem when we built a (single-file--whoops!) call graph,
+but we don't anymore, so we can probably delete this at some point.
+
+"""
 from dxr.testing import DxrInstanceTestCase
 
 from nose import SkipTest
@@ -13,7 +17,3 @@ class CrossFileCallerTests(DxrInstanceTestCase):
         self.found_line_eq('callers:another_file',
                            u'int <b>main</b>(int argc, char* argv[]) {',
                            3)
-
-    def test_called_by(self):
-        """Make sure "called-by" needles get deposited at function definitions
-        and refer to their call sites."""

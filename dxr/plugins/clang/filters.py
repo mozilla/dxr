@@ -213,14 +213,14 @@ class WarningOptFilter(_NameFilter):
     description = 'Warning messages brought on by a given compiler command-line option'
 
 
-class CalleeFilter(_QualifiedNameFilter):
-    name = 'called-by'
-    description = 'Functions or methods which are called by the given one'
-
-
 class CallerFilter(_QualifiedNameFilter):
     name = 'callers'
     description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
+
+    def __init__(self, term):
+        """Massage the needle name so we don't have to call our needle "callers"."""
+        super(CallerFilter, self).__init__(term)
+        self._needle = '{0}_call'.format(self.lang)
 
 
 class ChildFilter(_QualifiedNameFilter):

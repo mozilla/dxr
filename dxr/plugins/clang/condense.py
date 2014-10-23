@@ -112,14 +112,20 @@ def process_impl(props):
     return group_loc_name('tb', props)
 
 
+@without('callloc', 'calllocend')
 def process_call(props):
-    """Group caller and callee for the call site."""
-    callee_pos = _process_loc(props.get('calleeloc'))[1]
-    caller_pos = _process_loc(props.get('callerloc'))[1]
-    return Call(
-        (props['calleename'], Extent(callee_pos, callee_pos)),
-        (props.get('callername'), Extent(caller_pos, caller_pos)),
-        props['calltype'])
+    # This is a pilot test of outputting row/col for both start and end from
+    # the compiler plugin. It lets us construct reliable Extents, with no
+    # assumption that they don't span lines.
+    _, call_start = _process_loc(props['callloc'])
+    _, (_, call_end_row, call_end_col) = _process_loc(props['calllocend'])
+    if call_end_col > call_start.col + 1:
+        # The span coming out of the compiler includes the left paren. Stop that.
+        call_end_col -= 1
+    props['span'] = Extent(call_start,
+                           Position(offset=None, row=call_end_row, col=call_end_col))
+    props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
+    return props
 
 
 def process_scope(props):
@@ -229,6 +235,7 @@ def load_csv(csv_root, fpath=None, only_impl=False):
                   dict((key, []) for key in POSSIBLE_FIELDS))
 
 
+# TODO: Perhaps remove.
 def call_graph(condensed, inherit=None):
     """Return DiGraph with edges representing function caller -> callee."""
     graph = {}

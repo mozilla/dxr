@@ -773,17 +773,18 @@ public:
         !NamedDecl::classof(callee))
       return true;
 
+    const NamedDecl *namedCallee = dyn_cast<NamedDecl>(callee);
+
     // Fun facts about call exprs:
     // 1. callee isn't necessarily a function. Think function pointers.
     // 2. We might not be in a function. Think global function decls
     // 3. Virtual functions need not be called virtually!
     beginRecord("call", e->getLocStart());
-    if (m_currentFunction) {
-      recordValue("callername", getQualifiedName(*m_currentFunction));
-      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
-    }
-    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("callloc", locationToString(e->getLocStart()));
+    recordValue("calllocend", locationToString(e->getLocEnd()));
     recordValue("calleeloc", locationToString(callee->getLocation()));
+    recordValue("name", namedCallee->getNameAsString());
+    recordValue("qualname", getQualifiedName(*namedCallee));
     // Determine the type of call
     const char *type = "static";
     if (CXXMethodDecl::classof(callee)) {
@@ -817,12 +818,11 @@ public:
     // 2. We might not be in a function. Think global function decls
     // 3. Virtual functions need not be called virtually!
     beginRecord("call", e->getLocStart());
-    if (m_currentFunction) {
-      recordValue("callername", getQualifiedName(*m_currentFunction));
-      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
-    }
-    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("callloc", locationToString(e->getLocStart()));
+    recordValue("calllocend", locationToString(e->getLocEnd()));
     recordValue("calleeloc", locationToString(callee->getLocation()));
+    recordValue("name", callee->getNameAsString());
+    recordValue("qualname", getQualifiedName(*callee));
 
     // There are no virtual constructors in C++:
     recordValue("calltype", "static");

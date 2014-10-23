@@ -1,12 +1,12 @@
 """Unit tests for clang plugin"""
 
 from funcy import first
+from nose import SkipTest
 from nose.tools import eq_
 
 from dxr.indexers import Extent, Position, FuncSig, Call
 from dxr.plugins.clang.indexers import kind_getter
-from dxr.plugins.clang.needles import (
-    callee_needles, caller_needles, child_needles, parent_needles,
+from dxr.plugins.clang.needles import (child_needles, parent_needles,
     member_needles, sig_needles, overrides_needles, overridden_needles)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
@@ -81,19 +81,6 @@ def test_variable():
                   'name': 'comb(int **, int, int)'},
         'span': DEFAULT_EXTENT
     })
-
-
-def test_call():
-    csv = get_csv("""
-        call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"static"
-        call,callername,"main()",callerloc,"x:0:0",calleename,"comb(int **, int, int)",calleeloc,"x:0:0",calltype,"virtual"
-    """)
-    eq_(csv['call'][0], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-                             caller=('main()', CALL_EXTENT),
-                             calltype='static'))
-    eq_(csv['call'][1], Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-                             caller=('main()', CALL_EXTENT),
-                             calltype='virtual'))
 
 
 def test_macro():
@@ -230,7 +217,7 @@ def test_callgraph():
     There are also the 2 static calls.
 
     """
-
+    raise SkipTest("It is unlikely that we'll need to build a concrete call graph at all.")
     csv = get_csv("""
         impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
         impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
@@ -246,27 +233,6 @@ def test_callgraph():
 
 def eq__(l1, l2):
     eq_(list(l1), list(l2))
-
-
-def test_call_needles():
-    fixture = {
-        'call': [
-            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-                 caller=('main()', CALL_EXTENT),
-                 calltype='static'),
-            Call(callee=('comb(int **, int, int)', CALL_EXTENT),
-                 caller=('main()', CALL_EXTENT),
-                 calltype='virtual')
-        ]
-    }
-    g = call_graph(fixture, {})
-    eq__(callee_needles(g),
-         [(('c-callee', 'comb(int **, int, int)'), CALL_EXTENT),
-          (('c-callee', 'comb(int **, int, int)'), CALL_EXTENT)])
-
-    eq__(caller_needles(g),
-         [(('c-called-by', 'main()'), CALL_EXTENT),
-          (('c-called-by', 'main()'), CALL_EXTENT)])
 
 
 def test_inherit_needles():

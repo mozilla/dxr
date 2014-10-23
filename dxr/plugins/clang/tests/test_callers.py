@@ -1,9 +1,6 @@
 """Tests for searches using callers and called-by"""
 
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
 from nose import SkipTest
-raise SkipTest
 
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
@@ -40,24 +37,16 @@ class DirectCallTests(SingleFileTestCase):
     def test_no_caller(self):
         self.found_nothing('callers:orphan')
 
-    def test_no_callees(self):
-        self.found_nothing('called-by:orphan')
-
     def test_one_caller(self):
-        self.found_line_eq('callers:called_once', 'void <b>call_two</b>()')
+        self.found_line_eq('callers:called_once', '<b>called_once</b>();')
+
+    def test_qualified(self):
+        self.found_line_eq('+callers:called_once()', '<b>called_once</b>();')
 
     def test_two_callers(self):
         self.found_lines_eq('callers:called_twice', [
-            ('void <b>call_two</b>()', 14),
-            ('int <b>main</b>()', 20)])
-
-    def test_one_callee(self):
-        self.found_line_eq('called-by:main', 'void <b>called_twice</b>()')
-
-    def test_two_callees(self):
-        self.found_lines_eq('called-by:call_two', [
-            ('void <b>called_once</b>()', 6),
-            ('void <b>called_twice</b>()', 10)])
+            ('<b>called_twice</b>();', 16),
+            ('<b>called_twice</b>();', 22)])
 
 
 class IndirectCallTests(SingleFileTestCase):
@@ -69,6 +58,7 @@ class IndirectCallTests(SingleFileTestCase):
         public:
             Base() {}
             virtual void foo() {}
+            void bar() {}
         };
 
         class Derived : public Base
@@ -76,27 +66,48 @@ class IndirectCallTests(SingleFileTestCase):
         public:
             Derived() {}
             virtual void foo() {}
+            void bar() {}
         };
 
         void c1(Base &b)
         {
             b.foo();
+            b.bar();
         }
 
         void c2(Derived &d)
         {
             d.foo();
+            d.bar();
         }
         """ + MINIMAL_MAIN
 
-    def test_callers(self):
-        self.found_line_eq('+callers:Base::foo()', 'void <b>c1</b>(Base &amp;b)')
-        self.found_lines_eq('+callers:Derived::foo()', [
-            ('void <b>c1</b>(Base &amp;b)', 16),
-            ('void <b>c2</b>(Derived &amp;d)', 21)])
+    def test_virtual_base(self):
+        """Virtual methods on base classes should find only invocations
+        against base-class-typed things.
 
-    def test_callees(self):
-        self.found_lines_eq('called-by:c1', [
-            ('virtual void <b>foo</b>() {}', 6),
-            ('virtual void <b>foo</b>() {}', 13)])
-        self.found_line_eq('called-by:c2', 'virtual void <b>foo</b>() {}', 13)
+        C++ does not automatically downcast things from base to derived types.
+
+        """
+        self.found_line_eq('+callers:Base::foo()', '<b>b.foo</b>();')
+
+    def test_virtual_derived(self):
+        """Make sure derived-class method invocations are found on derived and
+        base classes.
+
+        We play it safe with derived methods. We say we found them when
+        they're invoked on something with the type of the derived class *or*
+        any of its base classes that have such a method. That way, we have, at
+        worst, false positives.
+
+        """
+        raise SkipTest("We don't yet represent implicit upcasts, so the b.foo hit doesn't get returned.")
+        # b could be a Base or a Derived; we can't tell. C++ happily upcasts.
+        self.found_lines_eq('+callers:Derived::foo()', [
+            ('<b>b.foo</b>();', 20),
+            ('<b>d.foo</b>();', 26)])
+
+    def test_non_virtual(self):
+        """Non-virtual methods should always resolve according to their ptr types."""
+        self.found_line_eq('+callers:Base::bar()', '<b>b.bar</b>();')
+        self.found_line_eq('+callers:Derived::bar()', '<b>d.bar</b>();')

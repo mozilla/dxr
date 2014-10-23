@@ -74,8 +74,7 @@ mappings = {
             'c_namespace_alias_ref': SYMBOL_NEEDLE,
             'c_warning': SYMBOL_NEEDLE,
             'c_warning_opt': SYMBOL_NEEDLE,
-            'c_called_by': SYMBOL_NEEDLE,
-            'c_callers': SYMBOL_NEEDLE,
+            'c_call': SYMBOL_NEEDLE,
             'c_bases': SYMBOL_NEEDLE,
             'c_derived': SYMBOL_NEEDLE,
             'c_member': SYMBOL_NEEDLE,
@@ -96,8 +95,7 @@ class FileToIndex(FileToIndexBase):
 
     def needles_by_line(self):
         return all_needles(self.condensed,
-                           self.inherit,
-                           call_graph(self.condensed, self.inherit))
+                           self.inherit)
 
     def refs(self):
         def silent_itemgetter(y):

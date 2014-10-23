@@ -13,12 +13,6 @@ def callee_needles(graph):
             in graph)
 
 
-def caller_needles(graph):
-    """Return needles (('c-needle', caller name), span)."""
-    return ((('c-called-by', call.caller[0]), call.caller[1]) for call
-            in graph)
-
-
 def sig_needles(condensed):
     """Return needles ((c-sig, type), span)."""
     return ((('c-sig', str(o['type'])), o['span']) for o in
@@ -102,8 +96,6 @@ def overridden_needles(condensed):
 #     """Return all C plugin needles."""
 #
 #     return chain(
-#         callee_needles(graph),
-#         caller_needles(graph),
 #         parent_needles(condensed, inherit),
 #         child_needles(condensed, inherit),
 #         member_needles(condensed),
@@ -132,10 +124,10 @@ def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', '
     kind = kind or name
     matches_subkind = (lambda entity: entity['kind'] == subkind if subkind
                        else lambda entity: True)
-    return [('c_{0}{1}'.format(name, suffix),
+    return (('c_{0}{1}'.format(name, suffix),
              dict((k, entity[k]) for k in keys),
              entity['span'])
-            for entity in condensed[kind] if matches_subkind(entity)]
+            for entity in condensed[kind] if matches_subkind(entity))
 
 
 def qualified_needles(condensed, name, kind=None):
@@ -149,7 +141,7 @@ def ref_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
     References are assumed to have names and qualnames.
 
     :arg subkind: The value of the 'kind' key to insist on in things within
-        :``condensed['ref']``. Defaults to ``name``.
+        ``condensed['ref']``. Defaults to ``name``.
 
     """
     subkind = subkind or name
@@ -166,22 +158,22 @@ def decl_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
 
 
 def warning_needles(condensed):
-    return [('c_warning', {'name': w['msg']}, w['span']) for w in
-            condensed['warning']]
+    return (('c_warning', {'name': w['msg']}, w['span']) for w in
+            condensed['warning'])
 
 
 def warning_opt_needles(condensed):
     """Return needles about the command-line options that call forth warnings."""
-    return [('c_warning_opt', {'name': w['opt']}, w['span']) for w in
-            condensed['warning']]
+    return (('c_warning_opt', {'name': w['opt']}, w['span']) for w in
+            condensed['warning'])
 
 
 def macro_needles(condensed):
-    return [('c_macro', {'name': m['name']}, m['span']) for m in
-            condensed['macro']]
+    return (('c_macro', {'name': m['name']}, m['span']) for m in
+            condensed['macro'])
 
 
-def all_needles(condensed, _1, _2):
+def all_needles(condensed, _):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
@@ -211,4 +203,6 @@ def all_needles(condensed, _1, _2):
             decl_needles(condensed, 'type'),
 
             warning_needles(condensed),
-            warning_opt_needles(condensed)))))
+            warning_opt_needles(condensed),
+
+            qualified_needles(condensed, 'call')))))
