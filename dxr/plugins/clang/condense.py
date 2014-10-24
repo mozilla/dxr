@@ -52,10 +52,15 @@ def without(call, *keys):
 
 @without('args')
 def process_function(props):
-    """Return FuncSig based on args."""
+    # Compute FuncSig based on args:
     input_args = tuple(ifilter(
         bool, imap(str.lstrip, props['args'][1:-1].split(","))))
     props['type'] = c_type_sig(input_args, props['type'])
+
+    # Deal with overrides:
+    if 'overrideloc' in props:
+        props['overrideloc'] = _process_loc(props['overrideloc'])
+
     return props
 
 
@@ -86,7 +91,7 @@ def process_loc(props):
 
 
 def _process_loc(locstring):
-    """Analysis locstring for src and Position."""
+    """Turn a path:row:col string into (path, Position)."""
     if locstring is None:
         return None
 
@@ -174,9 +179,6 @@ def process_fields(kind, fields):
 
         if 'scopeloc' in fields:
             fields = process_scope(fields)
-
-        if 'overrideloc' in fields:
-            fields = process_override(fields)
 
         if 'declloc' in fields:
             fields = process_declloc(fields)

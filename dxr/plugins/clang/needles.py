@@ -2,7 +2,7 @@ from operator import itemgetter
 from itertools import chain, izip
 from functools import partial
 
-from funcy import imap, group_by, is_mapping, repeat, icat
+from funcy import imap, is_mapping, repeat, icat
 
 from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
 
@@ -173,6 +173,12 @@ def macro_needles(condensed):
             condensed['macro'])
 
 
+def overrides_needles(condensed):
+    return (('c_overrides',
+             {'name': f['overridename'], 'qualname': f['overridequalname']},
+             f['span']) for f in condensed['function'] if 'overridename' in f)
+
+
 def all_needles(condensed, _):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
@@ -205,4 +211,7 @@ def all_needles(condensed, _):
             warning_needles(condensed),
             warning_opt_needles(condensed),
 
-            qualified_needles(condensed, 'call')))))
+            qualified_needles(condensed, 'call'),
+
+            overrides_needles(condensed),
+    ))))

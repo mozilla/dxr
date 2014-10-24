@@ -484,7 +484,8 @@ public:
         CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
         CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
         if (iter) {
-          recordValue("overridename", getQualifiedName(**iter));
+          recordValue("overridename", (*iter)->getNameAsString());
+          recordValue("overridequalname", getQualifiedName(**iter));
           recordValue("overrideloc", locationToString((*iter)->getLocation()));
         }
       }
