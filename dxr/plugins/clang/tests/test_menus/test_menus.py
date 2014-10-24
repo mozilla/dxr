@@ -9,6 +9,7 @@ import cgi
 import json
 import re
 
+from nose import SkipTest
 from nose.tools import ok_
 
 from dxr.testing import DxrInstanceTestCase
@@ -197,3 +198,11 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/source/extern.c#23'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bmacro-ref%3AMACRO'})
+
+    def test_deep_files(self):
+        """Make sure we process files not at the root level."""
+        raise SkipTest("The CSV-finding code is buggy. Fix this before launching.")
+        menu_on(self.page('more_code/deeper.c'),
+                'deep_thing',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Btype-ref%deep_thing'})
