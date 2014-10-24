@@ -1,7 +1,7 @@
 from nose.tools import eq_, assert_raises
 
 from dxr.indexers import (unsparsify, by_line, group_needles, span_to_lines,
-                          key_object_pair, Extent, Position)
+                          key_object_pair, Extent, Position, split_into_lines)
 
 
 KV1 = ('x', 'v1')
@@ -57,3 +57,10 @@ def test_span_to_lines():
              ((('y', 'v2'), 0, None), 2),
              ((('y', 'v2'), 0, 7), 3)])
     assert_raises(ValueError, lambda x: list(span_to_lines(x)), [])
+
+
+def test_split_into_lines():
+    list_eq(split_into_lines([('k', {'m': 'ap'}, Extent(Position(None, 1, 5), Position(None, 3, 7)))]),
+        [('k', {'m': 'ap'}, Extent(Position(None, 1, 5), Position(None, 1, None))),
+         ('k', {'m': 'ap'}, Extent(Position(None, 2, 0), Position(None, 2, None))),
+         ('k', {'m': 'ap'}, Extent(Position(None, 3, 0), Position(None, 3, 7)))])
