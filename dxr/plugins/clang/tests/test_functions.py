@@ -80,7 +80,6 @@ class TemplateClassMemberReferenceTests(SingleFileTestCase):
 
     def test_function_decl(self):
         """Try searching for function declaration."""
-        raise SkipTest('Not implemented on ES branch yet')
         self.found_line_eq('+function-decl:Foo::bar()', 'void <b>bar</b>();')
 
     def test_function(self):
