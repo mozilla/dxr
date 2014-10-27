@@ -7,12 +7,6 @@ from funcy import imap, is_mapping, repeat, icat
 from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
 
 
-def callee_needles(graph):
-    """Return needles (('c-callee', callee name), span)."""
-    return ((('c-callee', call.callee[0]), call.callee[1]) for call
-            in graph)
-
-
 def sig_needles(condensed):
     """Return needles ((c-sig, type), span)."""
     return ((('c-sig', str(o['type'])), o['span']) for o in
