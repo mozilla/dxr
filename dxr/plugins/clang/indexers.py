@@ -25,7 +25,7 @@ PLUGIN_NAME = 'clang'
 # An unanlyzed string property that points to a value that can be exact- or
 # prefix-matched against and carries start/end bounds for highlighting. Has
 # both a name and a qualname.
-SYMBOL_NEEDLE = {
+QUALIFIED_NEEDLE = {
     'type': 'object',
     'properties': {
         'name': {
@@ -57,29 +57,29 @@ SYMBOL_NEEDLE = {
 mappings = {
     LINE: {
         'properties': {
-            'c_function': SYMBOL_NEEDLE,
-            'c_function_ref': SYMBOL_NEEDLE,
-            'c_function_decl': SYMBOL_NEEDLE,
-            'c_type_ref': SYMBOL_NEEDLE,
-            'c_type_decl': SYMBOL_NEEDLE,
-            'c_type': SYMBOL_NEEDLE,
-            'c_var': SYMBOL_NEEDLE,
-            'c_var_ref': SYMBOL_NEEDLE,
-            'c_var_decl': SYMBOL_NEEDLE,
-            'c_macro': SYMBOL_NEEDLE,
-            'c_macro_ref': SYMBOL_NEEDLE,
-            'c_namespace': SYMBOL_NEEDLE,
-            'c_namespace_ref': SYMBOL_NEEDLE,
-            'c_namespace_alias': SYMBOL_NEEDLE,
-            'c_namespace_alias_ref': SYMBOL_NEEDLE,
-            'c_warning': SYMBOL_NEEDLE,
-            'c_warning_opt': SYMBOL_NEEDLE,
-            'c_call': SYMBOL_NEEDLE,
-            'c_bases': SYMBOL_NEEDLE,
-            'c_derived': SYMBOL_NEEDLE,
-            'c_member': SYMBOL_NEEDLE,
-            'c_overrides': SYMBOL_NEEDLE,
-            'c_overridden': SYMBOL_NEEDLE
+            'c_function': QUALIFIED_NEEDLE,
+            'c_function_ref': QUALIFIED_NEEDLE,
+            'c_function_decl': QUALIFIED_NEEDLE,
+            'c_type_ref': QUALIFIED_NEEDLE,
+            'c_type_decl': QUALIFIED_NEEDLE,
+            'c_type': QUALIFIED_NEEDLE,
+            'c_var': QUALIFIED_NEEDLE,
+            'c_var_ref': QUALIFIED_NEEDLE,
+            'c_var_decl': QUALIFIED_NEEDLE,
+            'c_macro': QUALIFIED_NEEDLE,
+            'c_macro_ref': QUALIFIED_NEEDLE,
+            'c_namespace': QUALIFIED_NEEDLE,
+            'c_namespace_ref': QUALIFIED_NEEDLE,
+            'c_namespace_alias': QUALIFIED_NEEDLE,
+            'c_namespace_alias_ref': QUALIFIED_NEEDLE,
+            'c_warning': QUALIFIED_NEEDLE,
+            'c_warning_opt': QUALIFIED_NEEDLE,
+            'c_call': QUALIFIED_NEEDLE,
+            'c_bases': QUALIFIED_NEEDLE,
+            'c_derived': QUALIFIED_NEEDLE,
+            'c_member': QUALIFIED_NEEDLE,
+            'c_overrides': QUALIFIED_NEEDLE,
+            'c_overridden': QUALIFIED_NEEDLE
         }
     }
 }
