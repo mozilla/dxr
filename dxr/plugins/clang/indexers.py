@@ -11,7 +11,7 @@ from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           unsparsify)
-from dxr.plugins.clang.condense import load_csv, build_inheritance, call_graph
+from dxr.plugins.clang.condense import load_csv, build_inheritance
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu, typedef_menu,

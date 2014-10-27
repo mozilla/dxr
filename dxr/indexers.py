@@ -308,7 +308,6 @@ class FileToIndex(FileToSkim):
 Extent = namedtuple('Extent', ['start', 'end'])  # 0-based
 # Note that if offset is a Maybe Int, if not present it's None
 Position = namedtuple('Position', ['offset', 'row', 'col'])  # offset & col 0-based, row 1-based
-Call = namedtuple('Call', ['callee', 'caller', 'calltype'])
 
 
 class FuncSig(namedtuple('FuncSig', ['inputs', 'output'])):

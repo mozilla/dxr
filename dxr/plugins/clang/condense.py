@@ -16,7 +16,7 @@ from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
                    pluck, first, remove)
 from toposort import toposort_flatten
 
-from dxr.indexers import FuncSig, Position, Extent, Call
+from dxr.indexers import FuncSig, Position, Extent
 
 
 class UselessLine(Exception):
@@ -222,26 +222,6 @@ def load_csv(csv_root, fpath=None, only_impl=False):
 
     return reduce(merge, imap(_load_csv(only_impl=only_impl), csv_paths),
                   dict((key, []) for key in POSSIBLE_FIELDS))
-
-
-# TODO: Perhaps remove.
-def call_graph(condensed, inherit=None):
-    """Return DiGraph with edges representing function caller -> callee."""
-    graph = {}
-    if inherit is None:
-        inherit = build_inheritance(condensed)
-
-    for call in condensed['call']:
-        graph[call] = call
-        if call.calltype == 'virtual':
-            # add children
-            callee_qname, pos = call.callee
-            if '::' in callee_qname:
-                scope, func = callee_qname.split('::')
-                for child in inherit[scope]:
-                    child_qname = "{0}::{1}".format(child, func)
-                    graph[(call.caller, (child_qname, pos), 'virtual')] = call
-    return graph
 
 
 def _relate((parent, children)):

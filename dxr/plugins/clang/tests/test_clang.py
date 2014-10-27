@@ -5,16 +5,15 @@ we can probably go further in that direction.
 
 """
 from funcy import first
-from nose import SkipTest
 from nose.tools import eq_
 
-from dxr.indexers import Extent, Position, FuncSig, Call
+from dxr.indexers import Extent, Position, FuncSig
 from dxr.plugins.clang.indexers import kind_getter
 from dxr.plugins.clang.needles import (child_needles, parent_needles,
     member_needles, sig_needles, overrides_needles, overridden_needles)
 
 from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
-                                        call_graph, c_type_sig)
+                                        c_type_sig)
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
@@ -173,25 +172,6 @@ def test_inheritance():
     """)
     inherit = build_inheritance(csv)
     eq_(inherit, INHERIT)
-
-
-def test_callgraph():
-    """Test that virtual call expands into 4 different calls
-    There are also the 2 static calls.
-
-    """
-    raise SkipTest("It is unlikely that we'll need to build a concrete call graph at all.")
-    csv = get_csv("""
-        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-        impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-        impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
-        impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
-        call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::X()",calleeloc,"x:0:0",calltype,"static"
-        call,callername,"foo2()",callerloc,"x:0:0",calleename,"X::foo()",calleeloc,"x:0:0",calltype,"virtual"
-        call,callername,"bar()",callerloc,"x:0:0",calleename,"foo2()",calleeloc,"x:0:0",calltype,"static"
-    """)
-    g = call_graph(csv)
-    eq_(len(set(g.keys())), 6)
 
 
 def eq__(l1, l2):
