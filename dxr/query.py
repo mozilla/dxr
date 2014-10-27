@@ -68,7 +68,6 @@ class Query(object):
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
         filters = [[f(term) for f in enabled_filters_by_name[term['name']]]
                    for term in self.terms]
-
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
@@ -310,6 +309,15 @@ class QueryVisitor(NodeVisitor):
         """
         return visited_children or node
 
+# Return the the first filter in filters which is provided by a plugin in enabled_plugins.
+def first_filter_for_plugins(enabled_plugins, filters):
+    for f in filters:
+        if not f[0].description:
+            continue
+        if f[1] in enabled_plugins:
+            return f[0]
+
+    return None
 
 @cached
 def filters_by_name(plugins):
