@@ -1,8 +1,3 @@
-# Skip tests whose functionality isn't implemented on the es branch yet. Unskip
-# before merging to master.
-from nose import SkipTest
-raise SkipTest
-
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
@@ -17,9 +12,8 @@ class MemberVariableTests(SingleFileTestCase):
     def test_member_variable(self):
         """Test searching for members of a class (or struct) that contains
         only member variables"""
-        self.found_lines_eq('+member:MemberVariable',
-            [('class <b>MemberVariable</b> {', 2),
-             ('int <b>member_variable</b>;', 4)])
+        self.found_line_eq('+member:MemberVariable',
+                           'int <b>member_variable</b>;')
 
 
 class MemberVariableCtorTests(SingleFileTestCase):
@@ -64,9 +58,8 @@ class MemberFunctionTests(SingleFileTestCase):
     def test_member_function(self):
         """Test searching for members of a class (or struct) that contains
         only member functions"""
-        self.found_lines_eq('+member:MemberFunction',
-            [(u'class <b>MemberFunction</b> {', 2),
-             (u'void MemberFunction::<b>member_function</b>() {', 7)])
+        self.found_line_eq('+member:MemberFunction',
+                           u'void MemberFunction::<b>member_function</b>() {')
 
 
 class StaticMemberTests(SingleFileTestCase):
@@ -154,13 +147,13 @@ class MemberTests(SingleFileTestCase):
 
     def test_members(self):
         """Make sure we can find all the members of a class."""
-        self.found_lines_eq('member:BitField',
-            [('class <b>BitField</b> {', 8),
+        self.found_lines_eq('+member:BitField',
+            [('typedef unsigned int <b>_word</b>;', 11),
              ('size_t <b>_words</b>() const{', 17),
              ('_word* <b>_bits</b>;', 22),
              ('size_t <b>_size</b>;', 23),
              ('<b>BitField</b>(size_t size){', 27),
              ('<b>BitField</b>(const BitField&amp; bf){', 33),
-             ('<b>~</b>BitField(){', 41),
+             ('<b>~BitField</b>(){', 41),
              ('BitField&amp; <b>operator=</b> (const BitField&amp; rhs){', 48),
              ('BitField&amp; <b>operator&amp;=</b> (const BitField&amp; rhs){', 54)])

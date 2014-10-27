@@ -339,8 +339,8 @@ public:
         if (redecl)
           namesource = redecl;
       }
-      recordValue("scopename", getQualifiedName(*namesource));
-      recordValue("scopeloc", locationToString(scope->getLocation()));
+      recordValue("scopename", namesource->getNameAsString());
+      recordValue("scopequalname", getQualifiedName(*namesource));
     }
   }
 

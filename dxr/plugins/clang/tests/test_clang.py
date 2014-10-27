@@ -1,5 +1,9 @@
-"""Unit tests for clang plugin"""
+"""Unit tests for clang plugin
 
+Most of these have been deleted in favor of integration tests elsewhere, and
+we can probably go further in that direction.
+
+"""
 from funcy import first
 from nose import SkipTest
 from nose.tools import eq_
@@ -40,20 +44,6 @@ def test_ref():
                         'kind': 'variable',
                         'span': DEFAULT_EXTENT,
                         'qualname': 'main(int, char **)::a'})
-
-
-def test_variable():
-    csv = get_csv("""
-        variable,name,"a",qualname,"comb(int **, int, int)::a",loc,"x:0:0",type,"int **",scopename,"comb(int **, int, int)",scopeloc,"x:0:0",extent,0:0
-    """)
-    eq_(csv['variable'][0], {
-        'name': 'a',
-        'qualname': 'comb(int **, int, int)::a',
-        'type': 'int **',
-        'scope': {'loc': DEFAULT_LOC,
-                  'name': 'comb(int **, int, int)'},
-        'span': DEFAULT_EXTENT
-    })
 
 
 def test_macro():
@@ -246,13 +236,6 @@ def test_sig_needles():
     }
     eq__(sig_needles(fixture),
         [(('c-sig', '(int**, int, int) -> int**'), DEFAULT_EXTENT)])
-
-
-def test_member_needles():
-    fixture = {
-        'foo': [{'scope': {'name': 'A'}, 'span': DEFAULT_EXTENT}]
-    }
-    eq__(member_needles(fixture), [(('c-member', 'A'), DEFAULT_EXTENT)])
 
 
 def test_kind_getter():

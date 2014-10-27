@@ -51,30 +51,10 @@ def parent_needles(condensed, inherit):
     return inherit_needles(condensed, 'parent', get_parents)
 
 
-def member_needles(condensed):
-    """Return needles for the scopes that various symbols belong to."""
-    for vals in condensed.itervalues():
-        # Many of the fields are grouped by kind
-        if is_mapping(vals):
-            continue
-        for val in vals:
-            if 'scope' not in val:
-                continue
-            yield ('c-member', val['scope']['name']), val['span']
-
-
 def _over_needles(condensed, tag, name_key, get_span):
     return ((('c-{0}'.format(tag), func['override'][name_key]), get_span(func))
             for func in condensed['function']
             if name_key in func.get('override', []))
-
-
-def overrides_needles(condensed):
-    """Return needles of methods which override the given one."""
-    _overrides_needles = partial(_over_needles, condensed=condensed,
-                                tag='overrides', get_span=itemgetter('span'))
-    return chain(_overrides_needles(name_key='name'),
-                 _overrides_needles(name_key='qualname'))
 
 
 def overridden_needles(condensed):
@@ -92,9 +72,7 @@ def overridden_needles(condensed):
 #     return chain(
 #         parent_needles(condensed, inherit),
 #         child_needles(condensed, inherit),
-#         member_needles(condensed),
 #         overridden_needles(condensed),
-#         overrides_needles(condensed),
 #         sig_needles(condensed),
 #     )
 
@@ -173,6 +151,18 @@ def overrides_needles(condensed):
              f['span']) for f in condensed['function'] if 'overridename' in f)
 
 
+def member_needles(condensed):
+    """Emit needles for anything that has a class scope."""
+    return (('c_member',
+             {'name': entity['scopename'], 'qualname': entity['scopequalname']},
+             entity['span'])
+            # Walk over all kinds of things: types, functions, vars. All of
+            # them can belong to a scope.
+            for kind in condensed.itervalues()
+            for entity in kind
+            if 'scopename' in entity)
+
+
 def all_needles(condensed, _):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
@@ -208,4 +198,6 @@ def all_needles(condensed, _):
             qualified_needles(condensed, 'call'),
 
             overrides_needles(condensed),
+
+            member_needles(condensed),
     ))))
