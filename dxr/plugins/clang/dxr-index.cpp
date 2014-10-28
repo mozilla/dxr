@@ -479,14 +479,24 @@ public:
       recordValue("loc", locationToString(d->getLocation()));
       printScope(d);
       printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+
       // Print out overrides
-      if (CXXMethodDecl::classof(d)) {
-        CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
-        CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
+      if (CXXMethodDecl::classof(d)) {  // It's a method.
+        CXXMethodDecl *methodDecl = dyn_cast<CXXMethodDecl>(d);
+
+        // What do we override?
+        CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
           recordValue("overridename", (*iter)->getNameAsString());
           recordValue("overridequalname", getQualifiedName(**iter));
           recordValue("overrideloc", locationToString((*iter)->getLocation()));
+        }
+
+        // What overrides us?
+        for (CXXMethodDecl::redecl_iterator overrider = methodDecl->redecls_begin(), e = methodDecl->redecls_end();
+             overrider != e;
+             ++overrider) {
+          recordValue("overriderqualname", getQualifiedName(**overrider));
         }
       }
       *out << std::endl;
