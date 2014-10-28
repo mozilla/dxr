@@ -493,7 +493,8 @@ public:
         }
 
         // What overrides us?
-        for (CXXMethodDecl::redecl_iterator overrider = methodDecl->redecls_begin(), e = methodDecl->redecls_end();
+        CXXMethodDecl *firstDecl = dyn_cast<CXXMethodDecl>(methodDecl->getFirstDecl());
+        for (CXXMethodDecl::redecl_iterator overrider = firstDecl->redecls_begin(), e = firstDecl->redecls_end();
              overrider != e;
              ++overrider) {
           recordValue("overriderqualname", getQualifiedName(**overrider));
