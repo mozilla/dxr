@@ -4,16 +4,18 @@ Most of these have been deleted in favor of integration tests elsewhere, and
 we can probably go further in that direction.
 
 """
+import csv
+from itertools import ifilter
+from StringIO import StringIO
+
 from funcy import first
 from nose.tools import eq_
 
 from dxr.indexers import Extent, Position, FuncSig
+from dxr.plugins.clang.condense import (condense, build_inheritance,                                        c_type_sig, DISPATCH_TABLE)
 from dxr.plugins.clang.indexers import kind_getter
 from dxr.plugins.clang.needles import (child_needles, parent_needles,
     member_needles, sig_needles, overrides_needles, overridden_needles)
-
-from dxr.plugins.clang.condense import (get_condensed, build_inheritance,
-                                        c_type_sig)
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
@@ -22,8 +24,8 @@ CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
 
 
 def get_csv(csv_str):
-    return get_condensed(x.strip() for x in csv_str.splitlines()
-                         if x.strip())
+    return condense(csv.reader(StringIO('\n'.join(ifilter(None, (x.strip() for x in csv_str.splitlines()))))),
+                    DISPATCH_TABLE)
 
 
 def test_smoke_test_csv():
@@ -170,7 +172,7 @@ def test_inheritance():
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
         impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
     """)
-    inherit = build_inheritance(csv)
+    inherit = build_inheritance(csv['impl'])
     eq_(inherit, INHERIT)
 
 

@@ -6,14 +6,14 @@ reason to keep this IR.]
 
 """
 import csv
+from functools import partial
 from hashlib import sha1
-from os import path
+from itertools import chain, izip
+from os.path import join
 from glob import glob
-from operator import itemgetter
 
-from funcy import (walk, decorator, identity, select_keys, zipdict, merge,
-                   imap, ifilter, group_by, compose, autocurry, is_mapping,
-                   pluck, first, remove)
+from funcy import (walk, decorator, identity, select_keys, imap,
+                   ifilter, group_by, remove)
 from toposort import toposort_flatten
 
 from dxr.indexers import FuncSig, Position, Extent
@@ -23,7 +23,7 @@ class UselessLine(Exception):
     """A CSV line isn't suitable for getting anything useful out of."""
 
 
-POSSIBLE_FIELDS = set(['call', 'macro', 'function', 'variable', 'ref',
+POSSIBLE_KINDS = set(['call', 'macro', 'function', 'variable', 'ref',
                        'type', 'impl', 'decldef', 'typedef', 'warning',
                        'namespace', 'namespace_alias', 'include'])
 
@@ -64,6 +64,22 @@ def process_function(props):
     return props
 
 
+def process_override(buckets, props):
+    """Extract what we need for an "overridden" needle from a "function" line.
+
+    Squirrel it away in ``buckets`` under a key that is the
+    source-root-relative path to the file where the overriden method is. The
+    squirreled-away value is [(start row, start col, end row, end col, name,
+    qualname), ...].
+
+    """
+    path, row, col = _split_loc(props['overrideloc'])
+    _, end_row, end_col = _split_loc(props['overridelocend'])
+    buckets.setdefault(path, []).append(
+        (row, col, end_row, end_col, props['overridename'], props['overridequalname']))
+    raise UselessLine  # No sense wasting RAM remembering anything
+
+
 @without('loc', 'extent')
 def process_loc(props):
     """Return extent based on loc and extent."""
@@ -90,13 +106,19 @@ def process_loc(props):
     return props
 
 
+def _split_loc(locstring):
+    """Turn a path:row:col string into (path, row, col)."""
+    path, row, col = locstring.rsplit(':', 2)
+    return path, int(row), int(col)
+
+
 def _process_loc(locstring):
     """Turn a path:row:col string into (path, Position)."""
     if locstring is None:
         return None
 
-    src, row, col = locstring.split(':')
-    return src, Position(None, int(row), int(col))
+    src, row, col = _split_loc(locstring)
+    return src, Position(None, row, col)
 
 
 def process_declloc(props):
@@ -146,95 +168,135 @@ def group_loc_name(base, props):
     return _group_loc_name(props)
 
 
-HANDLERS = {
-    'call': process_call,
-    'function': process_function,
-    'impl': process_impl
-}
-
-
-def process_fields(kind, fields):
-    """Return new fields dict based on a single row of a CSV file.
-
-    Return {} if this row is useless and should be ignored.
-
-    :arg kind: the ast node type specified by the csv file.
-
-    """
-    fields = HANDLERS.get(kind, identity)(fields)
-
-    try:
-        if 'loc' in fields:
-            fields = process_loc(fields)
-
-        if 'declloc' in fields:
-            fields = process_declloc(fields)
-
-        if 'defloc' in fields:
-            fields = process_defloc(fields)
-    except UselessLine:
-        return {}
-
-    return fields
-
-
-def process((kind, vals)):
-    """Process all rows of a given kind from a CSV file.
-
-    :arg kind: The (consistent) value of the first field of the rows
-    :arg vals: An iterable of tuples representing the contents of each row::
-
-        (kind, {dict of remaining fields as key/value pairs})
-
-    """
-    mapping = filter(None, imap(lambda v: process_fields(kind, v[1]), vals))
-    return kind, mapping
-
-
-def get_condensed(lines, only_impl=False):
-    """Return condensed analysis of CSV files."""
-    key = itemgetter(0)
-    pred = lambda line: not only_impl or line[0] == 'impl'
-    condensed = group_by(key, ((line[0], zipdict(line[1::2], line[2::2]))
-                               for line in csv.reader(lines) if pred(line)))
-    condensed = walk(process, condensed)
-    return condensed
-
-
-@autocurry
-def _load_csv(csv_path, only_impl=False):
-    """Open CSV_PATH and return the output of get_condensed based on csv."""
-    with open(csv_path, 'rb') as filep:
-        return get_condensed(filep, only_impl)
-
-
-def load_csv(csv_root, fpath=None, only_impl=False):
-    """Return a dict representing an analysis of a source file.
-
-    :arg csv_root: A path to the folder containing the CSVs emitted by the
-        compiler plugin
-    :arg fpath: A path to the file to analyze, relative to the tree's source
-        folder
-
-    """
-    hashed_fname = '*' if fpath is None else sha1(fpath).hexdigest()
-    csv_paths = glob('{0}.*.csv'.format(path.join(csv_root, hashed_fname)))
-
-    return reduce(merge, imap(_load_csv(only_impl=only_impl), csv_paths),
-                  dict((key, []) for key in POSSIBLE_FIELDS))
-
-
 def _relate((parent, children)):
     return parent, set((child['tc']['name']) for child in children)
 
 
-def build_inheritance(condensed):
+def build_inheritance(subclasses):
     """Builds mapping class -> set of all descendants."""
     get_tbname = lambda x: x['tb']['name']  # tb are parents, tc are children
-    tree = walk(_relate, group_by(get_tbname, condensed['impl']))
+    tree = walk(_relate, group_by(get_tbname, subclasses))
     tree.default_factory = set
     for node in toposort_flatten(tree):
         children = tree[node]
         for child in set(children):
             tree[node] |= tree[child]
     return tree
+
+
+def condense_line(dispatch_table, kind, fields):
+    """Digest one CSV row into an intermediate form.
+
+    :arg dispatch_table: A map of kinds to functions that transform ``fields``
+    :arg kind: The first field of the row, identifying the type of thing it
+        represents: "function", "impl", etc.
+    :arg fields: The map constructed from the row's alternating keys and values
+
+    """
+    fields = dispatch_table.get(kind, identity)(fields)
+
+    if 'loc' in fields:
+        fields = process_loc(fields)
+
+    if 'declloc' in fields:
+        fields = process_declloc(fields)
+
+    if 'defloc' in fields:
+        fields = process_defloc(fields)
+
+    return fields
+
+
+def condense(lines, dispatch_table, predicate=lambda kind, fields: True):
+    """Return a dict representing an analysis of one or more source files.
+
+    This function just takes a bunch of CSV lines; it doesn't concern itself
+    with where they come from.
+
+    :arg lines: An iterable of lists of strings. The first item of each list
+        is the "kind" of the line: function, call, impl, etc. The rest are
+        arbitrary alternating keys and values.
+    :arg dispatch_table: A map of kinds to functions that transform the
+        key/value dict extracted from each line.
+    :arg predicate: A function that returns whether we should pay any
+        attention to a line. If it returns False, the line is thrown away.
+
+    """
+    ret = dict((key, []) for key in POSSIBLE_KINDS)
+    for line in lines:
+        kind = line[0]
+        fields = dict(izip(line[1::2], line[2::2]))
+        if fields is None:
+            print "HEYYYYYYYYY", line
+        if not predicate(kind, fields):
+            continue
+
+        try:
+            if fields is None:
+                print "HEYYYYYYYYY", line
+            ret[kind].append(condense_line(dispatch_table, kind, fields))
+        except UselessLine:
+            pass
+    return ret
+
+
+def lines_from_csvs(folder, file_glob):
+    """Return an iterable of lines from all CSVs matching a glob.
+
+    All lines are lists of strings.
+
+    :arg folder: The folder in which to look for CSVs
+    :arg file_glob: A glob matching one or more CSVs in the folder
+
+    """
+    def lines_from_csv(path):
+        with open(path, 'rb') as file:
+            # Loop internally so we don't prematurely close the file:
+            for line in csv.reader(file):
+                yield line
+
+    paths = glob(join(folder, file_glob))
+    return chain.from_iterable(lines_from_csv(p) for p in paths)
+
+
+DISPATCH_TABLE = {'call': process_call,
+                  'function': process_function,
+                  'impl': process_impl}
+def condense_file(csv_folder, file_path):
+    """Return a dict representing an analysis of one source file.
+
+    This is phase 2: the file-at-a-time phase.
+
+    This may comprise several CSVs if, for example, proprocessor magic results
+    in the file being built several different times, with different effective
+    contents each time.
+
+    :arg csv_folder: A path to the folder containing the CSVs emitted by the
+        compiler plugin
+    :arg file_path: A path to the file to analyze, relative to the tree's
+        source folder
+
+    """
+    return condense(lines_from_csvs(csv_folder,
+                                    '{0}.*.csv'.format(sha1(file_path).hexdigest())),
+                    DISPATCH_TABLE)
+
+
+def inheritance_and_overrides(csv_folder):
+    """Perform the whole-program data gathering necessary to emit "overridden"
+    and subclass-related needles.
+
+    This is phase 1: the whole-program phase.
+
+    """
+    overriddens = {}  # process_override() squirrels things away in here.
+    # Load from all the CSVs only the impl lines and {function lines
+    # containing overridename}:
+    condensed = condense(
+        lines_from_csvs(csv_folder, '*.csv'),
+        {'impl': process_impl,
+         'function': partial(process_override, overriddens)},
+        predicate=lambda kind, fields: (kind == 'function' and
+                                        'overridename' in fields) or
+                                       kind == 'impl')
+    return build_inheritance(condensed['impl']), overriddens

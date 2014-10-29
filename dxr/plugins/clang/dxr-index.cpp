@@ -489,15 +489,8 @@ public:
         if (iter) {
           recordValue("overridename", (*iter)->getNameAsString());
           recordValue("overridequalname", getQualifiedName(**iter));
-          recordValue("overrideloc", locationToString((*iter)->getLocation()));
-        }
-
-        // What overrides us?
-        CXXMethodDecl *firstDecl = dyn_cast<CXXMethodDecl>(methodDecl->getFirstDecl());
-        for (CXXMethodDecl::redecl_iterator overrider = firstDecl->redecls_begin(), e = firstDecl->redecls_end();
-             overrider != e;
-             ++overrider) {
-          recordValue("overriderqualname", getQualifiedName(**overrider));
+          recordValue("overrideloc", locationToString((*iter)->getLocStart()));
+          recordValue("overridelocend", locationToString((*iter)->getLocEnd()));
         }
       }
       *out << std::endl;

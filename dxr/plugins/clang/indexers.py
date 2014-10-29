@@ -11,7 +11,7 @@ from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           unsparsify)
-from dxr.plugins.clang.condense import load_csv, build_inheritance
+from dxr.plugins.clang.condense import condense_file, inheritance_and_overrides
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu, typedef_menu,
@@ -91,7 +91,7 @@ class FileToIndex(FileToIndexBase):
     def __init__(self, path, contents, tree, inherit):
         super(FileToIndex, self).__init__(path, contents, tree)
         self.inherit = inherit
-        self.condensed = load_csv(*os.path.split(path))
+        self.condensed = condense_file(*os.path.split(path))
 
     def needles_by_line(self):
         return all_needles(self.condensed,
@@ -253,9 +253,8 @@ class TreeToIndex(TreeToIndexBase):
         return merge(vars_, env)
 
     def post_build(self):
-        condensed = load_csv(self._temp_folder, fpath=None, only_impl=True)
-        self._inherit = build_inheritance(condensed)
+        self._inheritance, self._overriddens = inheritance_and_overrides(self._temp_folder)
 
     def file_to_index(self, path, contents):
         return FileToIndex(os.path.join(
-                self._temp_folder, path), contents, self.tree, self._inherit)
+                self._temp_folder, path), contents, self.tree, self._inheritance)
