@@ -169,10 +169,13 @@ def index_tree(tree, es, verbose=False):
         Show progress while doing it.
 
         """
-        futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
-                   for ti in tree_indexers]
-        return [future.result() for future in
-                show_progress(futures, message='Running %s.' % method_name)]
+        if tree.config.disable_workers:
+            return [save_scribbles(ti, method_name) for ti in tree_indexers]
+        else:
+            futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
+                       for ti in tree_indexers]
+            return [future.result() for future in
+                    show_progress(futures, message='Running %s.' % method_name)]
 
     def delete_index_quietly(es, index):
         """Delete an index, and ignore any not-found error.
