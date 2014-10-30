@@ -56,6 +56,21 @@ def linked_pathname(path, tree_name):
     return components
 
 
+def full_traceback(callable, *args, **kwargs):
+    """Work around the wretched exception reporting of concurrent.futures.
+
+    Futures generally gives no access to the traceback of the task; you get
+    only a traceback into the guts of futures, plus the description line of
+    the task's traceback. We jam the full traceback of any exception that
+    occurs into the message of the exception: disgusting but informative.
+
+    """
+    try:
+        return callable(*args, **kwargs)
+    except Exception:
+        raise Exception(format_exc())
+
+
 def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     """Build a DXR instance, point the ES aliases to the new indices, and
     delete the old ones.
@@ -154,10 +169,13 @@ def index_tree(tree, es, verbose=False):
         Show progress while doing it.
 
         """
-        futures = [pool.submit(save_scribbles, ti, method_name) for ti in
-                   tree_indexers]
-        return [future.result() for future in
-                show_progress(futures, message='Running %s.' % method_name)]
+        if tree.config.disable_workers:
+            return [save_scribbles(ti, method_name) for ti in tree_indexers]
+        else:
+            futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
+                       for ti in tree_indexers]
+            return [future.result() for future in
+                    show_progress(futures, message='Running %s.' % method_name)]
 
     def delete_index_quietly(es, index):
         """Delete an index, and ignore any not-found error.

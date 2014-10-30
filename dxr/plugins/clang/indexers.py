@@ -11,7 +11,7 @@ from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           unsparsify)
-from dxr.plugins.clang.condense import load_csv, build_inheritance
+from dxr.plugins.clang.condense import condense_file, inheritance_and_overrides
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu, typedef_menu,
@@ -79,6 +79,9 @@ mappings = {
             'c_derived': QUALIFIED_NEEDLE,
             'c_member': QUALIFIED_NEEDLE,
             'c_overrides': QUALIFIED_NEEDLE,
+            # At a base method's site, record all the methods that override
+            # it. Then we can search for any of those methods and turn up the
+            # base one:
             'c_overridden': QUALIFIED_NEEDLE
         }
     }
@@ -88,14 +91,17 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, tree, inherit):
+    def __init__(self, path, contents, tree, inheritance, overriddens, temp_folder):
         super(FileToIndex, self).__init__(path, contents, tree)
-        self.inherit = inherit
-        self.condensed = load_csv(*os.path.split(path))
+        self.inheritance = inheritance
+        self.overriddens = overriddens
+        self.condensed = condense_file(temp_folder, path)
 
     def needles_by_line(self):
-        return all_needles(self.condensed,
-                           self.inherit)
+        return all_needles(
+                self.condensed,
+                self.inheritance,
+                self.overriddens.get(self.path, {}))
 
     def refs(self):
         def silent_itemgetter(y):
@@ -253,9 +259,12 @@ class TreeToIndex(TreeToIndexBase):
         return merge(vars_, env)
 
     def post_build(self):
-        condensed = load_csv(self._temp_folder, fpath=None, only_impl=True)
-        self._inherit = build_inheritance(condensed)
+        self._inheritance, self._overriddens = inheritance_and_overrides(self._temp_folder)
 
     def file_to_index(self, path, contents):
-        return FileToIndex(os.path.join(
-                self._temp_folder, path), contents, self.tree, self._inherit)
+        return FileToIndex(path,
+                           contents,
+                           self.tree,
+                           self._inheritance,
+                           self._overriddens,
+                           self._temp_folder)

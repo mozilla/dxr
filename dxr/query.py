@@ -315,6 +315,8 @@ def filter_menu_items():
     # TODO: Take a 'tree' arg, and return only filters registered by plugins
     # enabled on that tree. For this, we'll have to either add enabled plugins
     # per tree to the request-time config file or unify configs at last.
+    # TODO: Sort these in a stable order. But maybe common ones should be near
+    # the top?
     return (dict(name=name, description=filters[0].description) for
             name, filters in
             FILTERS_NAMED.iteritems() if filters[0].description)

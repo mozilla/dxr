@@ -479,14 +479,20 @@ public:
       recordValue("loc", locationToString(d->getLocation()));
       printScope(d);
       printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+
       // Print out overrides
-      if (CXXMethodDecl::classof(d)) {
-        CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
-        CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
+      if (CXXMethodDecl::classof(d)) {  // It's a method.
+        CXXMethodDecl *methodDecl = dyn_cast<CXXMethodDecl>(d);
+
+        // What do we override?
+        CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
-          recordValue("overridename", (*iter)->getNameAsString());
-          recordValue("overridequalname", getQualifiedName(**iter));
-          recordValue("overrideloc", locationToString((*iter)->getLocation()));
+          const FunctionDecl *overriddenDef;
+          if ((*iter)->isDefined(overriddenDef)) {
+            recordValue("overriddenname", overriddenDef->getNameAsString());
+            recordValue("overriddenqualname", getQualifiedName(*overriddenDef));
+            recordValue("overriddenloc", locationToString(overriddenDef->getLocStart())); // Finds the right line but the wrong columns. We ignore everything but the file path.
+          }
         }
       }
       *out << std::endl;

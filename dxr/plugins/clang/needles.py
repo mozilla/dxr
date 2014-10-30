@@ -4,7 +4,8 @@ from functools import partial
 
 from funcy import imap, is_mapping, repeat, icat
 
-from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
+from dxr.indexers import (iterable_per_line, with_start_and_end,
+                          split_into_lines, Extent, Position)
 
 
 def sig_needles(condensed):
@@ -51,28 +52,12 @@ def parent_needles(condensed, inherit):
     return inherit_needles(condensed, 'parent', get_parents)
 
 
-def _over_needles(condensed, tag, name_key, get_span):
-    return ((('c-{0}'.format(tag), func['override'][name_key]), get_span(func))
-            for func in condensed['function']
-            if name_key in func.get('override', []))
-
-
-def overridden_needles(condensed):
-    """Return needles of methods which are overridden by the given one."""
-    get_span = lambda x: x['override']['span']
-    _overriden_needles = partial(_over_needles, condensed=condensed,
-                                 tag='overridden', get_span=get_span)
-    return chain(_overriden_needles(name_key='name'),
-                 _overriden_needles(name_key='qualname'))
-
-
 # def needles(condensed, inherit, graph):
 #     """Return all C plugin needles."""
 #
 #     return chain(
 #         parent_needles(condensed, inherit),
 #         child_needles(condensed, inherit),
-#         overridden_needles(condensed),
 #         sig_needles(condensed),
 #     )
 
@@ -147,8 +132,28 @@ def macro_needles(condensed):
 
 def overrides_needles(condensed):
     return (('c_overrides',
-             {'name': f['overridename'], 'qualname': f['overridequalname']},
-             f['span']) for f in condensed['function'] if 'overridename' in f)
+             {'name': f['overriddenname'], 'qualname': f['overriddenqualname']},
+             f['span']) for f in condensed['function'] if 'overriddenname' in f)
+
+
+def overridden_needles(condensed, overriddens):
+    """Bang each function against the data gathered from override
+    sites during the whole-program pass, match them up, and spit out
+    "c_overridden" needles where they match.
+
+    :arg overriddens: A map of qualnames of overridden methods pointing to
+        lists of (qualname of overriding method, name of overriding method),
+        gathered during the whole-program post-build pass::
+
+        {'Base::foo()': [('Derived::foo()', 'foo')]}
+
+    """
+    for f in condensed['function']:
+        overrides = overriddens.get(f['qualname'], [])
+        for derived_qualname, derived_name  in overrides:
+            yield ('c_overridden',
+                   {'qualname': derived_qualname, 'name': derived_name},
+                   f['span'])
 
 
 def member_needles(condensed):
@@ -163,7 +168,7 @@ def member_needles(condensed):
             if 'scopename' in entity)
 
 
-def all_needles(condensed, _):
+def all_needles(condensed, inheritance, overriddens):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
@@ -198,6 +203,7 @@ def all_needles(condensed, _):
             qualified_needles(condensed, 'call'),
 
             overrides_needles(condensed),
+            overridden_needles(condensed, overriddens),
 
             member_needles(condensed),
     ))))

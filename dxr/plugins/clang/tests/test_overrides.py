@@ -21,11 +21,13 @@ class SingleOverrideTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_overridden(self):
+        """Find parent/ancestor methods overridden by a given one."""
         raise SkipTest("Overridden needles aren't yet implemented.")
         self.found_line_eq(
             '+overridden:Derived::foo()', 'void Base::<b>foo</b>() {')
 
     def test_overrides(self):
+        """Find child/descendant methods which override a given one."""
         self.found_line_eq(
             '+overrides:Base::foo()', 'void Derived::<b>foo</b>() {')
 
@@ -53,7 +55,6 @@ class ParallelOverrideTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_overridden(self):
-        raise SkipTest("Overridden needles aren't yet implemented.")
         self.found_line_eq(
             '+overridden:DerivedA::foo()', 'void Base::<b>foo</b>() {')
         self.found_line_eq(
@@ -87,7 +88,7 @@ class HierarchyOverrideTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_overridden(self):
-        raise SkipTest("Overridden needles aren't yet implemented.")
+        raise SkipTest("Base::foo doesn't come out, because only the immediate override is captured so far. We need to apply the inheritance graph to this, most likely.")
         self.found_line_eq(
             '+overridden:Derived1::foo()', 'void Base::<b>foo</b>() {')
         self.found_lines_eq('+overridden:Derived2::foo()',
@@ -124,7 +125,6 @@ class HierarchyImplicitOverrideTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_overridden(self):
-        raise SkipTest("Overridden needles aren't yet implemented.")
         self.found_line_eq('+overridden:Derived2::foo()',
                            'void Base::<b>foo</b>() {')
 
@@ -159,7 +159,6 @@ class MultipleOverrides(SingleFileTestCase):
     # overrides Base2::foo
     @nose.tools.raises(AssertionError)  # remove this line when fixed
     def test_overridden(self):
-        raise SkipTest("Overridden needles aren't yet implemented.")
         self.found_lines_eq('+overridden:Derived::foo()',
                             [('void Base1::<b>foo</b>() {', 5),
                              ('void Base2::<b>foo</b>() {', 10)])
