@@ -487,10 +487,10 @@ public:
         // What do we override?
         CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
-          recordValue("overridename", (*iter)->getNameAsString());
-          recordValue("overridequalname", getQualifiedName(**iter));
-          recordValue("overrideloc", locationToString((*iter)->getLocStart()));
-          recordValue("overridelocend", locationToString((*iter)->getLocEnd()));
+          recordValue("overriddenname", (*iter)->getNameAsString());
+          recordValue("overriddenqualname", getQualifiedName(**iter));
+          recordValue("overriddenloc", locationToString((*iter)->getLocStart()));
+          recordValue("overriddenlocend", locationToString((*iter)->getLocEnd()));
         }
       }
       *out << std::endl;

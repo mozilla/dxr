@@ -15,7 +15,7 @@ from dxr.indexers import Extent, Position, FuncSig
 from dxr.plugins.clang.condense import (condense, build_inheritance,                                        c_type_sig, DISPATCH_TABLE)
 from dxr.plugins.clang.indexers import kind_getter
 from dxr.plugins.clang.needles import (child_needles, parent_needles,
-    member_needles, sig_needles, overrides_needles, overridden_needles)
+    sig_needles)
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))

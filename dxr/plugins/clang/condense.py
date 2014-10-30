@@ -56,27 +56,26 @@ def process_function(props):
     input_args = tuple(ifilter(
         bool, imap(str.lstrip, props['args'][1:-1].split(","))))
     props['type'] = c_type_sig(input_args, props['type'])
-
-    # Deal with overrides:
-    if 'overrideloc' in props:
-        props['overrideloc'] = _process_loc(props['overrideloc'])
-
     return props
 
 
 def process_override(buckets, props):
     """Extract what we need for an "overridden" needle from a "function" line.
 
+    Namely, extract the location where the override occurred and the name of
+    the method overridden.
+
     Squirrel it away in ``buckets`` under a key that is the
     source-root-relative path to the file where the overriden method is. The
     squirreled-away value is [(start row, start col, end row, end col, name,
-    qualname), ...].
+    qualname of overriding method), ...].
 
     """
-    path, row, col = _split_loc(props['overrideloc'])
-    _, end_row, end_col = _split_loc(props['overridelocend'])
+    # The locs point to the overridden (superclass) method.
+    path, row, col = _split_loc(props['overriddenloc'])
+    _, end_row, end_col = _split_loc(props['overriddenlocend'])
     buckets.setdefault(path, []).append(
-        (row, col, end_row, end_col, props['overridename'], props['overridequalname']))
+        (row, col, end_row, end_col, props['name'], props['qualname']))
     raise UselessLine  # No sense wasting RAM remembering anything
 
 
@@ -291,12 +290,12 @@ def inheritance_and_overrides(csv_folder):
     """
     overriddens = {}  # process_override() squirrels things away in here.
     # Load from all the CSVs only the impl lines and {function lines
-    # containing overridename}:
+    # containing overriddenname}:
     condensed = condense(
         lines_from_csvs(csv_folder, '*.csv'),
         {'impl': process_impl,
          'function': partial(process_override, overriddens)},
         predicate=lambda kind, fields: (kind == 'function' and
-                                        'overridename' in fields) or
+                                        'overriddenname' in fields) or
                                        kind == 'impl')
     return build_inheritance(condensed['impl']), overriddens

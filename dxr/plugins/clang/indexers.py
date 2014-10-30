@@ -88,14 +88,17 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, tree, inherit):
+    def __init__(self, path, contents, tree, inheritance, overriddens, temp_folder):
         super(FileToIndex, self).__init__(path, contents, tree)
-        self.inherit = inherit
-        self.condensed = condense_file(*os.path.split(path))
+        self.inheritance = inheritance
+        self.overriddens = overriddens
+        self.condensed = condense_file(temp_folder, path)
 
     def needles_by_line(self):
-        return all_needles(self.condensed,
-                           self.inherit)
+        return all_needles(
+                self.condensed,
+                self.inheritance,
+                self.overriddens.get(self.path, []))
 
     def refs(self):
         def silent_itemgetter(y):
@@ -256,5 +259,9 @@ class TreeToIndex(TreeToIndexBase):
         self._inheritance, self._overriddens = inheritance_and_overrides(self._temp_folder)
 
     def file_to_index(self, path, contents):
-        return FileToIndex(os.path.join(
-                self._temp_folder, path), contents, self.tree, self._inheritance)
+        return FileToIndex(path,
+                           contents,
+                           self.tree,
+                           self._inheritance,
+                           self._overriddens,
+                           self._temp_folder)
