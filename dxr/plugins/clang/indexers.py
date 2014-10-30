@@ -79,6 +79,9 @@ mappings = {
             'c_derived': QUALIFIED_NEEDLE,
             'c_member': QUALIFIED_NEEDLE,
             'c_overrides': QUALIFIED_NEEDLE,
+            # At a base method's site, record all the methods that override
+            # it. Then we can search for any of those methods and turn up the
+            # base one:
             'c_overridden': QUALIFIED_NEEDLE
         }
     }
@@ -98,7 +101,7 @@ class FileToIndex(FileToIndexBase):
         return all_needles(
                 self.condensed,
                 self.inheritance,
-                self.overriddens.get(self.path, []))
+                self.overriddens.get(self.path, {}))
 
     def refs(self):
         def silent_itemgetter(y):

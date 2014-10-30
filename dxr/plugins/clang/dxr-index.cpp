@@ -487,10 +487,12 @@ public:
         // What do we override?
         CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
-          recordValue("overriddenname", (*iter)->getNameAsString());
-          recordValue("overriddenqualname", getQualifiedName(**iter));
-          recordValue("overriddenloc", locationToString((*iter)->getLocStart()));
-          recordValue("overriddenlocend", locationToString((*iter)->getLocEnd()));
+          const FunctionDecl *overriddenDef;
+          if ((*iter)->isDefined(overriddenDef)) {
+            recordValue("overriddenname", overriddenDef->getNameAsString());
+            recordValue("overriddenqualname", getQualifiedName(*overriddenDef));
+            recordValue("overriddenloc", locationToString(overriddenDef->getLocStart())); // Finds the right line but the wrong columns. We ignore everything but the file path.
+          }
         }
       }
       *out << std::endl;

@@ -136,18 +136,24 @@ def overrides_needles(condensed):
              f['span']) for f in condensed['function'] if 'overriddenname' in f)
 
 
-def overridden_needles(overriddens):
-    """Unpack "c_overridden" needles from the data gathered from override
-    sites during the whole-program pass, and spit them out.
+def overridden_needles(condensed, overriddens):
+    """Bang each function against the data gathered from override
+    sites during the whole-program pass, match them up, and spit out
+    "c_overridden" needles where they match.
 
-    :arg overriddens: An iterable of tuples encoding the overridden method
-        names and where they were overridden
+    :arg overriddens: A map of qualnames of overridden methods pointing to
+        lists of (qualname of overriding method, name of overriding method),
+        gathered during the whole-program post-build pass::
+
+        {'Base::foo()': [('Derived::foo()', 'foo')]}
 
     """
-    return list(('c_overridden',
-             {'name': name, 'qualname': qualname},
-             Extent(Position(None, row, col), Position(None, end_row, end_col)))
-            for row, col, end_row, end_col, name, qualname in overriddens)
+    for f in condensed['function']:
+        overrides = overriddens.get(f['qualname'], [])
+        for derived_qualname, derived_name  in overrides:
+            yield ('c_overridden',
+                   {'qualname': derived_qualname, 'name': derived_name},
+                   f['span'])
 
 
 def member_needles(condensed):
@@ -197,7 +203,7 @@ def all_needles(condensed, inheritance, overriddens):
             qualified_needles(condensed, 'call'),
 
             overrides_needles(condensed),
-            overridden_needles(overriddens),
+            overridden_needles(condensed, overriddens),
 
             member_needles(condensed),
     ))))

@@ -60,22 +60,23 @@ def process_function(props):
 
 
 def process_override(buckets, props):
-    """Extract what we need for an "overridden" needle from a "function" line.
+    """Note overrides of methods, and organize them so we can emit
+    "overridden" needles later.
 
-    Namely, extract the location where the override occurred and the name of
-    the method overridden.
+    Specifically, extract the qualname of the overridden method and the
+    qualname and name of the overriding method.
 
     Squirrel it away in ``buckets`` under a key that is the
-    source-root-relative path to the file where the overriden method is. The
-    squirreled-away value is [(start row, start col, end row, end col, name,
-    qualname of overriding method), ...].
+    source-root-relative path to the file where the overridden method is. The
+    complete built data structure is thus::
+
+        {'main.cpp': {'Base::foo()': [('Derived::foo()', 'foo')]}}
 
     """
-    # The locs point to the overridden (superclass) method.
+    # The loc points to the overridden (superclass) method.
     path, row, col = _split_loc(props['overriddenloc'])
-    _, end_row, end_col = _split_loc(props['overriddenlocend'])
-    buckets.setdefault(path, []).append(
-        (row, col, end_row, end_col, props['name'], props['qualname']))
+    buckets.setdefault(path, {}).setdefault(props['overriddenqualname'], []).append(
+            (props['qualname'], props['name']))
     raise UselessLine  # No sense wasting RAM remembering anything
 
 
