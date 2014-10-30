@@ -109,6 +109,10 @@ def namespace_alias_menu(tree, namespace_alias):
              'icon': 'reference'}]
 
 
+# TODO: Shouldn't we have a menu on calls pointing to the function called?
+# Prod does.
+
+
 def function_menu(tree, func):
     """Build menu for a function."""
     qualname = func['qualname']

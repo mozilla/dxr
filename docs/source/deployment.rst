@@ -84,7 +84,7 @@ but these pointers should start you off with reasonable performance:
   cluster.
 * Whether you intend to set up a cluster or not, beware that ES makes friends
   all too easily. Be sure to change the ``cluster.name`` to something unusual
-  and diable autodiscovery by setting ``discovery.zen.ping.multicast.enabled``
+  and disable autodiscovery by setting ``discovery.zen.ping.multicast.enabled``
   to ``false``, instead specifying your cluster members directly in
   ``discovery.zen.ping.unicast.hosts``.
 * Crank up your kernel's max file descriptors. Put this in the init script that
