@@ -22,7 +22,6 @@ class SingleOverrideTests(SingleFileTestCase):
 
     def test_overridden(self):
         """Find parent/ancestor methods overridden by a given one."""
-        raise SkipTest("Overridden needles aren't yet implemented.")
         self.found_line_eq(
             '+overridden:Derived::foo()', 'void Base::<b>foo</b>() {')
 
