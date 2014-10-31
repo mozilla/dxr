@@ -147,7 +147,7 @@ class FileToSkim(object):
         return self.contains_text()
 
     def links(self):
-        """Return an iterable of intra-page nav links::
+        """Return an iterable of links for the navigation pane::
 
             (sort order, heading, [(icon, title, href), ...])
 
