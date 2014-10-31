@@ -66,16 +66,14 @@ def process_override(buckets, props):
     Specifically, extract the qualname of the overridden method and the
     qualname and name of the overriding method.
 
-    Squirrel it away in ``buckets`` under a key that is the
-    source-root-relative path to the file where the overridden method is. The
-    complete built data structure is thus::
+    Squirrel it away in ``buckets``, keyed by base qualname::
 
-        {'main.cpp': {'Base::foo()': [('Derived::foo()', 'foo')]}}
+        {'Base::foo()': [('Derived::foo()', 'foo')]}
 
     """
     # The loc points to the overridden (superclass) method.
     path, row, col = _split_loc(props['overriddenloc'])
-    buckets.setdefault(path, {}).setdefault(props['overriddenqualname'], []).append(
+    buckets.setdefault(props['overriddenqualname'], []).append(
             (props['qualname'], props['name']))
     raise UselessLine  # No sense wasting RAM remembering anything
 

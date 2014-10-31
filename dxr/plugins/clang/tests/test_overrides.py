@@ -87,7 +87,6 @@ class HierarchyOverrideTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_overridden(self):
-        raise SkipTest("Base::foo doesn't come out, because only the immediate override is captured so far. We need to apply the inheritance graph to this, most likely.")
         self.found_line_eq(
             '+overridden:Derived1::foo()', 'void Base::<b>foo</b>() {')
         self.found_lines_eq('+overridden:Derived2::foo()',

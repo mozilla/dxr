@@ -101,7 +101,7 @@ class FileToIndex(FileToIndexBase):
         return all_needles(
                 self.condensed,
                 self.inheritance,
-                self.overriddens.get(self.path, {}))
+                self.overriddens)
 
     def refs(self):
         def silent_itemgetter(y):

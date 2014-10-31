@@ -137,9 +137,9 @@ def overrides_needles(condensed):
 
 
 def overridden_needles(condensed, overriddens):
-    """Bang each function against the data gathered from override
-    sites during the whole-program pass, match them up, and spit out
-    "c_overridden" needles where they match.
+    """Check each function to see if it's been overridden, using the data
+    gathered from override sites during the whole-program pass. If it has,
+    spit out "c_overridden" needles for its direct and indirect overrides.
 
     :arg overriddens: A map of qualnames of overridden methods pointing to
         lists of (qualname of overriding method, name of overriding method),
@@ -148,12 +148,28 @@ def overridden_needles(condensed, overriddens):
         {'Base::foo()': [('Derived::foo()', 'foo')]}
 
     """
+    def overrides_of(method_qualname, method_span):
+        """Return an iterable of needles for methods overridden by
+        ``method_qualname``, either directly or indirectly.
+
+        """
+        direct_overrides = overriddens.get(method_qualname, [])
+        return chain(
+            # Direct overrides:
+            (('c_overridden',
+             {'qualname': derived_qualname, 'name': derived_name},
+             method_span)
+            for derived_qualname, derived_name in direct_overrides),
+
+            # Indirect overrides. If something overrides my subclass's
+            # override, it overrides me as well.
+            chain.from_iterable(
+                overrides_of(derived_qualname, method_span)
+                for derived_qualname, derived_name in direct_overrides))
+
     for f in condensed['function']:
-        overrides = overriddens.get(f['qualname'], [])
-        for derived_qualname, derived_name  in overrides:
-            yield ('c_overridden',
-                   {'qualname': derived_qualname, 'name': derived_name},
-                   f['span'])
+        for needle in overrides_of(f['qualname'], f['span']):
+            yield needle
 
 
 def member_needles(condensed):
