@@ -31,7 +31,7 @@ namespace {
 
 const std::string GENERATED("--GENERATED--/");
 
-// Curse whomever didn't do this.
+// Curse whoever didn't do this.
 std::string &operator+=(std::string &str, unsigned int i) {
   static char buf[15] = { '\0' };
   char *ptr = &buf[13];

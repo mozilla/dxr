@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 from operator import itemgetter
+import os.path
 
 from funcy import group_by, decorator, imapcat
 
@@ -299,7 +300,7 @@ class FileToIndex(FileToSkim):
 
     def absolute_path(self):
         """Return the absolute path of the file to index."""
-        return join(self.tree.source_folder, self.path)
+        return os.path.join(self.tree.source_folder, self.path)
 
 
 # Conveniences:
