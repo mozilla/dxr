@@ -155,7 +155,7 @@ class TypeDeclFilter(_QualifiedNameFilter):
 
 class TypeFilter(_QualifiedNameFilter):
     name = 'type'
-    description = 'Type, function, or class definition: <code>type:Stack</code>'
+    description = Markup('Type, function, or class definition: <code>type:Stack</code>')
 
 
 class VariableFilter(_QualifiedNameFilter):
