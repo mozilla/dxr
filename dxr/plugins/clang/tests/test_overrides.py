@@ -1,7 +1,5 @@
 """Tests for searches about overrides of virtual methods"""
 
-from nose import SkipTest
-
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 import nose.tools
 
@@ -94,7 +92,6 @@ class HierarchyOverrideTests(SingleFileTestCase):
                              ('void Derived1::<b>foo</b>() {', 10)])
 
     def test_overrides(self):
-        raise SkipTest("Derived2::foo doesn't come out, because only the immediate override is represented in the CSV. (If A has a foo and B doesn't but C does, and C->B->A, then it'll say C::foo overrides A::foo.) We'll need an inheritance graph if we want more.")
         self.found_lines_eq('+overrides:Base::foo()',
                             [('void Derived1::<b>foo</b>() {', 10),
                              ('void Derived2::<b>foo</b>() {', 15)])

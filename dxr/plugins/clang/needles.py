@@ -130,10 +130,47 @@ def macro_needles(condensed):
             condensed['macro'])
 
 
-def overrides_needles(condensed):
-    return (('c_overrides',
-             {'name': f['overriddenname'], 'qualname': f['overriddenqualname']},
-             f['span']) for f in condensed['function'] if 'overriddenname' in f)
+def needles_from_graph(graph, root_qualname, method_span, needle_name):
+    """Yield the needles gleaned from recursively descending a graph.
+
+    :arg graph: A graph of this format::
+
+        {'source qualname': [('dest qualname', 'dest name')]}
+
+    :arg root_qualname: The graph key at which to begin
+    :arg method_span: The span to emit for every needle (the same for each)
+    :arg needle_name: The key to emit for every needle (the same for each)
+
+    """
+    # These variables are named as if operating on a graph where overridden
+    # methods point to their overriders, but it can be used in the opposite
+    # direction (or for other things altogether).
+    direct_overrides = graph.get(root_qualname, [])
+    return chain(
+        # Direct destinations:
+        ((needle_name,
+         {'qualname': derived_qualname, 'name': derived_name},
+         method_span)
+        for derived_qualname, derived_name in direct_overrides),
+
+        # Indirect destinations. For instance, if something overrides my
+        # subclass's override, it overrides me as well.
+        chain.from_iterable(
+            needles_from_graph(graph, derived_qualname, method_span, needle_name)
+            for derived_qualname, derived_name in direct_overrides))
+
+
+def overrides_needles(condensed, overrides):
+    def base_methods_of(method_qualname, method_span):
+        """Return an iterable of needles for methods overridden by
+        ``method_qualname``, either directly or indirectly.
+
+        """
+        return needles_from_graph(overrides, method_qualname, method_span, 'c_overrides')
+
+    for f in condensed['function']:
+        for needle in base_methods_of(f['qualname'], f['span']):
+            yield needle
 
 
 def overridden_needles(condensed, overriddens):
@@ -149,23 +186,11 @@ def overridden_needles(condensed, overriddens):
 
     """
     def overrides_of(method_qualname, method_span):
-        """Return an iterable of needles for methods overridden by
+        """Return an iterable of needles for methods that override
         ``method_qualname``, either directly or indirectly.
 
         """
-        direct_overrides = overriddens.get(method_qualname, [])
-        return chain(
-            # Direct overrides:
-            (('c_overridden',
-             {'qualname': derived_qualname, 'name': derived_name},
-             method_span)
-            for derived_qualname, derived_name in direct_overrides),
-
-            # Indirect overrides. If something overrides my subclass's
-            # override, it overrides me as well.
-            chain.from_iterable(
-                overrides_of(derived_qualname, method_span)
-                for derived_qualname, derived_name in direct_overrides))
+        return needles_from_graph(overriddens, method_qualname, method_span, 'c_overridden')
 
     for f in condensed['function']:
         for needle in overrides_of(f['qualname'], f['span']):
@@ -184,7 +209,7 @@ def member_needles(condensed):
             if 'scopename' in entity)
 
 
-def all_needles(condensed, inheritance, overriddens):
+def all_needles(condensed, inheritance, overrides, overriddens):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
@@ -218,7 +243,7 @@ def all_needles(condensed, inheritance, overriddens):
 
             qualified_needles(condensed, 'call'),
 
-            overrides_needles(condensed),
+            overrides_needles(condensed, overrides),
             overridden_needles(condensed, overriddens),
 
             member_needles(condensed),

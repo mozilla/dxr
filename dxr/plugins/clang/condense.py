@@ -59,23 +59,41 @@ def process_function(props):
     return props
 
 
-def process_override(buckets, props):
+def process_override(overrides, overriddens, props):
     """Note overrides of methods, and organize them so we can emit
-    "overridden" needles later.
+    "overridden" and "overrides" needles later.
 
     Specifically, extract the qualname of the overridden method and the
-    qualname and name of the overriding method.
-
-    Squirrel it away in ``buckets``, keyed by base qualname::
+    qualname and name of the overriding method, and squirrel it away in
+    ``overriddens``, keyed by base qualname::
 
         {'Base::foo()': [('Derived::foo()', 'foo')]}
+
+    Also store the reverse mapping (override to overridden), in ``overrides``::
+
+        {'Derived::foo()': [('Base::foo()', 'foo')]}
+
+    This lets return indirect overrides (not just direct ones) in "overrides"
+    queries.
 
     """
     # The loc points to the overridden (superclass) method.
     path, row, col = _split_loc(props['overriddenloc'])
-    buckets.setdefault(props['overriddenqualname'], []).append(
+
+    # It may not be necessary to have a list here. In multiple inheritance,
+    # does clang ever consider a method to override multiple other methods, or
+    # is it at most one each?
+    overrides.setdefault(props['qualname'], []).append(
+            (props['overriddenqualname'], props['overriddenname']))
+
+    # We store the unqualified name separately for each override because,
+    # while it's usually the same for each, it can be different for an
+    # overridden destructor.
+    overriddens.setdefault(props['overriddenqualname'], []).append(
             (props['qualname'], props['name']))
-    raise UselessLine  # No sense wasting RAM remembering anything
+
+    # No sense wasting RAM remembering anything:
+    raise UselessLine
 
 
 @without('loc', 'extent')
@@ -287,14 +305,17 @@ def inheritance_and_overrides(csv_folder):
     This is phase 1: the whole-program phase.
 
     """
-    overriddens = {}  # process_override() squirrels things away in here.
+    # process_override() squirrels things away in these:
+    overrides = {}
+    overriddens = {}
+
     # Load from all the CSVs only the impl lines and {function lines
     # containing overriddenname}:
     condensed = condense(
         lines_from_csvs(csv_folder, '*.csv'),
         {'impl': process_impl,
-         'function': partial(process_override, overriddens)},
+         'function': partial(process_override, overrides, overriddens)},
         predicate=lambda kind, fields: (kind == 'function' and
                                         'overriddenname' in fields) or
                                        kind == 'impl')
-    return build_inheritance(condensed['impl']), overriddens
+    return build_inheritance(condensed['impl']), overrides, overriddens
