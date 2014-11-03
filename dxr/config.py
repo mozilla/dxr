@@ -1,4 +1,5 @@
 from ConfigParser import ConfigParser
+from cStringIO import StringIO
 from datetime import datetime
 from ordereddict import OrderedDict
 from operator import attrgetter
@@ -25,7 +26,7 @@ FORMAT = resource_string('dxr', 'format').strip()
 
 class Config(object):
     """ Configuration for DXR """
-    def __init__(self, configfile, **override):
+    def __init__(self, config_string, **override):
         # Create parser with sane defaults
         parser = ConfigParser({
             'plugin_folder':    "%s/plugins" % dirname(dxr.__file__),
@@ -44,7 +45,7 @@ class Config(object):
             'es_index':         'dxr_{format}_{tree}_{unique}',
             'es_alias':         'dxr_{format}_{tree}',
         }, dict_type=OrderedDict)
-        parser.read(configfile)
+        parser.readfp(StringIO(config_string))
 
         # Set config values
         self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
@@ -63,8 +64,6 @@ class Config(object):
         self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
         self.es_index         = parser.get('DXR', 'es_index', False, override)
         self.es_alias         = parser.get('DXR', 'es_alias', False, override)
-        # Set configfile
-        self.configfile       = configfile
         self.trees            = []
 
         # Read all plugin_ keys
@@ -111,7 +110,7 @@ class Config(object):
         # Load trees
         for tree in parser.sections():
             if tree != 'DXR':
-                self.trees.append(TreeConfig(self, self.configfile, tree))
+                self.trees.append(TreeConfig(self, config_string, tree))
 
         # Trees in alphabetical order for Switch Tree menu:
         self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
@@ -130,7 +129,7 @@ class TreeConfig(object):
     # whenever a getitem fails. Then we can remove the exception-raising
     # machinery from places like buglink.
 
-    def __init__(self, config, configfile, name):
+    def __init__(self, config, config_string, name):
         # Create parser with sane defaults
         parser = ConfigParser({
             'enabled_plugins':  "*",
@@ -142,7 +141,7 @@ class TreeConfig(object):
             'source_encoding':  'utf-8',
             'description':  ''
         })
-        parser.read(configfile)
+        parser.readfp(StringIO(config_string))
 
         # Set config values
         self._enabled_plugins = parser.get(name, 'enabled_plugins')
@@ -159,7 +158,6 @@ class TreeConfig(object):
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
         # Set config file and DXR config object reference
-        self.configfile       = configfile
         self.config           = config
         self.name             = name
 

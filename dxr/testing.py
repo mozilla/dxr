@@ -206,7 +206,9 @@ class SingleFileTestCase(TestCase):
         mkdir(code_path)
         _make_file(code_path, 'main.cpp', cls.source)
         # $CXX gets injected by the clang DXR plugin:
-        _make_file(cls._config_dir_path, 'dxr.config', """
+
+        chdir(cls._config_dir_path)
+        build_instance("""
 [DXR]
 enabled_plugins = pygmentize clang
 temp_folder = {config_dir_path}/temp
@@ -220,9 +222,6 @@ source_folder = {config_dir_path}/code
 object_folder = {config_dir_path}/code
 build_command = $CXX -o main main.cpp
 """.format(config_dir_path=cls._config_dir_path))
-
-        chdir(cls._config_dir_path)
-        build_instance(os.path.join(cls._config_dir_path, 'dxr.config'))
         cls._es().refresh()
 
     @classmethod

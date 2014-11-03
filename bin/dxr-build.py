@@ -47,7 +47,7 @@ def main():
         options.config_file = 'dxr.config'
 
     try:
-        build_instance(options.config_file,
+        build_instance(open(options.config_file, 'r').read(),
                        nb_jobs=options.jobs,
                        tree=options.tree,
                        verbose=options.verbose)

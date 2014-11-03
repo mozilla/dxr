@@ -71,11 +71,11 @@ def full_traceback(callable, *args, **kwargs):
         raise Exception(format_exc())
 
 
-def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
+def build_instance(config_string, nb_jobs=None, tree=None, verbose=False):
     """Build a DXR instance, point the ES aliases to the new indices, and
     delete the old ones.
 
-    :arg config_path: The path to a config file
+    :arg config_string: The contents of the DXR config file
     :arg nb_jobs: The number of parallel jobs to pass into ``make``. Defaults
         to whatever the config file says.
     :arg tree: A single tree to build. Defaults to all the trees in the config
@@ -87,7 +87,7 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
     overrides = {}
     if nb_jobs:
         overrides['nb_jobs'] = nb_jobs
-    config = Config(config_path, **overrides)
+    config = Config(config_string, **overrides)
 
     # Find trees to make, fail if requested tree isn't available
     if tree:
