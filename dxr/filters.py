@@ -190,5 +190,5 @@ class _NameFilter(Filter):
         if self._term['not']:
             return []
         return ((entity['start'], entity['end'])
-                for entity in result[self._needle] if
+                for entity in result.get(self._needle, ()) if
                 self._should_be_highlit(entity))
