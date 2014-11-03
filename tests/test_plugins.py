@@ -1,10 +1,7 @@
 """Tests for the plugin architecture itself"""
 
-from unittest import TestCase
-
 from nose.tools import ok_
 
-import dxr
 from dxr.plugins import all_plugins
 import dxr.plugins.urllink as urllink
 
