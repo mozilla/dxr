@@ -1,95 +1,13 @@
-from funcy import identity
 from jinja2 import Markup
 
-from dxr.filters import Filter, negatable
+from dxr.filters import NameFilterBase, negatable
 
 
-class _NameFilter(Filter):
-    """An exact-match filter for things exposing a single value to compare
-    against
-
-    This filter assumes an object-shaped needle value with a 'name'
-    subproperty (containing the symbol name) and a 'name.lower' folded to
-    lowercase. Highlights are based on 'start' and 'end' subproperties, which
-    contain column bounds.
-
-    Derives the needle name from the ``name`` cls attribute.
-
-    """
+class _CFilter(NameFilterBase):
     lang = 'c'
 
-    def __init__(self, term):
-        """Expects ``self.lang`` to be a language identifier, to separate
-        structural needles from those of other languages and allow for an
-        eventual "lang:" metafilter.
 
-        """
-        super(_NameFilter, self).__init__(term)
-        self._needle = '{0}_{1}'.format(self.lang, self.name.replace('-', '_'))
-
-    def _term_filter(self, field):
-        """Return a term filter clause that does a case-sensitive match
-        against the given field.
-
-        """
-        return {
-            'term': {'{needle}.{field}'.format(
-                        needle=self._needle,
-                        field=field):
-                     self._term['arg']}
-        }
-
-    def _positive_filter(self):
-        """Non-negated filter recipe, broken out for subclassing"""
-        if self._term['case_sensitive']:
-            return self._term_filter('name')
-        else:
-            # term filters have no query analysis phase. We must use a
-            # match query, which is an analyzer pass + a term filter:
-            return {
-                'query': {
-                    'match': {
-                        '{needle}.name.lower'.format(needle=self._needle):
-                            self._term['arg']
-                    }
-                }
-            }
-
-    @negatable
-    def filter(self):
-        """Find things by their "name" properties, case-sensitive or not.
-
-        Ignore the term's "qualified" property.
-
-        """
-        return self._positive_filter()
-
-    def _should_be_highlit(self, entity):
-        """Return whether some entity should be highlit in the search results,
-        based on its "name" property.
-
-        :arg entity: A map, the value of a needle from a found line
-
-        """
-        maybe_lower = (identity if self._term['case_sensitive'] else
-                       unicode.lower)
-        return maybe_lower(entity['name']) == maybe_lower(self._term['arg'])
-
-    def highlight_content(self, result):
-        """Highlight any structural entity whose name matches the term.
-
-        Compare short names and qualnames if this isn't a fully-qualified
-        search. Otherwise, compare just qualnames.
-
-        """
-        if self._term['not']:
-            return []
-        return ((entity['start'], entity['end'])
-                for entity in result[self._needle] if
-                self._should_be_highlit(entity))
-
-
-class _QualifiedNameFilter(_NameFilter):
+class _QualifiedNameFilter(_CFilter):
     """An exact-match filter for symbols having names and qualnames
 
     This filter assumes an object-shaped needle value with a 'name'
@@ -173,12 +91,12 @@ class VarDeclFilter(_QualifiedNameFilter):
     description = 'Variable declaration'
 
 
-class MacroFilter(_NameFilter):
+class MacroFilter(_CFilter):
     name = 'macro'
     description = 'Macro definition'
 
 
-class MacroRefFilter(_NameFilter):
+class MacroRefFilter(_CFilter):
     name = 'macro-ref'
     description = 'Macro uses'
 
@@ -203,12 +121,12 @@ class NamespaceAliasRefFilter(_QualifiedNameFilter):
     description = 'Namespace alias references'
 
 
-class WarningFilter(_NameFilter):
+class WarningFilter(_CFilter):
     name = 'warning'
     description = 'Compiler warning messages'
 
 
-class WarningOptFilter(_NameFilter):
+class WarningOptFilter(_CFilter):
     name = 'warning-opt'
     description = 'Warning messages brought on by a given compiler command-line option'
 
