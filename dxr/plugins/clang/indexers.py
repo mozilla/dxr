@@ -241,7 +241,7 @@ class TreeToIndex(TreeToIndexBase):
         tree = self.tree
         temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
         self._temp_folder = temp_folder
-        plugin_folder = os.path.join(tree.config.plugin_folder, PLUGIN_NAME)
+        plugin_folder = os.path.dirname(__file__)
         flags = [
             '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
             '-add-plugin', 'dxr-index',

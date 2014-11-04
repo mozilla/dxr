@@ -4,12 +4,10 @@ from datetime import datetime
 from ordereddict import OrderedDict
 from operator import attrgetter
 import os
-from os.path import dirname, isdir
 import sys
 
 from pkg_resources import resource_string
 
-import dxr
 from dxr.plugins import all_plugins
 
 
@@ -29,8 +27,7 @@ class Config(object):
     def __init__(self, config_string, **override):
         # Create parser with sane defaults
         parser = ConfigParser({
-            'plugin_folder':    "%s/plugins" % dirname(dxr.__file__),
-            'nb_jobs':          1,
+            'nb_jobs':          "1",
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
             'wwwroot':          "/",
@@ -48,7 +45,6 @@ class Config(object):
         parser.readfp(StringIO(config_string))
 
         # Set config values
-        self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
         self.nb_jobs          = int(parser.get('DXR', 'nb_jobs',      False, override))
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
@@ -72,7 +68,6 @@ class Config(object):
                 setattr(self, key, value)
 
         # Render all paths absolute
-        self.plugin_folder    = os.path.abspath(self.plugin_folder)
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
@@ -83,7 +78,7 @@ class Config(object):
 
         # Convert disabled plugins to a list
         if self.disabled_plugins == "*":
-            self.disabled_plugins = os.listdir(self.plugin_folder)
+            self.disabled_plugins = all_plugins().keys()
         else:
             self.disabled_plugins = self.disabled_plugins.split()
 
@@ -93,8 +88,7 @@ class Config(object):
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
             self.enabled_plugins = [
-                p for p in os.listdir(self.plugin_folder) if
-                isdir(os.path.join(self.plugin_folder, p)) and
+                p for p in all_plugins().keys() if
                 p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
