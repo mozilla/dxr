@@ -1,11 +1,8 @@
 import ast, tokenize, token
 from StringIO import StringIO
 
-from jinja2 import Markup
-
 from dxr.indexers import (FileToIndex as FileToIndexBase, Extent, Position,
                           iterable_per_line, with_start_and_end, split_into_lines)
-from dxr.plugins.clang.filters import NameFilterBase
 from dxr.filters import LINE
 
 
@@ -121,17 +118,3 @@ class FileToIndex(FileToIndexBase):
                                 row=tok['end'][0],
                                 col=tok['end'][1]))
             )
-
-
-class _PyFilter(NameFilterBase):
-    lang = 'py'
-
-
-class TypeFilter(_PyFilter):
-    name = 'type'
-    description = Markup("Class definition: <code>type:Stack</code>")
-
-
-class FunctionFilter(_PyFilter):
-    name = 'function'
-    description = Markup("Function or method definition: <code>function:foo</code>")
