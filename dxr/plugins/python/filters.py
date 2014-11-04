@@ -1,6 +1,6 @@
 from jinja2 import Markup
 
-from dxr.plugins.clang.filters import NameFilterBase
+from dxr.filters import NameFilterBase
 
 
 class _PyFilter(NameFilterBase):
