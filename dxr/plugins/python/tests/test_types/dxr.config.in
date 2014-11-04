@@ -9,4 +9,4 @@ es_alias            = dxr_test_{format}_{tree}
 [code]
 source_folder       = PWD/code
 object_folder       = PWD/code
-build_command       = make -j $jobs
+build_command       = /bin/true
