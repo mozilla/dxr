@@ -1,11 +1,12 @@
+import ast, tokenize, token
+from StringIO import StringIO
+
+from jinja2 import Markup
+
 from dxr.indexers import (FileToIndex as FileToIndexBase, Extent, Position,
                           iterable_per_line, with_start_and_end, split_into_lines)
 from dxr.plugins.clang.filters import NameFilterBase
 from dxr.filters import LINE
-from jinja2 import Markup
-
-from StringIO import StringIO
-import ast, tokenize, token
 
 
 PLUGIN_NAME = 'python'
