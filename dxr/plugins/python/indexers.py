@@ -1,6 +1,6 @@
 from dxr.indexers import (FileToIndex as FileToIndexBase, Extent, Position,
                           iterable_per_line, with_start_and_end, split_into_lines)
-from dxr.plugins.clang.filters import _NameFilter
+from dxr.plugins.clang.filters import NameFilterBase
 from dxr.filters import LINE
 from jinja2 import Markup
 
@@ -122,7 +122,7 @@ class FileToIndex(FileToIndexBase):
             )
 
 
-class _PyFilter(_NameFilter):
+class _PyFilter(NameFilterBase):
     lang = 'py'
 
 

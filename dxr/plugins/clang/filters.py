@@ -1,9 +1,9 @@
 from jinja2 import Markup
 
-from dxr.filters import _NameFilter, negatable
+from dxr.filters import NameFilterBase, negatable
 
 
-class _CFilter(_NameFilter):
+class _CFilter(NameFilterBase):
     lang = 'c'
 
 

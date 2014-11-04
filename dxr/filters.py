@@ -111,7 +111,7 @@ def negatable(filter_method):
     return maybe_negate
 
 
-class _NameFilter(Filter):
+class NameFilterBase(Filter):
     """An exact-match filter for things exposing a single value to compare
     against
 
@@ -129,7 +129,7 @@ class _NameFilter(Filter):
         eventual "lang:" metafilter.
 
         """
-        super(_NameFilter, self).__init__(term)
+        super(NameFilterBase, self).__init__(term)
         self._needle = '{0}_{1}'.format(self.lang, self.name.replace('-', '_'))
 
     def _term_filter(self, field):
