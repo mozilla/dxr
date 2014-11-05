@@ -392,3 +392,6 @@ How can I use pdb to debug indexing?
     In the DXR config file for the tree you're building, add ``disable_workers
     = true`` to the ``[DXR]`` section. That will keep DXR from spawning
     multiple worker processes, something pdb doesn't tolerate well.
+
+I pulled a new version of the code that's supposed to have a new plugin (or I added one myself), but it's acting like it doesn't exist.
+    Re-run ``python setup.py develop`` to register the new setuptools entry point.
