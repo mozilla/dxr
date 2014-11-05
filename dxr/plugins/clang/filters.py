@@ -3,11 +3,11 @@ from jinja2 import Markup
 from dxr.filters import NameFilterBase, negatable
 
 
-class _CFilter(NameFilterBase):
+class _NameFilter(NameFilterBase):
     lang = 'c'
 
 
-class _QualifiedNameFilter(_CFilter):
+class _QualifiedNameFilter(_NameFilter):
     """An exact-match filter for symbols having names and qualnames
 
     This filter assumes an object-shaped needle value with a 'name'
@@ -91,12 +91,12 @@ class VarDeclFilter(_QualifiedNameFilter):
     description = 'Variable declaration'
 
 
-class MacroFilter(_CFilter):
+class MacroFilter(_NameFilter):
     name = 'macro'
     description = 'Macro definition'
 
 
-class MacroRefFilter(_CFilter):
+class MacroRefFilter(_NameFilter):
     name = 'macro-ref'
     description = 'Macro uses'
 
@@ -121,12 +121,12 @@ class NamespaceAliasRefFilter(_QualifiedNameFilter):
     description = 'Namespace alias references'
 
 
-class WarningFilter(_CFilter):
+class WarningFilter(_NameFilter):
     name = 'warning'
     description = 'Compiler warning messages'
 
 
-class WarningOptFilter(_CFilter):
+class WarningOptFilter(_NameFilter):
     name = 'warning-opt'
     description = 'Warning messages brought on by a given compiler command-line option'
 
