@@ -8,7 +8,7 @@ from dxr.config import Config
 def test_enabled_star():
     """Make sure even plugins that aren't packages get enabled when
     enabled_plugins = *.
-    
+
     """
     config = Config("""
 [DXR]

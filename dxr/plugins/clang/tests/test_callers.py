@@ -55,18 +55,18 @@ class IndirectCallTests(SingleFileTestCase):
     source = r"""
         class Base
         {
-        public:
-            Base() {}
-            virtual void foo() {}
-            void bar() {}
+            public:
+                Base() {}
+                virtual void foo() {}
+                void bar() {}
         };
 
         class Derived : public Base
         {
-        public:
-            Derived() {}
-            virtual void foo() {}
-            void bar() {}
+            public:
+                Derived() {}
+                virtual void foo() {}
+                void bar() {}
         };
 
         void c1(Base &b)
@@ -83,7 +83,7 @@ class IndirectCallTests(SingleFileTestCase):
         """ + MINIMAL_MAIN
 
     def test_virtual_base(self):
-        """Virtual methods on base classes should find only invocations
+        """Virtual methods on base classes should be found only on invocations
         against base-class-typed things.
 
         C++ does not automatically downcast things from base to derived types.
@@ -101,8 +101,8 @@ class IndirectCallTests(SingleFileTestCase):
         worst, false positives.
 
         """
-        raise SkipTest("We don't yet represent implicit upcasts, so the b.foo hit doesn't get returned.")
-        # b could be a Base or a Derived; we can't tell. C++ happily upcasts.
+        # b could be a Base or a Derived. We have to look to the whole-program
+        # analysis pass to tell; C++ happily upcasts.
         self.found_lines_eq('+callers:Derived::foo()', [
             ('<b>b.foo</b>();', 20),
             ('<b>d.foo</b>();', 26)])

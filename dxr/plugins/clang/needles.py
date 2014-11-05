@@ -133,6 +133,9 @@ def macro_needles(condensed):
 def needles_from_graph(graph, root_qualname, method_span, needle_name):
     """Yield the needles gleaned from recursively descending a graph.
 
+    The returned needles start at the nodes the ``root_qualname`` points to,
+    not at the root itself.
+
     :arg graph: A graph of this format::
 
         {'source qualname': [('dest qualname', 'dest name')]}
@@ -209,6 +212,24 @@ def member_needles(condensed):
             if 'scopename' in entity)
 
 
+def caller_needles(condensed, overriddens):
+    """Plonk qualified needles down at callsites, pointing at called functions.
+
+    If a call is virtual, add also any overrides of the method in derived
+    classes, because the dispatch will be controlled by the runtime type of
+    the object, and C++ will happily implicitly upcast derived instances to
+    base ones.
+
+    """
+    for needle in qualified_needles(condensed, 'call'):
+         yield needle
+    for call in condensed['call']:
+        if call['calltype'] == 'virtual':
+            for needle_from_base_method in needles_from_graph(
+                    overriddens, call['qualname'], call['span'], 'c_call'):
+                yield needle_from_base_method
+
+
 def all_needles(condensed, inheritance, overrides, overriddens):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
@@ -241,7 +262,7 @@ def all_needles(condensed, inheritance, overrides, overriddens):
             warning_needles(condensed),
             warning_opt_needles(condensed),
 
-            qualified_needles(condensed, 'call'),
+            caller_needles(condensed, overriddens),
 
             overrides_needles(condensed, overrides),
             overridden_needles(condensed, overriddens),
