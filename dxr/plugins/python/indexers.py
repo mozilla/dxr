@@ -56,12 +56,14 @@ class FileToIndex(FileToIndexBase):
         return iterable_per_line(
             with_start_and_end(
                 split_into_lines(
-                    self.all_needles()
+                    self._all_needles()
                 )
             )
         )
 
-    def all_needles(self):
+    def _all_needles(self):
+        """Return an iterable of needles in (needle name, value, Extent) format."""
+
         syntax_tree = ast.parse(self.contents.encode('utf-8'))
 
         # Create a lookup table for ast nodes by lineno and
