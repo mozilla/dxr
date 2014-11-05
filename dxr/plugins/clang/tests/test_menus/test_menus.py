@@ -201,8 +201,7 @@ class MenuTests(DxrInstanceTestCase):
 
     def test_deep_files(self):
         """Make sure we process files not at the root level."""
-        raise SkipTest("The CSV-finding code is buggy. Fix this before launching.")
-        menu_on(self.page('more_code/deeper.c'),
+        menu_on(self.page('deeper_folder/deeper.c'),
                 'deep_thing',
                 {'html': 'Find references',
-                 'href': '/code/search?q=%2Btype-ref%deep_thing'})
+                 'href': '/code/search?q=%2Btype-ref%3Adeep_thing'})
