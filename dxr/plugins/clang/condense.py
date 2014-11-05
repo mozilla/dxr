@@ -242,14 +242,10 @@ def condense(lines, dispatch_table, predicate=lambda kind, fields: True):
     for line in lines:
         kind = line[0]
         fields = dict(izip(line[1::2], line[2::2]))
-        if fields is None:
-            print "HEYYYYYYYYY", line
         if not predicate(kind, fields):
             continue
 
         try:
-            if fields is None:
-                print "HEYYYYYYYYY", line
             ret[kind].append(condense_line(dispatch_table, kind, fields))
         except UselessLine:
             pass
