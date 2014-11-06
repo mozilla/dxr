@@ -77,9 +77,6 @@ def process_override(overrides, overriddens, props):
     queries.
 
     """
-    # The loc points to the overridden (superclass) method.
-    path, row, col = _split_loc(props['overriddenloc'])
-
     # It may not be necessary to have a list here. In multiple inheritance,
     # does clang ever consider a method to override multiple other methods, or
     # is it at most one each?
