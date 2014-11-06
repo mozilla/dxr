@@ -325,6 +325,7 @@ def unsparsify(call):
     return group_needles(by_line(call()))
 
 
+# Deprecated in favor of iterable_per_line()
 def group_needles(line_needles):
     """Group line needles by line, and return a list of needles for each line,
     up to the last line with any needles::
@@ -343,6 +344,7 @@ def group_needles(line_needles):
             for line_num in xrange(1, last_line)]
 
 
+# Deprecated
 def by_line(span_needles):
     """Transform [(_, span:Extent)] into [(_, line:int)].
 
@@ -353,6 +355,7 @@ def by_line(span_needles):
             kv_start_end, line_number in imapcat(span_to_lines, span_needles))
 
 
+# Deprecated in favor of with_start_and_end()
 def key_object_pair((k, v), start, end):
     """Transform a key/value pair, along with start and end columns, to a
     key/multi-propertied-object pair that can be stored in ES and then used
@@ -362,6 +365,7 @@ def key_object_pair((k, v), start, end):
     return k, {'value': v, 'start': start, 'end': end}
 
 
+# Deprecated in favor of split_into_lines()
 def span_to_lines((kv, span)):
     """Expand ((k, v), span:Extent) into [(((k, v), line_span), line:int)].
 
@@ -385,7 +389,6 @@ def span_to_lines((kv, span)):
             yield (kv, 0, None), row
 
         yield (kv, 0, span.end.col), span.end.row
-
 
 
 
