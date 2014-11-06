@@ -12,15 +12,13 @@ from funcy import first
 from nose.tools import eq_
 
 from dxr.indexers import Extent, Position, FuncSig
-from dxr.plugins.clang.condense import (condense, build_inheritance,                                        c_type_sig, DISPATCH_TABLE)
+from dxr.plugins.clang.condense import condense, DISPATCH_TABLE
 from dxr.plugins.clang.indexers import kind_getter
-from dxr.plugins.clang.needles import (child_needles, parent_needles,
-    sig_needles)
+from dxr.plugins.clang.needles import sig_needles
 
 
 DEFAULT_LOC = ('x', Position(None, 0, 0))
 DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
-CALL_EXTENT = Extent(start=Position(None, 0, 0), end=Position(None, 0, 0))
 
 
 def get_csv(csv_str):
@@ -95,17 +93,6 @@ def test_type():
     })
 
 
-def test_impl():
-    csv = get_csv("""
-        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-    """)
-    eq_(csv['impl'][0], {
-        'tb': {'name': 'X', 'loc': DEFAULT_LOC},
-        'tc': {'name': 'Y', 'loc': DEFAULT_LOC},
-        'access': 'public'
-    })
-
-
 def test_decldef():
     csv = get_csv("""
         decldef,qualname,"Queue::Queue<T>(int)",loc,"x:0:0",defloc,"x:0:0",kind,"function",extent,0:0
@@ -159,54 +146,8 @@ def test_include():
     })
 
 
-INHERIT = {'X': {'Y', 'Z', 'W'},
-           'Y': {'W'},
-           'Z': {'W'},
-           'W': set()}
-
-
-def test_inheritance():
-    csv = get_csv("""
-        impl,tcname,"Y",tcloc,"main.cpp:10:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
-        impl,tcname,"Z",tcloc,"main.cpp:11:7",tbname,"X",tbloc,"main.cpp:9:7",access,"public"
-        impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Z",tbloc,"main.cpp:11:7",access,"public"
-        impl,tcname,"W",tcloc,"main.cpp:12:7",tbname,"Y",tbloc,"main.cpp:10:7",access,"public"
-    """)
-    inherit = build_inheritance(csv['impl'])
-    eq_(inherit, INHERIT)
-
-
 def eq__(l1, l2):
     eq_(list(l1), list(l2))
-
-
-def test_inherit_needles():
-    csv = get_csv("""
-        impl,tcname,"Y",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-        impl,tcname,"Z",tcloc,"x:0:0",tbname,"X",tbloc,"x:0:0",access,"public"
-        impl,tcname,"W",tcloc,"x:0:0",tbname,"Z",tbloc,"x:0:0",access,"public"
-        impl,tcname,"W",tcloc,"x:0:0",tbname,"Y",tbloc,"x:0:0",access,"public"
-        type,name,"X",qualname,"X",loc,"x:0:0",kind,"class",extent,0:0
-        type,name,"Y",qualname,"Y",loc,"x:0:0",kind,"class",extent,0:0
-        type,name,"W",qualname,"W",loc,"x:0:0",kind,"class",extent,0:0
-        type,name,"Z",qualname,"Z",loc,"x:0:0",kind,"class",extent,0:0
-    """)
-    c_needles = [(('c-child', 'Y'), DEFAULT_EXTENT),
-                 (('c-child', 'Z'), DEFAULT_EXTENT),
-                 (('c-child', 'W'), DEFAULT_EXTENT),
-                 (('c-child', 'W'), DEFAULT_EXTENT),
-                 (('c-child', 'W'), DEFAULT_EXTENT)]
-
-    eq_(len(list(child_needles(csv, INHERIT))), len(c_needles))
-    eq_(set(child_needles(csv, INHERIT)), set(c_needles))
-
-    p_needles = [(('c-parent', 'X'), DEFAULT_EXTENT),
-                 (('c-parent', 'X'), DEFAULT_EXTENT),
-                 (('c-parent', 'Y'), DEFAULT_EXTENT),
-                 (('c-parent', 'X'), DEFAULT_EXTENT),
-                 (('c-parent', 'Z'), DEFAULT_EXTENT)]
-    eq_(len(list(parent_needles(csv, INHERIT))), len(p_needles))
-    eq_(set(parent_needles(csv, INHERIT)), set(p_needles))
 
 
 def test_sig_needles():

@@ -36,7 +36,6 @@ setup(
                       'Pygments>=1.6,<2.0',
                       'requests>=1.0,<2.0',
                       'funcy>=1.0,<2.0',
-                      'toposort>=1.0,<2.0',
                   ],
     tests_require=['nose>=1.3.0,<2.0'],
     test_suite='nose.collector',

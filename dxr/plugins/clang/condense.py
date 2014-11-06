@@ -7,14 +7,12 @@ reason to keep this IR.]
 """
 import csv
 from functools import partial
+from glob import glob
 from hashlib import sha1
 from itertools import chain, izip
 from os.path import join
-from glob import glob
 
-from funcy import (walk, decorator, identity, select_keys, imap,
-                   ifilter, group_by, remove)
-from toposort import toposort_flatten
+from funcy import decorator, identity, select_keys, imap, ifilter, remove
 
 from dxr.indexers import FuncSig, Position, Extent
 
@@ -146,10 +144,25 @@ def process_defloc(props):
     return props
 
 
-def process_impl(props):
-    """Group tc and tb fields in impl field."""
-    props = group_loc_name('tc', props)
-    return group_loc_name('tb', props)
+def process_impl(parents, children, props):
+    """Contribute to the whole-program class hierarchy graphs.
+
+    :arg children: A dict that points from parents to children::
+
+        {'Some::Parent': [('A::Child', 'Child')]}
+
+    :arg parents: A dict that points from children to parents::
+
+        {'A::Child': [('Some::Parent', 'Parent)]}
+
+    """
+    parents.setdefault(props['qualname'], []).append(
+        (props['basequalname'], props['basename']))
+    children.setdefault(props['basequalname'], []).append(
+        (props['qualname'], props['name']))
+
+    # No need to waste memory keeping this in the per-file store:
+    raise UselessLine
 
 
 @without('callloc', 'calllocend')
@@ -166,35 +179,6 @@ def process_call(props):
                            Position(offset=None, row=call_end_row, col=call_end_col))
     props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
     return props
-
-
-def group_loc_name(base, props):
-    """Group the loc and name fields into a base field."""
-    name, loc = '{0}name'.format(base), '{0}loc'.format(base)
-
-    @without(name, loc)
-    def _group_loc_name(props):
-        src, row, col = props[loc].split(':')
-        props[base] = {'loc': (src, Position(None, int(row), int(col))),
-                       'name': props[name]}
-        return props
-    return _group_loc_name(props)
-
-
-def _relate((parent, children)):
-    return parent, set((child['tc']['name']) for child in children)
-
-
-def build_inheritance(subclasses):
-    """Builds mapping class -> set of all descendants."""
-    get_tbname = lambda x: x['tb']['name']  # tb are parents, tc are children
-    tree = walk(_relate, group_by(get_tbname, subclasses))
-    tree.default_factory = set
-    for node in toposort_flatten(tree):
-        children = tree[node]
-        for child in set(children):
-            tree[node] |= tree[child]
-    return tree
 
 
 def condense_line(dispatch_table, kind, fields):
@@ -269,8 +253,7 @@ def lines_from_csvs(folder, file_glob):
 
 
 DISPATCH_TABLE = {'call': process_call,
-                  'function': process_function,
-                  'impl': process_impl}
+                  'function': process_function}
 def condense_file(csv_folder, file_path):
     """Return a dict representing an analysis of one source file.
 
@@ -291,7 +274,7 @@ def condense_file(csv_folder, file_path):
                     DISPATCH_TABLE)
 
 
-def inheritance_and_overrides(csv_folder):
+def condense_global(csv_folder):
     """Perform the whole-program data gathering necessary to emit "overridden"
     and subclass-related needles.
 
@@ -301,14 +284,18 @@ def inheritance_and_overrides(csv_folder):
     # process_override() squirrels things away in these:
     overrides = {}
     overriddens = {}
+    # ...and process_impl() in these:
+    parents = {}
+    children = {}
 
     # Load from all the CSVs only the impl lines and {function lines
-    # containing overriddenname}:
-    condensed = condense(
+    # containing overriddenname}. Ignore the direct return value and collect
+    # what we want via the partials.
+    condense(
         lines_from_csvs(csv_folder, '*.csv'),
-        {'impl': process_impl,
+        {'impl': partial(process_impl, parents, children),
          'function': partial(process_override, overrides, overriddens)},
         predicate=lambda kind, fields: (kind == 'function' and
                                         'overriddenname' in fields) or
                                        kind == 'impl')
-    return build_inheritance(condensed['impl']), overrides, overriddens
+    return overrides, overriddens, parents, children

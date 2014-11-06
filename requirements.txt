@@ -28,9 +28,6 @@ Werkzeug==0.8.3
 # sha256: uyTo_df6vGRca0giqfa20IF1End-YHo_-ko4rSI_kgY
 funcy==1.1
 
-# sha256: 3zdO5VK2mPKZ63yWLDoLQymVjK1SoGOECuLs6Dt8ac0
-toposort==1.0
-
 # For deployment script only:
 # sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3

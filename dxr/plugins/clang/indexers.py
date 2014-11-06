@@ -11,7 +11,7 @@ from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           unsparsify)
-from dxr.plugins.clang.condense import condense_file, inheritance_and_overrides
+from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
                                      macro_menu, include_menu, typedef_menu,
@@ -91,19 +91,21 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, tree, inheritance, overrides, overriddens, temp_folder):
+    def __init__(self, path, contents, tree, overrides, overriddens, parents, children, temp_folder):
         super(FileToIndex, self).__init__(path, contents, tree)
-        self.inheritance = inheritance
         self.overrides = overrides
         self.overriddens = overriddens
+        self.parents = parents
+        self.children = children
         self.condensed = condense_file(temp_folder, path)
 
     def needles_by_line(self):
         return all_needles(
                 self.condensed,
-                self.inheritance,
                 self.overrides,
-                self.overriddens)
+                self.overriddens,
+                self.parents,
+                self.children)
 
     def refs(self):
         def silent_itemgetter(y):
@@ -261,13 +263,14 @@ class TreeToIndex(TreeToIndexBase):
         return merge(vars_, env)
 
     def post_build(self):
-        self._inheritance, self._overrides, self._overriddens = inheritance_and_overrides(self._temp_folder)
+        self._overrides, self._overriddens, self._parents, self._children = condense_global(self._temp_folder)
 
     def file_to_index(self, path, contents):
         return FileToIndex(path,
                            contents,
                            self.tree,
-                           self._inheritance,
                            self._overrides,
                            self._overriddens,
+                           self._parents,
+                           self._children,
                            self._temp_folder)

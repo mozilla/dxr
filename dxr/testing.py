@@ -83,7 +83,7 @@ class TestCase(unittest.TestCase):
                             [(content, line)],
                             is_case_sensitive=is_case_sensitive)
 
-    def found_lines_eq(self, query, success_lines, is_case_sensitive=True):
+    def found_lines_eq(self, query, expected_lines, is_case_sensitive=True):
         """Assert that a query returns a single file and that the highlighted
         lines are as expected, modulo leading and trailing whitespace."""
         results = self.search_results(query,
@@ -93,7 +93,7 @@ class TestCase(unittest.TestCase):
                                  '%s files, not one.' % num_results)
         lines = results[0]['lines']
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
-            success_lines)
+            expected_lines)
 
     def found_nothing(self, query, is_case_sensitive=True):
         """Assert that a query returns no hits."""
@@ -240,6 +240,16 @@ build_command = $CXX -o main main.cpp
                  .replace('&quot;', '"')
                  .replace('&amp;', '&'))
 
+    def _guess_line(self, content):
+        """Take a guess at which line number of our source code some (possibly
+        highlighted) content is from.
+
+        """
+        return self.source.count(
+                '\n',
+                0,
+                self.source.index(self._source_for_query(content))) + 1
+
     def found_line_eq(self, query, content, line=None, is_case_sensitive=True):
         """A specialization of ``found_line_eq`` that computes the line number
         if not given
@@ -250,10 +260,31 @@ build_command = $CXX -o main main.cpp
 
         """
         if not line:
-            line = self.source.count( '\n', 0, self.source.index(
-                self._source_for_query(content))) + 1
+            line = self._guess_line(content)
         super(SingleFileTestCase, self).found_line_eq(
                 query, content, line, is_case_sensitive=is_case_sensitive)
+
+    def found_lines_eq(self, query, expected_lines, is_case_sensitive=True):
+        """A specialization of ``found_lines_eq`` that computes the line
+        numbers if not given
+
+        :arg expected_lines: A list of pairs (line content, line number) or
+            strings (just line content) specifying expected results
+
+        """
+        def to_pair(line):
+            """Take either a string (a line of source, optionally highlit) or
+            a pair of (line of source, line number), and return (line of
+            source, line number).
+
+            """
+            if isinstance(line, basestring):
+                return line, self._guess_line(line)
+            return line
+
+        expected_pairs = map(to_pair, expected_lines)
+        super(SingleFileTestCase, self).found_lines_eq(
+                query, expected_pairs, is_case_sensitive=is_case_sensitive)
 
     def direct_result_eq(self, query, line_number, is_case_sensitive=True):
         """Assume the filename "main.cpp"."""

@@ -14,50 +14,10 @@ def sig_needles(condensed):
             condensed['function'])
 
 
-def inherit_needles(condensed, tag, func):
-    """Return list of needles ((c-tag, val), span).
-
-    :type func: str -> iterable
-    :param func: Map node name to an iterable of other node names.
-    :param tag: First element in the needle tuple
-
-    """
-    children = (izip(func(c['name']), repeat(c['span'])) for c
-                in condensed['type'] if c['kind'] == 'class')
-
-    return imap(lambda (a, (b, c)): ((a, b), c),
-                izip(repeat('c-{0}'.format(tag)), icat(children)))
-
-
-def child_needles(condensed, inherit):
-    """Return needles representing subclass relationships.
-
-    :type inherit: mapping parent:str -> Set child:str
-
-    """
-    return inherit_needles(condensed, 'child',
-                           lambda name: inherit.get(name, []))
-
-
-def parent_needles(condensed, inherit):
-    """Return needles representing super class relationships.
-
-    :type inherit: mapping parent:str -> Set child:str
-
-    """
-    def get_parents(name):
-        return (parent for parent, children in inherit.items()
-                if name in children)
-
-    return inherit_needles(condensed, 'parent', get_parents)
-
-
 # def needles(condensed, inherit, graph):
 #     """Return all C plugin needles."""
 #
 #     return chain(
-#         parent_needles(condensed, inherit),
-#         child_needles(condensed, inherit),
 #         sig_needles(condensed),
 #     )
 
@@ -130,8 +90,31 @@ def macro_needles(condensed):
             condensed['macro'])
 
 
+def _nonunique_needles_from_graph(graph, root_qualname):
+    """Yield (qualname, name) pairs gleaned from recursively descending a
+    graph, possibly with repeats.
+
+    It is possible, while traversing the graph, to come up with duplicates:
+    for instance, from multiple inheritance. This won't be a problem for ES,
+    since duplicates will be merged in the term index. But it makes the
+    highlighter emit icky empty tag pairs.
+
+    """
+    direct_dests = graph.get(root_qualname, [])
+    return chain(
+        # Direct destinations:
+        ((dest_qualname, dest_name)
+         for dest_qualname, dest_name in direct_dests),
+
+        # Indirect destinations. For instance, if something overrides my
+        # subclass's override, it overrides me as well.
+        chain.from_iterable(
+            _nonunique_needles_from_graph(graph, dest_qualname)
+            for dest_qualname, dest_name in direct_dests))
+
+
 def needles_from_graph(graph, root_qualname, method_span, needle_name):
-    """Yield the needles gleaned from recursively descending a graph.
+    """Yield the unique needles gleaned from recursively descending a graph.
 
     The returned needles start at the nodes the ``root_qualname`` points to,
     not at the root itself.
@@ -145,22 +128,10 @@ def needles_from_graph(graph, root_qualname, method_span, needle_name):
     :arg needle_name: The key to emit for every needle (the same for each)
 
     """
-    # These variables are named as if operating on a graph where overridden
-    # methods point to their overriders, but it can be used in the opposite
-    # direction (or for other things altogether).
-    direct_overrides = graph.get(root_qualname, [])
-    return chain(
-        # Direct destinations:
-        ((needle_name,
-         {'qualname': derived_qualname, 'name': derived_name},
-         method_span)
-        for derived_qualname, derived_name in direct_overrides),
-
-        # Indirect destinations. For instance, if something overrides my
-        # subclass's override, it overrides me as well.
-        chain.from_iterable(
-            needles_from_graph(graph, derived_qualname, method_span, needle_name)
-            for derived_qualname, derived_name in direct_overrides))
+    uniques = set(_nonunique_needles_from_graph(graph, root_qualname))
+    return ((needle_name,
+            {'qualname': qualname, 'name': name},
+            method_span) for qualname, name in uniques)
 
 
 def overrides_needles(condensed, overrides):
@@ -230,7 +201,23 @@ def caller_needles(condensed, overriddens):
                 yield needle_from_base_method
 
 
-def all_needles(condensed, inheritance, overrides, overriddens):
+def inheritance_needles(condensed, parents, children):
+    """Emit needles that let us find parent and child classes of classes."""
+    for type in condensed['type']:
+        if type['kind'] == 'class':
+            # Lay down needles at a class's line. These needles' values are
+            # any classes that this class is a parent of.
+            for needle in needles_from_graph(
+                    children, type['qualname'], type['span'], 'c_bases'):
+                yield needle
+            # And these needles' values are the classes that this class is a
+            # child of:
+            for needle in needles_from_graph(
+                    parents, type['qualname'], type['span'], 'c_derived'):
+                yield needle
+
+
+def all_needles(condensed, overrides, overriddens, parents, children):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
             qualified_needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
@@ -268,4 +255,6 @@ def all_needles(condensed, inheritance, overrides, overriddens):
             overridden_needles(condensed, overriddens),
 
             member_needles(condensed),
+
+            inheritance_needles(condensed, parents, children),
     ))))

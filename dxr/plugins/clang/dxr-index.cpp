@@ -433,16 +433,16 @@ public:
       if (!base)
         return true;
       beginRecord("impl", d->getLocation());
-      recordValue("tcname", getQualifiedName(*d));
-      recordValue("tcloc", locationToString(d->getLocation()));
-      recordValue("tbname", getQualifiedName(*base));
-      recordValue("tbloc", locationToString(base->getLocation()));
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("basename", base->getNameAsString());
+      recordValue("basequalname", getQualifiedName(*base));
       *out << ",access,\"";
       switch ((*iter).getAccessSpecifierAsWritten()) {
-      case AS_public: *out << "public"; break;
-      case AS_protected: *out << "protected"; break;
-      case AS_private: *out << "private"; break;
-      case AS_none: break; // It's implied, but we can ignore that
+        case AS_public: *out << "public"; break;
+        case AS_protected: *out << "protected"; break;
+        case AS_private: *out << "private"; break;
+        case AS_none: break; // It's implied, but we can ignore that
       }
       if ((*iter).isVirtual())
         *out << " virtual";

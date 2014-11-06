@@ -141,12 +141,12 @@ class CallerFilter(_QualifiedNameFilter):
         self._needle = '{0}_call'.format(self.lang)
 
 
-class ChildFilter(_QualifiedNameFilter):
+class ParentFilter(_QualifiedNameFilter):
     name = 'bases'
     description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
 
 
-class ParentFilter(_QualifiedNameFilter):
+class ChildFilter(_QualifiedNameFilter):
     name = 'derived'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
 
