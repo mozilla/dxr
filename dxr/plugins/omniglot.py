@@ -108,6 +108,25 @@ class Mercurial(VCS):
         self.untracked_files = set(line.split()[1] for line in
             self.invoke_vcs(['hg', 'status', '-u', '-i']).split('\n')[:-1])
 
+        # Determine the last revision on which each file is changed
+        self.previous_revisions = self.find_previous_revisions(root)
+
+    def find_previous_revisions(self, root):
+        '''
+        Find the last revision on which each file changed, used in diff links.
+        Return a mapping {filename: hash of last change commit}
+        '''
+        from mercurial import hg, ui # unsupported api
+        repo = hg.repository(ui.ui(), root)
+        last_change = {}
+        for rev in range(0, repo['tip'].rev() + 1):
+            ctx = repo[rev]
+            # go through all filenames changed in this commit
+            for filename in ctx.files():
+                # str(ctx) gives us the 12-char hash for URLs
+                last_change[filename] = str(ctx)
+        return last_change
+
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.hg' in dirs:
@@ -125,12 +144,7 @@ class Mercurial(VCS):
         return self.upstream + 'annotate/' + self.revision + '/' + path
 
     def generate_diff(self, path):
-        previous_rev = self.invoke_vcs(['hg', 'log', '-r', 'last(file("{}"))'.format(path), '--style=compact']).strip()
-        # pull out the commit hash from the compact log entry
-        # ex: 1   2e86c4e11a82   2004-9-12 10:36 -0500   ancient
-        #          ^wanted^
-        previous_rev = previous_rev.split()[1]
-        return self.upstream + 'diff/' + previous_rev + '/' + path
+        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
 
     def generate_raw(self, path):
         return self.upstream + 'raw-file/' + self.revision + '/' + path
