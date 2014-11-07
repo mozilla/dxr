@@ -9,9 +9,9 @@ KV1 = ('x', 'v1')
 KV2 = ('y', 'v2')
 KV3 = ('z', 'v3')
 
-NEEDLE1 = (KV1, Extent(Position(None, 1, 3), Position(None, 1, 7)))
-NEEDLE2 = (KV2, Extent(Position(None, 1, 5), Position(None, 3, 7)))
-NEEDLE3 = (KV3, Extent(Position(None, 1, 0), Position(None, 0, 0)))
+NEEDLE1 = (KV1, Extent(Position(1, 3), Position(1, 7)))
+NEEDLE2 = (KV2, Extent(Position(1, 5), Position(3, 7)))
+NEEDLE3 = (KV3, Extent(Position(1, 0), Position(0, 0)))
 
 
 def list_eq(result, expected):
@@ -61,10 +61,10 @@ def test_span_to_lines():
 
 
 def test_split_into_lines():
-    list_eq(split_into_lines([('k', {'m': 'ap'}, Extent(Position(None, 1, 5), Position(None, 3, 7)))]),
-        [('k', {'m': 'ap'}, Extent(Position(None, 1, 5), Position(None, 1, None))),
-         ('k', {'m': 'ap'}, Extent(Position(None, 2, 0), Position(None, 2, None))),
-         ('k', {'m': 'ap'}, Extent(Position(None, 3, 0), Position(None, 3, 7)))])
+    list_eq(split_into_lines([('k', {'m': 'ap'}, Extent(Position(1, 5), Position(3, 7)))]),
+        [('k', {'m': 'ap'}, Extent(Position(1, 5), Position(1, None))),
+         ('k', {'m': 'ap'}, Extent(Position(2, 0), Position(2, None))),
+         ('k', {'m': 'ap'}, Extent(Position(3, 0), Position(3, 7)))])
 
 
 def test_char_offset():

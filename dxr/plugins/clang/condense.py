@@ -105,8 +105,8 @@ def process_span(props):
 
     _, row, col = _split_loc(props['loc'])
     _, row_end, col_end = _split_loc(props['locend'])
-    props['span'] = Extent(Position(None, row, col),
-                           Position(None, row_end, col_end))
+    props['span'] = Extent(Position(row, col),
+                           Position(row_end, col_end))
 
     return props
 
@@ -123,7 +123,7 @@ def _process_loc(locstring):
         return None
 
     src, row, col = _split_loc(locstring)
-    return src, Position(None, row, col)
+    return src, Position(row, col)
 
 
 def process_declloc(props):
@@ -165,12 +165,12 @@ def process_call(props):
     # the compiler plugin. It lets us construct reliable Extents, with no
     # assumption that they don't span lines.
     _, call_start = _process_loc(props['callloc'])
-    _, (_, call_end_row, call_end_col) = _process_loc(props['calllocend'])
+    _, (call_end_row, call_end_col) = _process_loc(props['calllocend'])
     if call_end_col > call_start.col + 1:
         # The span coming out of the compiler includes the left paren. Stop that.
         call_end_col -= 1
     props['span'] = Extent(call_start,
-                           Position(offset=None, row=call_end_row, col=call_end_col))
+                           Position(row=call_end_row, col=call_end_col))
     props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
     return props
 

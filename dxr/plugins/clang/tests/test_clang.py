@@ -15,7 +15,7 @@ from dxr.plugins.clang.condense import condense, DISPATCH_TABLE
 from dxr.plugins.clang.needles import sig_needles
 
 
-DEFAULT_EXTENT = Extent(start=Position(0, 0, 0), end=Position(0, 0, 0))
+DEFAULT_EXTENT = Extent(start=Position(0, 0), end=Position(0, 0))
 
 
 def get_csv(csv_str):

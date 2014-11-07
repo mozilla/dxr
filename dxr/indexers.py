@@ -339,8 +339,7 @@ class FileToIndex(FileToSkim):
 
 
 Extent = namedtuple('Extent', ['start', 'end'])  # 0-based
-# Note that if offset is a Maybe Int, if not present it's None
-Position = namedtuple('Position', ['offset', 'row', 'col'])  # offset & col 0-based, row 1-based
+Position = namedtuple('Position', ['row', 'col'])  # col 0-based, row 1-based
 
 
 class FuncSig(namedtuple('FuncSig', ['inputs', 'output'])):
@@ -443,27 +442,21 @@ def split_into_lines(triples):
             # TODO: There are a lot of Nones used as slice bounds below. Do we
             # ever translate them back into char offsets? If not, does the
             # highlighter or anything else choke on them?
-            yield key, mapping, Extent(Position(offset=None,
-                                                row=extent.start.row,
+            yield key, mapping, Extent(Position(row=extent.start.row,
                                                 col=extent.start.col),
-                                       Position(offset=None,
-                                                row=extent.start.row,
+                                       Position(row=extent.start.row,
                                                 col=None))
 
             # Really wish we could use yield from
             for row in xrange(extent.start.row + 1, extent.end.row):
-                yield key, mapping, Extent(Position(offset=None,
-                                                    row=row,
+                yield key, mapping, Extent(Position(row=row,
                                                     col=0),
-                                           Position(offset=None,
-                                                    row=row,
+                                           Position(row=row,
                                                     col=None))
 
-            yield key, mapping, Extent(Position(offset=None,
-                                                row=extent.end.row,
+            yield key, mapping, Extent(Position(row=extent.end.row,
                                                 col=0),
-                                       Position(offset=None,
-                                                row=extent.end.row,
+                                       Position(row=extent.end.row,
                                                 col=extent.end.col))
 
     return imapcat(_split_one, triples)

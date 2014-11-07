@@ -186,7 +186,7 @@ class FileToIndex(FileToIndexBase):
 
         getter = itemgetter('name', 'qualname', 'span', 'kind')
         for name, tid, span, kind in imap(getter, self.condensed['type']):
-            (_, line, _), _ = span
+            (line, _), _ = span
             if len(name) == 0:
                 continue
 
@@ -209,7 +209,7 @@ class FileToIndex(FileToIndexBase):
         links = []
         getter = itemgetter('name', 'span')
         for name, span in imap(getter, self.condensed['type']):
-            (_, line, _), _ = span
+            (line, _), _ = span
             links.append(('macro', name, "#%s" % line))
         if links:
             yield 100, "Macros", links
@@ -227,7 +227,7 @@ def _members(condensed, key, id_):
     for props in ifilter(pred, condensed[key]):
         # Skip nameless things
         name = props['qualname']
-        (_, line, _), _ = props['span']
+        (line, _), _ = props['span']
         if not name:
             continue
         yield 'method', name, "#%s" % line

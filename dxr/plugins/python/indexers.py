@@ -113,10 +113,8 @@ class FileToIndex(FileToIndexBase):
                 {'name': tok['name'],
                  'start': tok['start'][1],
                  'end': tok['end'][1]},
-                Extent(Position(offset=None,
-                                row=tok['start'][0],
+                Extent(Position(row=tok['start'][0],
                                 col=tok['start'][1]),
-                       Position(offset=None,
-                                row=tok['end'][0],
+                       Position(row=tok['end'][0],
                                 col=tok['end'][1]))
             )
