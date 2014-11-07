@@ -185,8 +185,8 @@ public:
     return f->interesting;
   }
 
-  // Return the file name (path?), line, and column of a source location, or ''
-  // if the location is invalid.
+  // Return a source location's file path, line, and column, or '' if the
+  // location is invalid.
   std::string locationToString(SourceLocation loc) {
     std::string buffer;
     bool isInvalid;
@@ -291,7 +291,9 @@ public:
     *out << value.substr(start) << "\"";
   }
 
-  SourceLocation getFileLocation(SourceLocation loc) {
+  // This has something to do with linkifying macro args when they're a
+  // reference to or a definition of something.
+  SourceLocation expandMacroArgs(SourceLocation loc) {
     while (loc.isValid() && loc.isMacroID())
     {
       if (!sm.isMacroArgExpansion(loc))
@@ -304,8 +306,8 @@ public:
   void printExtent(SourceLocation begin, SourceLocation end) {
     if (!end.isValid())
       end = begin;
-    begin = getFileLocation(begin);
-    end   = getFileLocation(end);
+    begin = expandMacroArgs(begin);
+    end   = expandMacroArgs(end);
     if (!begin.isValid() || !end.isValid())
       return;
     *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
@@ -317,8 +319,7 @@ public:
   {
     DeclContext *dc;
     for (dc = d->getDeclContext(); dc->isClosure(); dc = dc->getParent())
-    {
-    }
+      ;
     return Decl::castFromDeclContext(dc);
   }
 
