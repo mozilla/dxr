@@ -91,28 +91,22 @@ def process_override(overrides, overriddens, props):
     raise UselessLine
 
 
-@without('loc', 'extent')
-def process_loc(props):
-    """Return extent based on loc and extent."""
-    if 'extent' not in props:
+@without('loc', 'locend')
+def process_span(props):
+    """Turn the "loc" and "locend" fields into a "span" that's an Extent."""
+    if not props.get('locend', ''):  # locend can be "" if isInvalid().
         # This happens with some macros which call other macros, like this:
         #   #define ID2(x) (x)
         #   #define ID(x) ID2(x)
         # In the second line, ID2 will get a macro ref line, but it will lack
         # an extent because the SourceLocation of ID2 will not be .isValid().
         # We never got that right, even in the SQLite implementation.
-        raise UselessLine('Found a line with "loc" but without "extent".')
+        raise UselessLine('Found a line with "loc" but without "locend".')
 
-    row, col = map(int, props['loc'].split(':')[1:])
-    start, end = map(int, props['extent'].split(':'))
-
-    # TODO: This assumes the extent doesn't span lines. If it did, row would
-    # have to change sometimes. Is this a problem, or do all extents pulled
-    # out of CSVs stay each within one line? If they don't, we'll need to pass
-    # the file text in here or, more easily and efficiently, improve the
-    # compiler plugin.
-    props['span'] = Extent(Position(start, row, col),
-                           Position(end, row, col + end - start))
+    _, row, col = _split_loc(props['loc'])
+    _, row_end, col_end = _split_loc(props['locend'])
+    props['span'] = Extent(Position(None, row, col),
+                           Position(None, row_end, col_end))
 
     return props
 
@@ -193,7 +187,7 @@ def condense_line(dispatch_table, kind, fields):
     fields = dispatch_table.get(kind, identity)(fields)
 
     if 'loc' in fields:
-        fields = process_loc(fields)
+        fields = process_span(fields)
 
     if 'declloc' in fields:
         fields = process_declloc(fields)

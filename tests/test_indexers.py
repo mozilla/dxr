@@ -1,7 +1,8 @@
 from nose.tools import eq_, assert_raises
 
 from dxr.indexers import (unsparsify, by_line, group_needles, span_to_lines,
-                          key_object_pair, Extent, Position, split_into_lines)
+                          key_object_pair, Extent, Position, split_into_lines,
+                          FileToSkim)
 
 
 KV1 = ('x', 'v1')
@@ -64,3 +65,12 @@ def test_split_into_lines():
         [('k', {'m': 'ap'}, Extent(Position(None, 1, 5), Position(None, 1, None))),
          ('k', {'m': 'ap'}, Extent(Position(None, 2, 0), Position(None, 2, None))),
          ('k', {'m': 'ap'}, Extent(Position(None, 3, 0), Position(None, 3, 7)))])
+
+
+def test_char_offset():
+    """Make sure char_offset() deals with different kinds of line breaks and
+    handles the first and last lines correctly."""
+    skimmer = FileToSkim('/some/path', u'abc\r\nde\nfghi', 'dummy_tree')
+    eq_(skimmer.char_offset(1, 1), 1)
+    eq_(skimmer.char_offset(2, 1), 6)
+    eq_(skimmer.char_offset(3, 1), 9)

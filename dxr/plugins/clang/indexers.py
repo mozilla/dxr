@@ -177,9 +177,9 @@ class FileToIndex(FileToIndexBase):
                 menu.extend(menu_maker(self.tree, prop))
                 start, end = prop['span']
 
-                if start.offset is None or end.offset is None:
-                    raise NotImplementedError("Fix this logic. It's full of holes. We must return a file-wide offset, but Position.offset was None.")
-                yield start.offset, end.offset, (menu, tooltip(prop))
+                yield (self.char_offset(start.row, start.col),
+                       self.char_offset(end.row, end.col),
+                       (menu, tooltip(prop)))
 
     def links(self):
         # For each type add a section with members

@@ -79,11 +79,12 @@ class TreeToIndex(object):
         worker process. Thus, a TreeToIndex-dwelling dict might be a suitable
         place for a cache but unsuitable for data that can't evaporate.
 
-        If a plugin omits a TreeToIndex class, :meth:`Plugin.from_namespace()`
-        constructs one dynamically. The method implementations of that class
-        are inherited from this class, with one exception: a
-        ``file_to_index()`` method is dynamically constructed which returns a
-        new instance of the ``FileToIndex`` class the plugin defines, if any.
+        If a plugin omits a TreeToIndex class,
+        :meth:`~dxr.plugins.Plugin.from_namespace()` constructs one
+        dynamically. The method implementations of that class are inherited
+        from this class, with one exception: a ``file_to_index()`` method is
+        dynamically constructed which returns a new instance of the
+        ``FileToIndex`` class the plugin defines, if any.
 
         """
 
@@ -217,10 +218,42 @@ class FileToSkim(object):
         text.
 
         This may come in handy as a component of your own
-        :meth:`is_interesting()` methods.
+        :meth:`~dxr.indexers.FileToSkim.is_interesting()` methods.
 
         """
         return isinstance(self.contents, unicode)
+
+    def char_offset(self, row, col):
+        """Return the from-BOF unicode char offset for the char at the given
+        row and column of the file we're indexing.
+
+        This is handy for translating row- and column-oriented input to the
+        format :meth:`~dxr.indexers.FileToSkim.refs()` and
+        :meth:`~dxr.indexers.FileToSkim.regions()` want.
+
+        :arg row: The 1-based line number, according to splitting in universal
+            newline mode
+        :arg col: The 0-based column number
+
+        """
+        return self._line_offsets()[row - 1] + col
+
+    # Private methods:
+
+    def _line_offsets(self):
+        """Return (and cache) a list mapping 1-based line numbers to from-BOF
+        Unicode offsets."""
+        if not hasattr(self, '_line_offset_list'):
+            if not self.contains_text():
+                raise ValueError("Can't get line offsets for a file that isn't"
+                                 " text.")
+            lines = self.contents.splitlines(True)
+            self._line_offset_list = []
+            chars = 0
+            for i in range(0, len(lines)):
+                self._line_offset_list.append(chars)
+                chars += len(lines[i])
+        return self._line_offset_list
 
 
 class FileToIndex(FileToSkim):
@@ -248,11 +281,11 @@ class FileToIndex(FileToSkim):
         it here makes for less code and less opportunity for error.
 
         FileToIndex classes of plugins may take whatever constructor args they
-        like; it is the responsibility of their
-        :meth:`TreeToIndex.file_to_index()` methods to supply them. However,
-        the ``path`` and ``contents`` instance vars should be initialized and
-        have the above semantics, or a lot of the provided convenience methods
-        and default implementations will break.
+        like; it is the responsibility of their TreeToIndex objects'
+        :meth:`~dxr.indexers.TreeToIndex.file_to_index()` methods to supply
+        them. However, the ``path`` and ``contents`` instance vars should be
+        initialized and have the above semantics, or a lot of the provided
+        convenience methods and default implementations will break.
 
         """
         # We receive the file contents from the outside for two reasons: (1) so
