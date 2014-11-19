@@ -25,13 +25,15 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
                                                 'plugin_buglink_regex',
                                                 r'(?i)bug\s+#?([0-9]+)'))
 
+        self.tree = tree
+
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.bug_finder_re, self.name, self.url)
+        return FileToIndex(path, contents, self.bug_finder_re, self.name, self.url, self.tree)
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
-    def __init__(self, path, contents, regex, tracker_name, url_template):
-        super(FileToIndex, self).__init__(path, contents)
+    def __init__(self, path, contents, regex, tracker_name, url_template, tree):
+        super(FileToIndex, self).__init__(path, contents, tree)
         self.regex = regex
         self.tracker_name = tracker_name
         self.url_template = url_template
