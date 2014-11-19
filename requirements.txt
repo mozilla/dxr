@@ -10,6 +10,9 @@ Jinja2==2.7.2
 # sha256: t9XWiL3TRb-ol3d9KXdWaIzwLhs3QsVoheLlwrmW_4I
 MarkupSafe==0.18
 
+# sha256: k-YuBcetPaGiM972cx6ChRVnAeNBml_ieQF8Qp7GfOA
+more-itertools==2.2
+
 # sha256: HDW0rCBs7y0kgWyJ-Jzyid09OM98RJuz-re_bUPwGx8
 ordereddict==1.1
 
