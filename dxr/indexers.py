@@ -4,6 +4,7 @@ from collections import namedtuple
 from operator import itemgetter
 
 from funcy import group_by, decorator, imapcat
+from os.path import join
 
 
 class TreeToIndex(object):

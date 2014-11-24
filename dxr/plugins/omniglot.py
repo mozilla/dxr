@@ -297,7 +297,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             yield 'raw', "Raw", vcs.generate_raw(vcs_relative_path)
 
         abs_path = self.absolute_path()
-        vcs = _find_vcs_for_file(abs_path)
+        vcs = self._find_vcs_for_file(abs_path)
         if vcs:
             vcs_relative_path = relpath(abs_path, vcs.get_root_dir())
             yield (5,
@@ -306,7 +306,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         else:
             yield 5, 'Untracked file', []
 
-    def _find_vcs_for_file(abs_path):
+    def _find_vcs_for_file(self, abs_path):
         """Given an absolute path, find a source repository we know about that
         claims to track that file.
 
