@@ -247,6 +247,8 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         keys in ``self.lookup_order``.
 
         """
+        if not hasattr(self, 'source_repositories'):
+            self.source_repositories = {}
         # Find all of the VCSs in the source directory:
         for cwd, dirs, files in os.walk(self.tree.source_folder):
             for vcs in every_vcs:
