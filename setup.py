@@ -29,7 +29,7 @@ setup(
     install_requires=['Flask>=0.9',
                       'futures>=2.1.1,<3.0',
                       'Jinja2>=2.6,<3.0',
-                      'more-itertools>=2.2,<3.0',
+                      'more-itertools>=2.0,<3.0',
                       'ordereddict>=1.1,<2.0',
                       'parsimonious==0.6',
                       'pyelasticsearch==0.7.1',

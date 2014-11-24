@@ -1,21 +1,22 @@
+import cgi
 from commands import getstatusoutput
 import json
 from os import chdir, mkdir
 import os.path
 from os.path import dirname
+import re
 from shutil import rmtree
 import sys
 from tempfile import mkdtemp
 import unittest
 from urllib2 import quote
 
-from nose.tools import eq_
+from nose.tools import eq_, ok_
 from pyelasticsearch import ElasticSearch
 
 try:
     from nose.tools import assert_in
 except ImportError:
-    from nose.tools import ok_
     def assert_in(item, container, msg=None):
         ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
@@ -55,6 +56,10 @@ class TestCase(unittest.TestCase):
 
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
+
+    def source_page(self, path):
+        """Return the text of a source page."""
+        return self.client().get('/code/source/%s' % path).data
 
     def found_files(self, query, is_case_sensitive=True):
         """Return the set of paths of files found by a search query."""
@@ -304,3 +309,58 @@ MINIMAL_MAIN = """
         return 0;
     }
     """
+
+
+def menu_on(haystack, text, *menu_items):
+    """Assert that there is a context menu on certain text that contains
+    certain menu items.
+
+    :arg text: The text contained by the menu's anchor tag. The first
+        menu-having anchor tag containing the text is the one compared against.
+    :arg menu_items: Dicts whose pairs must be contained in some item of the
+        menu. If an item is found to match, it is discarded can cannot be
+        reused to match another element of ``menu_items``.
+
+    """
+    def removed_match(expected, found_items):
+        """Remove the first menu item from ``found_items`` where the keys in
+        ``expected`` match it. If none is found, return False; else, True.
+
+        :arg expected: Dict whose pairs are expected to be found in an item of
+            ``found_items``
+        :arg found_items: A list of dicts representing menu items actually on
+            the page
+
+        """
+        def matches(expected, found):
+            """Return whether all the pairs in ``expected`` are found in
+            ``found``.
+
+            """
+            for k, v in expected.iteritems():
+                if found.get(k) != v:
+                    return False
+            return True
+
+        for i, found in enumerate(found_items):
+            if matches(expected, found):
+                del found_items[i]
+                return True
+        return False
+
+    # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
+    # compiling the entirety of lxml to run pyquery.
+    match = re.search(
+            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+            haystack)
+    if match:
+        found_items = json.loads(match.group(1).replace('&quot;', '"')
+                                               .replace('&lt;', '<')
+                                               .replace('&gt;', '>')
+                                               .replace('&amp;', '&'))
+        for expected in menu_items:
+            removed = removed_match(expected, found_items)
+            if not removed:
+                ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
+    else:
+        ok_(False, "No menu around '%s' was found." % text)

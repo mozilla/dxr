@@ -15,6 +15,7 @@ from uuid import uuid1
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from funcy import merge, chunks, first, suppress
 import jinja2
+from more_itertools import chunked
 from ordereddict import OrderedDict
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
@@ -492,10 +493,11 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text and needles_by_line:  # If it's an empty file (no lines), don't
                                      # bother ES. It hates empty dicts.
-        es.bulk_index(index,
-                      LINE,
-                      (merge(n, needles) for n in needles_by_line),
-                      id_field=None)
+        # Indexing a 277K-line file all in one request makes ES time out
+        # (>60s), so we chunk it up:
+        for chunk_of_needles in chunked(
+                (merge(n, needles) for n in needles_by_line), 5000):
+            es.bulk_index(index, LINE, chunk_of_needles, id_field=None)
 
     # Render some HTML:
     # TODO: Make this no longer conditional on is_text, and come up with a nice
