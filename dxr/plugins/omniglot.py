@@ -112,18 +112,19 @@ class Mercurial(VCS):
         self.previous_revisions = self.find_previous_revisions(root)
 
     def find_previous_revisions(self, root):
-        '''
-        Find the last revision on which each file changed, used in diff links.
+        """Find the last revision in which each file changed, for diff links.
+
         Return a mapping {filename: hash of last change commit}
-        '''
-        from mercurial import hg, ui # unsupported api
+
+        """
+        from mercurial import hg, ui  # unsupported api
         repo = hg.repository(ui.ui(), root)
         last_change = {}
-        for rev in range(0, repo['tip'].rev() + 1):
+        for rev in xrange(0, repo['tip'].rev() + 1):
             ctx = repo[rev]
-            # go through all filenames changed in this commit
+            # Go through all filenames changed in this commit:
             for filename in ctx.files():
-                # str(ctx) gives us the 12-char hash for URLs
+                # str(ctx) gives us the 12-char hash for URLs.
                 last_change[filename] = str(ctx)
         return last_change
 
