@@ -169,12 +169,16 @@ class Git(VCS):
         if repo.startswith("git@github.com:"):
             self._is_github = True
             return "https://github.com/" + repo[len("git@github.com:"):]
-        elif repo.startswith("git://github.com/"):
+        elif repo.startswith(("git://github.com/", "https://github.com/")):
             self._is_github = True
             if repo.endswith(".git"):
                 repo = repo[:-len(".git")]
-            return "https" + repo[len("git"):]
-        raise Exception("I don't know what's going on")
+            if repo.startswith("git"):
+                repo = "https" + repo[len("git"):]
+            return repo
+        else:
+            self._is_github = False
+            return "http://localhost"  # TODO: Find another URL
 
 
 class Perforce(VCS):
