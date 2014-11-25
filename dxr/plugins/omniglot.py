@@ -196,7 +196,7 @@ class Git(VCS):
             self._is_github = True
             if repo.endswith(".git"):
                 repo = repo[:-len(".git")]
-            if repo.startswith("git"):
+            if repo.startswith("git:"):
                 repo = "https" + repo[len("git"):]
             return repo
         else:
