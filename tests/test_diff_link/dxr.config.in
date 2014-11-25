@@ -1,0 +1,9 @@
+[DXR]
+enabled_plugins     = omniglot
+temp_folder         = PWD/temp
+target_folder       = PWD/target
+
+[code]
+source_folder       = PWD/code
+object_folder       = PWD/code
+build_command       = true

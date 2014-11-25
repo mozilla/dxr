@@ -95,6 +95,9 @@ class Mercurial(VCS):
         if upstream.scheme == 'ssh':
             recomb[0] == 'http'
         recomb[1] = upstream.hostname # Eliminate any username stuff
+        # check if port is defined and add that to the url
+        if upstream.port:
+            recomb[1] += ":{}".format(upstream.port)
         recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
         if not upstream.path.endswith('/'):
             recomb[2] += '/' # Make sure we have a '/' on the end
@@ -104,6 +107,26 @@ class Mercurial(VCS):
         # Find all untracked files
         self.untracked_files = set(line.split()[1] for line in
             self.invoke_vcs(['hg', 'status', '-u', '-i']).split('\n')[:-1])
+
+        # Determine the last revision on which each file is changed
+        self.previous_revisions = self.find_previous_revisions(root)
+
+    def find_previous_revisions(self, root):
+        """Find the last revision in which each file changed, for diff links.
+
+        Return a mapping {filename: hash of last change commit}
+
+        """
+        from mercurial import hg, ui  # unsupported api
+        repo = hg.repository(ui.ui(), root)
+        last_change = {}
+        for rev in xrange(0, repo['tip'].rev() + 1):
+            ctx = repo[rev]
+            # Go through all filenames changed in this commit:
+            for filename in ctx.files():
+                # str(ctx) gives us the 12-char hash for URLs.
+                last_change[filename] = str(ctx)
+        return last_change
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
@@ -122,7 +145,7 @@ class Mercurial(VCS):
         return self.upstream + 'annotate/' + self.revision + '/' + path
 
     def generate_diff(self, path):
-        return self.upstream + 'diff/' + self.revision + '/' + path
+        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
 
     def generate_raw(self, path):
         return self.upstream + 'raw-file/' + self.revision + '/' + path
@@ -251,6 +274,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         keys in ``self.lookup_order``.
 
         """
+        self.source_repositories = {}
         # Find all of the VCSs in the source directory:
         for cwd, dirs, files in os.walk(self.tree.source_folder):
             for vcs in every_vcs:
@@ -299,7 +323,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             yield 'raw', "Raw", vcs.generate_raw(vcs_relative_path)
 
         abs_path = self.absolute_path()
-        vcs = _find_vcs_for_file(abs_path)
+        vcs = self._find_vcs_for_file(abs_path)
         if vcs:
             vcs_relative_path = relpath(abs_path, vcs.get_root_dir())
             yield (5,
@@ -308,7 +332,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         else:
             yield 5, 'Untracked file', []
 
-    def _find_vcs_for_file(abs_path):
+    def _find_vcs_for_file(self, abs_path):
         """Given an absolute path, find a source repository we know about that
         claims to track that file.
 
