@@ -56,6 +56,10 @@ class VCS(object):
         """Does the repository track this file?"""
         return path not in self.untracked_files
 
+    def get_author(self, path):
+        """Return the revision's author"""
+        raise NotImplemented
+
     def get_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
         raise NotImplemented
@@ -115,6 +119,9 @@ class Mercurial(VCS):
     def get_rev(self, path):
         return self.revision
 
+    def get_author(self, path):
+        return "Unknown"  # TODO: Implement this on Hg
+
     def generate_log(self, path):
         return self.upstream + 'filelog/' + self.revision + '/' + path
 
@@ -134,6 +141,7 @@ class Git(VCS):
         self.untracked_files = set(line for line in
             self.invoke_vcs(['git', 'ls-files', '-o']).split('\n')[:-1])
         self.revision = self.invoke_vcs(['git', 'rev-parse', 'HEAD'])
+        self.author = self.invoke_vcs(['git', 'log', '--pretty=format:%aN', 'HEAD^..HEAD'])
         source_urls = self.invoke_vcs(['git', 'remote', '-v']).split('\n')
         for src_url in source_urls:
             name, url, _ = src_url.split()
@@ -150,6 +158,9 @@ class Git(VCS):
 
     def get_rev(self, path):
         return self.revision[:10]
+
+    def get_author(self, path):
+        return self.author
 
     def generate_log(self, path):
         return self.upstream + "/commits/" + self.revision + "/" + path
@@ -216,6 +227,9 @@ class Perforce(VCS):
     def get_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
+
+    def get_author(self, path):
+        return "Unknown"  # TODO: Implement this on P4
 
     def generate_log(self, path):
         info = self.have[path]
@@ -303,6 +317,16 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    items())
         else:
             yield 5, 'Untracked file', []
+
+    def metadata(self):
+        abs_path = self.absolute_path()
+        vcs = self._find_vcs_for_file(abs_path)
+        if vcs:
+            vcs_relative_path = relpath(abs_path, vcs.get_root_dir())
+            yield 'Commit Hash', vcs.get_rev(vcs_relative_path)
+            yield 'Author', vcs.get_author(vcs_relative_path)
+        else:
+            yield 'Untracked File', '-'
 
     def _find_vcs_for_file(abs_path):
         """Given an absolute path, find a source repository we know about that

@@ -447,7 +447,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
     num_lines = len(contents.splitlines())
     needles = {}
-    links, refs, regions = [], [], []
+    links, refs, regions, metadata = [], [], [], []
     needles_by_line = [{} for _ in xrange(num_lines)]
     annotations_by_line = [[] for _ in xrange(num_lines)]
 
@@ -459,6 +459,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
             links.extend(file_to_index.links())
             refs.extend(file_to_index.refs())
             regions.extend(file_to_index.regions())
+            metadata.extend(file_to_index.metadata())
 
             # Per-line stuff:
             if is_text:
@@ -532,7 +533,9 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
              'is_text': is_text,
 
-             'sections': build_sections(links)})
+             'sections': build_sections(links),
+
+             'metadata': metadata})
 
 
 def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):

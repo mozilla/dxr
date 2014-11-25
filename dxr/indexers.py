@@ -155,6 +155,14 @@ class FileToSkim(object):
         """
         return []
 
+    def metadata(self):
+        """Return an iterable of metadata linked to the current file::
+
+            [(key, value), ...]
+
+        """
+        return []
+
     def refs(self):
         """Provide cross references for various spans of text, accessed
         through a context menu.
