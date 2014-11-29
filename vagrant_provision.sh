@@ -83,7 +83,11 @@ THEEND
 fi
 a2enmod rewrite
 a2enmod proxy
+a2enmod wsgi
 a2dissite 000-default
+
+# mercurial
+apt-get install -y mercurial
 
 # DXR itself:
 # pkg-config is so (trilite's?) make clean works.

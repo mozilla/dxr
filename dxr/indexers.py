@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 from operator import itemgetter
+from os.path import join
 
 from funcy import group_by, decorator, imapcat
 from os.path import join
