@@ -480,6 +480,13 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     folder_name, file_name = split(rel_path)
 
     if is_text:  # conditional until we figure out how to display binary files
+        vcs_hash = ""
+        author = ""
+        for kv in metadata:
+            if kv[0] == "Commit Hash":
+                vcs_hash = kv[1]
+            elif kv[0] == "Author":
+                author = kv[1]
         es.index(index,
                  FILE,
                  # Hard-code the keys that are hard-coded in the browse()
@@ -489,6 +496,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                       size=file_info.st_size,
                       modified=datetime.fromtimestamp(file_info.st_mtime),
                       is_folder=False,
+                      author=author,
+                      vcs_hash=vcs_hash,
                       **needles))
 
     # Index all the lines, attaching the file-wide needles to each line as well:

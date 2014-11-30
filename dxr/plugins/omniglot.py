@@ -164,7 +164,6 @@ class Git(VCS):
         self.untracked_files = set(line for line in
             self.invoke_vcs(['git', 'ls-files', '-o']).split('\n')[:-1])
         self.revision = self.invoke_vcs(['git', 'rev-parse', 'HEAD'])
-        self.author = self.invoke_vcs(['git', 'log', '--pretty=format:%aN', 'HEAD^..HEAD'])
         source_urls = self.invoke_vcs(['git', 'remote', '-v']).split('\n')
         for src_url in source_urls:
             name, url, _ = src_url.split()
@@ -180,10 +179,14 @@ class Git(VCS):
         return None
 
     def get_rev(self, path):
-        return self.revision[:10]
+        return self.invoke_vcs(
+            ['git', 'log', '--pretty=format:%H', '-n', '1', '--', path]
+            )[:10]
 
     def get_author(self, path):
-        return self.author
+        return self.invoke_vcs(
+            ['git', 'log', '--pretty=format:%aN', '-n', '1', '--', path]
+            ).decode('utf-8')
 
     def generate_log(self, path):
         return self.upstream + "/commits/" + self.revision + "/" + path

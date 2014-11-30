@@ -31,14 +31,18 @@
         <th scope="col">Name</th>
         <th scope="col">Modified</th>
         <th scope="col">Size</th>
+        <th scope="col">Author</th>
+        <th scope="col">VCS Hash</th>
       </tr>
     </thead>
     <tbody>
-      {% for icon, name, modified, size, relative_url in files_and_folders %}
+      {% for icon, name, modified, size, author, vcs_hash, relative_url in files_and_folders %}
         <tr>
           <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
           <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
           <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
+          <td><a href="{{ relative_url }}">{{ '' if author is none else author }}</a></td>
+          <td><a href="{{ relative_url }}">{{ '' if vcs_hash is none else vcs_hash }}</a></td>
         </tr>
       {% endfor %}
     </tbody>
