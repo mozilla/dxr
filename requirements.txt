@@ -22,8 +22,8 @@ parsimonious==0.6
 # sha256: 33p-8L41qGMvjgz1P1yPfNdFbaokcLtaaD_u_5g9Uqg
 pyelasticsearch==0.7.1
 
-# sha256: eZ7Uyvd1FuVEQIBtjZzYKnYH399OT7ZDgVFxpLXJIcA
-Pygments==1.6
+# sha256: fydQ9H4cA_ffSGbTdhm4B0_8HTIYI7taNRMC_k3SC2c
+Pygments==2.0.1
 
 # sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
 Werkzeug==0.8.3
