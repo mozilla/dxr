@@ -18,7 +18,7 @@ DXR divides into 2 halves:
    structural analysis of C++ code, builds the project under clang while
    interposing a custom compiler plugin. The plugin rides sidecar with the
    compiler, dumping out structural data into CSV files, which the DXR plugin
-   later pulls in and uses to generate the SQLite tables that support
+   later uses to fill elasticsearch with the information that supports
    structural queries like ``callers:`` and ``function:``.
 
    Generally, the indexer is kicked off asynchronously—often even on a separate
