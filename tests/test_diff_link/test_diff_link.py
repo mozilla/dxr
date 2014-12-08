@@ -4,10 +4,6 @@ from nose import SkipTest
 from nose.tools import ok_
 
 
-# "make clean" fails on Jenkins during teardown_class().
-raise SkipTest
-
-
 class DiffLinkTests(DxrInstanceTestCase):
     """Tests that the diff links for files go somewhere helpful"""
     def test_diff_file1(self):
