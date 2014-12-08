@@ -194,8 +194,8 @@ class FileToSkim(object):
         holding the contents of the file. (``regions()`` will not be called
         for binary files.)
 
-        We'll probably store them in ES as a list of explicit objects, like
-        {start: 5, end: 18, class: k}.
+        We'll probably store them in elasticsearch as a list of explicit
+        objects, like {start: 5, end: 18, class: k}.
 
         """
         return []
@@ -392,8 +392,8 @@ def by_line(span_needles):
 # Deprecated in favor of with_start_and_end()
 def key_object_pair((k, v), start, end):
     """Transform a key/value pair, along with start and end columns, to a
-    key/multi-propertied-object pair that can be stored in ES and then used
-    to support searching and highlighting.
+    key/multi-propertied-object pair that can be stored in elasticsearch and
+    then used to support searching and highlighting.
 
     """
     return k, {'value': v, 'start': start, 'end': end}
