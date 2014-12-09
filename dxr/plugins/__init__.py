@@ -45,8 +45,8 @@ class Plugin(object):
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
-            plugin's ES-destined data. A dict with keys for each doctype and
-            values reflecting the structure described at
+            plugin's elasticsearch-destined data. A dict with keys for each
+            doctype and values reflecting the structure described at
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/indices-put-mapping.html. Since a FILE-domain query will
             be promoted to a LINE query if any other query term triggers a
@@ -60,10 +60,10 @@ class Plugin(object):
             current/analysis.html.
         :arg direct_searchers: Functions that provide direct search
             capability. Each must take a single query term of type 'text',
-            return an ES filter clause to run against LINEs, and have a
-            ``direct_search_priority`` attribute. Filters are tried in order
-            of increasing priority. Return None from a direct searcher to skip
-            it.
+            return an elasticsearch filter clause to run against LINEs, and
+            have a ``direct_search_priority`` attribute. Filters are tried in
+            order of increasing priority. Return None from a direct searcher
+            to skip it.
 
             .. note::
 
@@ -174,8 +174,8 @@ def all_plugins():
 
     The core plugin, which provides many of DXR's cross-language, built-in
     features, is always the first plugin when iterating over the returned
-    dict. This lets other plugins override bits of its ES mappings and
-    analyzers.
+    dict. This lets other plugins override bits of its elasticsearch mappings
+    and analyzers.
 
     """
     import dxr.plugins.core
