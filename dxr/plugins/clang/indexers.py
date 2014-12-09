@@ -40,7 +40,13 @@ QUALIFIED_NEEDLE = {
         },
         'qualname': {
             'type': 'string',
-            'index': 'not_analyzed'
+            'index': 'not_analyzed',
+            'fields': {
+                'lower': {  # for qualified_type direct searcher
+                    'type': 'string',
+                    'analyzer': 'lowercase'
+                }
+            }
         },
         'start': {
             'type': 'integer',

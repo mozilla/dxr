@@ -7,7 +7,7 @@ from nose import SkipTest
 from nose.tools import eq_
 
 
-class MemberFunctionTests(SingleFileTestCase):
+class TypeAndMethodTests(SingleFileTestCase):
     source = """
         class MemberFunction {
             public:
@@ -31,32 +31,29 @@ class MemberFunctionTests(SingleFileTestCase):
         }
         """ + MINIMAL_MAIN
 
-    def test_qualified_function_name_prefix_insensitive(self):
-        """A unique, case-insensitive prefix match on fully qualified function
-        name should take you directly to the result"""
-        raise SkipTest
-        self.direct_result_eq('MemberFunction::unique_member_FUNCTION', 20)
+    def test_qualified_function_name_insensitive(self):
+        """A unique, case-insensitive match on fully qualified function name
+        should take you directly to the result"""
+        self.direct_result_eq('MemberFunction::unique_member_FUNCTION(int)', 20)
 
-    def test_qualified_function_name_prefix_sensitive(self):
-        """A unique, case-sensitive prefix match on fully qualified function
-        name should take you directly to the result.
+    def test_qualified_function_name_sensitive(self):
+        """A unique, case-sensitive match on fully qualified function name
+        should take you directly to the result.
 
         This should have precedence over any case-insensitive match.
 
         """
         raise SkipTest('This does not take precedence like it should.')
-        self.direct_result_eq('MemberFunction::member_function', 14)
+        self.direct_result_eq('MemberFunction::member_function(int)', 14)
 
-    def test_qualified_function_name_prefix_multiple_matches(self):
-        """Multiple prefix matches on fully qualified function name should
-        return None."""
-        raise SkipTest
-        self.direct_result_eq('MemberFunction::member_FUNCTION', None)
+    def test_qualified_function_name_multiple_matches(self):
+        """Multiple matches on fully qualified function name should return
+        None."""
+        self.direct_result_eq('MemberFunction::member_FUNCTION(int)', None)
 
     def test_qualified_type_name_insensitive(self):
-        """A unique, case-insensitive prefix match on fully qualified type
-        name should take you directly to the result."""
-        raise SkipTest
+        """A unique, case-insensitive match on fully qualified type name
+        should take you directly to the result."""
         self.direct_result_eq('MemberFunction::uniqueinnerClass', 12)
 
     def test_qualified_type_name_sensitive(self):
@@ -72,13 +69,11 @@ class MemberFunctionTests(SingleFileTestCase):
     def test_qualified_type_name_multiple_matches(self):
         """Multiple case-insensitive prefix matches on fully qualified type
         name should not yield a direct result."""
-        raise SkipTest
         self.direct_result_eq('MemberFunction::InnerCLASS', None)
 
-    def test_line_number(self):
-        """A file name and line number should take you directly to that file
-        and line number."""
-        self.direct_result_eq('main.cpp:6', 6)
+    def test_type_sensitive(self):
+        """If the query is an exact match for a class, we should jump there."""
+        self.direct_result_eq('MemberFunction', 2)
 
 
 class MacroTypedefTests(SingleFileTestCase):
@@ -103,7 +98,6 @@ class MacroTypedefTests(SingleFileTestCase):
     def test_macro_name_insensitive(self):
         """A unique, case-insensitive match on a macro name should take you
         directly to the result."""
-        raise SkipTest
         self.direct_result_eq('unique_MACRO_NAME', 11)
 
     def test_macro_name_sensitive(self):
@@ -113,18 +107,15 @@ class MacroTypedefTests(SingleFileTestCase):
         This should have precedence over any case-insensitive match.
 
         """
-        raise SkipTest
         self.direct_result_eq('MACRO_NAME', 3)
 
     def test_macro_name_multiple_matches(self):
         """Multiple matches on a macro name should return None."""
-        raise SkipTest
         self.direct_result_eq('macro_NAME', None)
 
     def test_typedef_name_insensitive(self):
         """A unique, case-insensitive match on a typedef name should take you
         directly to the result."""
-        raise SkipTest
         self.direct_result_eq('myuniqueTypeDef', 16)
 
     def test_typedef_name_sensitive(self):
@@ -134,10 +125,8 @@ class MacroTypedefTests(SingleFileTestCase):
         This should have precedence over any case-insensitive match.
 
         """
-        raise SkipTest
         self.direct_result_eq('MyTypeDef', 14)
 
     def test_typedef_name_multiple_matches(self):
         """Multiple matches on a typedef name should return None."""
-        raise SkipTest
         self.direct_result_eq('myTypeDef', None)

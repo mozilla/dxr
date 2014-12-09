@@ -125,6 +125,18 @@ class Plugin(object):
                    analyzers=namespace.get('analyzers'),
                    direct_searchers=direct_searchers_from_namespace(namespace))
 
+    def __getstate__(self):
+        """When pickling, omit the direct searchers.
+
+        We don't use them during the multiprocess indexing phase, so we might
+        as well allow ourselves to create direct searchers using function
+        factories, whose products are unpickleable.
+
+        """
+        copy = self.__dict__.copy()
+        copy['direct_searchers'] = []
+        return copy
+
 
 def filters_from_namespace(namespace):
     """Return the filters which conform to our suggested naming convention.
