@@ -46,7 +46,7 @@ with. To get it running... ::
 
     cd ~/dxr/tests/test_basic
     make
-    dxr-serve.py -a target
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite dxr-serve.py -a target
 
 You can then surf to http://33.33.33.77:8000/ from the host machine and play
 around. When you're done, stop the server with :kbd:`Control-C`.
