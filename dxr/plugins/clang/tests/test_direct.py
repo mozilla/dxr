@@ -43,8 +43,7 @@ class TypeAndMethodTests(SingleFileTestCase):
         This should have precedence over any case-insensitive match.
 
         """
-        raise SkipTest('This does not take precedence like it should.')
-        self.direct_result_eq('MemberFunction::member_function(int)', 14)
+        self.direct_result_eq('MemberFunction::member_function(int)', 16)
 
     def test_qualified_function_name_multiple_matches(self):
         """Multiple matches on fully qualified function name should return
@@ -63,7 +62,6 @@ class TypeAndMethodTests(SingleFileTestCase):
         This should have precedence over any case-insensitive match.
 
         """
-        raise SkipTest('This does not take precedence like it should.')
         self.direct_result_eq('MemberFunction::InnerClass', 8)
 
     def test_qualified_type_name_multiple_matches(self):
