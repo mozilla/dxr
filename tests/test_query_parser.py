@@ -12,7 +12,7 @@ class VisitorTests(TestCase):
     """Make sure ``QueryVisitor`` is putting together sane data structures."""
 
     def visit(self, query):
-        return QueryVisitor().visit(query_grammar.parse(query))
+        return QueryVisitor().visit(query_grammar(['core', 'clang']).parse(query))
 
     def test_overall(self):
         """Test the overall structure."""
@@ -184,7 +184,7 @@ def test_quotes():
                                   lambda x: x),
                                  ('single_quoted_text',
                                   lambda x: x.replace('"', "'"))]:
-        rule = query_grammar[rule_name]
+        rule = query_grammar(['core', 'clang'])[rule_name]
         for input, output in tests:
             def test_something():
                 eq_(QueryVisitor().visit(rule.match(transform(input))),

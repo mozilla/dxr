@@ -124,7 +124,8 @@ def build_instance(config_string, nb_jobs=None, tree=None, verbose=False):
              default_tree=repr(config.default_tree),
              es_hosts=repr(config.es_hosts),
              es_aliases=repr(dict((name, alias) for
-                                  name, alias, index in indices))))
+                                  name, alias, index in indices)),
+             enabled_plugins=repr(tree.enabled_plugins.keys())))
 
     # Make new indices live:
     for _, alias, index in indices:
@@ -523,7 +524,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,
              'google_analytics_key': tree.config.google_analytics_key,
-             'filters': filter_menu_items(),
+             'filters': filter_menu_items(tree.enabled_plugins),
 
              # File template variables:
              'paths_and_names': linked_pathname(rel_path, tree.name),
