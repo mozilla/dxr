@@ -7,6 +7,7 @@
 **/tests/*/code/code
 **/tests/*/code2/code
 **/tests/*/dxr.config
+/tests/test_diff_link/code/.hg/dirstate
 /vagrantconfig_local.yaml
 /.vagrant
 /build
