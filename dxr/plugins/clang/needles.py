@@ -39,7 +39,7 @@ def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', '
 
     """
     kind = kind or name
-    matches_subkind = (lambda entity: entity['kind'] == subkind if subkind
+    matches_subkind = (lambda entity: entity.get('kind') == subkind if subkind
                        else lambda entity: True)
     return (('c_{0}{1}'.format(name, suffix),
              dict((k, entity[k]) for k in keys),
