@@ -40,7 +40,7 @@ def macro_menu(tree, macro):
 
 def type_menu(tree, type):
     """Return menu for type reference."""
-    qualname, kind = type['qualname'], type['kind']
+    qualname, kind = type['qualname'], type.get('kind', None)
     menu = [{'html': "Find declarations",
              'title': "Find declarations of this class",
              'href': search(tree, "+type-decl:%s" % quote(qualname)),
