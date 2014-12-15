@@ -408,10 +408,8 @@ def span_to_lines((kv, span)):
     """
     if span.end.row == span.start.row:
         yield (kv, span.start.col, span.end.col), span.start.row
-
     elif span.end.row < span.start.row:
-        raise ValueError("end.row < start.row")
-
+        raise ValueError('end.row < start.row')
     else:
         # TODO: There are a lot of Nones used as slice bounds below. Do we
         # ever translate them back into char offsets? If not, does the
@@ -439,7 +437,9 @@ def split_into_lines(triples):
         if extent.end.row == extent.start.row:
             yield key, mapping, extent
         elif extent.end.row < extent.start.row:
-            raise ValueError('Bad Extent: end.row < start.row')
+            # This indicates a bug in an indexer plugin.
+            warn('Bad extent: end.row < start.row: %s < %s' %
+                 (extent.end.row, extent.start.row))
         else:
             # TODO: There are a lot of Nones used as slice bounds below. Do we
             # ever translate them back into char offsets? If not, does the
