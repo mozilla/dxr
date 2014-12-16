@@ -39,7 +39,7 @@ def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', '
 
     """
     kind = kind or name
-    matches_subkind = (lambda entity: entity.get('kind', None) == subkind if subkind
+    matches_subkind = (lambda entity: entity.get('kind') == subkind if subkind
                        else lambda entity: True)
     return (('c_{0}{1}'.format(name, suffix),
              dict((k, entity[k]) for k in keys),
@@ -204,7 +204,7 @@ def caller_needles(condensed, overriddens):
 def inheritance_needles(condensed, parents, children):
     """Emit needles that let us find parent and child classes of classes."""
     for type in condensed['type']:
-        if type.get('kind', None) == 'class':
+        if type['kind'] == 'class':
             # Lay down needles at a class's line. These needles' values are
             # any classes that this class is a parent of.
             for needle in needles_from_graph(
