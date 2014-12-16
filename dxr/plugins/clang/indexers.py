@@ -224,7 +224,7 @@ class FileToIndex(FileToIndexBase):
 @autocurry
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
-    return (ref for ref in condensed.get(field) if ref['kind'] == kind)
+    return (ref for ref in condensed.get(field) if ref.get('kind') == kind)
 
 
 def _members(condensed, key, id_):
