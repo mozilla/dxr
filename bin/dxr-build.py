@@ -6,7 +6,7 @@ import os.path
 from os.path import isdir
 from sys import exit, stderr
 
-from dxr.build import build_instance
+from dxr.build import build_instance, BuildError
 
 
 def main():
@@ -46,11 +46,15 @@ def main():
         # Assume dxr.config in the cwd:
         options.config_file = 'dxr.config'
 
-    return build_instance(options.config_file,
-                          nb_jobs=options.jobs,
-                          tree=options.tree,
-                          verbose=options.verbose)
+    try:
+        build_instance(open(options.config_file, 'r').read(),
+                       nb_jobs=options.jobs,
+                       tree=options.tree,
+                       verbose=options.verbose)
+        return 0
+    except BuildError:
+        return 1
 
 
 if __name__ == '__main__':
-    main()
+    exit(main())

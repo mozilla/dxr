@@ -1,9 +1,6 @@
 #!/bin/sh
 # Kicks off the Jenkins tests.
 
-git submodule sync
-git submodule update --init --recursive
-
 VBGUEST=$(vagrant plugin list |grep -i vbguest)
 if [ ! "$VBGUEST" ]; then
   vagrant plugin install vagrant-vbguest

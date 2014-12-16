@@ -1,57 +1,15 @@
-import ctypes
-
-# Load the trilite plugin.
-#
-# If you ``import sqlite3`` before doing this, it's likely that the system
-# version of sqlite will be loaded, and then trilite, if built against a
-# different version, will fail to load. If you're having trouble getting
-# trilite to load, make sure you're not importing sqlite3 beforehand. Afterward
-# is fine.
-ctypes.CDLL('libtrilite.so').load_trilite_extension()
-
+from collections import Mapping
+from datetime import datetime
+import fnmatch
 import os
-from os import dup
-from os.path import join, dirname
-import jinja2
-import sqlite3
-import string
+from os import dup, fdopen
+from os.path import join
+from itertools import izip
 from sys import stdout
 from urllib import quote, quote_plus
 
-import dxr
-
 
 TEMPLATE_DIR = 'static/templates'
-
-_template_env = None
-def load_template_env(temp_folder):
-    """Load template environment (lazily)"""
-    global _template_env
-    if not _template_env:
-        # Cache folder for jinja2
-        tmpl_cache = os.path.join(temp_folder, 'jinja2_cache')
-        if not os.path.isdir(tmpl_cache):
-            os.mkdir(tmpl_cache)
-        # Create jinja2 environment
-        _template_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(
-                        join(dirname(dxr.__file__), TEMPLATE_DIR)),
-                auto_reload=False,
-                bytecode_cache=jinja2.FileSystemBytecodeCache(tmpl_cache),
-                autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
-        )
-    return _template_env
-
-
-_next_id = 1
-def next_global_id():
-    """Source of unique ids"""
-    #TODO Please stop using this, it makes distribution and parallelization hard
-    # Also it's just stupid!!! When whatever SQL database we use supports this
-    global _next_id
-    n = _next_id
-    _next_id += 1
-    return n
 
 
 def open_log(config_or_tree, name, use_stdout=False):
@@ -65,8 +23,8 @@ def open_log(config_or_tree, name, use_stdout=False):
 
     """
     if use_stdout:
-        return os.fdopen(dup(stdout.fileno()), 'w')
-    return open(os.path.join(config_or_tree.log_folder, name), 'w', 1)
+        return fdopen(dup(stdout.fileno()), 'w')
+    return open(join(config_or_tree.log_folder, name), 'w', 1)
 
 
 def non_negative_int(s, default):
@@ -81,6 +39,7 @@ def non_negative_int(s, default):
     return default
 
 
+# TODO: Obsolete this and parallel_url in favor of Flask's url_for.
 def search_url(www_root, tree, query, **query_string_params):
     """Return the URL to the search endpoint."""
     ret = '%s/%s/search?q=%s' % (www_root,
@@ -93,7 +52,7 @@ def search_url(www_root, tree, query, **query_string_params):
     return ret
 
 
-def browse_url(tree, www_root, path):
+def parallel_url(tree, www_root, path):
     """Return a URL that will redirect to a given path in a given tree."""
     return quote_plus('{www_root}/{tree}/parallel/{path}'.format(
                           www_root=www_root,
@@ -105,15 +64,85 @@ def browse_url(tree, www_root, path):
     # search_url().
 
 
-def connect_db(dir):
-    """Return the database connection for a tree.
+def browse_url(tree, www_root, path):
+    return quote('{www_root}/{tree}/source/{path}'.format(
+            www_root=www_root,
+            tree=tree,
+            path=path))
 
-    :arg dir: The directory containing the .dxr-xref.sqlite file
+
+def deep_update(dest, source):
+    """Overlay two dictionaries recursively.
+
+    Overwrite keys that hold non-mapping values. Raise TypeError if ``dest``
+    and ``source`` disagree about which values are mappings.
 
     """
-    conn = sqlite3.connect(join(dir, ".dxr-xref.sqlite"))
-    conn.text_factory = str
-    conn.execute("PRAGMA synchronous=off")
-    conn.execute("PRAGMA page_size=32768")
-    conn.row_factory = sqlite3.Row
-    return conn
+    for k, v in source.iteritems():
+        source_is_mapping = isinstance(v, Mapping)
+        if k in dest and source_is_mapping != isinstance(dest[k], Mapping):
+            raise TypeError("Can't merge value %r into %r for key %r." %
+                            (dest[k], v, k))
+        dest[k] = (deep_update(dest.get(k, {}), v) if source_is_mapping
+                   else source[k])
+    return dest
+
+
+def append_update(mapping, pairs):
+    """Merge key-value pairs into a mapping, preserving conflicting ones by
+    expanding values into lists.
+
+    Return the updated mapping.
+
+    :arg mapping: The mapping into which to merge the new pairs. All values
+        must be lists.
+    :arg pairs: An iterable of key-value pairs
+
+    """
+    for k, v in pairs:
+        mapping.setdefault(k, []).append(v)
+    return mapping
+
+
+def append_update_by_line(mappings, pairses):
+    """:func:`append_update()` each group of pairs into its parallel
+    ``mappings`` element.
+
+    Return the updated ``mappings``.
+
+    :arg mappings: A list of mappings the same length as ``pairses``
+    :arg pairses: An iterable of iterables of pairs to :func:`append_update()`
+        into ``mappings``, each into its parallel mapping
+
+    """
+    for mapping, pairs in izip(mappings, pairses):
+        append_update(mapping, pairs)
+    return mappings
+
+
+def append_by_line(dest_lists, list_per_line):
+    """Given a list and parallel iterable ``list_per_line``, merge the
+    element of the second into the element of the first."""
+    for dest_list, source_list in izip(dest_lists, list_per_line):
+        dest_list.extend(source_list)
+    return dest_lists
+
+
+def decode_es_datetime(es_datetime):
+    """Turn an elasticsearch datetime into a datetime object."""
+    try:
+        return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S')
+    except ValueError:
+        # For newer ES versions
+        return datetime.strptime(es_datetime, '%Y-%m-%dT%H:%M:%S.%f')
+
+
+_FNMATCH_TRANSLATE_SUFFIX_LEN = len('\Z(?ms)')
+def glob_to_regex(glob):
+    """Return a regex equivalent to a shell-style glob.
+
+    Don't include the regex flags and \\Z at the end like fnmatch.translate(),
+    because we don't parse flags and we don't want to pin to the end.
+
+    """
+    return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]

@@ -1,12 +1,19 @@
 from ConfigParser import ConfigParser
+from cStringIO import StringIO
 from datetime import datetime
 from ordereddict import OrderedDict
 from operator import attrgetter
 import os
-from os.path import dirname, isdir
 import sys
 
-import dxr
+from pkg_resources import resource_string
+
+from dxr.plugins import all_plugins
+
+
+# Format version, signifying the instance format this web frontend code is
+# able to serve. Must match exactly; deploy will do nothing until it does.
+FORMAT = resource_string('dxr', 'format').strip()
 
 
 # Please keep these config objects as simple as possible and in sync with
@@ -17,45 +24,42 @@ import dxr
 
 class Config(object):
     """ Configuration for DXR """
-    def __init__(self, configfile, **override):
+    def __init__(self, config_string, **override):
         # Create parser with sane defaults
         parser = ConfigParser({
-            'plugin_folder':    "%s/plugins" % dirname(dxr.__file__),
             'nb_jobs':          "1",
             'temp_folder':      "/tmp/dxr-temp",
             'log_folder':       "%(temp_folder)s/logs",
             'wwwroot':          "/",
             'enabled_plugins':  "*",
             'disabled_plugins': " ",
-            'directory_index':  ".dxr-directory-index.html",
             'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
+            'google_analytics_key': "",
             'disable_workers':  "",
             'skip_stages':      "",
             'default_tree':     "",
-            'filter_language':  "C",
-            'google_analytics_key': "" 
+            'es_hosts':         'http://127.0.0.1:9200/',
+            'es_index':         'dxr_{format}_{tree}_{unique}',
+            'es_alias':         'dxr_{format}_{tree}',
         }, dict_type=OrderedDict)
-        parser.read(configfile)
+        parser.readfp(StringIO(config_string))
 
         # Set config values
-        self.plugin_folder    = parser.get('DXR', 'plugin_folder',    False, override)
-        self.nb_jobs          = parser.get('DXR', 'nb_jobs',          False, override)
+        self.nb_jobs          = int(parser.get('DXR', 'nb_jobs',      False, override))
         self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
         self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
         self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
         self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
         self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
         self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
-        self.directory_index  = parser.get('DXR', 'directory_index',  False, override)
         self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
+        self.google_analytics_key = parser.get('DXR', 'google_analytics_key', False, override)
         self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
         self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
         self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
-        self.filter_language  = parser.get('DXR', 'filter_language',  False, override)
-        self.google_analytics_key = parser.get('DXR', 'google_analytics_key', False, override)
-
-        # Set configfile
-        self.configfile       = configfile
+        self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
+        self.es_index         = parser.get('DXR', 'es_index', False, override)
+        self.es_alias         = parser.get('DXR', 'es_alias', False, override)
         self.trees            = []
 
         # Read all plugin_ keys
@@ -64,7 +68,6 @@ class Config(object):
                 setattr(self, key, value)
 
         # Render all paths absolute
-        self.plugin_folder    = os.path.abspath(self.plugin_folder)
         self.temp_folder      = os.path.abspath(self.temp_folder)
         self.log_folder       = os.path.abspath(self.log_folder)
         self.target_folder    = os.path.abspath(self.target_folder)
@@ -75,7 +78,7 @@ class Config(object):
 
         # Convert disabled plugins to a list
         if self.disabled_plugins == "*":
-            self.disabled_plugins = os.listdir(self.plugin_folder)
+            self.disabled_plugins = all_plugins().keys()
         else:
             self.disabled_plugins = self.disabled_plugins.split()
 
@@ -85,8 +88,7 @@ class Config(object):
         # Convert enabled plugins to a list
         if self.enabled_plugins == "*":
             self.enabled_plugins = [
-                p for p in os.listdir(self.plugin_folder) if
-                isdir(os.path.join(self.plugin_folder, p)) and
+                p for p in all_plugins().keys() if
                 p not in self.disabled_plugins]
         else:
             self.enabled_plugins = self.enabled_plugins.split()
@@ -102,7 +104,7 @@ class Config(object):
         # Load trees
         for tree in parser.sections():
             if tree != 'DXR':
-                self.trees.append(TreeConfig(self, self.configfile, tree))
+                self.trees.append(TreeConfig(self, config_string, tree))
 
         # Trees in alphabetical order for Switch Tree menu:
         self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
@@ -115,7 +117,13 @@ class Config(object):
 
 class TreeConfig(object):
     """ Tree configuration for DXR """
-    def __init__(self, config, configfile, name):
+    # TODO: This should probably be a subclass of dict. Plugins and the
+    # framework can use .get() for optional options and .__getitem__() for
+    # required ones. We can override __missing__() to throw MissingOptionError
+    # whenever a getitem fails. Then we can remove the exception-raising
+    # machinery from places like buglink.
+
+    def __init__(self, config, config_string, name):
         # Create parser with sane defaults
         parser = ConfigParser({
             'enabled_plugins':  "*",
@@ -127,10 +135,10 @@ class TreeConfig(object):
             'source_encoding':  'utf-8',
             'description':  ''
         })
-        parser.read(configfile)
+        parser.readfp(StringIO(config_string))
 
         # Set config values
-        self.enabled_plugins  = parser.get(name, 'enabled_plugins')
+        self._enabled_plugins = parser.get(name, 'enabled_plugins')
         self.disabled_plugins = parser.get(name, 'disabled_plugins')
         self.temp_folder      = parser.get(name, 'temp_folder')
         self.log_folder       = parser.get(name, 'log_folder')
@@ -144,7 +152,6 @@ class TreeConfig(object):
         # You cannot redefine the target folder!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
         # Set config file and DXR config object reference
-        self.configfile       = configfile
         self.config           = config
         self.name             = name
 
@@ -173,12 +180,20 @@ class TreeConfig(object):
                 if p not in self.disabled_plugins:
                     self.disabled_plugins.append(p)
 
-        # Convert enabled plugins to a list
-        if self.enabled_plugins == "*":
-            self.enabled_plugins = [p for p in config.enabled_plugins
-                                    if p not in self.disabled_plugins]
+        # enabled_plugins, unlike in Config, is a dict of name -> Plugin. TODO:
+        # Clean this up when we refactor the whole config system.
+        all_the_plugins = all_plugins()
+        if self._enabled_plugins == "*":
+            enableds = [
+                (name, plug) for name, plug in all_the_plugins.iteritems() if
+                name in config.enabled_plugins and
+                name not in self.disabled_plugins]
         else:
-            self.enabled_plugins = self.enabled_plugins.split()
+            enableds = [
+                (name, plug) for name, plug in all_the_plugins.iteritems() if
+                name in self._enabled_plugins.split()]
+        self.enabled_plugins = OrderedDict([('core', all_the_plugins['core'])] +
+                                         enableds)
 
         # Test for conflicting plugins settings
         conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
@@ -192,3 +207,18 @@ class TreeConfig(object):
         if "$jobs" not in self.build_command:
             msg = "Warning: $jobs is not used in build_command for '%s'"
             print >> sys.stderr, msg % name
+
+
+class MissingOptionError(Exception):
+    """Exception raised when a required option is missing from the config file
+
+    These include globally required options and options required for an enabled
+    plugin.
+
+    """
+    def __init__(self, option_name):
+        self.option_name = option_name
+
+    def __str__(self):
+        return ('The %s option is required. Add it to the config file, and '
+                'try indexing again.') % self.option_name

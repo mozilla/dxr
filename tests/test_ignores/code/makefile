@@ -1,5 +1,5 @@
-all: HelloWorld
-HelloWorld: main.c
+all: code
+code: main.c
 	$(CXX) -o $@ $^
 clean:
-	rm -rf HelloWorld
+	rm -rf code

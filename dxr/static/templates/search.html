@@ -25,9 +25,8 @@
       <tbody>
       {%- for icon, path, lines in results -%}
         <tr class="result-head">
-          {%- set icon_class = icon.split('/')[1] -%}
           <td class="left-column">
-            <div class="{{icon_class}} icon-container"></div>
+            <div class="{{ icon }} icon-container"></div>
           </td>
           <td>
             {%- set paths = path.split('/') -%}

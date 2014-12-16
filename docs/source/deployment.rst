@@ -25,14 +25,15 @@ packages on both your build and web servers. These are the Ubuntu package
 names, but they should be clear enough to map to their equivalents on other
 distributions:
 
-*  make
-*  build-essential
-*  libclang-dev (clang dev headers 3.3 or 3.4)
-*  llvm-dev (LLVM dev headers 3.3 or 3.4)
-*  pkg-config
-*  mercurial (to check out re2)
-*  libsqlite3-dev
-*  npm (Node.js and its package manager)
+* make
+* build-essential
+* libclang-dev (clang dev headers 3.3 or 3.4)
+* llvm-dev (LLVM dev headers 3.3 or 3.4)
+* pkg-config
+* npm (Node.js and its package manager)
+* openjdk-7-jdk
+* elasticsearch 1.1 or higher. The elasticsearch corporation maintains its own
+  packages; they aren't often found in distros.
 
 Technically, you could probably do without most of these on the web server,
 though you'd then need to build DXR on a different machine and transfer it over.
@@ -71,12 +72,49 @@ Now, with your new virtualenv active, you can install the requisite packages::
     ./peep.py install -r requirements.txt
 
 
+Configuring Elasticsearch
+=========================
+
+Elasticsearch is the data store shared between the build and web servers.
+Obviously, they both need network access to it. ES tuning is a complex art,
+but these pointers should start you off with reasonable performance:
+
+* Give ES its own server. It loves RAM and IO speed. If you want high
+  availability or need more power than one machine can provide, set up a
+  cluster.
+* Whether you intend to set up a cluster or not, beware that ES makes friends
+  all too easily. Be sure to change the ``cluster.name`` to something unusual
+  and disable autodiscovery by setting ``discovery.zen.ping.multicast.enabled``
+  to ``false``, instead specifying your cluster members directly in
+  ``discovery.zen.ping.unicast.hosts``.
+* Crank up your kernel's max file descriptors. Put this in the init script that
+  launches ES::
+
+    ulimit -n 65535
+    ulimit -l unlimited
+
+  Doing the equivalent in :file:`/etc/security/limits.conf` tends not to work.
+
+* Set :envvar:`ES_HEAP_SIZE` to half of your system RAM, not exceeding 32GB,
+  because then the JVM can no longer use compressed pointers. Giving it one
+  big chunk of RAM up front will avoid heap fragmentation and costly
+  reallocations. The remaining memory will easily be filled by the OS's file
+  cache as it tussles with Lucene indices.
+* Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
+* It is often recommended to use Oracle's JVM, but OpenJDK works fine.
+
+DXR will create one index per indexed tree per format version. Reindexing a
+tree automatically replaces the old index with the new one as its last step.
+This happens atomically. Be sure there's enough space on the cluster to hold
+both the old and new indices at once during indexing.
+
+
 Building
 ========
 
 First, if you cannot arrange for the correct versions of :command:`llvm-config`,
 :command:`clang`, and :command:`clang++` to be available under those names,
-whether by a mechanism like Debian's alternatives system or with symlinks,  you
+whether by a mechanism like Debian's alternatives system or with symlinks, you
 will need to edit the makefile in :file:`dxr/plugins/clang` to specify complete
 paths to the right ones.
 
@@ -84,10 +122,8 @@ Then, build DXR from its top-level directory::
 
     make
 
-It will build the :file:`libtrilite.so` library in the :file:`trilite`
-directory and
-:file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang` as well as
-compiling the JavaScript-based templates.
+It will build :file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang`
+and compile the JavaScript-based templates.
 
 To assure yourself that everything has built correctly, you can run the tests::
 
@@ -97,22 +133,12 @@ To assure yourself that everything has built correctly, you can run the tests::
 Installation
 ============
 
-Once you've built it, install DXR in the activated virtualenv. This is an
-optional step, but it lets you call the :program:`dxr-index.py` and
-:program:`dxr-build.py` commands without specifying their full paths, as long as
-the env is activated. ::
+Once you've built it, install DXR in the activated virtualenv. This is
+an optional step, but it lets you call the :program:`dxr-build.py` and
+:program:`dxr-serve.py` commands without specifying their full paths,
+as long as the env is activated. ::
 
     python setup.py install
-
-It's also convenient to install the TriLite library globally. Otherwise,
-:program:`dxr-build.py` will complain that it can't find the TriLite SQLite
-extension unless you prepend ``LD_LIBRARY_PATH=dxr/trilite`` at every
-invocation. It's also a challenge to get a web server to see the lib, since you
-don't have a ready opportunity to interpose an environment variable. To install
-TriLite... ::
-
-    cp dxr/trilite/libtrilite.so /usr/local/lib/
-    sudo ldconfig
 
 
 Indexing
@@ -164,12 +190,6 @@ testing that the index arrived undamaged and DXR's dependencies are installed::
 
 Then visit http://localhost:8000/.
 
-As with :program:`dxr-build.py` above, you can pass an
-:envvar:`LD_LIBRARY_PATH` environment variable to :program:`dxr-serve.py` if you
-are unable to install the TriLite library globally on your system::
-
-    LD_LIBRARY_PATH=dxr/trilite dxr-serve.py target
-
 Apache and mod_wsgi
 -------------------
 
@@ -187,15 +207,6 @@ You must also specify the path to the generated index. This is done with a
 configuration::
 
    SetEnv DXR_FOLDER /path/to/target
-
-As with :program:`dxr-build.py` and :program:`dxr-serve.py` above, either pass
-an :envvar:`LD_LIBRARY_PATH` environment variable to mod_wsgi, or install the
-:file:`libtrilite.so` library onto your system globally. `Because of the ways`_
-:envvar:`LD_LIBRARY_PATH` and mod_wsgi work, adding it to your regular Apache
-configuration has no effect. Instead, add the following to
-:file:`/etc/apache2/envvars`::
-
-   export LD_LIBRARY_PATH=/path/to/dxr/trilite
 
 Because we used virtualenv to install DXR's runtime dependencies, add the path
 to the virtualenv to your Apache configuration::
@@ -262,7 +273,6 @@ To update to a new version of DXR...
 1. Update your DXR clone::
 
     git pull origin master
-    git submodule update
 
 2. Delete your old virtual env::
 

@@ -31,7 +31,7 @@ namespace {
 
 const std::string GENERATED("--GENERATED--/");
 
-// Curse whomever didn't do this.
+// Curse whoever didn't do this.
 std::string &operator+=(std::string &str, unsigned int i) {
   static char buf[15] = { '\0' };
   char *ptr = &buf[13];
@@ -152,6 +152,16 @@ private:
     std::string filenamestr(filename);
     return getFileInfo(filenamestr);
   }
+
+  // Return a path:row:col pointing to the end of the token at "end", drilling
+  // into macro args if they exist. Return an empty string if both begin and
+  // end are invalid.
+  std::string locationEnd(SourceLocation begin, SourceLocation end) {
+    if (!end.isValid())  // TODO: Is this necessary? When does it happen?
+      end = begin;
+    return locationToString(Lexer::getLocForEndOfToken(expandMacroArgs(end),
+                                                       0, sm, features));
+  }
 public:
   IndexConsumer(CompilerInstance &ci) :
     ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()),
@@ -185,13 +195,28 @@ public:
     return f->interesting;
   }
 
+  // Return a source location's file path, line, and column, or '' if the
+  // location is invalid.
   std::string locationToString(SourceLocation loc) {
-    PresumedLoc fixed = sm.getPresumedLoc(loc);
-    std::string buffer = getFileInfo(fixed.getFilename())->realname;
-    buffer += ":";
-    buffer += fixed.getLine();
-    buffer += ":";
-    buffer += fixed.getColumn();
+    std::string buffer;
+    bool isInvalid;
+    unsigned column = sm.getSpellingColumnNumber(loc, &isInvalid);
+    // If you run into surprises here, consider using the routines for "immediate" spellings.
+
+    if (!isInvalid) {
+      unsigned line = sm.getSpellingLineNumber(loc, &isInvalid);
+      if (!isInvalid) {
+        PresumedLoc presumed = sm.getPresumedLoc(loc);
+        // TODO: See if this returns the correct file even if the spelling loc
+        // differs from the presumed loc:
+        buffer = getFileInfo(presumed.getFilename())->realname;
+
+        buffer += ":";
+        buffer += line;
+        buffer += ":";
+        buffer += column - 1;  // Make 0-based.
+      }
+    }
     return buffer;
   }
 
@@ -260,6 +285,7 @@ public:
     out = &f->info;
     *out << name;
   }
+
   void recordValue(const char *key, std::string value, bool needQuotes=false) {
     *out << "," << key << ",\"";
     int start = 0;
@@ -275,7 +301,9 @@ public:
     *out << value.substr(start) << "\"";
   }
 
-  SourceLocation getFileLocation(SourceLocation loc) {
+  // This has something to do with linkifying macro args when they're a
+  // reference to or a definition of something.
+  SourceLocation expandMacroArgs(SourceLocation loc) {
     while (loc.isValid() && loc.isMacroID())
     {
       if (!sm.isMacroArgExpansion(loc))
@@ -285,24 +313,11 @@ public:
     return loc;
   }
 
-  void printExtent(SourceLocation begin, SourceLocation end) {
-    if (!end.isValid())
-      end = begin;
-    begin = getFileLocation(begin);
-    end   = getFileLocation(end);
-    if (!begin.isValid() || !end.isValid())
-      return;
-    *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
-      sm.getDecomposedSpellingLoc(
-        Lexer::getLocForEndOfToken(end, 0, sm, features)).second;
-  }
-
   Decl *getNonClosureDecl(Decl *d)
   {
     DeclContext *dc;
     for (dc = d->getDeclContext(); dc->isClosure(); dc = dc->getParent())
-    {
-    }
+      ;
     return Decl::castFromDeclContext(dc);
   }
 
@@ -323,8 +338,8 @@ public:
         if (redecl)
           namesource = redecl;
       }
-      recordValue("scopename", getQualifiedName(*namesource));
-      recordValue("scopeloc", locationToString(scope->getLocation()));
+      recordValue("scopename", namesource->getNameAsString());
+      recordValue("scopequalname", getQualifiedName(*namesource));
     }
   }
 
@@ -333,12 +348,13 @@ public:
       return;
 
     beginRecord("decldef", decl->getLocation());
+    recordValue("name", decl->getNameAsString());
     recordValue("qualname", getQualifiedName(*def));
-    recordValue("declloc", locationToString(decl->getLocation()));
+    recordValue("loc", locationToString(decl->getLocation()));
+    recordValue("locend", locationEnd(begin, end));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
       recordValue("kind", kind);
-    printExtent(begin, end);
     *out << std::endl;
   }
 
@@ -390,10 +406,10 @@ public:
       recordValue("name", nd->getNameAsString());
       recordValue("qualname", getQualifiedName(*nd));
       recordValue("loc", locationToString(d->getLocation()));
+      recordValue("locend", locationEnd(nd->getLocation(), nd->getLocation()));
       recordValue("kind", d->getKindName());
       printScope(d);
       // Linkify the name, not the `enum'
-      printExtent(nd->getLocation(), nd->getLocation());
       *out << std::endl;
     }
 
@@ -414,16 +430,16 @@ public:
       if (!base)
         return true;
       beginRecord("impl", d->getLocation());
-      recordValue("tcname", getQualifiedName(*d));
-      recordValue("tcloc", locationToString(d->getLocation()));
-      recordValue("tbname", getQualifiedName(*base));
-      recordValue("tbloc", locationToString(base->getLocation()));
+      recordValue("name", d->getNameAsString());
+      recordValue("qualname", getQualifiedName(*d));
+      recordValue("basename", base->getNameAsString());
+      recordValue("basequalname", getQualifiedName(*base));
       *out << ",access,\"";
       switch ((*iter).getAccessSpecifierAsWritten()) {
-      case AS_public: *out << "public"; break;
-      case AS_protected: *out << "protected"; break;
-      case AS_private: *out << "private"; break;
-      case AS_none: break; // It's implied, but we can ignore that
+        case AS_public: *out << "public"; break;
+        case AS_protected: *out << "protected"; break;
+        case AS_private: *out << "private"; break;
+        case AS_none: break; // It's implied, but we can ignore that
       }
       if ((*iter).isVirtual())
         *out << " virtual";
@@ -459,14 +475,22 @@ public:
       recordValue("args", args);
       recordValue("loc", locationToString(d->getLocation()));
       printScope(d);
-      printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+      recordValue("locend", locationEnd(d->getNameInfo().getBeginLoc(),
+                                        d->getNameInfo().getEndLoc()));
+
       // Print out overrides
-      if (CXXMethodDecl::classof(d)) {
-        CXXMethodDecl *cxxd = dyn_cast<CXXMethodDecl>(d);
-        CXXMethodDecl::method_iterator iter = cxxd->begin_overridden_methods();
+      if (CXXMethodDecl::classof(d)) {  // It's a method.
+        CXXMethodDecl *methodDecl = dyn_cast<CXXMethodDecl>(d);
+
+        // What do we override?
+        CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
-          recordValue("overridename", getQualifiedName(**iter));
-          recordValue("overrideloc", locationToString((*iter)->getLocation()));
+          const FunctionDecl *overriddenDef;
+          if ((*iter)->isDefined(overriddenDef)) {
+            recordValue("overriddenname", overriddenDef->getNameAsString());
+            recordValue("overriddenqualname", getQualifiedName(*overriddenDef));
+            recordValue("overriddenloc", locationToString(overriddenDef->getLocStart())); // Finds the right line but the wrong columns. We ignore everything but the file path.
+          }
         }
       }
       *out << std::endl;
@@ -544,12 +568,12 @@ public:
       recordValue("name", d->getNameAsString());
       recordValue("qualname", getQualifiedName(*d));
       recordValue("loc", locationToString(d->getLocation()));
+      recordValue("locend", locationEnd(d->getLocation(), d->getLocation()));
       recordValue("type", d->getType().getAsString(), true);
       const std::string &value = getValueForValueDecl(d);
       if (!value.empty())
         recordValue("value", value, true);
       printScope(d);
-      printExtent(d->getLocation(), d->getLocation());
       *out << std::endl;
     }
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
@@ -600,9 +624,9 @@ public:
     recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getLocation()));
+    recordValue("locend", locationEnd(d->getLocation(), d->getLocation()));
 //    recordValue("underlying", d->getUnderlyingType().getAsString());
     printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -617,8 +641,8 @@ public:
     recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getLocation()));
+    recordValue("locend", locationEnd(d->getLocation(), d->getLocation()));
     printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -632,7 +656,7 @@ public:
     recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getLocation()));
-    printExtent(d->getLocation(), d->getLocation());
+    recordValue("locend", locationEnd(d->getLocation(), d->getLocation()));
     *out << std::endl;
     return true;
   }
@@ -647,7 +671,7 @@ public:
     recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getAliasLoc()));
-    printExtent(d->getAliasLoc(), d->getAliasLoc());
+    recordValue("locend", locationEnd(d->getAliasLoc(), d->getAliasLoc()));
     *out << std::endl;
 
     if (d->getQualifierLoc())
@@ -701,9 +725,11 @@ public:
     beginRecord("ref", refLoc);
     recordValue("declloc", locationToString(d->getLocation()));
     recordValue("loc", locationToString(refLoc));
+    recordValue("locend", locationEnd(refLoc, end));
     if (kind)
       recordValue("kind", kind);
-    printExtent(refLoc, end);
+    recordValue("name", d->getNameAsString());
+    recordValue("qualname", getQualifiedName(*d));
     *out << std::endl;
   }
   const char *kindForDecl(const Decl *d)
@@ -752,17 +778,18 @@ public:
         !NamedDecl::classof(callee))
       return true;
 
+    const NamedDecl *namedCallee = dyn_cast<NamedDecl>(callee);
+
     // Fun facts about call exprs:
     // 1. callee isn't necessarily a function. Think function pointers.
     // 2. We might not be in a function. Think global function decls
     // 3. Virtual functions need not be called virtually!
     beginRecord("call", e->getLocStart());
-    if (m_currentFunction) {
-      recordValue("callername", getQualifiedName(*m_currentFunction));
-      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
-    }
-    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("callloc", locationToString(e->getLocStart()));
+    recordValue("calllocend", locationToString(e->getLocEnd()));
     recordValue("calleeloc", locationToString(callee->getLocation()));
+    recordValue("name", namedCallee->getNameAsString());
+    recordValue("qualname", getQualifiedName(*namedCallee));
     // Determine the type of call
     const char *type = "static";
     if (CXXMethodDecl::classof(callee)) {
@@ -796,12 +823,11 @@ public:
     // 2. We might not be in a function. Think global function decls
     // 3. Virtual functions need not be called virtually!
     beginRecord("call", e->getLocStart());
-    if (m_currentFunction) {
-      recordValue("callername", getQualifiedName(*m_currentFunction));
-      recordValue("callerloc", locationToString(m_currentFunction->getLocation()));
-    }
-    recordValue("calleename", getQualifiedName(*dyn_cast<NamedDecl>(callee)));
+    recordValue("callloc", locationToString(e->getLocStart()));
+    recordValue("calllocend", locationToString(e->getLocEnd()));
     recordValue("calleeloc", locationToString(callee->getLocation()));
+    recordValue("name", callee->getNameAsString());
+    recordValue("qualname", getQualifiedName(*callee));
 
     // There are no virtual constructors in C++:
     recordValue("calltype", "static");
@@ -940,18 +966,20 @@ public:
     info.FormatDiagnostic(message);
 
     beginRecord("warning", info.getLocation());
-    recordValue("loc", locationToString(info.getLocation()));
     recordValue("msg", message.c_str(), true);
     StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
     if (!opt.empty())
       recordValue("opt", ("-W" + opt).str());
     if (info.getNumRanges() > 0) {
       const CharSourceRange &range = info.getRange(0);
-      printExtent(getWarningExtentLocation(range.getBegin()),
-                  getWarningExtentLocation(range.getEnd()));
+      SourceLocation warningBeginning = getWarningExtentLocation(range.getBegin());
+      recordValue("loc", locationToString(warningBeginning));
+      recordValue("locend", locationEnd(warningBeginning,
+                                        getWarningExtentLocation(range.getEnd())));
     } else {
       SourceLocation loc = getWarningExtentLocation(info.getLocation());
-      printExtent(loc, loc);
+      recordValue("loc", locationToString(loc));
+      recordValue("locend", locationEnd(loc, loc));
     }
     *out << std::endl;
   }
@@ -993,6 +1021,7 @@ public:
     }
     beginRecord("macro", nameStart);
     recordValue("loc", locationToString(nameStart));
+    recordValue("locend", locationEnd(nameStart, nameStart));
     recordValue("name", std::string(contents, nameLen));
     if (argsStart > 0)
       recordValue("args", std::string(contents + argsStart,
@@ -1006,7 +1035,6 @@ public:
           text[i] = '?';
       recordValue("text", text, true);
     }
-    printExtent(nameStart, nameStart);
     *out << std::endl;
   }
 
@@ -1026,8 +1054,8 @@ public:
     recordValue("name", std::string(ii->getNameStart(), ii->getLength()));
     recordValue("declloc", locationToString(macroLoc));
     recordValue("loc", locationToString(refLoc));
+    recordValue("locend", locationEnd(refLoc, refLoc));
     recordValue("kind", "macro");
-    printExtent(refLoc, refLoc);
     *out << std::endl;
   }
 
@@ -1086,7 +1114,8 @@ public:
     beginRecord("include", hashLoc);
     recordValue("source_path", source->realname);
     recordValue("target_path", target->realname);
-    printExtent(targetBegin, targetEnd);
+    recordValue("loc", locationToString(targetBegin));
+    recordValue("locend", locationEnd(targetBegin, targetEnd));
     *out << std::endl;
   }
 
