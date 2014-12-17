@@ -198,19 +198,21 @@ def index_tree(tree, es, verbose=False):
     start_time = datetime.now()
 
     skip_indexing = 'index' in tree.config.skip_stages
+    skip_rebuild = 'build' in tree.config.skip_stages
+    skip_cleanup  = skip_indexing or skip_rebuild
 
     # Create folders (delete if exists)
     ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
     ensure_folder(tree.object_folder,                    # Object folder (user defined!)
         tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
-    ensure_folder(tree.temp_folder, not skip_indexing)   # <config.temp_folder>/<tree.name>
+    ensure_folder(tree.temp_folder, not skip_cleanup)   # <config.temp_folder>/<tree.name>
                                                          # (or user defined)
-    ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
+    ensure_folder(tree.log_folder, not skip_cleanup)    # <config.log_folder>/<tree.name>
                                                          # (or user defined)
     # Temporary folders for plugins
-    ensure_folder(join(tree.temp_folder, 'plugins'), not skip_indexing)
+    ensure_folder(join(tree.temp_folder, 'plugins'), not skip_cleanup)
     for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-        ensure_folder(join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+        ensure_folder(join(tree.temp_folder, 'plugins', plugin), not skip_cleanup)
 
     tree_indexers = [p.tree_to_index(tree) for p in
                      tree.enabled_plugins.itervalues() if p.tree_to_index]
@@ -257,8 +259,11 @@ def index_tree(tree, es, verbose=False):
                 tree_indexers = farm_out('pre_build')
                 # Tear down pool to let the build process use more RAM.
 
-            # Set up env vars, and build:
-            build_tree(tree, tree_indexers, verbose)
+            if not skip_rebuild:
+                # Set up env vars, and build:
+                build_tree(tree, tree_indexers, verbose)
+            else:
+                print " - Skipping rebuild (due to 'build' in 'skip_stages')"
 
             # Post-build, and index files:
             with new_pool() as pool:
@@ -310,11 +315,13 @@ def create_skeleton(config):
     """Make the non-tree-specific FS artifacts needed to do the build."""
 
     skip_indexing = 'index' in config.skip_stages
+    skip_rebuild = 'build' in config.skip_stages
+    skip_cleanup = skip_indexing or skip_rebuild
 
     # Create config.target_folder (if not exists)
     ensure_folder(config.target_folder, False)
-    ensure_folder(config.temp_folder, not skip_indexing)
-    ensure_folder(config.log_folder, not skip_indexing)
+    ensure_folder(config.temp_folder, not skip_cleanup)
+    ensure_folder(config.log_folder, not skip_cleanup)
 
     # Create jinja cache folder in target folder
     ensure_folder(join(config.target_folder, 'jinja_dxr_cache'))
