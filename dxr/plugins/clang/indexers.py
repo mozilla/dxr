@@ -240,6 +240,11 @@ def _members(condensed, key, id_):
 
 
 class TreeToIndex(TreeToIndexBase):
+    def pre_build(self):
+        self._temp_folder = os.path.join(self.tree.temp_folder,
+                                         'plugins',
+                                         PLUGIN_NAME)
+
     def environment(self, vars_):
         """Set up environment variables to trigger analysis dumps from clang.
 
@@ -247,8 +252,6 @@ class TreeToIndex(TreeToIndexBase):
 
         """
         tree = self.tree
-        temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-        self._temp_folder = temp_folder
         plugin_folder = os.path.dirname(__file__)
         flags = [
             '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
@@ -262,7 +265,7 @@ class TreeToIndex(TreeToIndexBase):
             'CXX': "clang++ %s" % flags_str,
             'DXR_CLANG_FLAGS': flags_str,
             'DXR_CXX_CLANG_OBJECT_FOLDER': tree.object_folder,
-            'DXR_CXX_CLANG_TEMP_FOLDER': temp_folder,
+            'DXR_CXX_CLANG_TEMP_FOLDER': self._temp_folder,
         }
         env['DXR_CC'] = env['CC']
         env['DXR_CXX'] = env['CXX']
