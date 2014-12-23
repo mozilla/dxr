@@ -387,6 +387,7 @@ mark {
     overflow-y: auto;
     overflow-x: hidden;
     max-height: calc(100% - 150px);
+    max-width: 30%;
     z-index: 2;
 }
 .panel button{
