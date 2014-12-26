@@ -11,14 +11,6 @@ from dxr.plugins import all_plugins
 from dxr.utils import append_update
 
 
-# A dict mapping a filter name to a list of all filters having that name,
-# across all plugins and the plugin the filter comes from.
-FILTERS_NAMED = append_update(
-    {},
-    ((fp[0].name, (fp[0], fp[1])) for fp in
-     chain.from_iterable(map(lambda f: (f, p_name), p.filters) for (p_name, p) in all_plugins().iteritems())))
-
-
 def _direct_searchers():
     """Return a list of all direct searchers, ordered by priority, then plugin
     name, then finally by function name.
@@ -74,8 +66,7 @@ class Query(object):
         # list representing the filters of the name of the parallel term. We
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
-        filters = [[f[0](term) for f in FILTERS_NAMED[term['name']] if f[1] in self.enabled_plugins] for term in
-                   self.terms]
+        filters = [[f(term) for f in all_filters_for_plugins(self.enabled_plugins)[term['name']]] for term in self.terms]
 
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
@@ -181,6 +172,24 @@ class Query(object):
                     return None
 
 
+
+def cached(c):
+    def cache_f(f):
+        def inner(enabled_plugins):
+            key = tuple(enabled_plugins)
+            if key in c:
+                return c[key]
+
+            result = f(enabled_plugins)
+            c[key] = result
+            return result
+
+        return inner
+    return cache_f
+
+
+query_grammar_cache = {}
+@cached(query_grammar_cache)
 def query_grammar(enabled_plugins):
     return Grammar(ur'''
         query = _ terms
@@ -200,7 +209,7 @@ def query_grammar(enabled_plugins):
             # avoids premature matches.
             '|'.join(sorted((re.escape(filter_name) for
                                     filter_name, f in
-                                    filter_filters_for_plugins(enabled_plugins)),
+                                    filters_for_plugins(enabled_plugins).iteritems()),
                             key=len,
                             reverse=True)) + ur'''"
 
@@ -311,23 +320,42 @@ class QueryVisitor(NodeVisitor):
         """
         return visited_children or node
 
-# Return the the first filter in filters which is provided by a plugin in enabled_plugins.
-def first_filter_for_plugins(enabled_plugins, filters):
+def filters_per_plugin(enabled_plugins):
+    """Return a list of lists of filters, one list for each plugin in enabled_plugins"""
+    # A list of plugins for all enabled plugins
+    plugins = [p for (n, p) in all_plugins().iteritems() if n in enabled_plugins]
+    # A list of filters (with a non-null description) for each enabled plugin 
+    filters = [p.filters for p in plugins]
+    return filters
+
+filters_for_plugins_cache = {}
+@cached(filters_for_plugins_cache)
+def filters_for_plugins(enabled_plugins):
+    """Return a mapping from filter names to a filter with that name."""
+
+    filters = filters_per_plugin(enabled_plugins)
+    # Flatten the list of lists into one list
+    filters = [f for fs in filters for f in fs]
+    # A mapping from filter names to the first filter with that name
+    filter_for_name = {}
     for f in filters:
-        if not f[0].description:
-            continue
-        if f[1] in enabled_plugins:
-            return f[0]
+        if f.name not in filter_for_name:
+            filter_for_name[f.name] = f
 
-    return None
+    return filter_for_name
 
-# We start with FILTERS_NAMED - a mapping from filter names to [(filter, plugin_name)]
-# where plugin_name is the plugin which defines the filter. We first find one or
-# zero filters for each filter name which are defined by one of the currently
-# enabled plugins. Then we ignore any names with zero filters, ending up with
-# a mapping from filter names to a single filter.
-def filter_filters_for_plugins(enabled_plugins):
-    return filter(lambda (name, f): f, map(lambda (name, filters): (name, first_filter_for_plugins(enabled_plugins, filters)), FILTERS_NAMED.iteritems()))
+
+all_filters_for_plugins_cache = {}
+@cached(all_filters_for_plugins_cache)
+def all_filters_for_plugins(enabled_plugins):
+    """Return a mapping from filter names to all filters (across plugins) with that name."""
+
+    filters = filters_per_plugin(enabled_plugins)
+    # Flatten the list of lists into one list
+    filters = [f for fs in filters for f in fs]
+    # A mapping from filter names to all filters with that name
+    return append_update({}, ((f.name, f) for f in filters))
+
 
 def filter_menu_items(enabled_plugins):
     """Return the additional template variables needed to render filter.html."""
@@ -335,7 +363,7 @@ def filter_menu_items(enabled_plugins):
     # the top?
 
     return (dict(name=name, description=f.description) for
-            name, f in filter_filters_for_plugins(enabled_plugins))
+            name, f in filters_for_plugins(enabled_plugins).iteritems() if f.description)
 
 
 def highlight(content, extents):

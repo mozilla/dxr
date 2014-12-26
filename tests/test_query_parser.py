@@ -184,7 +184,7 @@ def test_quotes():
                                   lambda x: x),
                                  ('single_quoted_text',
                                   lambda x: x.replace('"', "'"))]:
-        rule = query_grammar(['core', 'clang'])[rule_name]
+        rule = query_grammar([])[rule_name]
         for input, output in tests:
             def test_something():
                 eq_(QueryVisitor().visit(rule.match(transform(input))),
