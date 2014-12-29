@@ -428,6 +428,26 @@ $(function() {
     }
 
 
+    // Toggle the help box when the help icon is clicked, and hide it when
+    // anything outside of the box is clicked.
+    var helpIcon = $('.help-icon'),
+        helpMsg = helpIcon.find('.help-msg');
+
+    $(document.documentElement).on('click', '.help-icon', function(e) {
+        if ($(e.target).is(':not(.help-icon *)')) {
+            helpIcon.toggleClass('open');
+            helpMsg.toggle();
+        }
+    });
+
+    $(document.documentElement).on('click', function(e) {
+        if ($(e.target).is(':not(.help-icon, .help-icon *)')) {
+            helpIcon.removeClass('open');
+            helpMsg.hide();
+        }
+    });
+
+
     /**
      * Adds aleading 0 to numbers less than 10 and greater that 0
      *
