@@ -50,10 +50,6 @@
     </div>
   {% endif %}
 
-  {% if not is_text %}
-    (binary file)
-  {% endif %}
-
   <div id="annotations">
     {% for line, annotations in lines %}
       <div class="annotation-set" id="aset-{{ loop.index }}">
@@ -66,6 +62,9 @@
     {%- endfor -%}
   </div>
 
+  {% if image_src %}
+    <img src="{{wwwroot}}/{{ image_src }}">
+  {% endif %}
   <table id="file" class="file">
     <thead class="visually-hidden">
         <th scope="col">Line</th>
@@ -79,6 +78,9 @@
           {% endfor %}
         </td>
         <td class="code">
+          {% if not is_text %}
+            (binary file)
+          {% endif %}
 <pre>
 {% for line, annotations in lines -%}
 <code id="line-{{ loop.index }}" aria-labelledby="{{ loop.index }}">{{ line }}</code>

@@ -461,7 +461,7 @@ $(function() {
     // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
     // That means that if we naively set onpopstate, we would get into an
     // infinite loop of reloading whenever onpopstate is triggered. Therefore,
-    // we have to only add out onpopstate handler once the page has loaded.
+    // we have to only add our onpopstate handler once the page has loaded.
     window.onload = function() {
         setTimeout(function() {
             window.onpopstate = popStateHandler;

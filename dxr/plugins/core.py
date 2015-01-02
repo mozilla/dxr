@@ -8,7 +8,7 @@ from jinja2 import Markup
 from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
-from dxr.filters import Filter, negatable, FILE, LINE
+from dxr.filters import Filter, negatable, FILE, IMAGE, LINE
 import dxr.indexers
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
@@ -77,6 +77,22 @@ mappings = {
             },
             'is_folder': {
                 'type': 'boolean'
+            }
+        }
+    },
+
+    # The image doc stores the binary base64 encode blobs of image files.
+    IMAGE: {
+        '_all': {
+            'enabled': False
+        },
+        'properties': {
+            # IMAGE filters query this (like FILE)
+            'path': PATH_MAPPING,
+            # actual image data here
+            'data': {
+                'type': 'binary',
+                'index': 'no'
             }
         }
     },
@@ -312,6 +328,13 @@ class FileToIndex(dxr.indexers.FileToIndex):
         for number, text in enumerate(self.contents.splitlines(), 1):
             yield [('number', number),
                    ('content', text)]
+
+    def is_interesting(self):
+        """
+        Core is responsible for putting files in the index,
+        so everything is interesting
+        """
+        return True
 
 
 # Match file name and line number: filename:n. Strip leading slashes because

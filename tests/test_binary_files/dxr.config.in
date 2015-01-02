@@ -1,5 +1,5 @@
 [DXR]
-enabled_plugins     = pygmentize clang
+enabled_plugins     = pygmentize
 temp_folder         = PWD/temp
 target_folder       = PWD/target
 nb_jobs             = 4

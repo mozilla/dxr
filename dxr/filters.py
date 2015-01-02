@@ -7,6 +7,7 @@ from funcy import identity
 # Domain constants:
 FILE = 'file'
 LINE = 'line'
+IMAGE = 'image'
 
 
 class Filter(object):

@@ -3,6 +3,8 @@ from logging import StreamHandler
 from os.path import isdir, isfile, join, basename
 from sys import stderr
 from time import time
+from cStringIO import StringIO
+from mimetypes import guess_type
 from urllib import quote_plus
 
 from flask import (Blueprint, Flask, send_from_directory, current_app,
@@ -13,7 +15,7 @@ from werkzeug.exceptions import NotFound
 
 from dxr.build import linked_pathname
 from dxr.exceptions import BadTerm
-from dxr.filters import FILE
+from dxr.filters import FILE, IMAGE
 from dxr.mime import icon
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
@@ -165,6 +167,30 @@ def _tree_tuples(trees, tree, query_text, is_case_sensitive):
              description)
             for t, description in trees.iteritems()]
 
+@dxr_blueprint.route('/<tree>/images/<path:path>')
+def send_image(tree, path):
+    '''
+    Send an image at path from tree.
+    Looks like a file to the client, but it comes straight from the ES index.
+    '''
+    query = {
+            'filter': {
+                'term': {'path': path}
+                }
+            }
+    index = current_app.config['ES_ALIASES'][tree]
+    results = current_app.es.search(
+            query,
+            index=index,
+            doc_type=IMAGE, size=1)
+    try:
+        # we explicitly get index 0 because there should be exactly 1 result
+        data = results['hits']['hits'][0]['_source']['data']
+        dataFile = StringIO(data.decode("base64"))
+        return send_file(dataFile, mimetype=guess_type(path)[0])
+    except IndexError: # couldn't find the image
+        raise IndexError("Couldn't find image for %s.\nSearch: %s\nResults: %s"
+                % (path, query, results))
 
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
@@ -267,10 +293,9 @@ def parallel(tree, path=''):
 
 
 def _tree_folder(tree):
-    """Return the on-disk path to the root of the given tree's folder in the
-    instance."""
+    """Return the on-disk path to the root of the given tree's folder in
+    the instance."""
     return join(current_app.instance_path, 'trees', tree)
-
 
 def _html_file_path(tree_folder, url_path):
     """Return the on-disk path, relative to the tree folder, of the HTML file

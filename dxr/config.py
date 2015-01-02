@@ -149,7 +149,7 @@ class TreeConfig(object):
         self.source_encoding  = parser.get(name, 'source_encoding')
         self.description      = parser.get(name, 'description')
 
-        # You cannot redefine the target folder!
+        # You cannot redefine the target folders!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
         # Set config file and DXR config object reference
         self.config           = config

@@ -23,9 +23,9 @@ from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 import dxr
 from dxr.config import Config, FORMAT
 from dxr.exceptions import BuildError
-from dxr.filters import LINE, FILE
+from dxr.filters import LINE, FILE, IMAGE
 from dxr.lines import build_lines
-from dxr.mime import is_text, icon
+from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, parallel_url, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)
@@ -342,7 +342,7 @@ def ensure_folder(folder, clean=False):
     if clean and os.path.isdir(folder):
         shutil.rmtree(folder, False)
     if not os.path.isdir(folder):
-        mkdir(folder)
+        os.makedirs(folder)
 
 
 def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
@@ -487,17 +487,16 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     file_info = stat(path)
     folder_name, file_name = split(rel_path)
 
-    if is_text:  # conditional until we figure out how to display binary files
-        es.index(index,
-                 FILE,
-                 # Hard-code the keys that are hard-coded in the browse()
-                 # controller. Merge with the pluggable ones from needles:
-                 dict(folder=folder_name,
-                      name=file_name,
-                      size=file_info.st_size,
-                      modified=datetime.fromtimestamp(file_info.st_mtime),
-                      is_folder=False,
-                      **needles))
+    es.index(index,
+                FILE,
+                # Hard-code the keys that are hard-coded in the browse()
+                # controller. Merge with the pluggable ones from needles:
+                dict(folder=folder_name,
+                    name=file_name,
+                    size=file_info.st_size,
+                    modified=datetime.fromtimestamp(file_info.st_mtime),
+                    is_folder=False,
+                    **needles))
 
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text and needles_by_line:  # If it's an empty file (no lines), don't
@@ -508,10 +507,10 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                 (merge(n, needles) for n in needles_by_line), 300):
             es.bulk_index(index, LINE, chunk_of_needles, id_field=None)
 
+    # Index image contents as binary in ES
+    image_src = index_image(tree, rel_path, index, es) if is_image(rel_path) else None
     # Render some HTML:
-    # TODO: Make this no longer conditional on is_text, and come up with a nice
-    # way to show binary files, especially images.
-    if is_text and 'html' not in tree.config.skip_stages:
+    if 'html' not in tree.config.skip_stages:
         _fill_and_write_template(
             jinja_env,
             'file.html',
@@ -543,7 +542,24 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
              'is_text': is_text,
 
+             # if the file's an image, use <img src=image_src>
+             'image_src': image_src,
              'sections': build_sections(chain.from_iterable(linkses))})
+
+def index_image(tree, rel_path, index, es):
+    '''
+    Index the image located at path relative to given tree using es in index.
+    Return the URL to get the image.
+    '''
+    # define the image source
+    image_src = "%s/images/%s" % (tree.name, rel_path)
+    # encode the image file as base64 string and index it
+    with open(join(tree.source_folder, rel_path), "rb") as img:
+        imgdata = img.read().encode("base64")
+        es.index(index, IMAGE, {
+            'path': [rel_path],
+            'data': imgdata})
+    return image_src
 
 
 def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
