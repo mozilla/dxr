@@ -173,10 +173,11 @@ class FileToIndex(FileToIndexBase):
         """
         for prop in chain.from_iterable(v(self.condensed) for v in views):
             if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this. [Marcell says no.]
-                if 'declloc' in prop:  # if we can look up the target of this ref
+                definition = prop.get('defloc')
+                if definition:  # if we can look up the target of this ref
                     menu = definition_menu(self.tree,
-                                           path=prop['declloc'][0],
-                                           row=prop['declloc'][1].row)
+                                           path=definition[0],
+                                           row=definition[1].row)
                 else:
                     menu = []
 
