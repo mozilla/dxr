@@ -972,7 +972,7 @@ public:
   SourceLocation getWarningExtentLocation(SourceLocation loc) {
     while (loc.isMacroID()) {
       if (sm.isMacroArgExpansion(loc))
-        loc = sm.getImmediateSpellingLoc(loc);  // Why do we want to attach the warning to the macro definition site rather than its use?
+        loc = sm.getImmediateSpellingLoc(loc);  // TODO: Why do we want to attach the warning to the macro definition site rather than its use?
       else
         loc = sm.getImmediateExpansionRange(loc).first;
     }
@@ -998,7 +998,7 @@ public:
     if (info.getNumRanges() > 0) {
       const CharSourceRange &range = info.getRange(0);
       SourceLocation warningBeginning = getWarningExtentLocation(range.getBegin());
-      SourceLocation warningEnd = getWarningExtentLocation(range.getEnd());
+      SourceLocation warningEnd = getWarningExtentLocation(afterToken(range.getEnd()));
       recordValue("loc", locationToString(warningBeginning));
       recordValue("locend", locationToString(warningEnd));
       printExtent(warningBeginning, warningEnd);
