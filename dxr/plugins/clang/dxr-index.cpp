@@ -245,12 +245,16 @@ public:
     }
 
     // Make anonymous namespaces in separate files have separate names
+#if CLANG_AT_LEAST(3, 5)
+    const std::string anon_ns = "(anonymous namespace)";
+#else
     const std::string anon_ns = "<anonymous namespace>";
+#endif
     if (StringRef(ret).startswith(anon_ns))
     {
       const std::string &filename = ci.getFrontendOpts().Inputs[0].getFile().str();
       const std::string &realname = getFileInfo(filename)->realname;
-      ret = ret.substr(0, anon_ns.size() - 1) + " in " + realname + ">" + ret.substr(anon_ns.size());
+      ret = "(" + ret.substr(1, anon_ns.size() - 2) + " in " + realname + ")" + ret.substr(anon_ns.size());
     }
     return ret;
   }
