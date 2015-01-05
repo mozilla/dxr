@@ -16,7 +16,7 @@ check: $(CHECK_PLUGINS) trilite
 clean: $(CLEAN_PLUGINS) trilite-clean
 
 node:
-	npm install
+	npm install --production
 
 pycs:
 	find . -name "*.pyc" -exec rm -f {} \;
