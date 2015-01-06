@@ -934,7 +934,7 @@ public:
       return end;
 
     SmallVector<char, 32> buffer;
-    if (Lexer::getSpelling(end, buffer, sm, features) != "::")  // Is "spelling" correct? Not expansion or something?
+    if (Lexer::getSpelling(end, buffer, sm, features) != "::")  // Doesn't descend any deeper into a "spelling" or "expansion" location than the location already is.
       return end;
 
     SourceLocation prev;
@@ -963,9 +963,9 @@ public:
 
     NestedNameSpecifier *nss = l.getNestedNameSpecifier();
     if (nss->getKind() == NestedNameSpecifier::Namespace)
-      printReference("namespace", nss->getAsNamespace(), begin, end);
+      printReference("namespace", nss->getAsNamespace(), begin, afterToken(end));
     else if (nss->getKind() == NestedNameSpecifier::NamespaceAlias)
-      printReference("namespace_alias", nss->getAsNamespaceAlias(), begin, end);
+      printReference("namespace_alias", nss->getAsNamespaceAlias(), begin, afterToken(end));
   }
 
   // Warnings!
