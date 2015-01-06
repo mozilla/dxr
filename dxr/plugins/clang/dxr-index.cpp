@@ -879,7 +879,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("type", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
     return true;
   }
 
@@ -887,7 +887,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
     return true;
   }
 
@@ -904,7 +904,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("type", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
     return true;
   }
 
@@ -923,7 +923,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("typedef", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
+    printReference("typedef", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
     // TODO: It seems like a lot of the (presumably working) old stuff used getBeginLoc and getEndLoc. Try switching to those where available if things don't work.
     return true;
   }
