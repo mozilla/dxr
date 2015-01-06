@@ -476,4 +476,21 @@ $(function() {
             window.location.reload();
          }
     }
+
+    /**
+     * Replace 'source' with 'raw' in href, and set that to the background-image
+     */
+    function setBackgroundImageFromLink(anchorElement) {
+        var href = anchorElement.getAttribute('href');
+        // note: breaks if the tree's name is "source"
+        var bg_src = href.replace('source', 'raw');
+        anchorElement.style.backgroundImage = 'url(' + bg_src + ')';
+    }
+
+    window.addEventListener('load', function() {
+        $(".image").not('.too_fat').each(function() {
+            setBackgroundImageFromLink(this);
+        });
+    });
+
 });

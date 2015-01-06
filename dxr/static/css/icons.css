@@ -134,6 +134,9 @@ a.type {
 .iso {
     background-image: url(/static/icons/mimetypes/iso.png);
 }
+.image {
+    background-image: url(/static/icons/mimetypes/image.png);
+}
 .java {
     background-image: url(/static/icons/mimetypes/java.png);
 }

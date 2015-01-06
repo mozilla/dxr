@@ -64,6 +64,10 @@ def parallel_url(tree, www_root, path):
     # once we define a consistent handling of escapes in build.py. Same for
     # search_url().
 
+def raw_url(treename, path):
+    """Get the URL for the raw data for path: treename/raw/path"""
+    return join(treename, "raw", path)
+
 
 def browse_url(tree, www_root, path):
     return quote('{www_root}/{tree}/source/{path}'.format(
@@ -147,7 +151,6 @@ def glob_to_regex(glob):
 
     """
     return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]
-
 
 def cached(f):
     """Cache the result of a function that takes an iterable of plugins."""

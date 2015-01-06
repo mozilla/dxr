@@ -98,3 +98,4 @@ def test_decode_es_datetime():
     """Test that both ES datetime formats are decoded."""
     eq_(datetime(1992, 6, 27, 0, 0), decode_es_datetime("1992-06-27T00:00:00"))
     eq_(datetime(1992, 6, 27, 0, 0, 0), decode_es_datetime("1992-06-27T00:00:00.0"))
+

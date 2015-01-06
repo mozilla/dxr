@@ -8,8 +8,9 @@ from jinja2 import Markup
 from parsimonious import ParseError
 
 from dxr.exceptions import BadTerm
-from dxr.filters import Filter, negatable, FILE, IMAGE, LINE
+from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
+from dxr.mime import is_image
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
@@ -77,20 +78,8 @@ mappings = {
             },
             'is_folder': {
                 'type': 'boolean'
-            }
-        }
-    },
-
-    # The image doc stores the binary base64 encode blobs of image files.
-    IMAGE: {
-        '_all': {
-            'enabled': False
-        },
-        'properties': {
-            # IMAGE filters query this (like FILE)
-            'path': PATH_MAPPING,
-            # actual image data here
-            'data': {
+            },
+            'raw_data': { # only present if the file is an image
                 'type': 'binary',
                 'index': 'no'
             }
@@ -322,6 +311,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
         extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
+        if is_image(self.path):
+            yield 'raw_data', self.contents.encode("base64")
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
@@ -330,11 +321,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    ('content', text)]
 
     def is_interesting(self):
-        """
-        Core is responsible for putting files in the index,
-        so everything is interesting
-        """
-        return True
+        """Core plugin puts text and image files in the search index."""
+        return self.contains_text() or is_image(self.path)
 
 
 # Match file name and line number: filename:n. Strip leading slashes because
