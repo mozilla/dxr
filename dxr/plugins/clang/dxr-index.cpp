@@ -198,7 +198,7 @@ public:
     if (!isInvalid) {  // TODO: Make sure the Python happily skips CSV lines with empty locs and locends.
       unsigned line = sm.getExpansionLineNumber(loc, &isInvalid);
       if (!isInvalid) {
-        buffer = sm.getFilename(loc).str();  // getFilename seems to want a SpellingLoc. I may be disappointing it. I'm not sure what it will do if it's disappointed.
+        buffer = getFileInfo(sm.getFilename(loc).str())->realname;  // getFilename seems to want a SpellingLoc. I may be disappointing it. I'm not sure what it will do if it's disappointed.
         buffer += ":";
         buffer += line;
         buffer += ":";
