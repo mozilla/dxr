@@ -279,7 +279,7 @@ public:
     // Only a PresumedLoc has a getFilename() method, unfortunately. We'd
     // rather have the expansion location than the presumed one, as we're not
     // interested in lies told by the #lines directive.
-    FileInfo *f = getFileInfo(sm.getFilename(loc));  // Check that getFilename gets the full path.
+    FileInfo *f = getFileInfo(sm.getFilename(loc));
     out = &f->info;
     *out << name;
   }
@@ -311,6 +311,7 @@ public:
     return loc;
   }
 
+  // TODO: Quit using and delete this.
   void printExtent(SourceLocation begin, SourceLocation end) {
     if (!end.isValid())
       end = begin;
@@ -1080,7 +1081,7 @@ public:
     SourceLocation refLoc = tok.getLocation();
     beginRecord("ref", refLoc);
     recordValue("name", std::string(ii->getNameStart(), ii->getLength()));
-    recordValue("declloc", locationToString(macroLoc));  // probably should be "defloc"
+    recordValue("defloc", locationToString(macroLoc));
     recordValue("loc", locationToString(refLoc));
     recordValue("locend", locationToString(afterToken(refLoc)));
     recordValue("kind", "macro");
