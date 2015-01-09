@@ -126,18 +126,6 @@ def _process_loc(locstring):
     return src, Position(row, col)
 
 
-def process_declloc(props):
-    """Return Position based on declloc."""
-    props['declloc'] = _process_loc(props['declloc'])
-    return props
-
-
-def process_defloc(props):
-    """Return Position based on defloc and extent."""
-    props['defloc'] = _process_loc(props['defloc'])
-    return props
-
-
 def process_impl(parents, children, props):
     """Contribute to the whole-program class hierarchy graphs.
 
@@ -190,10 +178,10 @@ def condense_line(dispatch_table, kind, fields):
         fields = process_span(fields)
 
     if 'declloc' in fields:
-        fields = process_declloc(fields)
+        fields['declloc'] = _process_loc(fields['declloc'])
 
     if 'defloc' in fields:
-        fields = process_defloc(fields)
+        fields['defloc'] = _process_loc(fields['defloc'])
 
     return fields
 
