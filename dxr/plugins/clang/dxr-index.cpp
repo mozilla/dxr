@@ -279,7 +279,9 @@ public:
     // Only a PresumedLoc has a getFilename() method, unfortunately. We'd
     // rather have the expansion location than the presumed one, as we're not
     // interested in lies told by the #lines directive.
-    FileInfo *f = getFileInfo(sm.getFilename(loc));
+    StringRef filename = sm.getFilename(loc);
+    std::cout << "beginRecord on filename " << filename.str() << std::endl;  // Empty filenames are being emitted here for the failing vars only.
+    FileInfo *f = getFileInfo(filename);
     out = &f->info;
     *out << name;
   }
@@ -362,7 +364,7 @@ public:
     beginRecord("decldef", decl->getLocation());  // Assuming this is an expansion location.
     recordValue("name", decl->getNameAsString());
     recordValue("qualname", getQualifiedName(*def));
-    recordValue("loc", locationToString(decl->getLocation()));  // Of course, this used to call printExtent, which called expandMacroArgs. If this fails the macro tests, start calling expandMacroArgs and doing other things that printExtent did.
+    recordValue("loc", locationToString(decl->getLocation()));  // TODO: Of course, this used to call printExtent, which called expandMacroArgs. If this fails the macro tests, start calling expandMacroArgs and doing other things that printExtent did.
     recordValue("locend", locationToString(afterToken(decl->getLocation())));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
@@ -574,24 +576,38 @@ public:
     return std::string();
   }
 
+  // This isn't even getting called except for argc and argv. [Actually, I only confirmed that by calling beginRecord(). Maybe it's malfunctioning in this case; we did change it.]
+  // I've confirmed that the tip of es does the right thing.
+  // Let's see if just pasting in the dxr-index.cpp code from es does the right thing. It does. So the problem is in here somewhere. So let's see REALLY if this is being called. IT IS!
   void visitVariableDecl(ValueDecl *d) {
-    if (!interestingLocation(d->getLocation()))
+    SourceLocation location = expandMacroArgs(d->getLocation());
+    std::cout << "visitVariableDecl!!!!! " << d->getNameAsString() << std::endl;
+    if (!interestingLocation(location)) {
+      std::cout << "uninteresting" << std::endl;
       return;
-    if (treatThisValueDeclAsADefinition(d))
-    {
-      beginRecord("variable", d->getLocation());
+    }
+    if (treatThisValueDeclAsADefinition(d)) {
+      std::cout << "treated" << std::endl;  // Gets this far. So beginRecord must be broken.
+      beginRecord("variable", location);
+
+      std::cout << "isValid: " << (location.isValid() ? "true" : "false") << std::endl;
+      std::cout << "isMacroID: " << (location.isMacroID() ? "true" : "false") << std::endl;
+
       recordValue("name", d->getNameAsString());
       recordValue("qualname", getQualifiedName(*d));
-      recordValue("loc", locationToString(d->getLocation()));
-      recordValue("locend", locationToString(afterToken(d->getLocation())));
+      recordValue("loc", locationToString(location));
+      recordValue("locend", locationToString(afterToken(location)));
       recordValue("type", d->getType().getAsString(), true);
       const std::string &value = getValueForValueDecl(d);
       if (!value.empty())
         recordValue("value", value, true);
       printScope(d);
-      printExtent(d->getLocation(), d->getLocation());
+      printExtent(location, location);
       *out << std::endl;
+    } else {
+      std::cout << "untreated" << std::endl;
     }
+
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
       VarDecl *def = vd->getDefinition();
       if (!def) {
