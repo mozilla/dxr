@@ -242,6 +242,8 @@ def lines_from_csvs(folder, file_glob):
             for line in csv.reader(file):
                 yield line
 
+    # This globbing is stupid but actually not that slow: a few tenths of a
+    # second on a dir of 97K files in VirtualBox. That said, it does add up.
     paths = glob(join(folder, file_glob))
     return chain.from_iterable(lines_from_csv(p) for p in paths)
 
