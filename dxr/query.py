@@ -11,14 +11,6 @@ from dxr.plugins import all_plugins
 from dxr.utils import append_update
 
 
-# A dict mapping a filter name to a list of all filters having that name,
-# across all plugins
-FILTERS_NAMED = append_update(
-    {},
-    ((f.name, f) for f in
-     chain.from_iterable(p.filters for p in all_plugins().itervalues())))
-
-
 def _direct_searchers():
     """Return a list of all direct searchers, ordered by priority, then plugin
     name, then finally by function name.
@@ -41,12 +33,14 @@ DIRECT_SEARCHERS = _direct_searchers()
 class Query(object):
     """Query object, constructor will parse any search query"""
 
-    def __init__(self, es_search, querystr, is_case_sensitive=True):
+    def __init__(self, es_search, querystr, enabled_plugins, is_case_sensitive=True):
         self.es_search = es_search
         self.is_case_sensitive = is_case_sensitive
+        self.enabled_plugins = enabled_plugins
 
         # A list of dicts describing query terms:
-        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(query_grammar.parse(querystr))
+        q_grammar = query_grammar(enabled_plugins)
+        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(q_grammar.parse(querystr))
 
     def single_term(self):
         """Return the single, non-negated textual term in the query.
@@ -72,8 +66,7 @@ class Query(object):
         # list representing the filters of the name of the parallel term. We
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
-        filters = [[f(term) for f in FILTERS_NAMED[term['name']]] for term in
-                   self.terms]
+        filters = [[f(term) for f in all_filters_for_plugins(self.enabled_plugins)[term['name']]] for term in self.terms]
 
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
@@ -179,52 +172,70 @@ class Query(object):
                     return None
 
 
-query_grammar = Grammar(ur'''
-    query = _ terms
-    terms = term*
-    term = not_term / positive_term
-    not_term = not positive_term
-    positive_term = filtered_term / text
 
-    # A term with a filter name prepended:
-    filtered_term = maybe_plus filter ":" text
+def cached(c):
+    def cache_f(f):
+        def inner(enabled_plugins):
+            key = tuple(enabled_plugins)
+            if key in c:
+                return c[key]
 
-    # Bare or quoted text, possibly with spaces. Not empty.
-    text = (double_quoted_text / single_quoted_text / bare_text) _
+            result = f(enabled_plugins)
+            c[key] = result
+            return result
 
-    filter = ~r"''' +
-        # regexp, function, etc. No filter is a prefix of a later one. This
-        # avoids premature matches.
-        '|'.join(sorted((re.escape(filter_name) for
-                                filter_name, filters in
-                                FILTERS_NAMED.iteritems() if
-                                filters[0].description),
-                        key=len,
-                        reverse=True)) + ur'''"
+        return inner
+    return cache_f
 
-    not = "-"
 
-    # You can stick a plus in front of anything, and it'll parse, but it has
-    # meaning only with the filters where it makes sense.
-    maybe_plus = "+"?
+query_grammar_cache = {}
+@cached(query_grammar_cache)
+def query_grammar(enabled_plugins):
+    return Grammar(ur'''
+        query = _ terms
+        terms = term*
+        term = not_term / positive_term
+        not_term = not positive_term
+        positive_term = filtered_term / text
 
-    # Unquoted text until a space or EOL:
-    bare_text = ~r"[^ ]+"
+        # A term with a filter name prepended:
+        filtered_term = maybe_plus filter ":" text
 
-    # A string starting with a double quote and extending to {a double quote
-    # followed by a space} or {a double quote followed by the end of line} or
-    # {simply the end of line}, ignoring (that is, including) backslash-escaped
-    # quotes. The intent is to take quoted strings like `"hi \there"woo"` and
-    # take a good guess at what you mean even while you're still typing, before
-    # you've closed the quote. The motivation for providing backslash-escaping
-    # is so you can express trailing quote-space pairs without having the
-    # scanner prematurely end.
-    double_quoted_text = ~r'"(?P<content>(?:[^"\\]*(?:\\"|\\|"[^ ])*)*)(?:"(?= )|"$|$)'
-    # A symmetric rule for single quotes:
-    single_quoted_text = ~r"'(?P<content>(?:[^'\\]*(?:\\'|\\|'[^ ])*)*)(?:'(?= )|'$|$)"
+        # Bare or quoted text, possibly with spaces. Not empty.
+        text = (double_quoted_text / single_quoted_text / bare_text) _
 
-    _ = ~r"[ \t]*"
-    ''')
+        filter = ~r"''' +
+            # regexp, function, etc. No filter is a prefix of a later one. This
+            # avoids premature matches.
+            '|'.join(sorted((re.escape(filter_name) for
+                                    filter_name, f in
+                                    filters_for_plugins(enabled_plugins).iteritems()),
+                            key=len,
+                            reverse=True)) + ur'''"
+
+        not = "-"
+
+        # You can stick a plus in front of anything, and it'll parse, but it has
+        # meaning only with the filters where it makes sense.
+        maybe_plus = "+"?
+
+        # Unquoted text until a space or EOL:
+        bare_text = ~r"[^ ]+"
+
+        # A string starting with a double quote and extending to {a double quote
+        # followed by a space} or {a double quote followed by the end of line} or
+        # {simply the end of line}, ignoring (that is, including) backslash-escaped
+        # quotes. The intent is to take quoted strings like `"hi \there"woo"` and
+        # take a good guess at what you mean even while you're still typing, before
+        # you've closed the quote. The motivation for providing backslash-escaping
+        # is so you can express trailing quote-space pairs without having the
+        # scanner prematurely end.
+        double_quoted_text = ~r'"(?P<content>(?:[^"\\]*(?:\\"|\\|"[^ ])*)*)(?:"(?= )|"$|$)'
+        # A symmetric rule for single quotes:
+        single_quoted_text = ~r"'(?P<content>(?:[^'\\]*(?:\\'|\\|'[^ ])*)*)(?:'(?= )|'$|$)"
+
+        _ = ~r"[ \t]*"
+        ''')
 
 
 class QueryVisitor(NodeVisitor):
@@ -309,17 +320,50 @@ class QueryVisitor(NodeVisitor):
         """
         return visited_children or node
 
+def filters_per_plugin(enabled_plugins):
+    """Return a list of lists of filters, one list for each plugin in enabled_plugins"""
+    # A list of plugins for all enabled plugins
+    plugins = [p for (n, p) in all_plugins().iteritems() if n in enabled_plugins]
+    # A list of filters (with a non-null description) for each enabled plugin 
+    filters = [p.filters for p in plugins]
+    return filters
 
-def filter_menu_items():
+filters_for_plugins_cache = {}
+@cached(filters_for_plugins_cache)
+def filters_for_plugins(enabled_plugins):
+    """Return a mapping from filter names to a filter with that name."""
+
+    filters = filters_per_plugin(enabled_plugins)
+    # Flatten the list of lists into one list
+    filters = [f for fs in filters for f in fs]
+    # A mapping from filter names to the first filter with that name
+    filter_for_name = {}
+    for f in filters:
+        if f.name not in filter_for_name:
+            filter_for_name[f.name] = f
+
+    return filter_for_name
+
+
+all_filters_for_plugins_cache = {}
+@cached(all_filters_for_plugins_cache)
+def all_filters_for_plugins(enabled_plugins):
+    """Return a mapping from filter names to all filters (across plugins) with that name."""
+
+    filters = filters_per_plugin(enabled_plugins)
+    # Flatten the list of lists into one list
+    filters = [f for fs in filters for f in fs]
+    # A mapping from filter names to all filters with that name
+    return append_update({}, ((f.name, f) for f in filters))
+
+
+def filter_menu_items(enabled_plugins):
     """Return the additional template variables needed to render filter.html."""
-    # TODO: Take a 'tree' arg, and return only filters registered by plugins
-    # enabled on that tree. For this, we'll have to either add enabled plugins
-    # per tree to the request-time config file or unify configs at last.
     # TODO: Sort these in a stable order. But maybe common ones should be near
     # the top?
-    return (dict(name=name, description=filters[0].description) for
-            name, filters in
-            FILTERS_NAMED.iteritems() if filters[0].description)
+
+    return (dict(name=name, description=f.description) for
+            name, f in filters_for_plugins(enabled_plugins).iteritems() if f.description)
 
 
 def highlight(content, extents):
