@@ -7,27 +7,26 @@ from parsimonious import Grammar, NodeVisitor
 
 from dxr.filters import LINE, FILE
 from dxr.mime import icon
-from dxr.plugins import all_plugins
-from dxr.utils import append_update
+from dxr.utils import append_update, cached
 
 
-def _direct_searchers():
+@cached
+def direct_searchers(plugins):
     """Return a list of all direct searchers, ordered by priority, then plugin
     name, then finally by function name.
 
     This is meant to at least yield a stable order if priorities are not
     unique.
 
+    :arg plugins: An iterable of Plugins
+
     """
     sortables = []
-    for plugin_name, plugin in all_plugins().iteritems():
+    for plugin in plugins:
         for s in plugin.direct_searchers:
-            sortables.append((s, (s.direct_search_priority, plugin_name, s.__name__)))
+            sortables.append((s, (s.direct_search_priority, plugin.name, s.__name__)))
     sortables.sort(key=itemgetter(1))
     return [searcher for searcher, _ in sortables]
-
-
-DIRECT_SEARCHERS = _direct_searchers()
 
 
 class Query(object):
@@ -36,11 +35,11 @@ class Query(object):
     def __init__(self, es_search, querystr, enabled_plugins, is_case_sensitive=True):
         self.es_search = es_search
         self.is_case_sensitive = is_case_sensitive
-        self.enabled_plugins = enabled_plugins
+        self.enabled_plugins = list(enabled_plugins)
 
         # A list of dicts describing query terms:
-        q_grammar = query_grammar(enabled_plugins)
-        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(q_grammar.parse(querystr))
+        grammar = query_grammar(self.enabled_plugins)
+        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
 
     def single_term(self):
         """Return the single, non-negated textual term in the query.
@@ -66,7 +65,9 @@ class Query(object):
         # list representing the filters of the name of the parallel term. We
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
-        filters = [[f(term) for f in all_filters_for_plugins(self.enabled_plugins)[term['name']]] for term in self.terms]
+        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
+        filters = [[f(term) for f in enabled_filters_by_name[term['name']]]
+                   for term in self.terms]
 
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
@@ -148,7 +149,7 @@ class Query(object):
         if not term:
             return None
 
-        for searcher in DIRECT_SEARCHERS:
+        for searcher in direct_searchers(self.enabled_plugins):
             clause = searcher(term)
             if clause:
                 results = self.es_search(
@@ -172,25 +173,13 @@ class Query(object):
                     return None
 
 
-
-def cached(c):
-    def cache_f(f):
-        def inner(enabled_plugins):
-            key = tuple(enabled_plugins)
-            if key in c:
-                return c[key]
-
-            result = f(enabled_plugins)
-            c[key] = result
-            return result
-
-        return inner
-    return cache_f
-
-
-query_grammar_cache = {}
-@cached(query_grammar_cache)
-def query_grammar(enabled_plugins):
+@cached
+def query_grammar(plugins):
+    """Return a query-parsing grammar for some set of plugins.
+    
+    :arg plugins: An iterable of Plugins
+    
+    """
     return Grammar(ur'''
         query = _ terms
         terms = term*
@@ -208,8 +197,9 @@ def query_grammar(enabled_plugins):
             # regexp, function, etc. No filter is a prefix of a later one. This
             # avoids premature matches.
             '|'.join(sorted((re.escape(filter_name) for
-                                    filter_name, f in
-                                    filters_for_plugins(enabled_plugins).iteritems()),
+                             filter_name, filters in
+                             filters_by_name(plugins).iteritems() if
+                             filters[0].description),
                             key=len,
                             reverse=True)) + ur'''"
 
@@ -320,51 +310,33 @@ class QueryVisitor(NodeVisitor):
         """
         return visited_children or node
 
-def filters_per_plugin(enabled_plugins):
-    """Return a list of filters for each plugin in enabled_plugins"""
-    # A list of plugins for all enabled plugins
-    plugins = [p for (n, p) in all_plugins().iteritems() if n in enabled_plugins]
-    # A list of filters (with a non-null description) for each enabled plugin 
-    filters = [[f for f in p.filters if f.description] for p in plugins]
-    return filters
+
+@cached
+def filters_by_name(plugins):
+    """Return a mapping of filter names to all filters with that name,
+    regardless of whether they have descriptions
+
+    :arg plugins: An iterable of plugins from which to get filters
+
+    """
+    return append_update(
+        {},
+        ((f.name, f) for f in
+         chain.from_iterable(p.filters for p in plugins)))
 
 
-filters_for_plugins_cache = {}
-@cached(filters_for_plugins_cache)
-def filters_for_plugins(enabled_plugins):
-    """Return a mapping from filter names to filters."""
-
-    filters = filters_per_plugin(enabled_plugins)
-    # Flatten the list of lists into one list
-    filters = [f for fs in filters for f in fs]
-    # A mapping from filter names to the first filter with that name
-    filter_for_name = {}
-    for f in filters:
-        if f.name not in filter_for_name:
-            filter_for_name[f.name] = f
-
-    return filter_for_name
-
-
-all_filters_for_plugins_cache = {}
-@cached(all_filters_for_plugins_cache)
-def all_filters_for_plugins(enabled_plugins):
-    """Return a mapping from a filter name to a list of filters."""
-
-    filters = filters_per_plugin(enabled_plugins)
-    # Flatten the list of lists into one list
-    filters = [f for fs in filters for f in fs]
-    # A mapping from filter names to all filters with that name
-    return append_update({}, ((f.name, f) for f in filters))
-
-
-def filter_menu_items(enabled_plugins):
-    """Return the additional template variables needed to render filter.html."""
+def filter_menu_items(plugins):
+    """Return the additional template variables needed to render filter.html.
+    
+    :arg plugins: An iterable of Plugins whose filters to put in the Filters
+        menu
+    
+    """
     # TODO: Sort these in a stable order. But maybe common ones should be near
     # the top?
-
-    return (dict(name=name, description=f.description) for
-            name, f in filters_for_plugins(enabled_plugins).iteritems())
+    return (dict(name=name, description=filters[0].description)
+            for name, filters in filters_by_name(plugins).iteritems()
+            if filters[0].description)
 
 
 def highlight(content, extents):

@@ -197,10 +197,22 @@ def all_plugins():
         object = entry_point.load()
         plugin = (object if isinstance(object, Plugin) else
                   Plugin.from_namespace(object.__dict__))
+        plugin.name = entry_point.name
         return entry_point.name, plugin
 
     ret = OrderedDict()
     ret['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
+    ret['core'].name = 'core'
     ret.update(name_and_plugin(point) for point in
                iter_entry_points('dxr.plugins'))
     return ret
+
+
+def plugins_named(names):
+    """Return an iterable of Plugins having the given names.
+
+    :arg names: An iterable of plugin names
+
+    """
+    plugins = all_plugins()
+    return (plugins[name] for name in names)

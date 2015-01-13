@@ -524,7 +524,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,
              'google_analytics_key': tree.config.google_analytics_key,
-             'filters': filter_menu_items(tree.enabled_plugins),
+             'filters': filter_menu_items(tree.enabled_plugins.itervalues()),
 
              # File template variables:
              'paths_and_names': linked_pathname(rel_path, tree.name),

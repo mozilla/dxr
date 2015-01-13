@@ -15,6 +15,7 @@ from dxr.build import linked_pathname
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE
 from dxr.mime import icon
+from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime
 
@@ -79,7 +80,7 @@ def search(tree):
     query = Query(partial(current_app.es.search,
                           index=config['ES_ALIASES'][tree]),
                   query_text,
-                  config['ENABLED_PLUGINS'],
+                  plugins_named(config['ENABLED_PLUGINS']),
                   is_case_sensitive=is_case_sensitive)
 
     # Fire off one of the two search routines:
@@ -131,7 +132,8 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     # Try a normal search:
     template_vars = {
-            'filters': filter_menu_items(config['ENABLED_PLUGINS']),
+            'filters': filter_menu_items(plugins_named(
+                    config['ENABLED_PLUGINS'])),
             'generated_date': config['GENERATED_DATE'],
             'google_analytics_key': config['GOOGLE_ANALYTICS_KEY'],
             'is_case_sensitive': is_case_sensitive,
@@ -210,7 +212,8 @@ def browse(tree, path=''):
             generated_date=config['GENERATED_DATE'],
             google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
             paths_and_names=linked_pathname(path, tree),
-            filters=filter_menu_items(config['ENABLED_PLUGINS']),
+            filters=filter_menu_items(plugins_named(
+                    config['ENABLED_PLUGINS'])),
             # Autofocus only at the root of each tree:
             should_autofocus_query=path == '',
 

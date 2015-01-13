@@ -5,6 +5,7 @@ from unittest import TestCase
 
 from nose.tools import eq_
 
+from dxr.plugins import plugins_named
 from dxr.query import query_grammar, QueryVisitor
 
 
@@ -12,7 +13,7 @@ class VisitorTests(TestCase):
     """Make sure ``QueryVisitor`` is putting together sane data structures."""
 
     def visit(self, query):
-        return QueryVisitor().visit(query_grammar(['core', 'clang']).parse(query))
+        return QueryVisitor().visit(query_grammar(plugins_named(['core', 'clang'])).parse(query))
 
     def test_overall(self):
         """Test the overall structure."""
