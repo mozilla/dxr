@@ -1,8 +1,9 @@
-from commands import getstatusoutput
+import commands
 import json
 from os import chdir, mkdir
 import os.path
 from os.path import dirname
+import re
 from shutil import rmtree
 import sys
 from tempfile import mkdtemp
@@ -41,7 +42,7 @@ def run(command):
     `CommandFailure`.
 
     """
-    status, output = getstatusoutput(command)
+    status, output = commands.getstatusoutput(command)
     if status:
         raise CommandFailure(command, status, output)
     return output
@@ -125,6 +126,15 @@ class TestCase(unittest.TestCase):
             '/code/search?format=json&q=%s&redirect=false&case=%s' %
             (quote(query), 'true' if is_case_sensitive else 'false'))
         return json.loads(response.data)['results']
+
+    def clang_at_least(self, version):
+        output = commands.getoutput("clang --version")
+        if not output:
+            return False
+        match = re.match("clang version ([0-9]+\.[0-9]+)", output)
+        if not match:
+            return False
+        return float(match.group(1)) >= version
 
 
 class DxrInstanceTestCase(TestCase):

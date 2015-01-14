@@ -168,11 +168,15 @@ def build_instance(config_path, nb_jobs=None, tree=None, verbose=False):
             print "Building HTML for the '%s' tree." % tree.name
 
             max_file_id = conn.execute("SELECT max(files.id) FROM files").fetchone()[0]
-            if config.disable_workers:
-                print " - Worker pool disabled (due to 'disable_workers')"
-                _build_html_for_file_ids(tree, 0, max_file_id)
+
+            if max_file_id:
+                if config.disable_workers:
+                    print " - Worker pool disabled (due to 'disable_workers')"
+                    _build_html_for_file_ids(tree, 0, max_file_id)
+                else:
+                    run_html_workers(tree, config, max_file_id)
             else:
-                run_html_workers(tree, config, max_file_id)
+                    print " - Skipping htmlifying (due to '%s' tree being empty)" % tree.name
 
         # Close connection
         conn.commit()
