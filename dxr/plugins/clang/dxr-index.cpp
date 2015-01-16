@@ -314,19 +314,6 @@ public:
     return loc;
   }
 
-  // TODO: Quit using and delete this.
-  void printExtent(SourceLocation begin, SourceLocation end) {
-    if (!end.isValid())
-      end = begin;
-    begin = escapeMacros(begin);
-    end   = escapeMacros(end);
-    if (!begin.isValid() || !end.isValid())
-      return;
-    *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
-      sm.getDecomposedSpellingLoc(
-        Lexer::getLocForEndOfToken(end, 0, sm, features)).second;
-  }
-
   Decl *getNonClosureDecl(Decl *d)
   {
     DeclContext *dc;
@@ -370,7 +357,6 @@ public:
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
       recordValue("kind", kind);
-    printExtent(begin, end);
     *out << std::endl;
   }
 
@@ -426,8 +412,6 @@ public:
       recordValue("locend", locationToString(afterToken(begin)));
       recordValue("kind", d->getKindName());
       printScope(d);
-      // Linkify the name, not the `enum'
-      printExtent(nd->getLocation(), nd->getLocation());
       *out << std::endl;
     }
 
@@ -494,7 +478,6 @@ public:
       recordValue("loc", locationToString(d->getNameInfo().getBeginLoc()));
       recordValue("locend", locationToString(afterToken(d->getNameInfo().getEndLoc())));
       printScope(d);
-      printExtent(d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
 
       // Print out overrides
       if (CXXMethodDecl::classof(d)) {  // It's a method.
@@ -596,7 +579,6 @@ public:
       if (!value.empty())
         recordValue("value", value, true);
       printScope(d);
-      printExtent(location, location);
       *out << std::endl;
     }
 
@@ -651,7 +633,6 @@ public:
     recordValue("locend", locationToString(afterToken(d->getLocation())));
 //    recordValue("underlying", d->getUnderlyingType().getAsString());
     printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -668,7 +649,6 @@ public:
     recordValue("loc", locationToString(d->getLocation()));
     recordValue("locend", locationToString(afterToken(d->getLocation())));  // TODO: d->getNameInfo()?
     printScope(d);
-    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -683,7 +663,6 @@ public:
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getLocation()));
     recordValue("locend", locationToString(afterToken(d->getLocation())));
-    printExtent(d->getLocation(), d->getLocation());
     *out << std::endl;
     return true;
   }
@@ -699,7 +678,6 @@ public:
     recordValue("qualname", getQualifiedName(*d));
     recordValue("loc", locationToString(d->getAliasLoc()));
     recordValue("locend", locationToString(afterToken(d->getAliasLoc())));
-    printExtent(d->getAliasLoc(), d->getAliasLoc());
     *out << std::endl;
 
     if (d->getQualifierLoc())
@@ -759,7 +737,6 @@ public:
       recordValue("kind", kind);
     recordValue("name", d->getNameAsString());
     recordValue("qualname", getQualifiedName(*d));
-    printExtent(refLoc, end);
     *out << std::endl;
   }
 
@@ -1011,12 +988,10 @@ public:
       SourceLocation warningEnd = getWarningExtentLocation(afterToken(range.getEnd()));
       recordValue("loc", locationToString(warningBeginning));
       recordValue("locend", locationToString(warningEnd));
-      printExtent(warningBeginning, warningEnd);
     } else {
       SourceLocation loc = getWarningExtentLocation(info.getLocation());
-      recordValue("loc", locationToString(loc)); //NEXT: what to do for locend?
+      recordValue("loc", locationToString(loc));
       recordValue("locend", locationToString(afterToken(loc)));  // Not great, but it's basically what it did before, via printExtent
-      printExtent(loc, loc);
     }
     *out << std::endl;
   }
@@ -1072,7 +1047,6 @@ public:
           text[i] = '?';
       recordValue("text", text, true);
     }
-    printExtent(nameStart, nameStart);
     *out << std::endl;
   }
 
@@ -1094,7 +1068,6 @@ public:
     recordValue("loc", locationToString(refLoc));
     recordValue("locend", locationToString(afterToken(refLoc)));
     recordValue("kind", "macro");
-    printExtent(refLoc, refLoc);
     *out << std::endl;
   }
 
@@ -1155,7 +1128,6 @@ public:
     recordValue("target_path", target->realname);
     recordValue("loc", locationToString(targetBegin));
     recordValue("locend", locationToString(targetEnd));
-    printExtent(targetBegin, targetEnd);
     *out << std::endl;
   }
 
