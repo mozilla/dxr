@@ -301,9 +301,11 @@ public:
     *out << value.substr(start) << "\"";
   }
 
-  // This has something to do with linkifying macro args when they're a
-  // reference to or a definition of something.
-  SourceLocation expandMacroArgs(SourceLocation loc) {
+  // If we're in a macro definition or even a stack of macros that all call
+  // each other, walk up out that mess, back to the place that called the
+  // first macro. This is useful for getting back to the actual place that
+  // cites a variable that then gets passed to a macro.
+  SourceLocation escapeMacros(SourceLocation loc) {
     while (loc.isValid() && loc.isMacroID())
     {
       if (!sm.isMacroArgExpansion(loc))
@@ -317,8 +319,8 @@ public:
   void printExtent(SourceLocation begin, SourceLocation end) {
     if (!end.isValid())
       end = begin;
-    begin = expandMacroArgs(begin);
-    end   = expandMacroArgs(end);
+    begin = escapeMacros(begin);
+    end   = escapeMacros(end);
     if (!begin.isValid() || !end.isValid())
       return;
     *out << ",extent," << sm.getDecomposedSpellingLoc(begin).second << ":" <<
@@ -364,7 +366,7 @@ public:
     beginRecord("decldef", decl->getLocation());  // Assuming this is an expansion location.
     recordValue("name", decl->getNameAsString());
     recordValue("qualname", getQualifiedName(*def));
-    recordValue("loc", locationToString(decl->getLocation()));  // TODO: Of course, this used to call printExtent, which called expandMacroArgs. If this fails the macro tests, start calling expandMacroArgs and doing other things that printExtent did.
+    recordValue("loc", locationToString(decl->getLocation()));  // TODO: Of course, this used to call printExtent, which called escapeMacros. If this fails the macro tests, start calling escapeMacros and doing other things that printExtent did.
     recordValue("locend", locationToString(afterToken(decl->getLocation())));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
@@ -580,7 +582,7 @@ public:
   // I've confirmed that the tip of es does the right thing.
   // Let's see if just pasting in the dxr-index.cpp code from es does the right thing. It does. So the problem is in here somewhere. So let's see REALLY if this is being called. IT IS!
   void visitVariableDecl(ValueDecl *d) {
-    SourceLocation location = expandMacroArgs(d->getLocation());
+    SourceLocation location = escapeMacros(d->getLocation());
     std::cout << "visitVariableDecl!!!!! " << d->getNameAsString() << std::endl;
     if (!interestingLocation(location)) {
       std::cout << "uninteresting" << std::endl;
@@ -758,11 +760,11 @@ public:
   void printReference(const char *kind, NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
-    SourceLocation nonMacroRefLoc = expandMacroArgs(refLoc);
+    SourceLocation nonMacroRefLoc = escapeMacros(refLoc);
     beginRecord("ref", nonMacroRefLoc);
     recordValue("defloc", locationToString(d->getLocation()));
     recordValue("loc", locationToString(nonMacroRefLoc));
-    recordValue("locend", locationToString(afterToken(expandMacroArgs(end))));
+    recordValue("locend", locationToString(afterToken(escapeMacros(end))));
     if (kind)
       recordValue("kind", kind);
     recordValue("name", d->getNameAsString());
