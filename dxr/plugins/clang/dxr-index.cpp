@@ -529,7 +529,7 @@ public:
       const CXXCtorInitializer *ci = *it;
       if (!ci->getMember() || !ci->isWritten())
         continue;
-      printReference("variable", ci->getMember(), ci->getMemberLocation(), afterToken(ci->getMemberLocation()));
+      printReference("variable", ci->getMember(), ci->getMemberLocation(), ci->getMemberLocation());
     }
 
     return true;
@@ -723,7 +723,7 @@ public:
       return true;
     if (d->getQualifierLoc())
       visitNestedNameSpecifierLoc(d->getQualifierLoc());
-    printReference("namespace", d->getNominatedNamespace(), d->getIdentLocation(), afterToken(d->getIdentLocation()));
+    printReference("namespace", d->getNominatedNamespace(), d->getIdentLocation(), d->getIdentLocation());
     return true;
   }
 
@@ -758,10 +758,11 @@ public:
   void printReference(const char *kind, NamedDecl *d, SourceLocation refLoc, SourceLocation end) {
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
-    beginRecord("ref", refLoc);
+    SourceLocation nonMacroRefLoc = expandMacroArgs(refLoc);
+    beginRecord("ref", nonMacroRefLoc);
     recordValue("defloc", locationToString(d->getLocation()));
-    recordValue("loc", locationToString(refLoc));
-    recordValue("locend", locationToString(end));
+    recordValue("loc", locationToString(nonMacroRefLoc));
+    recordValue("locend", locationToString(afterToken(expandMacroArgs(end))));
     if (kind)
       recordValue("kind", kind);
     recordValue("name", d->getNameAsString());
@@ -783,7 +784,7 @@ public:
     printReference(kindForDecl(e->getMemberDecl()),
                    e->getMemberDecl(),
                    e->getExprLoc(),
-                   afterToken(e->getSourceRange().getEnd()));
+                   e->getSourceRange().getEnd());
     return true;
   }
 
@@ -805,7 +806,7 @@ public:
     printReference(kindForDecl(e->getDecl()),
                    e->getDecl(),
                    start,
-                   afterToken(end));
+                   end);
     return true;
   }
 
@@ -896,7 +897,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("type", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
+    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
@@ -904,7 +905,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
+    printReference("typedef", l.getTypedefNameDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
@@ -921,7 +922,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("type", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
+    printReference("type", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     return true;
   }
 
@@ -931,7 +932,7 @@ public:
 
     TemplateDecl *td = l.getTypePtr()->getTemplateName().getAsTemplateDecl();
     if (ClassTemplateDecl *d = dyn_cast<ClassTemplateDecl>(td))
-      printReference("type", d, l.getTemplateNameLoc(), afterToken(l.getTemplateNameLoc()));
+      printReference("type", d, l.getTemplateNameLoc(), l.getTemplateNameLoc());
 
     return true;
   }
@@ -940,7 +941,7 @@ public:
     if (!interestingLocation(l.getBeginLoc()))
       return true;
 
-    printReference("typedef", l.getDecl(), l.getBeginLoc(), afterToken(l.getEndLoc()));
+    printReference("typedef", l.getDecl(), l.getBeginLoc(), l.getEndLoc());
     // TODO: It seems like a lot of the (presumably working) old stuff used getBeginLoc and getEndLoc. Try switching to those where available if things don't work.
     return true;
   }
@@ -980,9 +981,9 @@ public:
 
     NestedNameSpecifier *nss = l.getNestedNameSpecifier();
     if (nss->getKind() == NestedNameSpecifier::Namespace)
-      printReference("namespace", nss->getAsNamespace(), begin, afterToken(end));
+      printReference("namespace", nss->getAsNamespace(), begin, end);
     else if (nss->getKind() == NestedNameSpecifier::NamespaceAlias)
-      printReference("namespace_alias", nss->getAsNamespaceAlias(), begin, afterToken(end));
+      printReference("namespace_alias", nss->getAsNamespaceAlias(), begin, end);
   }
 
   // Warnings!
