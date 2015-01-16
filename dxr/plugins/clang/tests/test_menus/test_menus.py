@@ -5,8 +5,6 @@ right stuff and that that stuff makes it through the DXR clang plugin
 unscathed.
 
 """
-from nose import SkipTest
-
 from dxr.testing import DxrInstanceTestCase, menu_on
 
 

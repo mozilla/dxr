@@ -113,29 +113,17 @@ def process_span(props):
 
 def _split_loc(locstring):
     """Turn a path:row:col string into (path, row, col)."""
+    if not locstring:
+        # Empty loc or locend means the SourceLocation was invalid.
+        raise UselessLine
     path, row, col = locstring.rsplit(':', 2)
     return path, int(row), int(col)
 
 
 def _process_loc(locstring):
     """Turn a path:row:col string into (path, Position)."""
-    if locstring is None:
-        return None
-
     src, row, col = _split_loc(locstring)
     return src, Position(row, col)
-
-
-def process_declloc(props):
-    """Return Position based on declloc."""
-    props['declloc'] = _process_loc(props['declloc'])
-    return props
-
-
-def process_defloc(props):
-    """Return Position based on defloc and extent."""
-    props['defloc'] = _process_loc(props['defloc'])
-    return props
 
 
 def process_impl(parents, children, props):
@@ -190,10 +178,10 @@ def condense_line(dispatch_table, kind, fields):
         fields = process_span(fields)
 
     if 'declloc' in fields:
-        fields = process_declloc(fields)
+        fields['declloc'] = _process_loc(fields['declloc'])
 
     if 'defloc' in fields:
-        fields = process_defloc(fields)
+        fields['defloc'] = _process_loc(fields['defloc'])
 
     return fields
 
