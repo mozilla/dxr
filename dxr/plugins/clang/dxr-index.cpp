@@ -195,7 +195,7 @@ public:
     // guaranteed to stay within the same file as "out" points to.
     unsigned column = sm.getExpansionColumnNumber(loc, &isInvalid);
 
-    if (!isInvalid) {  // TODO: Make sure the Python happily skips CSV lines with empty locs and locends.
+    if (!isInvalid) {
       unsigned line = sm.getExpansionLineNumber(loc, &isInvalid);
       if (!isInvalid) {
         buffer = getFileInfo(sm.getFilename(loc).str())->realname;  // getFilename seems to want a SpellingLoc. I may be disappointing it. I'm not sure what it will do if it's disappointed.

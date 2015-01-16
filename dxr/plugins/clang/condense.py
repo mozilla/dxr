@@ -113,15 +113,15 @@ def process_span(props):
 
 def _split_loc(locstring):
     """Turn a path:row:col string into (path, row, col)."""
+    if not locstring:
+        # Empty loc or locend means the SourceLocation was invalid.
+        raise UselessLine
     path, row, col = locstring.rsplit(':', 2)
     return path, int(row), int(col)
 
 
 def _process_loc(locstring):
     """Turn a path:row:col string into (path, Position)."""
-    if locstring is None:
-        return None
-
     src, row, col = _split_loc(locstring)
     return src, Position(row, col)
 
