@@ -280,7 +280,6 @@ public:
     // rather have the expansion location than the presumed one, as we're not
     // interested in lies told by the #lines directive.
     StringRef filename = sm.getFilename(loc);
-    std::cout << "beginRecord on filename " << filename.str() << std::endl;  // Empty filenames are being emitted here for the failing vars only.
     FileInfo *f = getFileInfo(filename);
     out = &f->info;
     *out << name;
@@ -366,7 +365,7 @@ public:
     beginRecord("decldef", decl->getLocation());  // Assuming this is an expansion location.
     recordValue("name", decl->getNameAsString());
     recordValue("qualname", getQualifiedName(*def));
-    recordValue("loc", locationToString(decl->getLocation()));  // TODO: Of course, this used to call printExtent, which called escapeMacros. If this fails the macro tests, start calling escapeMacros and doing other things that printExtent did.
+    recordValue("loc", locationToString(decl->getLocation()));
     recordValue("locend", locationToString(afterToken(decl->getLocation())));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
@@ -583,18 +582,11 @@ public:
   // Let's see if just pasting in the dxr-index.cpp code from es does the right thing. It does. So the problem is in here somewhere. So let's see REALLY if this is being called. IT IS!
   void visitVariableDecl(ValueDecl *d) {
     SourceLocation location = escapeMacros(d->getLocation());
-    std::cout << "visitVariableDecl!!!!! " << d->getNameAsString() << std::endl;
     if (!interestingLocation(location)) {
-      std::cout << "uninteresting" << std::endl;
       return;
     }
     if (treatThisValueDeclAsADefinition(d)) {
-      std::cout << "treated" << std::endl;  // Gets this far. So beginRecord must be broken.
       beginRecord("variable", location);
-
-      std::cout << "isValid: " << (location.isValid() ? "true" : "false") << std::endl;
-      std::cout << "isMacroID: " << (location.isMacroID() ? "true" : "false") << std::endl;
-
       recordValue("name", d->getNameAsString());
       recordValue("qualname", getQualifiedName(*d));
       recordValue("loc", locationToString(location));
@@ -606,8 +598,6 @@ public:
       printScope(d);
       printExtent(location, location);
       *out << std::endl;
-    } else {
-      std::cout << "untreated" << std::endl;
     }
 
     if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
