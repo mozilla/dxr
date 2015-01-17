@@ -504,7 +504,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         # Indexing a 277K-line file all in one request makes ES time out
         # (>60s), so we chunk it up:
         for chunk_of_needles in chunked(
-                (merge(n, needles) for n in needles_by_line), 5000):
+                (merge(n, needles) for n in needles_by_line), 300):
             es.bulk_index(index, LINE, chunk_of_needles, id_field=None)
 
     # Render some HTML:
