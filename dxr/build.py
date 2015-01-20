@@ -1,6 +1,7 @@
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
+from itertools import chain
 from operator import attrgetter
 import os
 from os import stat, mkdir
@@ -455,7 +456,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
     num_lines = len(contents.splitlines())
     needles = {}
-    links, refs, regions = [], [], []
+    linkses, refses, regionses = [], [], []
     needles_by_line = [{} for _ in xrange(num_lines)]
     annotations_by_line = [[] for _ in xrange(num_lines)]
 
@@ -464,9 +465,9 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         if file_to_index.is_interesting():
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
-            links.extend(file_to_index.links())
-            refs.extend(file_to_index.refs())
-            regions.extend(file_to_index.regions())
+            linkses.append(file_to_index.links())
+            refses.append(file_to_index.refs())
+            regionses.append(file_to_index.regions())
 
             # Per-line stuff:
             if is_text:
@@ -535,12 +536,14 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              # Someday, it would be great to stream this and not concretize the
              # whole thing in RAM. The template will have to quit looping
              # through the whole thing 3 times.
-             'lines': zip(build_lines(contents, refs, regions),
+             'lines': zip(build_lines(contents,
+                                      chain.from_iterable(refses),
+                                      chain.from_iterable(regionses)),
                           annotations_by_line) if is_text else [],
 
              'is_text': is_text,
 
-             'sections': build_sections(links)})
+             'sections': build_sections(chain.from_iterable(linkses))})
 
 
 def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
