@@ -563,6 +563,26 @@ def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
             raise
 
 
+def create_and_index_folders(tree, index, es):
+    """Make the folder tree to contain the HTML files, and index the folder
+    hierarchy into ES.
+
+    """
+    for folder in unignored(
+            tree.source_folder,
+            tree.ignore_paths,
+            tree.ignore_patterns,
+            want_folders=True):
+        rel_path = relpath(folder, tree.source_folder)
+        mkdir(join(tree.target_folder, rel_path))
+        superfolder_path, folder_name = split(rel_path)
+        es.index(index, FILE, {
+            'path': [rel_path],  # array for consistency with non-folder file docs
+            'folder': superfolder_path,
+            'name': folder_name,
+            'is_folder': True})
+
+
 def index_files(tree, tree_indexers, index, pool, es):
     """Divide source files into groups, and send them out to be indexed."""
 
@@ -572,23 +592,9 @@ def index_files(tree, tree_indexers, index, pool, es):
                                      tree.ignore_paths,
                                      tree.ignore_patterns))
 
-    # Lay down all the containing folders so we can generate the file HTML in
-    # parallel:
-#    with es.bulk_indexing(doctype=FILE, index=, size=100) as indexer:
-    for folder in unignored(
-            tree.source_folder,
-            tree.ignore_paths,
-            tree.ignore_patterns,
-            want_folders=True):
-        rel_path = relpath(folder, tree.source_folder)
-        mkdir(join(tree.target_folder, rel_path))
-        superfolder_path, folder_name = split(rel_path)
-#        indexer.index({
-        es.index(index, FILE, {
-            'path': [rel_path],  # array for consistency with non-folder file docs
-            'folder': superfolder_path,
-            'name': folder_name,
-            'is_folder': True})
+    # We lay down all the containing folders up front so we can generate the
+    # file HTML in parallel.
+    create_and_index_folders(tree, index, es)
 
     if tree.config.disable_workers:
         for paths in path_chunks(tree):
