@@ -29,6 +29,13 @@ IRC
 We hang out in the #static channel of irc.mozilla.org. Poke your head in, and
 say hello.
 
+If you have questions, please address them to the public channel; don't /msg
+someone in particular. That way, more people have a chance at answering your
+question, and more people can benefit from hearing the answers. We realize
+that no one likes looking naive, but please be brave and set an example to
+embolden the less-brave naive people. We're a friendly bunch and will never
+deride anyone for being a beginner.
+
 
 Open Bugs
 =========
