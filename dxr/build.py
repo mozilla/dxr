@@ -282,7 +282,7 @@ def index_tree(tree, es, verbose=False):
             raise
 
     print " - Finished processing '%s' in %s." % (tree.name,
-                                                      datetime.now() - start_time)
+                                                  datetime.now() - start_time)
 
     return index
 
@@ -546,18 +546,34 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              'sections': build_sections(chain.from_iterable(linkses))})
 
 
-def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
+def index_chunk(tree,
+                tree_indexers,
+                paths,
+                index,
+                swallow_exc=False,
+                worker_number=None):
     """Index a pile of files.
 
     This is the entrypoint for indexer pool workers.
+
+    :arg worker_number: A unique number assigned to this worker so it knows
+        what to call its log file
 
     """
     path = '(no file yet)'
     try:
         es = ElasticSearch(tree.config.es_hosts)
         jinja_env = load_template_env()
-        for path in paths:
-            index_file(tree, tree_indexers, path, es, index, jinja_env)
+        try:
+            # Don't log if single-process:
+            log = (worker_number and
+                   open_log(tree, 'index-chunk-%s.log' % worker_number))
+            for path in paths:
+                log and log.write('Starting %s.\n' % path)
+                index_file(tree, tree_indexers, path, es, index, jinja_env)
+            log and log.write('Finished chunk.\n')
+        finally:
+            log and log.close()
     except Exception as exc:
         if swallow_exc:
             type, value, traceback = exc_info()
@@ -601,11 +617,20 @@ def index_files(tree, tree_indexers, index, pool, es):
 
     if tree.config.disable_workers:
         for paths in path_chunks(tree):
-            result = index_chunk(tree, tree_indexers, paths, index,
-                                 swallow_exc=False)
+            index_chunk(tree,
+                        tree_indexers,
+                        paths,
+                        index,
+                        swallow_exc=False)
     else:
-        futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index,
-                               swallow_exc=True) for paths in path_chunks(tree)]
+        futures = [pool.submit(index_chunk,
+                               tree,
+                               tree_indexers,
+                               paths,
+                               index,
+                               worker_number=worker_number,
+                               swallow_exc=True)
+                   for worker_number, paths in enumerate(path_chunks(tree), 1)]
         for future in show_progress(futures, message=' - Indexing files.'):
             result = future.result()
             if result:
@@ -655,7 +680,7 @@ def build_tree(tree, tree_indexers, verbose):
 
 
 def build_sections(links):
-    """ Build navigation sections for template """
+    """Build navigation pane for template."""
     # Sort by importance (resolve ties by section name)
     links = sorted(links, key=lambda section: (section[0], section[1]))
     # Return list of section and items (without importance)
