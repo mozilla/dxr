@@ -166,6 +166,14 @@ def _tree_tuples(trees, tree, query_text, is_case_sensitive):
             for t, description in trees.iteritems()]
 
 
+def _es_alias_or_not_found(tree):
+    """Return the elasticsearch alias for a tree, or raise NotFound."""
+    try:
+        return current_app.config['ES_ALIASES'][tree]
+    except KeyError:
+        raise NotFound
+
+
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
@@ -192,7 +200,7 @@ def browse(tree, path=''):
                 },
                 'sort': [{'is_folder': 'desc'}, 'name']
             },
-            index=config['ES_ALIASES'][tree],
+            index=_es_alias_or_not_found(tree),
             doc_type=FILE,
             size=10000)['hits']['hits']]
 
@@ -233,6 +241,8 @@ def browse(tree, path=''):
 @dxr_blueprint.route('/<tree>')
 def tree_root(tree):
     """Redirect requests for the tree root instead of giving 404s."""
+    # Don't do a redirect and then 404; that's tacky:
+    _es_alias_or_not_found(tree)
     return redirect(tree + '/source/')
 
 
