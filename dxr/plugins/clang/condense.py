@@ -266,7 +266,7 @@ def condense_global(csv_folder):
 
     """
     def listify_keys(d):
-        """Fore a dict having values that are sets, turn those into lists."""
+        """For a dict having values that are sets, turn those into lists."""
         for k, v in d.iteritems():
             d[k] = list(v)
 
