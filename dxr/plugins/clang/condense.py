@@ -65,11 +65,11 @@ def process_override(overrides, overriddens, props):
     qualname and name of the overriding method, and squirrel it away in
     ``overriddens``, keyed by base qualname::
 
-        {'Base::foo()': [('Derived::foo()', 'foo')]}
+        {'Base::foo()': set([('Derived::foo()', 'foo')])}
 
     Also store the reverse mapping (override to overridden), in ``overrides``::
 
-        {'Derived::foo()': [('Base::foo()', 'foo')]}
+        {'Derived::foo()': set([('Base::foo()', 'foo')])}
 
     This lets return indirect overrides (not just direct ones) in "overrides"
     queries.
@@ -78,13 +78,13 @@ def process_override(overrides, overriddens, props):
     # It may not be necessary to have a list here. In multiple inheritance,
     # does clang ever consider a method to override multiple other methods, or
     # is it at most one each?
-    overrides.setdefault(props['qualname'], []).append(
+    overrides.setdefault(props['qualname'], set()).add(
             (props['overriddenqualname'], props['overriddenname']))
 
     # We store the unqualified name separately for each override because,
     # while it's usually the same for each, it can be different for an
     # overridden destructor.
-    overriddens.setdefault(props['overriddenqualname'], []).append(
+    overriddens.setdefault(props['overriddenqualname'], set()).add(
             (props['qualname'], props['name']))
 
     # No sense wasting RAM remembering anything:
@@ -131,16 +131,16 @@ def process_impl(parents, children, props):
 
     :arg children: A dict that points from parents to children::
 
-        {'Some::Parent': [('A::Child', 'Child')]}
+        {'Some::Parent': set([('A::Child', 'Child')])}
 
     :arg parents: A dict that points from children to parents::
 
-        {'A::Child': [('Some::Parent', 'Parent)]}
+        {'A::Child': set([('Some::Parent', 'Parent)])}
 
     """
-    parents.setdefault(props['qualname'], []).append(
+    parents.setdefault(props['qualname'], set()).add(
         (props['basequalname'], props['basename']))
-    children.setdefault(props['basequalname'], []).append(
+    children.setdefault(props['basequalname'], set()).add(
         (props['qualname'], props['name']))
 
     # No need to waste memory keeping this in the per-file store:
@@ -265,6 +265,11 @@ def condense_global(csv_folder):
     This is phase 1: the whole-program phase.
 
     """
+    def listify_keys(d):
+        """Fore a dict having values that are sets, turn those into lists."""
+        for k, v in d.iteritems():
+            d[k] = list(v)
+
     # process_override() squirrels things away in these:
     overrides = {}
     overriddens = {}
@@ -282,4 +287,10 @@ def condense_global(csv_folder):
         predicate=lambda kind, fields: (kind == 'function' and
                                         'overriddenname' in fields) or
                                        kind == 'impl')
+
+    # Turn some sets into lists. There's no need to keep them as sets, and
+    # lists are tighter on RAM, which will make them faster to pass to workers.
+    for x in [overrides, overriddens, parents, children]:
+        listify_keys(x)
+
     return overrides, overriddens, parents, children
