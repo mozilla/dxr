@@ -573,7 +573,7 @@ def index_chunk(tree,
             # Don't log if single-process:
             log = (worker_number and
                    open_log(tree, 'index-chunk-%s.log' % worker_number))
-        for path in paths:
+            for path in paths:
                 log and log.write('Starting %s.\n' % path)
             index_file(tree, tree_indexers, path, es, index, jinja_env)
             log and log.write('Finished chunk.\n')
