@@ -82,7 +82,7 @@ def warning_needles(condensed):
 def warning_opt_needles(condensed):
     """Return needles about the command-line options that call forth warnings."""
     return (('c_warning_opt', {'name': w['opt']}, w['span']) for w in
-            condensed['warning'])
+            condensed['warning'] if 'opt' in w)
 
 
 def macro_needles(condensed):
