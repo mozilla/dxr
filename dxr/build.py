@@ -262,8 +262,8 @@ def index_tree(tree, es, verbose=False):
                 # Tear down pool to let the build process use more RAM.
 
             if not skip_rebuild:
-            # Set up env vars, and build:
-            build_tree(tree, tree_indexers, verbose)
+                # Set up env vars, and build:
+                build_tree(tree, tree_indexers, verbose)
             else:
                 print " - Skipping rebuild (due to 'build' in 'skip_stages')"
 
@@ -282,7 +282,7 @@ def index_tree(tree, es, verbose=False):
             raise
 
     print " - Finished processing '%s' in %s." % (tree.name,
-                                                      datetime.now() - start_time)
+                                                  datetime.now() - start_time)
 
     return index
 
@@ -490,7 +490,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     folder_name, file_name = split(rel_path)
 
     if is_text:  # conditional until we figure out how to display binary files
-                es.index(index,
+        es.index(index,
                  FILE,
                  # Hard-code the keys that are hard-coded in the browse()
                  # controller. Merge with the pluggable ones from needles:
@@ -626,7 +626,7 @@ def index_files(tree, tree_indexers, index, pool, es):
                         tree_indexers,
                         paths,
                         index,
-                                 swallow_exc=False)
+                        swallow_exc=False)
     else:
         futures = [pool.submit(index_chunk,
                                tree,
