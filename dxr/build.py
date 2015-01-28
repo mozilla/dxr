@@ -1,6 +1,7 @@
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
+from itertools import chain
 from operator import attrgetter
 import os
 from os import stat, mkdir
@@ -124,7 +125,8 @@ def build_instance(config_string, nb_jobs=None, tree=None, verbose=False):
              default_tree=repr(config.default_tree),
              es_hosts=repr(config.es_hosts),
              es_aliases=repr(dict((name, alias) for
-                                  name, alias, index in indices))))
+                                  name, alias, index in indices)),
+             enabled_plugins=repr(tree.enabled_plugins.keys())))
 
     # Make new indices live:
     for _, alias, index in indices:
@@ -198,19 +200,21 @@ def index_tree(tree, es, verbose=False):
     start_time = datetime.now()
 
     skip_indexing = 'index' in tree.config.skip_stages
+    skip_rebuild = 'build' in tree.config.skip_stages
+    skip_cleanup  = skip_indexing or skip_rebuild
 
     # Create folders (delete if exists)
     ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
     ensure_folder(tree.object_folder,                    # Object folder (user defined!)
         tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
-    ensure_folder(tree.temp_folder, not skip_indexing)   # <config.temp_folder>/<tree.name>
+    ensure_folder(tree.temp_folder, not skip_cleanup)   # <config.temp_folder>/<tree.name>
                                                          # (or user defined)
-    ensure_folder(tree.log_folder, not skip_indexing)    # <config.log_folder>/<tree.name>
+    ensure_folder(tree.log_folder, not skip_cleanup)    # <config.log_folder>/<tree.name>
                                                          # (or user defined)
     # Temporary folders for plugins
-    ensure_folder(join(tree.temp_folder, 'plugins'), not skip_indexing)
+    ensure_folder(join(tree.temp_folder, 'plugins'), not skip_cleanup)
     for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-        ensure_folder(join(tree.temp_folder, 'plugins', plugin), not skip_indexing)
+        ensure_folder(join(tree.temp_folder, 'plugins', plugin), not skip_cleanup)
 
     tree_indexers = [p.tree_to_index(tree) for p in
                      tree.enabled_plugins.itervalues() if p.tree_to_index]
@@ -257,8 +261,11 @@ def index_tree(tree, es, verbose=False):
                 tree_indexers = farm_out('pre_build')
                 # Tear down pool to let the build process use more RAM.
 
+            if not skip_rebuild:
             # Set up env vars, and build:
             build_tree(tree, tree_indexers, verbose)
+            else:
+                print " - Skipping rebuild (due to 'build' in 'skip_stages')"
 
             # Post-build, and index files:
             with new_pool() as pool:
@@ -310,11 +317,13 @@ def create_skeleton(config):
     """Make the non-tree-specific FS artifacts needed to do the build."""
 
     skip_indexing = 'index' in config.skip_stages
+    skip_rebuild = 'build' in config.skip_stages
+    skip_cleanup = skip_indexing or skip_rebuild
 
     # Create config.target_folder (if not exists)
     ensure_folder(config.target_folder, False)
-    ensure_folder(config.temp_folder, not skip_indexing)
-    ensure_folder(config.log_folder, not skip_indexing)
+    ensure_folder(config.temp_folder, not skip_cleanup)
+    ensure_folder(config.log_folder, not skip_cleanup)
 
     # Create jinja cache folder in target folder
     ensure_folder(join(config.target_folder, 'jinja_dxr_cache'))
@@ -447,7 +456,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
     num_lines = len(contents.splitlines())
     needles = {}
-    links, refs, regions, metadata = [], [], [], []
+    linkses, refses, regionses, metadata = [], [], [], []
     needles_by_line = [{} for _ in xrange(num_lines)]
     annotations_by_line = [[] for _ in xrange(num_lines)]
 
@@ -456,9 +465,9 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         if file_to_index.is_interesting():
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
-            links.extend(file_to_index.links())
-            refs.extend(file_to_index.refs())
-            regions.extend(file_to_index.regions())
+            linkses.append(file_to_index.links())
+            refses.append(file_to_index.refs())
+            regionses.append(file_to_index.regions())
             metadata.extend(file_to_index.metadata())
 
             # Per-line stuff:
@@ -506,7 +515,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         # Indexing a 277K-line file all in one request makes ES time out
         # (>60s), so we chunk it up:
         for chunk_of_needles in chunked(
-                (merge(n, needles) for n in needles_by_line), 5000):
+                (merge(n, needles) for n in needles_by_line), 300):
             es.bulk_index(index, LINE, chunk_of_needles, id_field=None)
 
     # Render some HTML:
@@ -526,7 +535,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                              for t in tree.config.sorted_tree_order],
              'generated_date': tree.config.generated_date,
              'google_analytics_key': tree.config.google_analytics_key,
-             'filters': filter_menu_items(),
+             'filters': filter_menu_items(tree.enabled_plugins.itervalues()),
 
              # File template variables:
              'paths_and_names': linked_pathname(rel_path, tree.name),
@@ -537,34 +546,72 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
              # Someday, it would be great to stream this and not concretize the
              # whole thing in RAM. The template will have to quit looping
              # through the whole thing 3 times.
-             'lines': zip(build_lines(contents, refs, regions),
+             'lines': zip(build_lines(contents,
+                                      chain.from_iterable(refses),
+                                      chain.from_iterable(regionses)),
                           annotations_by_line) if is_text else [],
 
              'is_text': is_text,
 
-             'sections': build_sections(links),
+             'sections': build_sections(chain.from_iterable(linkses))})
 
              'metadata': metadata})
 
 
-def index_chunk(tree, tree_indexers, paths, index, swallow_exc=False):
+def index_chunk(tree,
+                tree_indexers,
+                paths,
+                index,
+                swallow_exc=False,
+                worker_number=None):
     """Index a pile of files.
 
     This is the entrypoint for indexer pool workers.
+
+    :arg worker_number: A unique number assigned to this worker so it knows
+        what to call its log file
 
     """
     path = '(no file yet)'
     try:
         es = ElasticSearch(tree.config.es_hosts)
         jinja_env = load_template_env()
+        try:
+            # Don't log if single-process:
+            log = (worker_number and
+                   open_log(tree, 'index-chunk-%s.log' % worker_number))
         for path in paths:
+                log and log.write('Starting %s.\n' % path)
             index_file(tree, tree_indexers, path, es, index, jinja_env)
+            log and log.write('Finished chunk.\n')
+        finally:
+            log and log.close()
     except Exception as exc:
         if swallow_exc:
             type, value, traceback = exc_info()
             return format_exc(), type, value, path
         else:
             raise
+
+
+def create_and_index_folders(tree, index, es):
+    """Make the folder tree to contain the HTML files, and index the folder
+    hierarchy into ES.
+
+    """
+    for folder in unignored(
+            tree.source_folder,
+            tree.ignore_paths,
+            tree.ignore_patterns,
+            want_folders=True):
+        rel_path = relpath(folder, tree.source_folder)
+        mkdir(join(tree.target_folder, rel_path))
+        superfolder_path, folder_name = split(rel_path)
+        es.index(index, FILE, {
+            'path': [rel_path],  # array for consistency with non-folder file docs
+            'folder': superfolder_path,
+            'name': folder_name,
+            'is_folder': True})
 
 
 def index_files(tree, tree_indexers, index, pool, es):
@@ -576,31 +623,26 @@ def index_files(tree, tree_indexers, index, pool, es):
                                      tree.ignore_paths,
                                      tree.ignore_patterns))
 
-    # Lay down all the containing folders so we can generate the file HTML in
-    # parallel:
-#    with es.bulk_indexing(doctype=FILE, index=, size=100) as indexer:
-    for folder in unignored(
-            tree.source_folder,
-            tree.ignore_paths,
-            tree.ignore_patterns,
-            want_folders=True):
-        rel_path = relpath(folder, tree.source_folder)
-        mkdir(join(tree.target_folder, rel_path))
-        superfolder_path, folder_name = split(rel_path)
-#        indexer.index({
-        es.index(index, FILE, {
-            'path': [rel_path],  # array for consistency with non-folder file docs
-            'folder': superfolder_path,
-            'name': folder_name,
-            'is_folder': True})
+    # We lay down all the containing folders up front so we can generate the
+    # file HTML in parallel.
+    create_and_index_folders(tree, index, es)
 
     if tree.config.disable_workers:
         for paths in path_chunks(tree):
-            result = index_chunk(tree, tree_indexers, paths, index,
+            index_chunk(tree,
+                        tree_indexers,
+                        paths,
+                        index,
                                  swallow_exc=False)
     else:
-        futures = [pool.submit(index_chunk, tree, tree_indexers, paths, index,
-                               swallow_exc=True) for paths in path_chunks(tree)]
+        futures = [pool.submit(index_chunk,
+                               tree,
+                               tree_indexers,
+                               paths,
+                               index,
+                               worker_number=worker_number,
+                               swallow_exc=True)
+                   for worker_number, paths in enumerate(path_chunks(tree), 1)]
         for future in show_progress(futures, message=' - Indexing files.'):
             result = future.result()
             if result:
@@ -650,7 +692,7 @@ def build_tree(tree, tree_indexers, verbose):
 
 
 def build_sections(links):
-    """ Build navigation sections for template """
+    """Build navigation pane for template."""
     # Sort by importance (resolve ties by section name)
     links = sorted(links, key=lambda section: (section[0], section[1]))
     # Return list of section and items (without importance)

@@ -29,7 +29,7 @@ apt-get install -y sphinx-common
 
 # Python:
 apt-get install -y libapache2-mod-wsgi python-pip
-pip install virtualenv virtualenvwrapper nose
+pip install nose
 cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop

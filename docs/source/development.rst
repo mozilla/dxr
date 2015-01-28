@@ -18,7 +18,7 @@ DXR divides into 2 halves:
    structural analysis of C++ code, builds the project under clang while
    interposing a custom compiler plugin. The plugin rides sidecar with the
    compiler, dumping out structural data into CSV files, which the DXR plugin
-   later pulls in and uses to generate the SQLite tables that support
+   later uses to fill elasticsearch with the information that supports
    structural queries like ``callers:`` and ``function:``.
 
    Generally, the indexer is kicked off asynchronously—often even on a separate
@@ -46,7 +46,7 @@ with. To get it running... ::
 
     cd ~/dxr/tests/test_basic
     make
-    dxr-serve.py -a target
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite dxr-serve.py -a target
 
 You can then surf to http://33.33.33.77:8000/ from the host machine and play
 around. When you're done, stop the server with :kbd:`Control-C`.
@@ -210,7 +210,7 @@ like "dxr.plugins.urllink", can point to either...
    which it can be automatically found. This method saves boilerplate and
    should be used unless there is a compelling need otherwise. Behind the
    scenes, an actual Plugin object is constructed implicitly: see
-   :class:`~dxr.plugins.Plugin.from_namespace` for details of the naming
+   :meth:`~dxr.plugins.Plugin.from_namespace` for details of the naming
    convention.
 
 Here is the Plugin object's API, in case you do decide to construct one
@@ -236,6 +236,26 @@ File Indexers
 
 FileToIndex also has all the methods of its superclass,
 :class:`~dxr.indexers.FileToSkim`.
+
+Looking Inside Elasticsearch
+````````````````````````````
+
+While debugging a file indexer, it can help to see what is actually getting
+into elasticsearch. For example, if you are debugging
+:meth:`~dxr.indexers.FileToIndex.needles_by_line`, you can see all the data
+attached to each line of code (up to 1000) with this curl command::
+
+    curl -s -XGET "http://localhost:9200/dxr_10_code/line/_search?pretty&size=1000"
+
+Be sure to replace "dxr_10_code" with the name of your DXR index. You
+can see which indexes exist by running... ::
+
+    curl -s -XGET "http://localhost:9200/_status?pretty"
+
+Similarly, when debugging :meth:`~dxr.indexers.FileToIndex.needles`, you can
+see all the data attached to files-as-a-whole with... ::
+
+    curl -s -XGET "http://localhost:9200/dxr_10_code/file/_search?pretty&size=1000"
 
 File Skimmers
 =============

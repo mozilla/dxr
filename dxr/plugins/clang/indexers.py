@@ -40,7 +40,13 @@ QUALIFIED_NEEDLE = {
         },
         'qualname': {
             'type': 'string',
-            'index': 'not_analyzed'
+            'index': 'not_analyzed',
+            'fields': {
+                'lower': {  # for qualified_type direct searcher
+                    'type': 'string',
+                    'analyzer': 'lowercase'
+                }
+            }
         },
         'start': {
             'type': 'integer',
@@ -167,10 +173,11 @@ class FileToIndex(FileToIndexBase):
         """
         for prop in chain.from_iterable(v(self.condensed) for v in views):
             if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this. [Marcell says no.]
-                if 'declloc' in prop:  # if we can look up the target of this ref
+                definition = prop.get('defloc')
+                if definition:  # if we can look up the target of this ref
                     menu = definition_menu(self.tree,
-                                           path=prop['declloc'][0],
-                                           row=prop['declloc'][1].row)
+                                           path=definition[0],
+                                           row=definition[1].row)
                 else:
                     menu = []
 
@@ -218,7 +225,7 @@ class FileToIndex(FileToIndexBase):
 @autocurry
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
-    return (ref for ref in condensed.get(field) if ref['kind'] == kind)
+    return (ref for ref in condensed.get(field) if ref.get('kind') == kind)
 
 
 def _members(condensed, key, id_):
@@ -234,6 +241,11 @@ def _members(condensed, key, id_):
 
 
 class TreeToIndex(TreeToIndexBase):
+    def pre_build(self):
+        self._temp_folder = os.path.join(self.tree.temp_folder,
+                                         'plugins',
+                                         PLUGIN_NAME)
+
     def environment(self, vars_):
         """Set up environment variables to trigger analysis dumps from clang.
 
@@ -241,8 +253,6 @@ class TreeToIndex(TreeToIndexBase):
 
         """
         tree = self.tree
-        temp_folder = os.path.join(tree.temp_folder, 'plugins', PLUGIN_NAME)
-        self._temp_folder = temp_folder
         plugin_folder = os.path.dirname(__file__)
         flags = [
             '-load', os.path.join(plugin_folder, 'libclang-index-plugin.so'),
@@ -256,7 +266,7 @@ class TreeToIndex(TreeToIndexBase):
             'CXX': "clang++ %s" % flags_str,
             'DXR_CLANG_FLAGS': flags_str,
             'DXR_CXX_CLANG_OBJECT_FOLDER': tree.object_folder,
-            'DXR_CXX_CLANG_TEMP_FOLDER': temp_folder,
+            'DXR_CXX_CLANG_TEMP_FOLDER': self._temp_folder,
         }
         env['DXR_CC'] = env['CC']
         env['DXR_CXX'] = env['CXX']

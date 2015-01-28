@@ -1,5 +1,8 @@
 from dxr.testing import DxrInstanceTestCase
+
+from nose import SkipTest
 from nose.tools import ok_
+
 
 class DiffLinkTests(DxrInstanceTestCase):
     """Tests that the diff links for files go somewhere helpful"""
