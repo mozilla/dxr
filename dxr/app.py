@@ -204,6 +204,13 @@ def browse(tree, path=''):
             doc_type=FILE,
             size=10000)['hits']['hits']]
 
+        revision_id = ""
+        for f in files_and_folders:
+            current_rev = f.get('revision_id')
+            if len(current_rev) > 0:
+                revision_id = current_rev
+                break
+
         if not files_and_folders:
             raise NotFound
 
@@ -228,13 +235,12 @@ def browse(tree, path=''):
             # Folder template variables:
             name=basename(path) or tree,
             path=path,
+            revision_id=revision_id,
             files_and_folders=[
                 ('folder' if f['is_folder'] else icon(f['name']),
                  f['name'],
                  decode_es_datetime(f['modified']) if 'modified' in f else None,
                  f.get('size'),
-                 f.get('author'),
-                 f.get('vcs_hash'),
                  url_for('.browse', tree=tree, path=f['path'][0]))
                 for f in files_and_folders])
 

@@ -56,10 +56,6 @@ class VCS(object):
         """Does the repository track this file?"""
         return path not in self.untracked_files
 
-    def get_author(self, path):
-        """Return the revision's author"""
-        raise NotImplemented
-
     def get_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
         raise NotImplemented
@@ -142,9 +138,6 @@ class Mercurial(VCS):
     def get_rev(self, path):
         return self.revision
 
-    def get_author(self, path):
-        return "Unknown"  # TODO: Implement this on Hg
-
     def generate_log(self, path):
         return self.upstream + 'filelog/' + self.revision + '/' + path
 
@@ -182,11 +175,6 @@ class Git(VCS):
         return self.invoke_vcs(
             ['git', 'log', '--pretty=format:%H', '-n', '1', '--', path]
             )[:10]
-
-    def get_author(self, path):
-        return self.invoke_vcs(
-            ['git', 'log', '--pretty=format:%aN', '-n', '1', '--', path]
-            ).decode('utf-8')
 
     def generate_log(self, path):
         return self.upstream + "/commits/" + self.revision + "/" + path
@@ -253,9 +241,6 @@ class Perforce(VCS):
     def get_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
-
-    def get_author(self, path):
-        return "Unknown"  # TODO: Implement this on P4
 
     def generate_log(self, path):
         info = self.have[path]
@@ -345,15 +330,14 @@ class FileToIndex(dxr.indexers.FileToIndex):
         else:
             yield 5, 'Untracked file', []
 
-    def metadata(self):
+    def revision_id(self):
         abs_path = self.absolute_path()
         vcs = self._find_vcs_for_file(abs_path)
         if vcs:
             vcs_relative_path = relpath(abs_path, vcs.get_root_dir())
-            yield 'Commit Hash', vcs.get_rev(vcs_relative_path)
-            yield 'Author', vcs.get_author(vcs_relative_path)
+            return vcs.get_rev(vcs_relative_path)
         else:
-            yield 'Untracked File', '-'
+            return ""
 
     def _find_vcs_for_file(self, abs_path):
         """Given an absolute path, find a source repository we know about that

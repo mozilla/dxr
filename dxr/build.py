@@ -456,7 +456,8 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
     num_lines = len(contents.splitlines())
     needles = {}
-    linkses, refses, regionses, metadata = [], [], [], []
+    linkses, refses, regionses = [], [], []
+    revision_id = ""
     needles_by_line = [{} for _ in xrange(num_lines)]
     annotations_by_line = [[] for _ in xrange(num_lines)]
 
@@ -468,7 +469,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
             linkses.append(file_to_index.links())
             refses.append(file_to_index.refs())
             regionses.append(file_to_index.regions())
-            metadata.extend(file_to_index.metadata())
+            revision_id = file_to_index.revision_id()
 
             # Per-line stuff:
             if is_text:
@@ -489,14 +490,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     folder_name, file_name = split(rel_path)
 
     if is_text:  # conditional until we figure out how to display binary files
-        vcs_hash = ""
-        author = ""
-        for kv in metadata:
-            if kv[0] == "Commit Hash":
-                vcs_hash = kv[1]
-            elif kv[0] == "Author":
-                author = kv[1]
-        es.index(index,
+                es.index(index,
                  FILE,
                  # Hard-code the keys that are hard-coded in the browse()
                  # controller. Merge with the pluggable ones from needles:
@@ -505,8 +499,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                       size=file_info.st_size,
                       modified=datetime.fromtimestamp(file_info.st_mtime),
                       is_folder=False,
-                      author=author,
-                      vcs_hash=vcs_hash,
+                      revision_id=revision_id,
                       **needles))
 
     # Index all the lines, attaching the file-wide needles to each line as well:
@@ -555,7 +548,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
              'sections': build_sections(chain.from_iterable(linkses))})
 
-             'metadata': metadata})
+             'revision_id': revision_id})
 
 
 def index_chunk(tree,

@@ -158,13 +158,9 @@ class FileToSkim(object):
         """
         return []
 
-    def metadata(self):
-        """Return an iterable of metadata linked to the current file::
-
-            [(key, value), ...]
-
-        """
-        return []
+    def revision_id(self):
+        """Return the VCS revision id for the file as a string"""
+        return ""
 
     def refs(self):
         """Provide cross references for various spans of text, accessed
