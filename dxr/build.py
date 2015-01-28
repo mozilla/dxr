@@ -546,7 +546,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
 
              'is_text': is_text,
 
-             'sections': build_sections(chain.from_iterable(linkses))})
+             'sections': build_sections(chain.from_iterable(linkses)),
 
              'revision_id': revision_id})
 
