@@ -1,6 +1,7 @@
 from collections import Mapping
 from datetime import datetime
 import fnmatch
+from functools import wraps
 import os
 from os import dup, fdopen
 from os.path import join
@@ -146,3 +147,21 @@ def glob_to_regex(glob):
 
     """
     return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]
+
+
+def cached(f):
+    """Cache the result of a function that takes an iterable of plugins."""
+    # TODO: Generalize this into a general memoizer function later if needed.
+
+    cache = {}
+
+    @wraps(f)
+    def inner(plugins):
+        key = tuple(plugins)
+        if key in cache:
+            return cache[key]
+
+        result = cache[key] = f(key)
+        return result
+
+    return inner

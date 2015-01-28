@@ -3,6 +3,7 @@
 from collections import namedtuple
 from operator import itemgetter
 from os.path import join
+from warnings import warn
 
 from funcy import group_by, decorator, imapcat
 from os.path import join
@@ -194,8 +195,8 @@ class FileToSkim(object):
         holding the contents of the file. (``regions()`` will not be called
         for binary files.)
 
-        We'll probably store them in ES as a list of explicit objects, like
-        {start: 5, end: 18, class: k}.
+        We'll probably store them in elasticsearch as a list of explicit
+        objects, like {start: 5, end: 18, class: k}.
 
         """
         return []
@@ -392,8 +393,8 @@ def by_line(span_needles):
 # Deprecated in favor of with_start_and_end()
 def key_object_pair((k, v), start, end):
     """Transform a key/value pair, along with start and end columns, to a
-    key/multi-propertied-object pair that can be stored in ES and then used
-    to support searching and highlighting.
+    key/multi-propertied-object pair that can be stored in elasticsearch and
+    then used to support searching and highlighting.
 
     """
     return k, {'value': v, 'start': start, 'end': end}
@@ -408,11 +409,12 @@ def span_to_lines((kv, span)):
     """
     if span.end.row == span.start.row:
         yield (kv, span.start.col, span.end.col), span.start.row
-
     elif span.end.row < span.start.row:
-        raise ValueError("end.row < start.row")
-
+        warn('Bad Extent: end.row < start.row: %s < %s' %
+             (span.end.row, span.start.row))
     else:
+        num_rows = span.end.row - span.start.row
+
         # TODO: There are a lot of Nones used as slice bounds below. Do we
         # ever translate them back into char offsets? If not, does the
         # highlighter or anything else choke on them?
@@ -439,8 +441,12 @@ def split_into_lines(triples):
         if extent.end.row == extent.start.row:
             yield key, mapping, extent
         elif extent.end.row < extent.start.row:
-            raise ValueError('Bad Extent: end.row < start.row')
+            # This indicates a bug in an indexer plugin.
+            warn('Bad extent: end.row < start.row: %s < %s' %
+                 (extent.end.row, extent.start.row))
         else:
+            num_rows = extent.end.row - extent.start.row
+
             # TODO: There are a lot of Nones used as slice bounds below. Do we
             # ever translate them back into char offsets? If not, does the
             # highlighter or anything else choke on them?

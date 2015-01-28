@@ -1,3 +1,4 @@
+from nose import SkipTest
 from nose.tools import eq_, assert_raises
 
 from dxr.indexers import (unsparsify, by_line, group_needles, span_to_lines,
@@ -22,9 +23,14 @@ def test_needle_smoke_test():
     list_eq(unsparsify(lambda: [])(), [])
 
 
-def test_unsparsify():
+def test_unsparsify_invalid():
+    """Make sure unsparify raises ValueError on extents whose ends come before
+    their starts."""
+    raise SkipTest("At the moment, we tolerate these and simply warn. Once the clang compiler plugin doesn't spit these out anymore, return to raising an exception.")
     assert_raises(ValueError, unsparsify(lambda: [NEEDLE3]))
 
+
+def test_unsparsify():
     # Test 2 overlapping dense needles:
     output = [[key_object_pair(KV1, 3, 7), key_object_pair(KV2, 5, None)],  # the overlap.
               [key_object_pair(KV2, 0, None)],  # just the second one,

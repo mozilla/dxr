@@ -45,8 +45,8 @@ class Plugin(object):
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
-            plugin's ES-destined data. A dict with keys for each doctype and
-            values reflecting the structure described at
+            plugin's elasticsearch-destined data. A dict with keys for each
+            doctype and values reflecting the structure described at
             http://www.elasticsearch.org/guide/en/elasticsearch/reference/
             current/indices-put-mapping.html. Since a FILE-domain query will
             be promoted to a LINE query if any other query term triggers a
@@ -60,10 +60,10 @@ class Plugin(object):
             current/analysis.html.
         :arg direct_searchers: Functions that provide direct search
             capability. Each must take a single query term of type 'text',
-            return an ES filter clause to run against LINEs, and have a
-            ``direct_search_priority`` attribute. Filters are tried in order
-            of increasing priority. Return None from a direct searcher to skip
-            it.
+            return an elasticsearch filter clause to run against LINEs, and
+            have a ``direct_search_priority`` attribute. Filters are tried in
+            order of increasing priority. Return None from a direct searcher
+            to skip it.
 
             .. note::
 
@@ -125,6 +125,18 @@ class Plugin(object):
                    analyzers=namespace.get('analyzers'),
                    direct_searchers=direct_searchers_from_namespace(namespace))
 
+    def __getstate__(self):
+        """When pickling, omit the direct searchers.
+
+        We don't use them during the multiprocess indexing phase, so we might
+        as well allow ourselves to create direct searchers using function
+        factories, whose products are unpickleable.
+
+        """
+        copy = self.__dict__.copy()
+        copy['direct_searchers'] = []
+        return copy
+
 
 def filters_from_namespace(namespace):
     """Return the filters which conform to our suggested naming convention.
@@ -174,8 +186,8 @@ def all_plugins():
 
     The core plugin, which provides many of DXR's cross-language, built-in
     features, is always the first plugin when iterating over the returned
-    dict. This lets other plugins override bits of its ES mappings and
-    analyzers.
+    dict. This lets other plugins override bits of its elasticsearch mappings
+    and analyzers.
 
     """
     import dxr.plugins.core
@@ -185,10 +197,22 @@ def all_plugins():
         object = entry_point.load()
         plugin = (object if isinstance(object, Plugin) else
                   Plugin.from_namespace(object.__dict__))
+        plugin.name = entry_point.name
         return entry_point.name, plugin
 
     ret = OrderedDict()
     ret['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
+    ret['core'].name = 'core'
     ret.update(name_and_plugin(point) for point in
                iter_entry_points('dxr.plugins'))
     return ret
+
+
+def plugins_named(names):
+    """Return an iterable of Plugins having the given names.
+
+    :arg names: An iterable of plugin names
+
+    """
+    plugins = all_plugins()
+    return (plugins[name] for name in names)

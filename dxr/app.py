@@ -15,6 +15,7 @@ from dxr.build import linked_pathname
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE
 from dxr.mime import icon
+from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime
 
@@ -79,6 +80,7 @@ def search(tree):
     query = Query(partial(current_app.es.search,
                           index=config['ES_ALIASES'][tree]),
                   query_text,
+                  plugins_named(config['ENABLED_PLUGINS']),
                   is_case_sensitive=is_case_sensitive)
 
     # Fire off one of the two search routines:
@@ -130,7 +132,8 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     # Try a normal search:
     template_vars = {
-            'filters': filter_menu_items(),
+            'filters': filter_menu_items(plugins_named(
+                    config['ENABLED_PLUGINS'])),
             'generated_date': config['GENERATED_DATE'],
             'google_analytics_key': config['GOOGLE_ANALYTICS_KEY'],
             'is_case_sensitive': is_case_sensitive,
@@ -163,6 +166,14 @@ def _tree_tuples(trees, tree, query_text, is_case_sensitive):
             for t, description in trees.iteritems()]
 
 
+def _es_alias_or_not_found(tree):
+    """Return the elasticsearch alias for a tree, or raise NotFound."""
+    try:
+        return current_app.config['ES_ALIASES'][tree]
+    except KeyError:
+        raise NotFound
+
+
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
@@ -189,7 +200,7 @@ def browse(tree, path=''):
                 },
                 'sort': [{'is_folder': 'desc'}, 'name']
             },
-            index=config['ES_ALIASES'][tree],
+            index=_es_alias_or_not_found(tree),
             doc_type=FILE,
             size=10000)['hits']['hits']]
 
@@ -209,7 +220,8 @@ def browse(tree, path=''):
             generated_date=config['GENERATED_DATE'],
             google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
             paths_and_names=linked_pathname(path, tree),
-            filters=filter_menu_items(),
+            filters=filter_menu_items(plugins_named(
+                    config['ENABLED_PLUGINS'])),
             # Autofocus only at the root of each tree:
             should_autofocus_query=path == '',
 
@@ -229,6 +241,8 @@ def browse(tree, path=''):
 @dxr_blueprint.route('/<tree>')
 def tree_root(tree):
     """Redirect requests for the tree root instead of giving 404s."""
+    # Don't do a redirect and then 404; that's tacky:
+    _es_alias_or_not_found(tree)
     return redirect(tree + '/source/')
 
 

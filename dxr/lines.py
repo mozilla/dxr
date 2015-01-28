@@ -226,6 +226,9 @@ def tag_boundaries(refs, regions):
     Like in Python slice notation, the offset of a tag refers to the index of
     the source code char it comes before.
 
+    :arg refs: An iterable (doesn't have to be a list)
+    :arg regions: An iterable (doesn't have to be a list)
+
     """
     for intervals, cls in [(regions, Region), (refs, Ref)]:
         for start, end, data in intervals:
@@ -357,6 +360,9 @@ def build_lines(text, refs, regions):
     tags = list(tag_boundaries(refs, regions))
 
     tags.extend(line_boundaries(text))
+
+    # Sorting is actually not a significant use of time in an actual indexing
+    # run.
     tags.sort(key=nesting_order)  # balanced_tags undoes this, but we tolerate
                                   # that in html_lines().
     remove_overlapping_refs(tags)

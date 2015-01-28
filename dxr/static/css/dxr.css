@@ -209,8 +209,7 @@ mark {
 }
 .results a {
     cursor: pointer;
-    display: block;
-    width: 100%;
+    display: inline-block;
 }
 .file a:target {
     background-color: gray;

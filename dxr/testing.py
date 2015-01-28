@@ -119,13 +119,17 @@ class TestCase(unittest.TestCase):
         response = self.client().get(
             '/code/search?q=%s&redirect=true&case=%s' %
                     (quote(query), 'true' if is_case_sensitive else 'false'))
-        eq_(response.status_code, 302)
-        location = response.headers['Location']
-        # Location is something like
-        # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
-        eq_(location[:location.index('?')],
-            'http://localhost/code/source/' + path)
-        eq_(int(location[location.index('#') + 1:]), line_number)
+        if line_number:
+            eq_(response.status_code, 302)
+            location = response.headers['Location']
+            # Location is something like
+            # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
+            eq_(location[:location.index('?')],
+                'http://localhost/code/source/' + path)
+            eq_(int(location[location.index('#') + 1:]), line_number)
+        else:
+            # When line_number is None, just expect a normal search.
+            eq_(response.status_code, 200)
 
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.

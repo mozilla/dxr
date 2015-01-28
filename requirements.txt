@@ -1,3 +1,7 @@
+# sha256: a7zWVNYZeqoklQWnHUNyUyzTAjhRGMnJhgdUhei-8mU
+# sha256: zWxuAeAVlxTgwdvY2yY8PtvmNpWH46_hgVhKF0lCj_A
+elasticsearch==1.3.0
+
 # sha256: L9XU_-gfdi3So-WEctaQoNu6N2Z3ZQYAOu4-16qor-8
 Flask==0.9
 
@@ -19,11 +23,23 @@ ordereddict==1.1
 # sha256: RPLinN6e9780jIdUsmE5pghpDZ8CPbyEnq0CRqDJXQo
 parsimonious==0.6
 
-# sha256: 33p-8L41qGMvjgz1P1yPfNdFbaokcLtaaD_u_5g9Uqg
-pyelasticsearch==0.7.1
+# sha256: RN37EiUFTX1rHQLpM459SAm-lO2-mSmi7AgH0435k_o
+pyelasticsearch==1.0
 
-# sha256: eZ7Uyvd1FuVEQIBtjZzYKnYH399OT7ZDgVFxpLXJIcA
-Pygments==1.6
+# Pygments 2.0.1 with a C++ lexer patched to fix https://bitbucket.org/birkenfeld/pygments-main/issue/1081/cpplexer-pathological-slowness-case
+# sha256: Ftr99EAuAJQ9S1PJiiUa36knAKmRQDbXsk6WPwt3V1Q
+https://bitbucket.org/erikrose/pygments-main/get/1081-pragmatic-fix.tar.gz#egg=Pygments
+
+# sha256: KjGJ950ce4ohSaDng8C0IX-tmzCm59YEUPJVPcLA5X4
+simplejson==3.6.5
+
+# sha256: QYqTw5en7asj5ViNvAZ6x0pyPts9VBvUk295R252Rdo
+# sha256: 4kBSQR_E-9H2cmNVN8P8IzDZSBsYwDF2lbRiWVEskdU
+six==1.9.0
+
+# sha256: g0wCoeekicCbmUBFGKhARyZnTHWpijqLxf5XI4v2MQE
+# sha256: JbSn-72REuAZDzH4h3qgUjyuq4YwhyrRu92roBzdZZk
+urllib3==1.10
 
 # sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
 Werkzeug==0.8.3
