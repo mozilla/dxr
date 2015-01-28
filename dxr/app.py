@@ -206,7 +206,7 @@ def browse(tree, path=''):
 
         revision_id = ""
         for f in files_and_folders:
-            current_rev = f.get('revision_id')
+            current_rev = f.get('revision_id', "")
             if len(current_rev) > 0:
                 revision_id = current_rev
                 break
