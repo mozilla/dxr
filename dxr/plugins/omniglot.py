@@ -199,9 +199,7 @@ class Git(VCS):
             if repo.startswith("git:"):
                 repo = "https" + repo[len("git"):]
             return repo
-        else:
-            self._is_github = False
-            return "http://localhost"  # TODO: Find another URL
+        raise Exception("Your git remote is not supported yet. Please use a github remote for now.")
 
 
 class Perforce(VCS):
