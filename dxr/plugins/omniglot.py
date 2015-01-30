@@ -4,6 +4,7 @@ from os.path import relpath
 import subprocess
 import urlparse
 
+from dxr.config import ConfigError
 import dxr.indexers
 
 """Omniglot - Speaking all commonly-used version control systems.
@@ -199,7 +200,9 @@ class Git(VCS):
             if repo.startswith("git:"):
                 repo = "https" + repo[len("git"):]
             return repo
-        raise Exception("Your git remote is not supported yet. Please use a github remote for now.")
+        raise ConfigError("Your git remote is not supported yet. Please use a "
+                          "GitHub remote for now, or disable the omniglot "
+                          "plugin.")
 
 
 class Perforce(VCS):

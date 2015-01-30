@@ -209,7 +209,11 @@ class TreeConfig(object):
             print >> sys.stderr, msg % name
 
 
-class MissingOptionError(Exception):
+class ConfigError(Exception):
+    """Some kind of user error in the configuration"""
+
+
+class MissingOptionError(ConfigError):
     """Exception raised when a required option is missing from the config file
 
     These include globally required options and options required for an enabled
