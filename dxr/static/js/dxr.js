@@ -295,7 +295,8 @@ $(function() {
      * Saves checkbox checked property to localStorage and invokes queryNow function.
      */
     function updateLocalStorageAndQueryNow(){
-       localStorage.setItem('caseSensitive', $('#case').prop('checked'));
+        //The localStorage is updated with the current variable storing the Case Sensitive information before a queryNow is called.
+       localStorage.setItem('caseSensitive', isCaseSensitive);
        queryNow();
     }
 
