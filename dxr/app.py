@@ -215,7 +215,10 @@ def browse(tree, path=''):
                         }
                     }
                 },
-                'sort': [{'is_folder': 'desc'}, 'name']
+                'sort': [{'is_folder': 'desc'}, 'name'],
+                '_source': {
+                    'exclude': ['raw_data']
+                },
             },
             index=config['ES_ALIASES'][tree],
             doc_type=FILE,

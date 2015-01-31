@@ -4,7 +4,7 @@ from fnmatch import fnmatchcase
 from itertools import chain
 from operator import attrgetter
 import os
-from os import stat, mkdir
+from os import stat, mkdir, makedirs
 from os.path import dirname, islink, relpath, join, split
 import shutil
 import subprocess
@@ -342,7 +342,7 @@ def ensure_folder(folder, clean=False):
     if clean and os.path.isdir(folder):
         shutil.rmtree(folder, False)
     if not os.path.isdir(folder):
-        os.makedirs(folder)
+        makedirs(folder)
 
 
 def _unignored_folders(folders, source_path, ignore_patterns, ignore_paths):
@@ -490,15 +490,15 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     # conditional until we figure out how to display arbitrary binary files
     if is_text or is_image(rel_path):
         es.index(index,
-                FILE,
-                # Hard-code the keys that are hard-coded in the browse()
-                # controller. Merge with the pluggable ones from needles:
-                dict(folder=folder_name,
-                    name=file_name,
-                    size=file_info.st_size,
-                    modified=datetime.fromtimestamp(file_info.st_mtime),
-                    is_folder=False,
-                    **needles))
+                 FILE,
+                 # Hard-code the keys that are hard-coded in the browse()
+                 # controller. Merge with the pluggable ones from needles:
+                 dict(folder=folder_name,
+                     name=file_name,
+                     size=file_info.st_size,
+                     modified=datetime.fromtimestamp(file_info.st_mtime),
+                     is_folder=False,
+                     **needles))
 
     # Index all the lines, attaching the file-wide needles to each line as well:
     if is_text and needles_by_line:  # If it's an empty file (no lines), don't
@@ -542,7 +542,7 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         elif is_text:
             _fill_and_write_template(
                 jinja_env,
-                'file.html',
+                'text_file.html',
                 join(tree.target_folder, rel_path + '.html'),
                 merge(common, file_vars, {
                 # Someday, it would be great to stream this and not concretize the

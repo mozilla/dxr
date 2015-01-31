@@ -14,7 +14,6 @@
 {% endblock %}
 
 {% block content %}
-<div id="content" class="content" data-no-results="{{ no_results() }}">
   <div class="breadcrumbs">
     {%- for path, name in paths_and_names -%}
       {%- if not loop.first or loop.last -%}
@@ -26,68 +25,6 @@
   </div>
 
   {{ tree_menu(tree_tuples, tree) }}
-
-  {% set state_eof = True %}
-
-  {% if sections %}
-    <div class="panel">
-      <button id="panel-toggle">
-        <span class="navpanel-icon expanded" aria-hidden="false"></span>
-        Navigation
-      </button>
-      <section id="panel-content" aria-expanded="true" aria-hidden="false">
-        {% for section, items in sections %}
-          <h4>{{ section }}</h4>
-          <ul>
-          {% for icon, title, href in items %}
-            <li>
-              <a href="{{ href }}" title="{{ title }}" class="{{ icon }} icon">{{ title }}</a>
-            </li>
-          {%- endfor %}
-          </ul>
-        {% endfor %}
-      </section>
-    </div>
-  {% endif %}
-
-  <div id="annotations">
-    {% for line, annotations in lines %}
-      <div class="annotation-set" id="aset-{{ loop.index }}">
-        {%- for annotation in annotations -%}
-          <div {% for key, value in annotation.items() %}
-                {{ key }}="{{ value }}"
-               {% endfor %} ></div>
-        {%- endfor -%}
-      </div>
-    {%- endfor -%}
-  </div>
-
-  <table id="file" class="file">
-    <thead class="visually-hidden">
-        <th scope="col">Line</th>
-        <th scope="col">Code</th>
-    </thead>
-    <tbody>
-      <tr>
-        <td id="line-numbers">
-          {% for line in lines %}
-            <span id="{{ loop.index }}" class="line-number" unselectable="on" rel="#{{ loop.index }}">{{ loop.index }}</span>
-          {% endfor %}
-        </td>
-        <td class="code">
-          {% if not is_text %}
-            (binary file)
-          {% endif %}
-<pre>
-{% for line, annotations in lines -%}
-<code id="line-{{ loop.index }}" aria-labelledby="{{ loop.index }}">{{ line }}</code>
-{% endfor -%}
-</pre>
-        </td>
-      </tr>
-    </tbody>
-  </table>
- </div>
 {% endblock %}
 
 {% block site_js %}
