@@ -374,7 +374,7 @@ def fix_extents_overlap(extents):
     :arg extents: A sorted iterable of (start, end) extent tuples
 
     """
-    cur = init = -2, -2
+    cur = init = -1, -1
     for nex in extents:
         if cur[0] <= nex[0] <= cur[1]:
             # nex overlaps cur or comes directly after it. Combine them.
