@@ -1,7 +1,9 @@
 .selector-options {
+    box-shadow: 0px 4px 5px 0px rgba(0,0,0,0.25);
+    -webkit-box-shadow: 0px 4px 5px 0px rgba(0,0,0,0.25);
+    list-style: none;
     margin: 0;
     padding: 0;
-    list-style: none;
 }
 .selector-options a {
     display: block;
