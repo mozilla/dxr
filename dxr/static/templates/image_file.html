@@ -6,8 +6,6 @@
 {% endblock %}
 
 {% block content %}
-<div id="content" class="content" data-no-results="{{ no_results() }}">
   {{ super() }}
   <img src="{{wwwroot}}/{{ image_src }}" id="image_file">
-</div>
 {% endblock %}

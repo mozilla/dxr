@@ -1,7 +1,6 @@
 {% extends "file.html" %}
 
 {% block content %}
-<div id="content" class="content" data-no-results="{{ no_results() }}">
   {{ super() }}
 
   {% set state_eof = True %}
@@ -64,5 +63,4 @@
       </tr>
     </tbody>
   </table>
- </div>
 {% endblock %}
