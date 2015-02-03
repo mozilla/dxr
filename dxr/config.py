@@ -41,6 +41,7 @@ class Config(object):
             'es_hosts':         'http://127.0.0.1:9200/',
             'es_index':         'dxr_{format}_{tree}_{unique}',
             'es_alias':         'dxr_{format}_{tree}',
+            'max_thumbnail_size': '20000',
         }, dict_type=OrderedDict)
         parser.readfp(StringIO(config_string))
 
@@ -60,6 +61,7 @@ class Config(object):
         self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
         self.es_index         = parser.get('DXR', 'es_index', False, override)
         self.es_alias         = parser.get('DXR', 'es_alias', False, override)
+        self.max_thumbnail_size = int(parser.get('DXR', 'max_thumbnail_size'))
         self.trees            = []
 
         # Read all plugin_ keys
@@ -149,7 +151,7 @@ class TreeConfig(object):
         self.source_encoding  = parser.get(name, 'source_encoding')
         self.description      = parser.get(name, 'description')
 
-        # You cannot redefine the target folder!
+        # You cannot redefine the target folders!
         self.target_folder    = os.path.join(config.target_folder, 'trees', name)
         # Set config file and DXR config object reference
         self.config           = config

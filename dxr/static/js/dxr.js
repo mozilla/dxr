@@ -461,7 +461,7 @@ $(function() {
     // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
     // That means that if we naively set onpopstate, we would get into an
     // infinite loop of reloading whenever onpopstate is triggered. Therefore,
-    // we have to only add out onpopstate handler once the page has loaded.
+    // we have to only add our onpopstate handler once the page has loaded.
     window.onload = function() {
         setTimeout(function() {
             window.onpopstate = popStateHandler;
@@ -476,4 +476,21 @@ $(function() {
             window.location.reload();
          }
     }
+
+    /**
+     * Replace 'source' with 'raw' in href, and set that to the background-image
+     */
+    function setBackgroundImageFromLink(anchorElement) {
+        var href = anchorElement.getAttribute('href');
+        // note: breaks if the tree's name is "source"
+        var bg_src = href.replace('source', 'raw');
+        anchorElement.style.backgroundImage = 'url(' + bg_src + ')';
+    }
+
+    window.addEventListener('load', function() {
+        $(".image").not('.too_fat').each(function() {
+            setBackgroundImageFromLink(this);
+        });
+    });
+
 });

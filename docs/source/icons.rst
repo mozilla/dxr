@@ -47,6 +47,7 @@ licensed under Creative Commons Attribution 2.5 License.
 -  ``mimetypes/html``
 -  ``mimetypes/iso``
 -  ``mimetypes/vs``
+-  ``mimetypes/image``
 -  ``mimetypes/py`` (mixed with official python logo)
 -  ``mimetypes/mm`` (Remixed by DXR developers)
 

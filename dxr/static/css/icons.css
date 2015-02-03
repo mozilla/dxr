@@ -10,6 +10,7 @@
     background-color: transparent;
     background-position: .5em center;
     background-repeat: no-repeat;
+    background-size: 16px 16px;
     padding: .5em .5em .5em 30px;
 }
 .icon-container {
@@ -132,6 +133,9 @@ a.type {
 }
 .iso {
     background-image: url(/static/icons/mimetypes/iso.png);
+}
+.image {
+    background-image: url(/static/icons/mimetypes/image.png);
 }
 .java {
     background-image: url(/static/icons/mimetypes/java.png);

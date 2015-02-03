@@ -1,0 +1,7 @@
+/**
+ * Make sure the image does not overlap breadcrumbs, footer text, left margin.
+ */
+#image_file {
+    display: block;
+    margin: 3em 0px;
+}

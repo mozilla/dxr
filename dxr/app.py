@@ -3,6 +3,8 @@ from logging import StreamHandler
 from os.path import isdir, isfile, join, basename
 from sys import stderr
 from time import time
+from cStringIO import StringIO
+from mimetypes import guess_type
 from urllib import quote_plus
 
 from flask import (Blueprint, Flask, send_from_directory, current_app,
@@ -165,6 +167,29 @@ def _tree_tuples(trees, tree, query_text, is_case_sensitive):
              description)
             for t, description in trees.iteritems()]
 
+@dxr_blueprint.route('/<tree>/raw/<path:path>')
+def raw(tree, path):
+    """Send raw data at path from tree, for binary things like images."""
+    query = {
+        'filter': {
+            'term': {
+                'path': path
+            }
+        }
+    }
+    index = current_app.config['ES_ALIASES'][tree]
+    results = current_app.es.search(
+            query,
+            index=index,
+            doc_type=FILE,
+            size=1)
+    try:
+        # we explicitly get index 0 because there should be exactly 1 result
+        data = results['hits']['hits'][0]['_source']['raw_data'][0]
+    except IndexError: # couldn't find the image
+        raise NotFound
+    data_file = StringIO(data.decode('base64'))
+    return send_file(data_file, mimetype=guess_type(path)[0])
 
 def _es_alias_or_not_found(tree):
     """Return the elasticsearch alias for a tree, or raise NotFound."""
@@ -198,7 +223,10 @@ def browse(tree, path=''):
                         }
                     }
                 },
-                'sort': [{'is_folder': 'desc'}, 'name']
+                'sort': [{'is_folder': 'desc'}, 'name'],
+                '_source': {
+                    'exclude': ['raw_data']
+                },
             },
             index=_es_alias_or_not_found(tree),
             doc_type=FILE,
@@ -229,7 +257,7 @@ def browse(tree, path=''):
             name=basename(path) or tree,
             path=path,
             files_and_folders=[
-                ('folder' if f['is_folder'] else icon(f['name']),
+                (_icon_class_name(f),
                  f['name'],
                  decode_es_datetime(f['modified']) if 'modified' in f else None,
                  f.get('size'),
@@ -277,10 +305,20 @@ def parallel(tree, path=''):
 
 
 def _tree_folder(tree):
-    """Return the on-disk path to the root of the given tree's folder in the
-    instance."""
+    """Return the on-disk path to the root of the given tree's folder in
+    the instance."""
     return join(current_app.instance_path, 'trees', tree)
 
+def _icon_class_name(file_doc):
+    """Return a string for the CSS class of the icon for file document."""
+    if file_doc['is_folder']:
+        return 'folder'
+    class_name = icon(file_doc['name'])
+    # for small images, we can turn the image into icon via javascript
+    # if bigger than the cutoff, we mark it as too big and don't do this
+    if file_doc['size'] > current_app.config['MAX_THUMBNAIL_SIZE']:
+        class_name += " too_fat"
+    return class_name
 
 def _html_file_path(tree_folder, url_path):
     """Return the on-disk path, relative to the tree folder, of the HTML file
