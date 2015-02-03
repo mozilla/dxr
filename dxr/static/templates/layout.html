@@ -69,12 +69,10 @@
         <input type="submit" value="Search" class="visually-hidden" />
     </form>
 
-    {% block content_wrapper %}
-      <div id="content" class="content" data-no-results="{{ no_results() }}">
+    <div id="content" class="content" data-no-results="{{ no_results() }}">
       {% block content %}
-      {% endblock content %}
-      </div>
-    {% endblock content_wrapper %}
+      {% endblock %}
+    </div>
 
     {% block footer %}
       <div id="foot" class="footer">
