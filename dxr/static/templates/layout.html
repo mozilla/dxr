@@ -20,54 +20,65 @@
   </head>
   <body>
 
-    <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="basic_search" class="search-box">
-        <fieldset>
-            <div id="search-box" class="flex-container" role="group">
-                <div class="elem_container find">
-                    <label for="query" class="query_label visually-hidden">Find</label>
-                    <input type="text" name="q" {% if should_autofocus_query %}autofocus {% endif %}value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
-                    <div class="zero-size-container">
-                      <div class="bubble">
-                      </div>
-                    </div>
-                    <section id="search-filter" class="search-filter">
-                      <button type="button" class="sf-select-trigger" aria-label="Select Filter">
-                          <!-- arrow icon using icon font -->
-                          <span aria-hidden="true" data-filter-arrow="&#xe801;" class="sf-selector-arrow">
-                              Filters
-                          </span>
-                      </button>
-                    </section>
-                    <div class="sf-select-options sf-modal" aria-expanded="false">
-                      <ul class="selector-options" tabindex="-1">
-                        {% for filter in filters %}
-                          <li>
-                            <a href="javascript:void(0)" data-value="{{ filter.name }}:">
-                              <span class="selector-option-label">
-                                {{ filter.name }}:
-                              </span>
-                              <span class="selector-option-description">
-                                {{ filter.description }}
-                              </span>
-                            </a>
-                          </li>
-                        {% endfor %}
-                      </ul>
-                    </div>
-                </div>
-
-                <div class="elem_container case">
-                    <label for="case">
-                        <input type="checkbox" name="case" id="case" class="checkbox_case" value="true" accesskey="c"{% if is_case_sensitive %} checked{% endif %} /><span class="access-key">C</span>ase-sensitive
-                    </label>
-                </div>
+    <div class="header">
+        <div class="help-icon">
+            <div class="help-msg">
+                <p>DXR is a code search and navigation tool aimed at making sense of large projects. It supports full-text and regex searches as well as structural queries.</p>
+                <ul>
+                    <li><a href="https://github.com/mozilla/dxr">DXR on GitHub</a></li>
+                    <li><a href="https://dxr.readthedocs.org/en/latest/">How to Get Involved</a></li>
+                </ul>
             </div>
-        </fieldset>
+        </div>
+        <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="basic_search">
+            <fieldset>
+                <div id="search-box" class="flex-container" role="group">
+                    <div class="elem_container find">
+                        <label for="query" class="query_label visually-hidden">Find</label>
+                        <input type="text" name="q" {% if should_autofocus_query %}autofocus {% endif %}value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
+                        <div class="zero-size-container">
+                          <div class="bubble">
+                          </div>
+                        </div>
+                        <section id="search-filter" class="search-filter">
+                          <button type="button" class="sf-select-trigger" aria-label="Select Filter">
+                              <!-- arrow icon using icon font -->
+                              <span aria-hidden="true" data-filter-arrow="&#xe801;" class="sf-selector-arrow">
+                                  Filters
+                              </span>
+                          </button>
+                        </section>
+                        <div class="sf-select-options sf-modal" aria-expanded="false">
+                          <ul class="selector-options" tabindex="-1">
+                            {% for filter in filters %}
+                              <li>
+                                <a href="javascript:void(0)" data-value="{{ filter.name }}:">
+                                  <span class="selector-option-label">
+                                    {{ filter.name }}:
+                                  </span>
+                                  <span class="selector-option-description">
+                                    {{ filter.description }}
+                                  </span>
+                                </a>
+                              </li>
+                            {% endfor %}
+                          </ul>
+                        </div>
+                    </div>
 
-        <input type="hidden" value="{{ tree }}" id="ts-value" />
-        <input type="hidden" name="redirect" value="true" id="redirect" />
-        <input type="submit" value="Search" class="visually-hidden" />
-    </form>
+                    <div class="elem_container case">
+                        <label for="case">
+                            <input type="checkbox" name="case" id="case" class="checkbox_case" value="true" accesskey="c"{% if is_case_sensitive %} checked{% endif %} /><span class="access-key">C</span>ase-sensitive
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <input type="hidden" value="{{ tree }}" id="ts-value" />
+            <input type="hidden" name="redirect" value="true" id="redirect" />
+            <input type="submit" value="Search" class="visually-hidden" />
+        </form>
+    </div>
 
     {% block content %}
       <div id="content" class="content" data-no-results="{{ no_results() }}"></div>
