@@ -10,4 +10,3 @@ clean:
 	rm -rf dxr.config
 	rm -rf temp
 	rm -rf target
-	cd code; make clean; cd -

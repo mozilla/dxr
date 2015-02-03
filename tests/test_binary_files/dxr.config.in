@@ -9,4 +9,4 @@ max_thumbnail_size    = 4000
 [code]
 source_folder         = PWD/code
 object_folder         = PWD/code
-build_command         = make
+build_command         = true
