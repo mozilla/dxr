@@ -309,6 +309,7 @@ def _tree_folder(tree):
     the instance."""
     return join(current_app.instance_path, 'trees', tree)
 
+
 def _icon_class_name(file_doc):
     """Return a string for the CSS class of the icon for file document."""
     if file_doc['is_folder']:
@@ -319,6 +320,7 @@ def _icon_class_name(file_doc):
     if file_doc['size'] > current_app.config['MAX_THUMBNAIL_SIZE']:
         class_name += " too_fat"
     return class_name
+
 
 def _html_file_path(tree_folder, url_path):
     """Return the on-disk path, relative to the tree folder, of the HTML file
