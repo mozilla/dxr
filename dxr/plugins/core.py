@@ -1,5 +1,7 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
+
+from base64 import b64encode
 from os.path import splitext
 import re
 
@@ -312,7 +314,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         if extension:
             yield 'ext', extension[1:]  # skip the period
         if is_image(self.path):
-            yield 'raw_data', self.contents.encode("base64")
+            bytestring = (self.contents.encode('utf-8') if self.contains_text()
+                          else self.contents)
+            yield 'raw_data', b64encode(bytestring)
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
