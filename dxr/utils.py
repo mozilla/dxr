@@ -168,3 +168,16 @@ def cached(f):
         return result
 
     return inner
+
+
+class frozendict(dict):
+    """A dict that can be hashed if all its values are hashable
+
+    You shouldn't modify one of these once constructed; it will change the
+    hash.
+
+    """
+    def __hash__(self):
+        items = self.items()
+        items.sort()
+        return hash(tuple(items))

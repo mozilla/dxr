@@ -15,6 +15,7 @@ from os.path import join
 from funcy import decorator, identity, select_keys, imap, ifilter, remove
 
 from dxr.indexers import FuncSig, Position, Extent
+from dxr.utils import frozendict
 
 
 class UselessLine(Exception):
@@ -183,7 +184,7 @@ def condense_line(dispatch_table, kind, fields):
     if 'defloc' in fields:
         fields['defloc'] = _process_loc(fields['defloc'])
 
-    return fields
+    return frozendict(fields)
 
 
 def condense(lines, dispatch_table, predicate=lambda kind, fields: True):
@@ -201,7 +202,7 @@ def condense(lines, dispatch_table, predicate=lambda kind, fields: True):
         attention to a line. If it returns False, the line is thrown away.
 
     """
-    ret = dict((key, []) for key in POSSIBLE_KINDS)
+    ret = dict((key, set()) for key in POSSIBLE_KINDS)
     for line in lines:
         kind = line[0]
         fields = dict(izip(line[1::2], line[2::2]))
@@ -209,7 +210,7 @@ def condense(lines, dispatch_table, predicate=lambda kind, fields: True):
             continue
 
         try:
-            ret[kind].append(condense_line(dispatch_table, kind, fields))
+            ret[kind].add(condense_line(dispatch_table, kind, fields))
         except UselessLine:
             pass
     return ret

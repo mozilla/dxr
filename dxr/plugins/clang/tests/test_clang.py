@@ -18,17 +18,13 @@ from dxr.plugins.clang.needles import sig_needles
 DEFAULT_EXTENT = Extent(start=Position(0, 0), end=Position(0, 0))
 
 
-def get_csv(csv_str):
+def condense_csv(csv_str):
     return condense(csv.reader(StringIO('\n'.join(ifilter(None, (x.strip() for x in csv_str.splitlines()))))),
                     DISPATCH_TABLE)
 
 
 def test_smoke_test_csv():
-    get_csv('')
-
-
-def eq__(l1, l2):
-    eq_(list(l1), list(l2))
+    condense_csv('')
 
 
 def test_sig_needles():
@@ -38,5 +34,19 @@ def test_sig_needles():
         'variable': [{'type': 'a',
                       'span': DEFAULT_EXTENT}],
     }
-    eq__(sig_needles(fixture),
+    eq_(list(sig_needles(fixture)),
         [(('c-sig', '(int**, int, int) -> int**'), DEFAULT_EXTENT)])
+
+
+def test_duplicate_collapsing():
+    """Duplicate condensed data should be filtered out.
+
+    Duplicates CSV lines are encountered when the clang plugin emits multiple
+    CSVs for a single source file, which happens when they have different
+    contents at different points during compilation (due to preprocessor
+    directives?).
+
+    """
+    line = '''variable,name,"mAtkObject",qualname,"mozilla::a11y::AccessibleWrap::mAtkObject",loc,"accessible/atk/AccessibleWrap.h:83:13",locend,"accessible/atk/AccessibleWrap.h:83:23",type,"AtkObject *",scopename,"AccessibleWrap",scopequalname,"mozilla::a11y::AccessibleWrap"'''
+    eq_(condense_csv(line + '\n' + line),
+        condense_csv(line))
