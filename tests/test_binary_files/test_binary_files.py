@@ -38,6 +38,8 @@ class BinaryFileTests(DxrInstanceTestCase):
         ok_(response.status_code, 200)
 
     def test_some_bytes(self):
-        """We do not want some_bytes to show in the folder index."""
+        """We want some_bytes to show in the folder index, but without its own page."""
         response = self.client().get('/code/source/')
-        ok_('some_bytes' not in response.data)
+        ok_('some_bytes' in response.data)
+        response = self.client().get('/code/source/some_bytes')
+        ok_(response.status_code, 404)

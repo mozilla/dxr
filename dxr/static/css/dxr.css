@@ -148,6 +148,13 @@ td#line-numbers span {
     text-align: right;
     padding: 0 0.5rem;
 }
+tr.binary_row > td {
+    padding-top: .5em;
+    padding-bottom: .5em;
+}
+tr.binary_row {
+    opacity: 0.6;
+}
 .highlighted,
 .multihighlight {
     background: none repeat scroll 0 0 rgb(255, 255, 204);

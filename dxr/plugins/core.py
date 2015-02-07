@@ -381,6 +381,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
+        # binary, but not an image
+        elif not self.contains_text():
+            yield 'is_binary', True
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
@@ -389,8 +392,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    ('content', text)]
 
     def is_interesting(self):
-        """Core plugin puts text and image files in the search index."""
-        return self.contains_text() or is_image(self.path)
+        """Core plugin puts all files in the search index."""
+        return True
 
 
 # Match file name and line number: filename:n. Strip leading slashes because
