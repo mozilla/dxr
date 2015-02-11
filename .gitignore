@@ -10,6 +10,7 @@
 /tests/test_diff_link/code/.hg/dirstate
 /vagrantconfig_local.yaml
 /.vagrant
+/.noseids
 /build
 /dist
 /*.egg-info

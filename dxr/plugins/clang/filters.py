@@ -1,137 +1,102 @@
 from jinja2 import Markup
 
-from dxr.filters import NameFilterBase, negatable
+from dxr.filters import NameFilterBase, QualifiedNameFilterBase
 
 
-class _NameFilter(NameFilterBase):
+class _CQualifiedNameFilter(QualifiedNameFilterBase):
     lang = 'c'
 
 
-class _QualifiedNameFilter(_NameFilter):
-    """An exact-match filter for symbols having names and qualnames
-
-    This filter assumes an object-shaped needle value with a 'name'
-    subproperty (containing the symbol name), a 'name.lower' folded to
-    lowercase, and 'qualname' and 'qualname.lower' (doing the same for
-    fully-qualified name). Highlights are based on 'start' and 'end'
-    subproperties, which contain column bounds.
-
-    """
-    @negatable
-    def filter(self):
-        """Find functions by their name or qualname.
-
-        "+" searches look at just qualnames, but non-"+" searches look at both
-        names and qualnames. All comparisons against qualnames are
-        case-sensitive, because, if you're being that specific, that's
-        probably what you want.
-
-        """
-        if self._term['qualified']:
-            return self._term_filter('qualname')
-        else:
-            return {'or': [super(_QualifiedNameFilter, self)._positive_filter(),
-                           self._term_filter('qualname')]}
-
-    def _should_be_highlit(self, entity):
-        """Return whether a structural entity should be highlit, according to
-        names and qualnames.
-
-        Compare short names and qualnames if this is a regular search. Compare
-        just qualnames if it's a qualified search.
-
-        """
-        return ((not self._term['qualified'] and
-                 super(_QualifiedNameFilter, self)._should_be_highlit(entity))
-                or entity['qualname'] == self._term['arg'])
+class _CNameFilter(NameFilterBase):
+    lang = 'c'
 
 
-class FunctionFilter(_QualifiedNameFilter):
+class FunctionFilter(_CQualifiedNameFilter):
     name = 'function'
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
-class FunctionRefFilter(_QualifiedNameFilter):
+class FunctionRefFilter(_CQualifiedNameFilter):
     name = 'function-ref'
     description = 'Function or method references'
 
 
-class FunctionDeclFilter(_QualifiedNameFilter):
+class FunctionDeclFilter(_CQualifiedNameFilter):
     name = 'function-decl'
     description = 'Function or method declaration'
 
 
-class TypeRefFilter(_QualifiedNameFilter):
+class TypeRefFilter(_CQualifiedNameFilter):
     name = 'type-ref'
     description = 'Type or class references, uses, or instantiations'
 
 
-class TypeDeclFilter(_QualifiedNameFilter):
+class TypeDeclFilter(_CQualifiedNameFilter):
     name = 'type-decl'
     description = 'Type or class declaration'
 
 
-class TypeFilter(_QualifiedNameFilter):
+class TypeFilter(_CQualifiedNameFilter):
     name = 'type'
     description = Markup('Type or class definition: <code>type:Stack</code>')
 
 
-class VariableFilter(_QualifiedNameFilter):
+class VariableFilter(_CQualifiedNameFilter):
     name = 'var'
     description = 'Variable definition'
 
 
-class VariableRefFilter(_QualifiedNameFilter):
+class VariableRefFilter(_CQualifiedNameFilter):
     name = 'var-ref'
     description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
 
 
-class VarDeclFilter(_QualifiedNameFilter):
+class VarDeclFilter(_CQualifiedNameFilter):
     name = 'var-decl'
     description = 'Variable declaration'
 
 
-class MacroFilter(_NameFilter):
+class MacroFilter(_CNameFilter):
     name = 'macro'
     description = 'Macro definition'
 
 
-class MacroRefFilter(_NameFilter):
+class MacroRefFilter(_CNameFilter):
     name = 'macro-ref'
     description = 'Macro uses'
 
 
-class NamespaceFilter(_QualifiedNameFilter):
+class NamespaceFilter(_CQualifiedNameFilter):
     name = 'namespace'
     description = 'Namespace definition'
 
 
-class NamespaceRefFilter(_QualifiedNameFilter):
+class NamespaceRefFilter(_CQualifiedNameFilter):
     name = 'namespace-ref'
     description = 'Namespace references'
 
 
-class NamespaceAliasFilter(_QualifiedNameFilter):
+class NamespaceAliasFilter(_CQualifiedNameFilter):
     name = 'namespace-alias'
     description = 'Namespace alias'
 
 
-class NamespaceAliasRefFilter(_QualifiedNameFilter):
+class NamespaceAliasRefFilter(_CQualifiedNameFilter):
     name = 'namespace-alias-ref'
     description = 'Namespace alias references'
 
 
-class WarningFilter(_NameFilter):
+class WarningFilter(_CNameFilter):
     name = 'warning'
     description = 'Compiler warning messages'
 
 
-class WarningOptFilter(_NameFilter):
+class WarningOptFilter(_CNameFilter):
     name = 'warning-opt'
     description = 'Warning messages brought on by a given compiler command-line option'
 
 
-class CallerFilter(_QualifiedNameFilter):
+class CallerFilter(_CQualifiedNameFilter):
     name = 'callers'
     description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
 
@@ -141,26 +106,26 @@ class CallerFilter(_QualifiedNameFilter):
         self._needle = '{0}_call'.format(self.lang)
 
 
-class ParentFilter(_QualifiedNameFilter):
+class ParentFilter(_CQualifiedNameFilter):
     name = 'bases'
     description = Markup('Superclasses of a class: <code>bases:SomeSubclass</code>')
 
 
-class ChildFilter(_QualifiedNameFilter):
+class ChildFilter(_CQualifiedNameFilter):
     name = 'derived'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
 
 
-class MemberFilter(_QualifiedNameFilter):
+class MemberFilter(_CQualifiedNameFilter):
     name = 'member'
     description = Markup('Member variables, types, or methods of a class: <code>member:SomeClass</code>')
 
 
-class OverridesFilter(_QualifiedNameFilter):
+class OverridesFilter(_CQualifiedNameFilter):
     name = 'overrides'
     description = Markup('Methods which override the given one: <code>overrides:someMethod</code>')
 
 
-class OverriddenFilter(_QualifiedNameFilter):
+class OverriddenFilter(_CQualifiedNameFilter):
     name = 'overridden'
     description = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.')

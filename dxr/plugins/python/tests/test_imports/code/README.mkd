@@ -1,0 +1,5 @@
+# Test Non-Python File
+
+This file exists mainly to ensure that the indexer skips over
+non-python files and doesn't freak out and fail to parse non-Python
+code.

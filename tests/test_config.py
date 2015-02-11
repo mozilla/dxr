@@ -22,6 +22,9 @@ def test_enabled_star():
 
             [[buglink]]
             url = http://example.com/
+
+            [[python]]
+            python_path = /some/path
         """)
     ok_('urllink' in (p.name for p in config.trees['some_tree'].enabled_plugins))
 
@@ -71,6 +74,7 @@ def test_deep_attrs():
     """Test traversal of multiple layers of DotDictWrappers."""
     config = Config("""
         [DXR]
+        enabled_plugins = buglink
         target_folder = /some/path
 
         [mozilla-central]
@@ -90,6 +94,7 @@ def test_multi_word_strings():
     """
     config = Config("""
         [DXR]
+        enabled_plugins = clang buglink
         target_folder = /some/path
 
         [mozilla-central]
@@ -113,6 +118,7 @@ def test_unknown_options():
     try:
         config = Config("""
             [DXR]
+            enabled_plugins = clang
             target_folder = /some/path
             disabled_plugins = buglink
             smoop = 5
@@ -137,8 +143,8 @@ def test_and_error():
     try:
         config = Config("""
             [DXR]
+            enabled_plugins = clang
             target_folder = /some/path
-            disabled_plugins = buglink
             workers = -5
 
             [mozilla-central]

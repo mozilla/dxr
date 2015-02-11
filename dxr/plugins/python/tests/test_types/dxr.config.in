@@ -9,3 +9,5 @@ es_alias            = dxr_test_{format}_{tree}
 source_folder       = PWD/code
 object_folder       = PWD/code
 build_command       = /bin/true
+    [[python]]
+    python_path     = PWD/code

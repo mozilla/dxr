@@ -207,30 +207,42 @@ class SingleFileTestCase(TestCase):
     # print its path so you can examine it:
     should_delete_instance = True
 
+    # Override this in a subclass to change the filename used for the
+    # source file.
+    source_filename = 'main.cpp'
+
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
         cls._config_dir_path = mkdtemp()
         code_path = os.path.join(cls._config_dir_path, 'code')
         mkdir(code_path)
-        _make_file(code_path, 'main.cpp', cls.source)
-        # $CXX gets injected by the clang DXR plugin:
+        _make_file(code_path, cls.source_filename, cls.source)
 
         chdir(cls._config_dir_path)
-        build_instance("""
-[DXR]
-enabled_plugins = pygmentize clang
-temp_folder = {config_dir_path}/temp
-target_folder = {config_dir_path}/target
-es_index = dxr_test_{{format}}_{{tree}}_{{unique}}
-es_alias = dxr_test_{{format}}_{{tree}}
-
-[code]
-source_folder = {config_dir_path}/code
-object_folder = {config_dir_path}/code
-build_command = $CXX -o main main.cpp
-""".format(config_dir_path=cls._config_dir_path))
+        build_instance(cls.get_config(cls._config_dir_path))
         cls._es().refresh()
+
+    @classmethod
+    def get_config(cls, config_dir_path):
+        """Return a dictionary of config options for building the tree.
+
+        Override this in subclasses to customize the config.
+        """
+        return {
+            'DXR': {
+                'enabled_plugins': 'pygmentize clang',
+                'temp_folder': '{0}/temp'.format(config_dir_path),
+                'target_folder': '{0}/target'.format(config_dir_path),
+                'es_index': 'dxr_test_{format}_{tree}_{unique}',
+                'es_alias': 'dxr_test_{format}_{tree}',
+            },
+            'code': {
+                'source_folder': '{0}/code'.format(config_dir_path),
+                'object_folder': '{0}/code'.format(config_dir_path),
+                'build_command': '$CXX -o main main.cpp',
+            }
+        }
 
     @classmethod
     def teardown_class(cls):

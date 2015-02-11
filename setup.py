@@ -23,7 +23,7 @@ setup(
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
                                   'buglink = dxr.plugins.buglink:plugin',
                                   'clang = dxr.plugins.clang:plugin',
-                                  'python = dxr.plugins.python',
+                                  'python = dxr.plugins.python:plugin',
                                   'omniglot = dxr.plugins.omniglot:plugin',
                                   'pygmentize = dxr.plugins.pygmentize']},
     install_requires=['configobj>=5.0.6',

@@ -192,3 +192,42 @@ class NameFilterBase(Filter):
         return ((entity['start'], entity['end'])
                 for entity in result.get(self._needle, ()) if
                 self._should_be_highlit(entity))
+
+
+class QualifiedNameFilterBase(NameFilterBase):
+    """An exact-match filter for symbols having names and qualnames
+
+    This filter assumes an object-shaped needle value with a 'name'
+    subproperty (containing the symbol name), a 'name.lower' folded to
+    lowercase, and 'qualname' and 'qualname.lower' (doing the same for
+    fully-qualified name). Highlights are based on 'start' and 'end'
+    subproperties, which contain column bounds.
+
+    """
+    @negatable
+    def filter(self):
+        """Find functions by their name or qualname.
+
+        "+" searches look at just qualnames, but non-"+" searches look at both
+        names and qualnames. All comparisons against qualnames are
+        case-sensitive, because, if you're being that specific, that's
+        probably what you want.
+
+        """
+        if self._term['qualified']:
+            return self._term_filter('qualname')
+        else:
+            return {'or': [super(QualifiedNameFilterBase, self)._positive_filter(),
+                           self._term_filter('qualname')]}
+
+    def _should_be_highlit(self, entity):
+        """Return whether a structural entity should be highlit, according to
+        names and qualnames.
+
+        Compare short names and qualnames if this is a regular search. Compare
+        just qualnames if it's a qualified search.
+
+        """
+        return ((not self._term['qualified'] and
+                 super(QualifiedNameFilterBase, self)._should_be_highlit(entity))
+                or entity['qualname'] == self._term['arg'])

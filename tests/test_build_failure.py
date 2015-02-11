@@ -6,6 +6,7 @@ from dxr.testing import SingleFileTestCase, CommandFailure
 
 class BuildFailureTests(SingleFileTestCase):
     source = r"""A bunch of garbage"""
+    should_delete_instance = False
 
     @classmethod
     def setup_class(cls):
@@ -15,7 +16,7 @@ class BuildFailureTests(SingleFileTestCase):
         except BuildError:
             pass
         else:
-            raise AssertionError('A failed build returned an exit code of 0.')
+            raise AssertionError('A failed build returned an exit code of 0. ' + cls._config_dir_path)
 
     def test_nothing(self):
         """A null test just to make the setup method run"""
