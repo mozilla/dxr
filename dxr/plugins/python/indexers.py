@@ -45,8 +45,8 @@ mappings = {
 
 class FileToIndex(FileToIndexBase):
     needle_types = {
-        'ClassDef': 'py_type',
-        'FunctionDef': 'py_function',
+        ast.ClassDef: 'py_type',
+        ast.FunctionDef: 'py_function',
     }
 
     def is_interesting(self):
@@ -63,58 +63,43 @@ class FileToIndex(FileToIndexBase):
 
     def _all_needles(self):
         """Return an iterable of needles in (needle name, value, Extent) format."""
-
-        syntax_tree = ast.parse(self.contents.encode('utf-8'))
-
-        # Create a lookup table for ast nodes by lineno and
-        # col_offset, for those that have them.  This makes it easy to
-        # associate nodes with their corresponding token.
-        node_location = {}
-        for node in ast.walk(syntax_tree):
-            if getattr(node, 'lineno', None) is not None:
-                position = (node.lineno, node.col_offset)
-                node_location.setdefault(position, []).append(node)
-
-        tmpfile = StringIO(self.contents)
-        token_gen = tokenize.generate_tokens(tmpfile.readline)
-
-        relocate_nodes = []
+        # AST nodes for classes and functions point to the position of
+        # their 'def' and 'class' tokens. To get the position of their
+        # names, we look for 'def' and 'class' tokens and store the
+        # position of the token immediately following them.
+        node_start_table = {}
+        previous_start = None
+        token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
         for tok_type, tok_name, start, end, _ in token_gen:
             if tok_type != token.NAME:
-                relocate_nodes = []
                 continue
 
-            cur_token = {'name': tok_name, 'start': start, 'end': end}
-            if relocate_nodes:
-                cur_token['nodes'] = relocate_nodes
-            else:
-                cur_token['nodes'] = node_location.get(start, [])
+            if tok_name in ('def', 'class'):
+                previous_start = start
+            elif previous_start is not None:
+                node_start_table[previous_start] = start
+                previous_start = None
 
-            relocate_nodes = []
+        # Run through the AST looking for things to index!
+        syntax_tree = ast.parse(self.contents.encode('utf-8'))
+        for node in ast.walk(syntax_tree):
+            if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
+                node.start = (node.lineno, node.col_offset)
+                if node.start in node_start_table:
+                    node.start = node_start_table[node.start]
 
-            # The ast node has a lineno and col_offset that points to
-            # where the token 'def' or 'class' is positioned in the file.
-            # We actually want it to go with the following name token.
-            if tok_type == token.NAME and tok_name in ('def', 'class'):
-                relocate_nodes, cur_token['nodes'] = cur_token['nodes'], []
+                node.end = (node.start[0], node.start[1] + len(node.name))
+                needle_type = self.needle_types[node.__class__]
+                yield self._needle(needle_type, node.name, node.start, node.end)
 
-            if cur_token.get('nodes'):
-                needle = self._construct_needle(cur_token)
-                if needle:
-                    yield needle
-
-    def _construct_needle(self, tok):
-        class_name = tok['nodes'][0].__class__.__name__
-        needle_type = self.needle_types.get(class_name)
-
-        if needle_type:
-            return (
-                needle_type,
-                {'name': tok['name'],
-                 'start': tok['start'][1],
-                 'end': tok['end'][1]},
-                Extent(Position(row=tok['start'][0],
-                                col=tok['start'][1]),
-                       Position(row=tok['end'][0],
-                                col=tok['end'][1]))
-            )
+    def _needle(self, needle_type, name, start, end):
+        return (
+            needle_type,
+            {'name': name,
+             'start': start[1],
+             'end': end[1]},
+            Extent(Position(row=start[0],
+                            col=start[1]),
+                   Position(row=end[0],
+                            col=end[1]))
+        )
