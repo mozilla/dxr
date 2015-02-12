@@ -18,7 +18,8 @@ from funcy import merge, chunks, first, suppress
 import jinja2
 from more_itertools import chunked
 from ordereddict import OrderedDict
-from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
+from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
+                             bulk_chunks)
 
 import dxr
 from dxr.config import Config, FORMAT
@@ -476,38 +477,44 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                 append_by_line(annotations_by_line,
                                file_to_index.annotations_by_line())
 
-
-    # Index a doc of type 'file' so we can build folder listings.
-    # At the moment, we send to ES in the same worker that does the indexing.
-    # We could interpose an external queueing system, but I'm willing to
-    # potentially sacrifice a little speed here for the easy management of
-    # self-throttling.
-    # TODO: Merge with the bulk_index below when pyelasticsearch supports
-    # multi-doctype bulk indexing.
-    file_info = stat(path)
-    folder_name, file_name = split(rel_path)
-
-    # conditional until we figure out how to display arbitrary binary files
-    if is_text or is_image(rel_path):
-        es.index(index,
-                 FILE,
-                 # Hard-code the keys that are hard-coded in the browse()
-                 # controller. Merge with the pluggable ones from needles:
-                 dict(folder=folder_name,
+    def docs():
+        """Yield documents for bulk indexing."""
+        # Index a doc of type 'file' so we can build folder listings.
+        # At the moment, we send to ES in the same worker that does the
+        # indexing. We could interpose an external queueing system, but I'm
+        # willing to potentially sacrifice a little speed here for the easy
+        # management of self-throttling.
+        #
+        # Conditional until we figure out how to display arbitrary binary
+        # files:
+        if is_text or is_image(rel_path):
+            file_info = stat(path)
+            folder_name, file_name = split(rel_path)
+            yield es.index_op(
+                # Hard-code the keys that are hard-coded in the browse()
+                # controller. Merge with the pluggable ones from needles:
+                dict(folder=folder_name,
                      name=file_name,
                      size=file_info.st_size,
                      modified=datetime.fromtimestamp(file_info.st_mtime),
                      is_folder=False,
-                     **needles))
+                     **needles),
+                doc_type=FILE)
 
-    # Index all the lines, attaching the file-wide needles to each line as well:
-    if is_text and needles_by_line:  # If it's an empty file (no lines), don't
-                                     # bother ES. It hates empty dicts.
-        # Indexing a 277K-line file all in one request makes ES time out
-        # (>60s), so we chunk it up:
-        for chunk_of_needles in chunked(
-                (merge(n, needles) for n in needles_by_line), 300):
-            es.bulk_index(index, LINE, chunk_of_needles, id_field=None)
+        # Index all the lines, attaching the file-wide needles to each line as
+        # well. If it's an empty file (no lines), don't bother ES. It hates
+        # empty dicts.
+        if is_text and needles_by_line:
+            for n in needles_by_line:
+                yield es.index_op(merge(n, needles))
+
+    # Indexing a 277K-line file all in one request makes ES time out (>60s),
+    # so we chunk it up. 300 docs is optimal according to the benchmarks in
+    # https://bugzilla.mozilla.org/show_bug.cgi?id=1122685. So large docs like
+    # images don't make our chunk sizes ridiculous, there's a size ceiling as
+    # well: 10000 is based on the 300 and an average of 31 chars per line.
+    for chunk in bulk_chunks(docs(), docs_per_chunk=300, bytes_per_chunk=10000):
+        es.bulk(chunk, index=index, doc_type=LINE)
 
     # Render some HTML:
     if 'html' not in tree.config.skip_stages:
@@ -538,24 +545,23 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                 join(tree.target_folder, rel_path + '.html'),
                 merge(common, file_vars, {
                 'image_src': raw_url(tree.name, rel_path) }))
-
         elif is_text:
             _fill_and_write_template(
                 jinja_env,
                 'text_file.html',
                 join(tree.target_folder, rel_path + '.html'),
                 merge(common, file_vars, {
-                # Someday, it would be great to stream this and not concretize the
-                # whole thing in RAM. The template will have to quit looping
-                # through the whole thing 3 times.
+                # Someday, it would be great to stream this and not concretize
+                # the whole thing in RAM. The template will have to quit
+                # looping through the whole thing 3 times.
                 'lines': zip(build_lines(contents,
                                          chain.from_iterable(refses),
                                          chain.from_iterable(regionses)),
                              annotations_by_line) if is_text else [],
 
                 'is_text': is_text,
-
                 'sections': build_sections(chain.from_iterable(linkses))}))
+
 
 def index_chunk(tree,
                 tree_indexers,
