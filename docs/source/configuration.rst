@@ -100,6 +100,10 @@ Here are the options that can live in the ``[DXR]`` section:
     will be substituted, and their meanings are as in ``es_index``. Default:
     ``dxr_{format}_{tree}``.
 
+``max_thumbnail_size``
+    A number that specifies the file size in bytes at which images will not be
+    used for their icon previews on folder browsing pages. Default: 20KB.
+
 (Refer to the Plugin Configuration section for plugin keys available
 here).
 

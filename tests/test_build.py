@@ -1,5 +1,9 @@
-"""Unit tests that don't fit anywhere else"""
+"""Tests for the dxr.build module
 
+Much of the module is covered in the course of the integration tests that test
+everything else. Here are a few unit tests.
+
+"""
 from unittest import TestCase
 
 from nose.tools import eq_

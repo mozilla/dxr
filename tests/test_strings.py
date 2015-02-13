@@ -46,8 +46,7 @@ def test_highlight():
     """Try ``highlight()`` against overlapping and disjunct inputs."""
     eq_(highlight('inini main(ini argc, char* argv[]) {',
                   [(0, 3), (2, 5), (11, 14)]),
-        '<b>in</b><b>i</b><b>ni</b> main(<b>ini</b> argc, char* argv[]) {')
-    # That's not the optimal result, but it's a correct one.
+        '<b>inini</b> main(<b>ini</b> argc, char* argv[]) {')
 
 
 class RegexpTests(SingleFileTestCase):

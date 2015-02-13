@@ -3,7 +3,6 @@ import os.path
 from dxr.query import Query
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
-from nose import SkipTest
 from nose.tools import eq_
 
 

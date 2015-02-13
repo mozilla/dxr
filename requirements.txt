@@ -23,8 +23,8 @@ ordereddict==1.1
 # sha256: RPLinN6e9780jIdUsmE5pghpDZ8CPbyEnq0CRqDJXQo
 parsimonious==0.6
 
-# sha256: RN37EiUFTX1rHQLpM459SAm-lO2-mSmi7AgH0435k_o
-pyelasticsearch==1.0
+# sha256: 9D6pnDgR_p_mwPuKXmlkjhs6964a6NZIc450y4R2gHc
+pyelasticsearch==1.1
 
 # Pygments 2.0.1 with a C++ lexer patched to fix https://bitbucket.org/birkenfeld/pygments-main/issue/1081/cpplexer-pathological-slowness-case
 # sha256: Ftr99EAuAJQ9S1PJiiUa36knAKmRQDbXsk6WPwt3V1Q

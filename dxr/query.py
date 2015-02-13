@@ -176,9 +176,9 @@ class Query(object):
 @cached
 def query_grammar(plugins):
     """Return a query-parsing grammar for some set of plugins.
-    
+
     :arg plugins: An iterable of Plugins
-    
+
     """
     return Grammar(ur'''
         query = _ terms
@@ -327,10 +327,10 @@ def filters_by_name(plugins):
 
 def filter_menu_items(plugins):
     """Return the additional template variables needed to render filter.html.
-    
+
     :arg plugins: An iterable of Plugins whose filters to put in the Filters
         menu
-    
+
     """
     # TODO: Sort these in a stable order. But maybe common ones should be near
     # the top?
@@ -368,22 +368,20 @@ def highlight(content, extents):
 
 
 def fix_extents_overlap(extents):
-    """Take a sorted list of extents and yield the extents without overlaps."""
-    # There must be two extents for there to be an overlap
-    while len(extents) >= 2:
-        # Take the two next extents
-        start1, end1 = extents[0]
-        start2, end2 = extents[1]
-        # Check for overlap
-        if end1 <= start2:
-            # If no overlap, yield first extent
-            yield start1, end1
-            extents = extents[1:]  # This has got to be slow as death.
-            continue
-        # If overlap, yield extent from start1 to start2
-        if start1 != start2:
-            yield start1, start2
-        extents[0] = start2, end1
-        extents[1] = end1, end2
-    if extents:
-        yield extents[0]
+    """Return a sorted list of extents whose effect is to highlight the same
+    characters the passed-in ones did but without overlapping each other.
+
+    :arg extents: A sorted iterable of (start, end) extent tuples
+
+    """
+    cur = init = -1, -1
+    for nex in extents:
+        if cur[0] <= nex[0] <= cur[1]:
+            # nex overlaps cur or comes directly after it. Combine them.
+            cur = cur[0], nex[1]
+        else:  # nex and cur are disjoint
+            if cur is not init:
+                yield cur
+            cur = nex
+    if cur is not init:
+        yield cur

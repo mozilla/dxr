@@ -1,0 +1,11 @@
+{% extends "file.html" %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ wwwroot }}/static/css/image_file.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+  {{ super() }}
+  <img src="{{wwwroot}}/{{ image_src }}" id="image_file">
+{% endblock %}

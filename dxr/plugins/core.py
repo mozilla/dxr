@@ -1,5 +1,7 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
+
+from base64 import b64encode
 from os.path import splitext
 import re
 
@@ -10,6 +12,7 @@ from parsimonious import ParseError
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
+from dxr.mime import is_image
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
                             And, JsRegexVisitor, es_regex_filter, NoTrigrams,
@@ -77,6 +80,10 @@ mappings = {
             },
             'is_folder': {
                 'type': 'boolean'
+            },
+            'raw_data': { # only present if the file is an image
+                'type': 'binary',
+                'index': 'no'
             }
         }
     },
@@ -306,12 +313,20 @@ class FileToIndex(dxr.indexers.FileToIndex):
         extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
+        if is_image(self.path):
+            bytestring = (self.contents.encode('utf-8') if self.contains_text()
+                          else self.contents)
+            yield 'raw_data', b64encode(bytestring)
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
         for number, text in enumerate(self.contents.splitlines(), 1):
             yield [('number', number),
                    ('content', text)]
+
+    def is_interesting(self):
+        """Core plugin puts text and image files in the search index."""
+        return self.contains_text() or is_image(self.path)
 
 
 # Match file name and line number: filename:n. Strip leading slashes because

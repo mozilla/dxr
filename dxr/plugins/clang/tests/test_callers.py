@@ -1,7 +1,5 @@
 """Tests for searches using callers and called-by"""
 
-from nose import SkipTest
-
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
 
