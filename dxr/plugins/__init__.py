@@ -175,6 +175,7 @@ def direct_search(priority):
     return decorator
 
 
+_plugin_cache = None
 def all_plugins():
     """Return a dict of plugin name -> Plugin for all registered plugins.
 
@@ -190,6 +191,13 @@ def all_plugins():
     and analyzers.
 
     """
+    global _plugin_cache
+
+    if _plugin_cache:
+        # Iterating over entrypoints could be kind of expensive, with the FS
+        # reads and all.
+        return _plugin_cache
+
     import dxr.plugins.core
 
     def name_and_plugin(entry_point):
@@ -200,12 +208,12 @@ def all_plugins():
         plugin.name = entry_point.name
         return entry_point.name, plugin
 
-    ret = OrderedDict()
-    ret['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
-    ret['core'].name = 'core'
-    ret.update(name_and_plugin(point) for point in
-               iter_entry_points('dxr.plugins'))
-    return ret
+    _plugin_cache = OrderedDict()
+    _plugin_cache['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
+    _plugin_cache['core'].name = 'core'
+    _plugin_cache.update(name_and_plugin(point) for point in
+                              iter_entry_points('dxr.plugins'))
+    return _plugin_cache
 
 
 def plugins_named(names):
