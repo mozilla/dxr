@@ -247,6 +247,8 @@ def browse(tree, path=''):
                 for t_name, t_description in config['TREES'].iteritems()],
             generated_date=config['GENERATED_DATE'],
             google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
+            # generated_date=conf.generated_date,
+            # TODO: Replace the above with a pull from the upcoming TREE doctype.
             paths_and_names=linked_pathname(path, tree),
             filters=filter_menu_items(plugins_named(
                     config['ENABLED_PLUGINS'])),
