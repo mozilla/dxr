@@ -4,8 +4,10 @@ from os.path import relpath
 import subprocess
 import urlparse
 
-from dxr.config import ConfigError
+from schema import Optional
+
 import dxr.indexers
+from dxr.plugins import Plugin
 
 """Omniglot - Speaking all commonly-used version control systems.
 At present, this plugin is still under development, so not all features are
@@ -130,7 +132,7 @@ class Mercurial(VCS):
         return last_change
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs, tree):
+    def claim_vcs_source(cls, path, dirs, plugin_config):
         if '.hg' in dirs:
             dirs.remove('.hg')
             return cls(path)
@@ -166,7 +168,7 @@ class Git(VCS):
                 break
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs, tree):
+    def claim_vcs_source(cls, path, dirs, plugin_config):
         if '.git' in dirs:
             dirs.remove('.git')
             return cls(path)
@@ -200,9 +202,9 @@ class Git(VCS):
             if repo.startswith("git:"):
                 repo = "https" + repo[len("git"):]
             return repo
-        raise ConfigError("Your git remote is not supported yet. Please use a "
-                          "GitHub remote for now, or disable the omniglot "
-                          "plugin.")
+        raise RuntimeError("Your git remote is not supported yet. Please use a "
+                           "GitHub remote for now, or disable the omniglot "
+                           "plugin.")
 
 
 class Perforce(VCS):
@@ -213,12 +215,11 @@ class Perforce(VCS):
         self.upstream = upstream
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs, tree):
+    def claim_vcs_source(cls, path, dirs, plugin_config):
         if 'P4CONFIG' not in os.environ:
             return None
         if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
-            return cls(path,
-                       getattr(tree, 'plugin_omniglot_p4web', 'http://p4web/'))
+            return cls(path, plugin_config.p4web_url)
         return None
 
     def _p4run(self, args):
@@ -279,7 +280,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         # Find all of the VCSs in the source directory:
         for cwd, dirs, files in os.walk(self.tree.source_folder):
             for vcs in every_vcs:
-                attempt = vcs.claim_vcs_source(cwd, dirs, self.tree)
+                attempt = vcs.claim_vcs_source(cwd, dirs, self.plugin_config)
                 if attempt is not None:
                     self.source_repositories[attempt.root] = attempt
 
@@ -292,7 +293,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
             for vcs in every_vcs:
                 attempt = vcs.claim_vcs_source(directory,
                                                os.listdir(directory),
-                                               self.tree)
+                                               self.plugin_config)
                 if attempt is not None:
                     self.source_repositories[directory] = attempt
         # Note: we want to make sure that we look up source repositories by deepest
@@ -303,6 +304,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
     def file_to_index(self, path, contents):
         return FileToIndex(path,
                            contents,
+                           self.plugin_name,
                            self.tree,
                            self.lookup_order,
                            self.source_repositories)
@@ -311,8 +313,8 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
 class FileToIndex(dxr.indexers.FileToIndex):
     """Adder of blame and external links to items under version control"""
 
-    def __init__(self, path, contents, tree, lookup_order, source_repositories):
-        super(FileToIndex, self).__init__(path, contents, tree)
+    def __init__(self, path, contents, plugin_name, tree, lookup_order, source_repositories):
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.lookup_order = lookup_order
         self.source_repositories = source_repositories
 
@@ -347,3 +349,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
             if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
                 return vcs
         return None
+
+
+plugin = Plugin(
+        tree_to_index=TreeToIndex,
+        config_schema={Optional('p4web_url', default='http://p4web/'): str})

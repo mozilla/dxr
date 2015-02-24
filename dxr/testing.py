@@ -222,7 +222,6 @@ class SingleFileTestCase(TestCase):
 enabled_plugins = pygmentize clang
 temp_folder = {config_dir_path}/temp
 target_folder = {config_dir_path}/target
-nb_jobs = 4
 es_index = dxr_test_{{format}}_{{tree}}_{{unique}}
 es_alias = dxr_test_{{format}}_{{tree}}
 

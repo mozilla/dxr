@@ -6,11 +6,11 @@
 
 {% block site_css %}
   {{ super() }}
-  <link href="{{ wwwroot }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{{ www_root }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
 {% block content %}
-  <p class="top-of-tree">Results from the <a href="{{ wwwroot }}/{{ tree }}/source/">{{ tree }}</a> tree:</p>
+  <p class="top-of-tree">Results from the <a href="{{ www_root }}/{{ tree }}/source/">{{ tree }}</a> tree:</p>
 
   {{ tree_menu(tree_tuples, tree) }}
 
@@ -33,7 +33,7 @@
               {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
               {%- set is_first_or_only = loop.first or paths|length == 1 -%}
               {%- set is_dir = not loop.last -%}
-              {%- set url = '%s/%s/source/%s' % (wwwroot, tree, path) -%}
+              {%- set url = '%s/%s/source/%s' % (www_root, tree, path) -%}
 
               {%- include 'path_line.html' -%}
             {%- endfor -%}
@@ -42,12 +42,12 @@
         {% for number, line in lines %}
         <tr>
           <td class="left-column">
-            <a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+            <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
               {{ number }}
             </a>
           </td>
           <td>
-<a href="{{ wwwroot }}/{{ tree }}/source/{{ path }}#{{ number }}">
+<a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
 <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
 </a>
           </td>
@@ -63,5 +63,5 @@
 
 {% block site_js %}
   {{ super() }}
-  <script src="{{ wwwroot }}/static/js/tree-selector.js"></script>
+  <script src="{{ www_root }}/static/js/tree-selector.js"></script>
 {% endblock %}

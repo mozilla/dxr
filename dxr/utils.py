@@ -152,6 +152,7 @@ def glob_to_regex(glob):
     """
     return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]
 
+
 def cached(f):
     """Cache the result of a function that takes an iterable of plugins."""
     # TODO: Generalize this into a general memoizer function later if needed.

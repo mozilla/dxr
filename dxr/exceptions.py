@@ -19,3 +19,29 @@ class BuildError(Exception):
     """Catch-all error for expected kinds of failures during indexing"""
     # This could be refined better, have params added, etc., but it beats
     # calling sys.exit, which is what was happening before.
+
+
+class ConfigError(Exception):
+    """A single error in the configuration file"""
+
+    def __init__(self, message, sections):
+        """
+        :arg message: A human-readable error message
+        :arg sections: A list of sections under which the error was encountered
+
+        """
+        self.message = message
+        self.sections = sections
+
+    def __str__(self):
+        def bracketed(sections):
+            """Yield sections names with increasing numbers of brackets around
+            them.
+
+            """
+            for i, section in enumerate(sections, 1):
+                yield '[' * i + section + ']' * i
+
+        return ('There was an error in the configuration file, in the %s '
+                'section: %s' % (' '.join(bracketed(self.sections)),
+                                 self.message))

@@ -76,7 +76,7 @@ def test_split_into_lines():
 def test_char_offset():
     """Make sure char_offset() deals with different kinds of line breaks and
     handles the first and last lines correctly."""
-    skimmer = FileToSkim('/some/path', u'abc\r\nde\nfghi', 'dummy_tree')
+    skimmer = FileToSkim('/some/path', u'abc\r\nde\nfghi', 'dummy_plugin', 'dummy_tree')
     eq_(skimmer.char_offset(1, 1), 1)
     eq_(skimmer.char_offset(2, 1), 6)
     eq_(skimmer.char_offset(3, 1), 9)

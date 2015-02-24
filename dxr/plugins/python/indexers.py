@@ -6,9 +6,6 @@ from dxr.indexers import (FileToIndex as FileToIndexBase, Extent, Position,
 from dxr.filters import LINE
 
 
-PLUGIN_NAME = 'python'
-
-
 NEEDLE = {
     'type': 'object',
     'properties': {

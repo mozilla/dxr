@@ -303,7 +303,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         return vars
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.tree)
+        return FileToIndex(path, contents, self.plugin_name, self.tree)
 
 
 class FileToIndex(dxr.indexers.FileToIndex):

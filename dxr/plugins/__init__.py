@@ -20,7 +20,8 @@ class AdHocTreeToIndex(TreeToIndex):
 
     def file_to_index(self, path, contents):
         if self._file_to_index_class:
-            return self._file_to_index_class(path, contents, self.tree)
+            return self._file_to_index_class(
+                    path, contents, self.plugin_name, self.tree)
 
 
 class Plugin(object):
@@ -39,7 +40,7 @@ class Plugin(object):
     otherwise.
 
     """
-    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None, direct_searchers=None):
+    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None, direct_searchers=None, config_schema=None):
         """
         :arg filters: A list of filter classes
         :arg tree_to_index: A :class:`TreeToIndex` subclass
@@ -70,6 +71,9 @@ class Plugin(object):
                 A more general approach may replace direct search in the
                 future.
 
+        :arg config_schema: A validation schema for this plugin's
+            configuration. See https://pypi.python.org/pypi/schema/ for docs.
+
         ``mappings`` and ``analyzers`` are recursively merged into other
         plugins' mappings and analyzers using the algorithm described at
         :func:`~dxr.utils.deep_update()`. This is mostly intended so you can
@@ -87,6 +91,7 @@ class Plugin(object):
         self.file_to_skim = file_to_skim
         self.mappings = mappings or {}
         self.analyzers = analyzers or {}
+        self.config_schema = config_schema or {}
 
     @classmethod
     def from_namespace(cls, namespace):
@@ -124,6 +129,17 @@ class Plugin(object):
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
                    direct_searchers=direct_searchers_from_namespace(namespace))
+
+    def __eq__(self, other):
+        """Consider instances of the same plugin equal."""
+        return self.name == other.name
+
+    def __ne__(self, other):
+        return self.name != other.name
+
+    def __hash__(self):
+        """Let us put plugins in sets and test for membership."""
+        return hash(self.name)
 
     def __getstate__(self):
         """When pickling, omit the direct searchers.

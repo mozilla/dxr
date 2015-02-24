@@ -22,11 +22,6 @@ def main():
                       help='An INI section title in the config file, '
                            'specifying a source tree to build. (Default: all '
                            'trees.)')
-    parser.add_option('-j', '--jobs', dest='jobs',
-                      type='int',
-                      default=None,
-                      help='Number of parallel processes to use, (Default: the'
-                           ' value of nb_jobs in the config file)')
     parser.add_option('-v', '--verbose', dest='verbose',
                       action='store_true', default=False,
                       help='Display the build logs during the build instead of'
@@ -48,7 +43,6 @@ def main():
 
     try:
         build_instance(open(options.config_file, 'r').read(),
-                       nb_jobs=options.jobs,
                        tree=options.tree,
                        verbose=options.verbose)
         return 0

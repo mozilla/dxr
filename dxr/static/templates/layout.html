@@ -5,22 +5,22 @@
   <head>
     <meta charset="utf-8" />
     {% block head %}
-      <link href="{{ wwwroot }}/static/icons/search.png" rel="shortcut icon">
+      <link href="{{ www_root }}/static/icons/search.png" rel="shortcut icon">
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
 
     {% block site_css %}
-      <link href="{{ wwwroot }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/css/forms.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/css/icons.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/css/code-style.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/css/selector-common.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ wwwroot }}/static/css/filter.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/forms.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/icons.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/code-style.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/selector-common.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ www_root }}/static/css/filter.css" rel="stylesheet" type="text/css" media="screen" />
     {% endblock %}
   </head>
   <body>
 
-    <form method="get" action="{{ wwwroot }}/{{ tree }}/search" id="basic_search" class="search-box">
+    <form method="get" action="{{ www_root }}/{{ tree }}/search" id="basic_search" class="search-box">
         <fieldset>
             <div id="search-box" class="flex-container" role="group">
                 <div class="elem_container find">
@@ -86,17 +86,17 @@
     {% set eof = True if state_eof else False %}
 
     <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
-    <span id="data" data-root="{{ wwwroot }}" data-search="{{ wwwroot }}/{{ tree }}/search" data-tree="{{ tree }}"></span>
+    <span id="data" data-root="{{ www_root }}" data-search="{{ www_root }}/{{ tree }}/search" data-tree="{{ tree }}"></span>
     <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-result-count="{{ results|length }}" data-eof="{{ eof }}"></span>
 
     {% block site_js %}
-      <script src="{{ wwwroot }}/static/js/libs/jquery203.js"></script>
-      <script src="{{ wwwroot }}/static/js/libs/nunjucks-min.js"></script>
-      <script src="{{ wwwroot }}/static/js/templates.js"></script>
-      <script src="{{ wwwroot }}/static/js/utils.js"></script>
-      <script src="{{ wwwroot }}/static/js/dxr.js"></script>
-      <script src="{{ wwwroot }}/static/js/context_menu.js"></script>
-      <script src="{{ wwwroot }}/static/js/filter.js"></script>
+      <script src="{{ www_root }}/static/js/libs/jquery203.js"></script>
+      <script src="{{ www_root }}/static/js/libs/nunjucks-min.js"></script>
+      <script src="{{ www_root }}/static/js/templates.js"></script>
+      <script src="{{ www_root }}/static/js/utils.js"></script>
+      <script src="{{ www_root }}/static/js/dxr.js"></script>
+      <script src="{{ www_root }}/static/js/context_menu.js"></script>
+      <script src="{{ www_root }}/static/js/filter.js"></script>
     {% endblock %}
 
     {% if google_analytics_key %}
