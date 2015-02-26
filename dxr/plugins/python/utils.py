@@ -3,6 +3,14 @@ import os
 from contextlib import contextmanager
 
 
+def local_name(absolute_name):
+    """Return the local part of an absolute name. For example,
+    `os.path.join` would become `join`.
+
+    """
+    return absolute_name.rsplit('.', 1)[-1]
+
+
 def package_for_module(module_path):
     return module_path.rsplit('.', 1)[0] if '.' in module_path else None
 

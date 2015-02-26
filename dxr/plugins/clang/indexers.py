@@ -10,7 +10,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_NEEDLE, unsparsify)
+                          QUALIFIED_LINE_NEEDLE, unsparsify)
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
@@ -25,32 +25,32 @@ PLUGIN_NAME = 'clang'
 mappings = {
     LINE: {
         'properties': {
-            'c_function': QUALIFIED_NEEDLE,
-            'c_function_ref': QUALIFIED_NEEDLE,
-            'c_function_decl': QUALIFIED_NEEDLE,
-            'c_type_ref': QUALIFIED_NEEDLE,
-            'c_type_decl': QUALIFIED_NEEDLE,
-            'c_type': QUALIFIED_NEEDLE,
-            'c_var': QUALIFIED_NEEDLE,
-            'c_var_ref': QUALIFIED_NEEDLE,
-            'c_var_decl': QUALIFIED_NEEDLE,
-            'c_macro': QUALIFIED_NEEDLE,
-            'c_macro_ref': QUALIFIED_NEEDLE,
-            'c_namespace': QUALIFIED_NEEDLE,
-            'c_namespace_ref': QUALIFIED_NEEDLE,
-            'c_namespace_alias': QUALIFIED_NEEDLE,
-            'c_namespace_alias_ref': QUALIFIED_NEEDLE,
-            'c_warning': QUALIFIED_NEEDLE,
-            'c_warning_opt': QUALIFIED_NEEDLE,
-            'c_call': QUALIFIED_NEEDLE,
-            'c_bases': QUALIFIED_NEEDLE,
-            'c_derived': QUALIFIED_NEEDLE,
-            'c_member': QUALIFIED_NEEDLE,
-            'c_overrides': QUALIFIED_NEEDLE,
+            'c_function': QUALIFIED_LINE_NEEDLE,
+            'c_function_ref': QUALIFIED_LINE_NEEDLE,
+            'c_function_decl': QUALIFIED_LINE_NEEDLE,
+            'c_type_ref': QUALIFIED_LINE_NEEDLE,
+            'c_type_decl': QUALIFIED_LINE_NEEDLE,
+            'c_type': QUALIFIED_LINE_NEEDLE,
+            'c_var': QUALIFIED_LINE_NEEDLE,
+            'c_var_ref': QUALIFIED_LINE_NEEDLE,
+            'c_var_decl': QUALIFIED_LINE_NEEDLE,
+            'c_macro': QUALIFIED_LINE_NEEDLE,
+            'c_macro_ref': QUALIFIED_LINE_NEEDLE,
+            'c_namespace': QUALIFIED_LINE_NEEDLE,
+            'c_namespace_ref': QUALIFIED_LINE_NEEDLE,
+            'c_namespace_alias': QUALIFIED_LINE_NEEDLE,
+            'c_namespace_alias_ref': QUALIFIED_LINE_NEEDLE,
+            'c_warning': QUALIFIED_LINE_NEEDLE,
+            'c_warning_opt': QUALIFIED_LINE_NEEDLE,
+            'c_call': QUALIFIED_LINE_NEEDLE,
+            'c_bases': QUALIFIED_LINE_NEEDLE,
+            'c_derived': QUALIFIED_LINE_NEEDLE,
+            'c_member': QUALIFIED_LINE_NEEDLE,
+            'c_overrides': QUALIFIED_LINE_NEEDLE,
             # At a base method's site, record all the methods that override
             # it. Then we can search for any of those methods and turn up the
             # base one:
-            'c_overridden': QUALIFIED_NEEDLE
+            'c_overridden': QUALIFIED_LINE_NEEDLE
         }
     }
 }

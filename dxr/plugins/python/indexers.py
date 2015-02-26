@@ -4,28 +4,37 @@ import tokenize
 from StringIO import StringIO
 
 from dxr.build import unignored
-from dxr.filters import LINE
+from dxr.filters import FILE, LINE
 from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_NEEDLE, with_start_and_end)
+                          QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
+                          with_start_and_end)
 from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import class_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
-                                      convert_node_to_name, path_to_module)
+                                      convert_node_to_name, local_name,
+                                      path_to_module)
 
+
+PLUGIN_NAME = 'python'
 
 mappings = {
+    FILE: {
+        'properties': {
+            'py_module': QUALIFIED_FILE_NEEDLE,
+        },
+    },
     LINE: {
         'properties': {
-            'py_type': QUALIFIED_NEEDLE,
-            'py_function': QUALIFIED_NEEDLE,
-            'py_derived': QUALIFIED_NEEDLE,
-            'py_bases': QUALIFIED_NEEDLE,
-            'py_callers': QUALIFIED_NEEDLE,
-            'py_called_by': QUALIFIED_NEEDLE,
-            'py_overrides': QUALIFIED_NEEDLE,
-            'py_overridden': QUALIFIED_NEEDLE,
+            'py_type': QUALIFIED_LINE_NEEDLE,
+            'py_function': QUALIFIED_LINE_NEEDLE,
+            'py_derived': QUALIFIED_LINE_NEEDLE,
+            'py_bases': QUALIFIED_LINE_NEEDLE,
+            'py_callers': QUALIFIED_LINE_NEEDLE,
+            'py_called_by': QUALIFIED_LINE_NEEDLE,
+            'py_overrides': QUALIFIED_LINE_NEEDLE,
+            'py_overridden': QUALIFIED_LINE_NEEDLE,
         },
     },
 }
@@ -113,16 +122,14 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
         bases = self.tree_analysis.get_base_classes(class_name)
         for qualname in bases:
-            name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_derived',
-                              name=name, qualname=qualname,
+                              name=local_name(qualname), qualname=qualname,
                               start=start, end=end)
 
         derived_classes = self.tree_analysis.get_derived_classes(class_name)
         for qualname in derived_classes:
-            name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_bases',
-                              name=name, qualname=qualname,
+                              name=local_name(qualname), qualname=qualname,
                               start=start, end=end)
 
         # Show a menu when hovering over this class.
@@ -197,6 +204,14 @@ class FileToIndex(FileToIndexBase):
             self._visitor.visit(syntax_tree)
         return self._visitor
 
+    def needles(self):
+        # Index module name. For practical purposes, this includes
+        # __init__.py files for packages even though that's not
+        # _technically_ a module.
+        yield file_needle('py_module',
+                          name=local_name(self.module_name),
+                          qualname=self.module_name)
+
     def needles_by_line(self):
         return iterable_per_line(
             with_start_and_end(
@@ -252,6 +267,14 @@ class FileToIndex(FileToIndexBase):
                 end = start[0], start[1] + len(name)
 
         return start, end
+
+
+def file_needle(needle_type, name, qualname=None):
+    data = {'name': name}
+    if qualname:
+        data['qualname'] = qualname
+
+    return needle_type, data
 
 
 def line_needle(needle_type, name, start, end, qualname=None):
