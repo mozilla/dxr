@@ -4,6 +4,7 @@ import token
 import tokenize
 from collections import defaultdict
 from StringIO import StringIO
+from warnings import warn
 
 from dxr.build import file_contents, unignored
 from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
@@ -25,14 +26,27 @@ mappings = {
 }
 
 
+class _FileToIgnore(object):
+    """A file that we don't want to bother indexing, usually due to
+    syntax errors.
+
+    """
+    def is_interesting(self):
+        return False
+FILE_TO_IGNORE = _FileToIgnore()
+
+
 class TreeToIndex(TreeToIndexBase):
     def __init__(self, *args, **kwargs):
         super(TreeToIndex, self).__init__(*args, **kwargs)
 
-        self.python_path = getattr(self.tree, 'plugin_python_path', self.tree.source_folder)
+        self.python_path = self.plugin_config.python_path
+
+        # Post-build analysis results.
         self.base_classes = defaultdict(list)
         self.derived_classes = defaultdict(list)
         self.names = {}
+        self.ignore_paths = set()
 
     @property
     def unignored_files(self):
@@ -59,7 +73,16 @@ class TreeToIndex(TreeToIndexBase):
 
         """
         module_path = path_to_module(self.python_path, path)
-        syntax_tree = ast.parse(file_contents(path, self.tree.source_encoding))
+
+        try:
+            syntax_tree = ast.parse(file_contents(path, self.tree.source_encoding))
+        except SyntaxError as err:
+            rel_path = os.path.relpath(path, self.tree.source_folder)
+            warn('Failed to analyze {filename} due to error "{error}".'.format(
+                 filename=rel_path, error=err))
+            self.ignore_paths.add(rel_path)
+            return
+
         for node in ast.walk(syntax_tree):
             # Save the base classes of any class we find.
             if isinstance(node, ast.ClassDef):
@@ -91,9 +114,12 @@ class TreeToIndex(TreeToIndexBase):
                     self.names[absolute_local_name] = import_name
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.plugin_name, self.tree,
-                           self.python_path, self.base_classes,
-                           self.derived_classes, self.names)
+        if path in self.ignore_paths:
+            return FILE_TO_IGNORE
+        else:
+            return FileToIndex(path, contents, self.plugin_name, self.tree,
+                               self.python_path, self.base_classes,
+                               self.derived_classes, self.names)
 
 
 class FileToIndex(FileToIndexBase):
@@ -153,6 +179,7 @@ class FileToIndex(FileToIndexBase):
         node_start_table = {}
         previous_start = None
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
+
         for tok_type, tok_name, start, end, _ in token_gen:
             if tok_type != token.NAME:
                 continue
