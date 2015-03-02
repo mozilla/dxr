@@ -122,12 +122,50 @@ class TreeToIndex(TreeToIndexBase):
                                self.derived_classes, self.names)
 
 
-class FileToIndex(FileToIndexBase):
-    needle_types = {
-        ast.ClassDef: 'py_type',
-        ast.FunctionDef: 'py_function',
-    }
+class IndexingNodeVisitor(ast.NodeVisitor):
+    def __init__(self, file_to_index):
+        self.file_to_index = file_to_index
+        self.needles = []
 
+    def visit_FunctionDef(self, node):
+        start, end = self.file_to_index.get_node_start_end(node)
+        self.yield_needle('py_function', node.name, start, end)
+
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node):
+        # Index the class itself for the type: filter.
+        start, end = self.file_to_index.get_node_start_end(node)
+        self.yield_needle('py_type', node.name, start, end)
+
+        # Index the class hierarchy for classes for the derived: and
+        # bases: filters.
+        class_name = self.file_to_index.module_name + '.' + node.name
+
+        # Index both the full absolute base name and the
+        # local name for conveniece.
+        bases = self.file_to_index.get_bases_for_class(class_name)
+        for qualname in bases:
+            name = qualname.split('.')[-1]
+            self.yield_needle(needle_type='py_derived',
+                              name=name, qualname=qualname,
+                              start=start, end=end)
+
+        derived_classes = self.file_to_index.get_derived_for_class(class_name)
+        for qualname in derived_classes:
+            name = qualname.split('.')[-1]
+            self.yield_needle(needle_type='py_bases',
+                              name=name, qualname=qualname,
+                              start=start, end=end)
+
+        self.generic_visit(node)
+
+    def yield_needle(self, *args, **kwargs):
+        needle = line_needle(*args, **kwargs)
+        self.needles.append(needle)
+
+
+class FileToIndex(FileToIndexBase):
     def __init__(self, path, contents, plugin_name, tree, python_path,
                  class_bases, derived_classes, names):
         """
@@ -153,30 +191,36 @@ class FileToIndex(FileToIndexBase):
         self.derived_classes = derived_classes
         self.names = names
 
+        self.module_name = path_to_module(self.python_path, self.path)
+
     def is_interesting(self):
         return is_interesting(self.path)
 
     def needles_by_line(self):
+        self.analyze_tokens()
+
+        visitor = IndexingNodeVisitor(self)
+        syntax_tree = ast.parse(self.contents.encode('utf-8'))
+        visitor.visit(syntax_tree)
+
         return iterable_per_line(
             with_start_and_end(
                 split_into_lines(
-                    self._all_needles()
+                    visitor.needles
                 )
             )
         )
 
-    def _all_needles(self):
-        """Return an iterable of needles in (needle name, value, Extent)
-        format.
+    def analyze_tokens(self):
+        """Split the file into tokens and analyze them for data needed
+        for indexing.
 
         """
-        module_name = path_to_module(self.python_path, self.path)
-
         # AST nodes for classes and functions point to the position of
         # their 'def' and 'class' tokens. To get the position of their
         # names, we look for 'def' and 'class' tokens and store the
         # position of the token immediately following them.
-        node_start_table = {}
+        self.node_start_table = {}
         previous_start = None
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
 
@@ -187,54 +231,25 @@ class FileToIndex(FileToIndexBase):
             if tok_name in ('def', 'class'):
                 previous_start = start
             elif previous_start is not None:
-                node_start_table[previous_start] = start
+                self.node_start_table[previous_start] = start
                 previous_start = None
 
-        # Run through the AST looking for things to index!
-        syntax_tree = ast.parse(self.contents.encode('utf-8'))
-        for node in ast.walk(syntax_tree):
-            # Index classes and functions for the type: and function:
-            # filters.
-            if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-                node.start = (node.lineno, node.col_offset)
-                if node.start in node_start_table:
-                    node.start = node_start_table[node.start]
 
-                node.end = (node.start[0], node.start[1] + len(node.name))
-                needle_type = self.needle_types[node.__class__]
-                yield self._needle(needle_type, node.name, node.start, node.end)
+    def get_node_start_end(self, node):
+        """Return start and end positions within the file for the given
+        AST Node.
 
-            # Index the class hierarchy for classes for the derived: and
-            # bases: filters.
-            if isinstance(node, ast.ClassDef):
-                class_name = module_name + '.' + node.name
+        """
+        start = (node.lineno, node.col_offset)
+        if start in self.node_start_table:
+            start = self.node_start_table[start]
 
-                bases = self.get_bases_for_class(class_name)
-                for qualname in bases:
-                    name = qualname.split('.')[-1]
-                    yield self._needle(needle_type='py_derived',
-                                       name=name, qualname=qualname,
-                                       start=node.start, end=node.end)
+        if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
+            end = (start[0], start[1] + len(node.name))
+        else:
+            end = None
 
-                derived_classes = self.get_derived_for_class(class_name)
-                for qualname in derived_classes:
-                    name = qualname.split('.')[-1]
-                    yield self._needle(needle_type='py_bases',
-                                       name=name, qualname=qualname,
-                                       start=node.start, end=node.end)
-
-    def _needle(self, needle_type, name, start, end, qualname=None):
-        return (
-            needle_type,
-            {'name': name,
-             'qualname': qualname,
-             'start': start[1],
-             'end': end[1]},
-            Extent(Position(row=start[0],
-                            col=start[1]),
-                   Position(row=end[0],
-                            col=end[1]))
-        )
+        return start, end
 
     def get_bases_for_class(self, absolute_class_name):
         """Return a list of all the classes that the given class
@@ -256,6 +271,20 @@ class FileToIndex(FileToIndexBase):
             yield derived
             for derived_child in self.get_derived_for_class(derived):
                 yield derived_child
+
+
+def line_needle(needle_type, name, start, end, qualname=None):
+    return (
+        needle_type,
+        {'name': name,
+         'qualname': qualname,
+         'start': start[1],
+         'end': end[1]},
+        Extent(Position(row=start[0],
+                        col=start[1]),
+               Position(row=end[0],
+                        col=end[1]))
+    )
 
 
 def package_for_module(module_path):
