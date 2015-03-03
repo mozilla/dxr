@@ -17,6 +17,7 @@ from schema import Schema, Optional, Use, And, Schema, SchemaError
 
 from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins
+from dxr.utils import if_raises
 
 
 # Format version, signifying the instance format this web frontend code is
@@ -99,7 +100,9 @@ class Config(DotSection):
                                          .strftime("%a, %d %b %Y %H:%M:%S +0000")):
                     basestring,
                 Optional('log_folder', default=None): AbsPath,
-                Optional('workers', default=cpu_count()):
+                Optional('workers', default=if_raises(NotImplementedError,
+                                                      cpu_count,
+                                                      1)):
                     Use(int, error='"workers" must be an integer >= 1.'),
                 Optional('skip_stages', default=[]): WhitespaceList,
                 Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
