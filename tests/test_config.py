@@ -130,3 +130,23 @@ def test_unknown_options():
         ok_('smoop' in exc.message)
     else:
         self.fail("Didn't raise ConfigError")
+
+
+def test_and_error():
+    """Make sure I'm using the ``error`` kwargs of And correctly."""
+    try:
+        config = Config("""
+            [DXR]
+            target_folder = /some/path
+            disabled_plugins = buglink
+            workers = -5
+
+            [mozilla-central]
+            source_folder = /some/path
+            object_folder = /some/path
+            """)
+    except ConfigError as exc:
+        eq_(exc.sections, ['DXR'])
+        ok_('non-negative' in exc.message)
+    else:
+        self.fail("Didn't raise ConfigError")

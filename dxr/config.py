@@ -103,7 +103,9 @@ class Config(DotSection):
                 Optional('workers', default=if_raises(NotImplementedError,
                                                       cpu_count,
                                                       1)):
-                    Use(int, error='"workers" must be an integer >= 1.'),
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"workers" must be a non-negative integer.'),
                 Optional('skip_stages', default=[]): WhitespaceList,
                 Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
                 Optional('google_analytics_key', default=''): basestring,
@@ -114,7 +116,9 @@ class Config(DotSection):
                 Optional('es_alias', default='dxr_{format}_{tree}'):
                     basestring,
                 Optional('max_thumbnail_size', default=20000):
-                    Use(int, error='"max_thumbnail_size" must be an integer.')
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"max_thumbnail_size" must be an integer.')
             },
             basestring: dict
         })
