@@ -21,6 +21,8 @@ mappings = {
             'py_function': QUALIFIED_NEEDLE,
             'py_derived': QUALIFIED_NEEDLE,
             'py_bases': QUALIFIED_NEEDLE,
+            'py_callers': QUALIFIED_NEEDLE,
+            'py_called_by': QUALIFIED_NEEDLE,
         },
     },
 }
@@ -123,13 +125,47 @@ class TreeToIndex(TreeToIndexBase):
 
 
 class IndexingNodeVisitor(ast.NodeVisitor):
+    """Node visitor that walks through the nodes in an abstract syntax
+    tree and finds interesting things to index.
+
+    """
+
     def __init__(self, file_to_index):
         self.file_to_index = file_to_index
+        self.function_call_stack = []  # List of lists of function names.
+        self.needles = None
+
+    def get_needles(self, node):
+        """Walk through the given AST and return needles to index from
+        the tree.
+
+        """
         self.needles = []
+        self.visit(node)
+        return self.needles
 
     def visit_FunctionDef(self, node):
+        # Index the function itself for the function: filter.
         start, end = self.file_to_index.get_node_start_end(node)
         self.yield_needle('py_function', node.name, start, end)
+
+        # Index function calls within this function for the callers: and
+        # called-by filters.
+        self.function_call_stack.append([])
+        self.generic_visit(node)
+        call_needles = self.function_call_stack.pop()
+        for name, call_start, call_end in call_needles:
+            self.yield_needle('py_callers', name, start, end)
+            self.yield_needle('py_called_by', node.name, call_start, call_end)
+
+    def visit_Call(self, node):
+        # Save this call if we're currently tracking function calls.
+        if self.function_call_stack:
+            call_needles = self.function_call_stack[-1]
+            name = convert_node_to_name(node.func)
+            if name:
+                start, end = self.file_to_index.get_node_start_end(node)
+                call_needles.append((name, start, end))
 
         self.generic_visit(node)
 
@@ -197,16 +233,15 @@ class FileToIndex(FileToIndexBase):
         return is_interesting(self.path)
 
     def needles_by_line(self):
-        self.analyze_tokens()
+        self.node_start_table = self.analyze_tokens()
 
         visitor = IndexingNodeVisitor(self)
-        syntax_tree = ast.parse(self.contents.encode('utf-8'))
-        visitor.visit(syntax_tree)
+        syntax_tree = ast.parse(self.contents)
 
         return iterable_per_line(
             with_start_and_end(
                 split_into_lines(
-                    visitor.needles
+                    visitor.get_needles(syntax_tree)
                 )
             )
         )
@@ -220,7 +255,7 @@ class FileToIndex(FileToIndexBase):
         # their 'def' and 'class' tokens. To get the position of their
         # names, we look for 'def' and 'class' tokens and store the
         # position of the token immediately following them.
-        self.node_start_table = {}
+        node_start_table = {}
         previous_start = None
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
 
@@ -231,23 +266,27 @@ class FileToIndex(FileToIndexBase):
             if tok_name in ('def', 'class'):
                 previous_start = start
             elif previous_start is not None:
-                self.node_start_table[previous_start] = start
+                node_start_table[previous_start] = start
                 previous_start = None
 
+        return node_start_table
 
     def get_node_start_end(self, node):
         """Return start and end positions within the file for the given
         AST Node.
 
         """
-        start = (node.lineno, node.col_offset)
+        start = node.lineno, node.col_offset
         if start in self.node_start_table:
             start = self.node_start_table[start]
 
+        end = None
         if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            end = (start[0], start[1] + len(node.name))
-        else:
-            end = None
+            end = start[0], start[1] + len(node.name)
+        elif isinstance(node, ast.Call):
+            name = convert_node_to_name(node.func)
+            if name:
+                end = start[0], start[1] + len(name)
 
         return start, end
 
@@ -274,12 +313,18 @@ class FileToIndex(FileToIndexBase):
 
 
 def line_needle(needle_type, name, start, end, qualname=None):
+    data = {
+        'name': name,
+        'start': start[1],
+        'end': end[1]
+    }
+
+    if qualname:
+        data['qualname'] = qualname
+
     return (
         needle_type,
-        {'name': name,
-         'qualname': qualname,
-         'start': start[1],
-         'end': end[1]},
+        data,
         Extent(Position(row=start[0],
                         col=start[1]),
                Position(row=end[0],
