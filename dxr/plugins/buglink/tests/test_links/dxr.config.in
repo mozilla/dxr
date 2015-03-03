@@ -12,4 +12,4 @@ build_command       = /bin/true
 
     [[buglink]]
     name = Fred's Bugzilla
-    url = http://bugs.com/%s
+    url = http://bugs.example.com/%s
