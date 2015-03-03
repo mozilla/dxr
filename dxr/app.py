@@ -102,7 +102,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
     return jsonify({
-        'wwwroot': config['WWW_ROOT'],
+        'www_root': config['WWW_ROOT'],
         'tree': tree,
         'results': results,
         'tree_tuples': _tree_tuples(config['TREES'], tree, query_text, is_case_sensitive)})
@@ -146,7 +146,7 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
                                   redirect='false'),
             'tree': tree,
             'tree_tuples': _tree_tuples(config['TREES'], tree, query_text, is_case_sensitive),
-            'wwwroot': config['WWW_ROOT']}
+            'www_root': config['WWW_ROOT']}
 
     try:
         results = list(query.results(offset, limit))
@@ -238,7 +238,7 @@ def browse(tree, path=''):
         return render_template(
             'folder.html',
             # Common template variables:
-            wwwroot=config['WWW_ROOT'],
+            www_root=config['WWW_ROOT'],
             tree=tree,
             tree_tuples=[
                 (t_name,

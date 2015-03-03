@@ -9,7 +9,19 @@ from funcy import group_by, decorator, imapcat
 from os.path import join
 
 
-class TreeToIndex(object):
+class PluginConfig(object):
+    """Mixin providing access to the plugin-specific configuration of a tree
+
+    Expects ``plugin_name`` and ``tree`` instance attrs.
+
+    """
+    @property
+    def plugin_config(self):
+        """Return a mapping of plugin-specific config options."""
+        return getattr(self.tree, self.plugin_name)
+
+
+class TreeToIndex(PluginConfig):
     """A TreeToIndex performs build environment setup and teardown and serves
     as a repository for scratch data that should persist across an entire
     indexing run.
@@ -21,13 +33,14 @@ class TreeToIndex(object):
     and then have it index several files before sending it again.
 
     """
-    def __init__(self, tree):
+    def __init__(self, plugin_name, tree):
         """
         :arg tree: The configuration of the tree to index: a TreeConfig
 
         """
         # We need source_folder, object_folder, temp_folder, and maybe
-        # ignore_patterns out of the tree.
+        # ignore_filenames out of the tree.
+        self.plugin_name = plugin_name
         self.tree = tree
 
     def environment(self, vars):
@@ -99,7 +112,7 @@ class TreeToIndex(object):
     # introduce another kind of plugin: an enumerator.
 
 
-class FileToSkim(object):
+class FileToSkim(PluginConfig):
     """A source of rendering data about a file, generated at request time
 
     This is appropriate for unindexed files (such as old revisions pulled out
@@ -108,7 +121,8 @@ class FileToSkim(object):
     shared cache among my methods.
 
     """
-    def __init__(self, path, contents, tree, file_properties=None, line_properties=None):
+    def __init__(self, path, contents, plugin_name, tree, file_properties=None,
+                 line_properties=None):
         """
         :arg path: The conceptual path to the file, relative to the tree's
             source folder. Such a file might not exist on disk. This is useful
@@ -133,6 +147,7 @@ class FileToSkim(object):
         """
         self.path = path
         self.contents = contents
+        self.plugin_name = plugin_name
         self.tree = tree
         self.file_properties = file_properties or {}
         self.line_properties = line_properties  # TODO: not clear what the default here should be. repeat([])?
@@ -262,7 +277,7 @@ class FileToSkim(object):
 class FileToIndex(FileToSkim):
     """A source of search and rendering data about one source file"""
 
-    def __init__(self, path, contents, tree):
+    def __init__(self, path, contents, plugin_name, tree):
         """Analyze a file or digest an analysis that happened at compile time.
 
         :arg path: A path to the file to index, relative to the tree's source
@@ -296,7 +311,7 @@ class FileToIndex(FileToSkim):
         # iterating over potentially the whole file looking for nulls) and (2)
         # for symmetry with FileToSkim, so we can share many method
         # implementations.
-        super(FileToIndex, self).__init__(path, contents, tree)
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
     def needles(self):
         """Return an iterable of key-value pairs of search data about the file

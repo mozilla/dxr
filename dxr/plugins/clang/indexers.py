@@ -97,8 +97,8 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, tree, overrides, overriddens, parents, children, temp_folder):
-        super(FileToIndex, self).__init__(path, contents, tree)
+    def __init__(self, path, contents, plugin_name, tree, overrides, overriddens, parents, children, temp_folder):
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.overrides = overrides
         self.overriddens = overriddens
         self.parents = parents
@@ -146,7 +146,7 @@ class FileToIndex(FileToIndexBase):
     @unsparsify
     def annotations_by_line(self):
         icon = "background-image: url('{0}/static/icons/warning.png');".format(
-            self.tree.config.wwwroot)  # TODO: DRY
+            self.tree.config.www_root)  # TODO: DRY
         getter = itemgetter('msg', 'opt', 'span')
         for msg, opt, span in imap(getter, self.condensed.get('warnings', [])):
             if opt:
@@ -278,6 +278,7 @@ class TreeToIndex(TreeToIndexBase):
     def file_to_index(self, path, contents):
         return FileToIndex(path,
                            contents,
+                           self.plugin_name,
                            self.tree,
                            self._overrides,
                            self._overriddens,

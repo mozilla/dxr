@@ -11,10 +11,10 @@ $(function() {
     var dxr = {},
         docElem = document.documentElement;
 
-    dxr.wwwroot = constants.data('root');
+    dxr.wwwRoot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
-    dxr.icons = dxr.wwwroot + '/static/icons/';
-    dxr.views = dxr.wwwroot + '/static/templates';
+    dxr.icons = dxr.wwwRoot + '/static/icons/';
+    dxr.views = dxr.wwwRoot + '/static/templates';
     dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
@@ -313,9 +313,9 @@ $(function() {
      * @param {bool} append - Should the content be appended or overwrite
      */
     function populateResults(tmpl, data, append) {
-        data.wwwroot = dxr.wwwroot;
+        data.www_root = dxr.wwwRoot;
         data.tree = dxr.tree;
-        data.top_of_tree = dxr.wwwroot + '/' + data.tree + '/source/';
+        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
 
         var params = {
             q: data.query,

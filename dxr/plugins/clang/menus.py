@@ -14,7 +14,7 @@ def quote(qualname):
 
 def search(tree, query):
     """Auxiliary function for getting the search url for query."""
-    return search_url(tree.config.wwwroot, tree.name, query)
+    return search_url(tree.config.www_root, tree.name, query)
 
 
 def include_menu(tree, include):
@@ -24,7 +24,7 @@ def include_menu(tree, include):
     return [{'html': 'Jump to file',
              'title': 'Jump to what is included here.',
              'href': browse_url(tree.name,
-                                tree.config.wwwroot,
+                                tree.config.www_root,
                                 include['target_path']),
              'icon': 'jump'}]
 
@@ -147,6 +147,6 @@ def definition_menu(tree, path, row):
     return [{'html': "Jump to definition",
              'title': "Jump to the definition in '%s'" % basename(path),
              'href': browse_url(tree.name,
-                                tree.config.wwwroot,
+                                tree.config.www_root,
                                 path) + '#{0}'.format(row),
              'icon': 'jump'}]

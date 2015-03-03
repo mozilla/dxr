@@ -152,6 +152,7 @@ def glob_to_regex(glob):
     """
     return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]
 
+
 def cached(f):
     """Cache the result of a function that takes an iterable of plugins."""
     # TODO: Generalize this into a general memoizer function later if needed.
@@ -181,3 +182,15 @@ class frozendict(dict):
         items = self.items()
         items.sort()
         return hash(tuple(items))
+
+
+def if_raises(exception, callable, fallback, *args, **kwargs):
+    """Call ``callable`` with ``args`` and ``kwargs``, returning the result.
+
+    If it raises ``exception``, return ``fallback``.
+
+    """
+    try:
+        return callable(*args, **kwargs)
+    except exception:
+        return fallback

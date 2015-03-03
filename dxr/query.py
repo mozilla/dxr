@@ -34,8 +34,8 @@ class Query(object):
 
     def __init__(self, es_search, querystr, enabled_plugins, is_case_sensitive=True):
         self.es_search = es_search
-        self.is_case_sensitive = is_case_sensitive
         self.enabled_plugins = list(enabled_plugins)
+        self.is_case_sensitive = is_case_sensitive
 
         # A list of dicts describing query terms:
         grammar = query_grammar(self.enabled_plugins)

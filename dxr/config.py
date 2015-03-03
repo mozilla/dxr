@@ -1,14 +1,23 @@
-from ConfigParser import ConfigParser
-from cStringIO import StringIO
+"""Configuration file abstractions
+
+Please update docs/source/configuration.rst when you change this.
+
+"""
 from datetime import datetime
+from multiprocessing import cpu_count
 from ordereddict import OrderedDict
 from operator import attrgetter
-import os
-import sys
+from os.path import abspath, join
 
+from configobj import ConfigObj
+from funcy import merge
+from more_itertools import first
 from pkg_resources import resource_string
+from schema import Schema, Optional, Use, And, Schema, SchemaError
 
+from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins
+from dxr.utils import if_raises
 
 
 # Format version, signifying the instance format this web frontend code is
@@ -16,215 +25,276 @@ from dxr.plugins import all_plugins
 FORMAT = resource_string('dxr', 'format').strip()
 
 
-# Please keep these config objects as simple as possible and in sync with
-# docs/source/configuration.rst. I'm well aware that this is not the most compact way
-# of writing things, but it sure is doomed to fail when user forgets an important
-# key. It's also fairly easy to extract default values, and config keys from
-# this code, so enjoy.
+class DotSection(object):
+    """In the absense of an actual attribute, let attr lookup fall through to
+    ``self._section[attr]``."""
 
-class Config(object):
-    """ Configuration for DXR """
-    def __init__(self, config_string, **override):
-        # Create parser with sane defaults
-        parser = ConfigParser({
-            'nb_jobs':          "1",
-            'temp_folder':      "/tmp/dxr-temp",
-            'log_folder':       "%(temp_folder)s/logs",
-            'wwwroot':          "/",
-            'enabled_plugins':  "*",
-            'disabled_plugins': " ",
-            'generated_date':   datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000"),
-            'google_analytics_key': "",
-            'disable_workers':  "",
-            'skip_stages':      "",
-            'default_tree':     "",
-            'es_hosts':         'http://127.0.0.1:9200/',
-            'es_index':         'dxr_{format}_{tree}_{unique}',
-            'es_alias':         'dxr_{format}_{tree}',
-            'max_thumbnail_size': '20000',
-        }, dict_type=OrderedDict)
-        parser.readfp(StringIO(config_string))
-
-        # Set config values
-        self.nb_jobs          = int(parser.get('DXR', 'nb_jobs',      False, override))
-        self.temp_folder      = parser.get('DXR', 'temp_folder',      False, override)
-        self.target_folder    = parser.get('DXR', 'target_folder',    False, override)
-        self.log_folder       = parser.get('DXR', 'log_folder',       False, override)
-        self.wwwroot          = parser.get('DXR', 'wwwroot',          False, override)
-        self.enabled_plugins  = parser.get('DXR', 'enabled_plugins',  False, override)
-        self.disabled_plugins = parser.get('DXR', 'disabled_plugins', False, override)
-        self.generated_date   = parser.get('DXR', 'generated_date',   False, override)
-        self.google_analytics_key = parser.get('DXR', 'google_analytics_key', False, override)
-        self.disable_workers  = parser.get('DXR', 'disable_workers',  False, override)
-        self.skip_stages      = parser.get('DXR', 'skip_stages',      False, override)
-        self.default_tree     = parser.get('DXR', 'default_tree',     False, override)
-        self.es_hosts         = parser.get('DXR', 'es_hosts', False, override).split()
-        self.es_index         = parser.get('DXR', 'es_index', False, override)
-        self.es_alias         = parser.get('DXR', 'es_alias', False, override)
-        self.max_thumbnail_size = int(parser.get('DXR', 'max_thumbnail_size'))
-        self.trees            = []
-
-        # Read all plugin_ keys
-        for key, value in parser.items('DXR'):
-            if key.startswith('plugin_'):
-                setattr(self, key, value)
-
-        # Render all paths absolute
-        self.temp_folder      = os.path.abspath(self.temp_folder)
-        self.log_folder       = os.path.abspath(self.log_folder)
-        self.target_folder    = os.path.abspath(self.target_folder)
-
-        # Make sure wwwroot doesn't end in /
-        if self.wwwroot[-1] == '/':
-            self.wwwroot = self.wwwroot[:-1]
-
-        # Convert disabled plugins to a list
-        if self.disabled_plugins == "*":
-            self.disabled_plugins = all_plugins().keys()
-        else:
-            self.disabled_plugins = self.disabled_plugins.split()
-
-        # Convert skipped stages to a list
-        self.skip_stages = self.skip_stages.split()
-
-        # Convert enabled plugins to a list
-        if self.enabled_plugins == "*":
-            self.enabled_plugins = [
-                p for p in all_plugins().keys() if
-                p not in self.disabled_plugins]
-        else:
-            self.enabled_plugins = self.enabled_plugins.split()
-
-        # Test for conflicting plugins settings
-        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
-        if conflicts:
-            msg = "Plugin: '%s' is both enabled and disabled"
-            for p in conflicts:
-                print >> sys.stderr, msg % p
-            sys.exit(1)
-
-        # Load trees
-        for tree in parser.sections():
-            if tree != 'DXR':
-                self.trees.append(TreeConfig(self, config_string, tree))
-
-        # Trees in alphabetical order for Switch Tree menu:
-        self.sorted_tree_order = sorted(self.trees, key=attrgetter('name'))
-
-        # Make sure that default_tree is defined
-        if not self.default_tree:
-            self.default_tree = self.sorted_tree_order[0].name
+    def __getattr__(self, attr):
+        if not hasattr(self, '_section'):  # Happens during unpickling
+            raise AttributeError(attr)
+        try:
+            val = self._section[attr]
+        except KeyError:
+            raise AttributeError(attr)
+        if isinstance(val, dict):
+            # So we can dot into nested dicts
+            return DotSectionWrapper(val)
+        return val
 
 
+class DotSectionWrapper(DotSection):
+    """A wrapper for non-first-level sections so we can dot our way through
+    them as well"""
 
-class TreeConfig(object):
-    """ Tree configuration for DXR """
-    # TODO: This should probably be a subclass of dict. Plugins and the
-    # framework can use .get() for optional options and .__getitem__() for
-    # required ones. We can override __missing__() to throw MissingOptionError
-    # whenever a getitem fails. Then we can remove the exception-raising
-    # machinery from places like buglink.
-
-    def __init__(self, config, config_string, name):
-        # Create parser with sane defaults
-        parser = ConfigParser({
-            'enabled_plugins':  "*",
-            'disabled_plugins': "",
-            'temp_folder':      os.path.join(config.temp_folder, name),
-            'log_folder':       os.path.join(config.log_folder, name),
-            'ignore_patterns':  ".hg .git CVS .svn .bzr .deps .libs",
-            'build_command':    "make -j $jobs",
-            'source_encoding':  'utf-8',
-            'description':  ''
-        })
-        parser.readfp(StringIO(config_string))
-
-        # Set config values
-        self._enabled_plugins = parser.get(name, 'enabled_plugins')
-        self.disabled_plugins = parser.get(name, 'disabled_plugins')
-        self.temp_folder      = parser.get(name, 'temp_folder')
-        self.log_folder       = parser.get(name, 'log_folder')
-        self.object_folder    = parser.get(name, 'object_folder')
-        self.source_folder    = parser.get(name, 'source_folder')
-        self.build_command    = parser.get(name, 'build_command')
-        self.ignore_patterns  = parser.get(name, 'ignore_patterns')
-        self.source_encoding  = parser.get(name, 'source_encoding')
-        self.description      = parser.get(name, 'description')
-
-        # You cannot redefine the target folders!
-        self.target_folder    = os.path.join(config.target_folder, 'trees', name)
-        # Set config file and DXR config object reference
-        self.config           = config
-        self.name             = name
-
-        # Read all plugin_ keys
-        for key, value in parser.items(name):
-            if key.startswith('plugin_'):
-                setattr(self, key, value)
-
-        # Convert ignore patterns to list
-        self.ignore_patterns  = self.ignore_patterns.split()
-        self.ignore_paths     = filter(lambda p: p.startswith("/"), self.ignore_patterns)
-        self.ignore_patterns  = filter(lambda p: not p.startswith("/"), self.ignore_patterns)
-
-        # Render all path absolute
-        self.temp_folder      = os.path.abspath(self.temp_folder)
-        self.log_folder       = os.path.abspath(self.log_folder)
-        self.object_folder    = os.path.abspath(self.object_folder)
-        self.source_folder    = os.path.abspath(self.source_folder)
-
-        # Convert disabled plugins to a list
-        if self.disabled_plugins == "*":
-            self.disabled_plugins = config.enabled_plugins
-        else:
-            self.disabled_plugins = self.disabled_plugins.split()
-            for p in config.disabled_plugins:
-                if p not in self.disabled_plugins:
-                    self.disabled_plugins.append(p)
-
-        # enabled_plugins, unlike in Config, is a dict of name -> Plugin. TODO:
-        # Clean this up when we refactor the whole config system.
-        all_the_plugins = all_plugins()
-        if self._enabled_plugins == "*":
-            enableds = [
-                (name, plug) for name, plug in all_the_plugins.iteritems() if
-                name in config.enabled_plugins and
-                name not in self.disabled_plugins]
-        else:
-            enableds = [
-                (name, plug) for name, plug in all_the_plugins.iteritems() if
-                name in self._enabled_plugins.split()]
-        self.enabled_plugins = OrderedDict([('core', all_the_plugins['core'])] +
-                                         enableds)
-
-        # Test for conflicting plugins settings
-        conflicts = [p for p in self.disabled_plugins if p in self.enabled_plugins]
-        if conflicts:
-            msg = "Plugin: '%s' is both enabled and disabled in '%s'"
-            for p in conflicts:
-                print >> sys.stderr, msg % (p, name)
-            sys.exit(1)
-
-        # Warn if $jobs isn't used...
-        if "$jobs" not in self.build_command:
-            msg = "Warning: $jobs is not used in build_command for '%s'"
-            print >> sys.stderr, msg % name
+    def __init__(self, section):
+        self._section = section
 
 
-class ConfigError(Exception):
-    """Some kind of user error in the configuration"""
+class Config(DotSection):
+    """Validation and encapsulation for the DXR config file
 
+    Examples::
 
-class MissingOptionError(ConfigError):
-    """Exception raised when a required option is missing from the config file
+        # Settings from the [DXR] section:
+        >>> Config(...).target_folder
 
-    These include globally required options and options required for an enabled
-    plugin.
+        # Settings from individual trees:
+        >>> Config(...).trees['some-tree'].build_command
+
+        # Settings from plugin-specific sections of trees:
+        >>> Config(...).trees['some-tree'].buglink.url
 
     """
-    def __init__(self, option_name):
-        self.option_name = option_name
+    # Design decisions:
+    # * Keep the explicit [DXR] section name because, otherwise, global options
+    #   can collide with tree names.
+    # * Keep tree.config shortcut. It makes a lot of things shorter and doesn't
+    #   hurt anything, since it's all read-only anyway.
+    # * Crosswire __getattr__ with __getitem__. It makes callers more readable.
+    # * Keep whitespace-delimited lists in config file. I prefer them to
+    #   commas, people will have to change less, and it wasn't a big deal to
+    #   customize.
+    # * Use configobj to parse the ini file and then schema to validate it.
+    #   configobj's favored "validate" module makes it very hard to have
+    #   whitespace-delimited lists and doesn't compose well since its
+    #   validators are strings. The downside is we only report 1 error at a
+    #   time, but this can and should be fixed in the schema lib.
 
-    def __str__(self):
-        return ('The %s option is required. Add it to the config file, and '
-                'try indexing again.') % self.option_name
+    def __init__(self, input):
+        """Pull in and validate a config file.
+
+        :arg input: A string or dict from which to populate the config
+
+        Raise ConfigError if the configuration is invalid.
+
+        """
+        schema = Schema({
+            'DXR': {
+                'target_folder': AbsPath,
+                Optional('temp_folder', default='/tmp/dxr-temp'): AbsPath,
+                Optional('default_tree', default=None): basestring,
+                Optional('disabled_plugins', default=plugin_list('')): Plugins,
+                Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+                Optional('generated_date',
+                         default=datetime.utcnow()
+                                         .strftime("%a, %d %b %Y %H:%M:%S +0000")):
+                    basestring,
+                Optional('log_folder', default=None): AbsPath,
+                Optional('workers', default=if_raises(NotImplementedError,
+                                                      cpu_count,
+                                                      1)):
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"workers" must be a non-negative integer.'),
+                Optional('skip_stages', default=[]): WhitespaceList,
+                Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
+                Optional('google_analytics_key', default=''): basestring,
+                Optional('es_hosts', default='http://127.0.0.1:9200/'):
+                    WhitespaceList,
+                Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
+                    basestring,
+                Optional('es_alias', default='dxr_{format}_{tree}'):
+                    basestring,
+                Optional('max_thumbnail_size', default=20000):
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"max_thumbnail_size" must be an integer.')
+            },
+            basestring: dict
+        })
+
+        # Parse the ini into nested dicts:
+        config_obj = ConfigObj(input.splitlines() if isinstance(input,
+                                                                basestring)
+                               else input,
+                               list_values=False)
+        try:
+            config = schema.validate(config_obj.dict())
+        except SchemaError as exc:
+            raise ConfigError(exc.code, ['DXR'])
+
+        self._section = config['DXR']
+
+        # Fill in log_folder if blank:
+        if self.log_folder is None:
+            self._section['log_folder'] = join(self.temp_folder, 'logs')
+
+        # Normalize enabled_plugins:
+        if self.enabled_plugins.is_all:
+            # Then explicitly enable anything that isn't explicitly
+            # disabled:
+            self._section['enabled_plugins'] = [
+                    p for p in all_plugins().values()
+                    if p not in self.disabled_plugins]
+
+        # Now that enabled_plugins and the other keys that TreeConfig depends
+        # on are filled out, make some TreeConfigs:
+        self.trees = OrderedDict()  # name -> TreeConfig
+        for section in config_obj.sections:
+            if section != 'DXR':
+                try:
+                    self.trees[section] = TreeConfig(section,
+                                                     config[section],
+                                                     config_obj[section].sections,
+                                                     self)
+                except SchemaError as exc:
+                    raise ConfigError(exc.code, [section])
+
+        # Trees in alphabetical order for Switch Tree menu:
+        self.alphabetical_trees = sorted(self.trees.itervalues(),
+                                         key=attrgetter('name'))
+
+        # Make sure default_tree is defined:
+        if not self.default_tree:
+            self._section['default_tree'] = first(self.trees.iterkeys())
+
+        # These aren't intended for actual use; they're just to influence
+        # enabled_plugins of trees, and now we're done with them:
+        del self._section['enabled_plugins']
+        del self._section['disabled_plugins']
+
+
+class TreeConfig(DotSectionWrapper):
+    def __init__(self, name, unvalidated_tree, sections, config):
+        """Fix up settings that depend on the [DXR] section or have
+        inter-setting dependencies. (schema can't do multi-setting validation
+        yet, and configobj can't do cross-section interpolation.)
+
+        Add a ``config`` attr to trees as a shortcut back to the [DXR] section
+        and a ``name`` attr to save cumbersome tuple unpacks in callers.
+
+        """
+        self.config = config
+        self.name = name
+
+        schema = Schema({
+            Optional('build_command', default='make -j $jobs'): basestring,
+            Optional('description', default=''): basestring,
+            Optional('disabled_plugins', default=plugin_list('')): Plugins,
+            Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+            Optional('ignore_patterns',
+                     default=['.hg', '.git', 'CVS', '.svn', '.bzr',
+                              '.deps', '.libs']): WhitespaceList,
+            Optional('log_folder', default=None): AbsPath,
+            'object_folder': AbsPath,
+            'source_folder': AbsPath,
+            Optional('source_encoding', default='utf-8'): basestring,
+            Optional('temp_folder', default=None): AbsPath,
+            Optional(basestring): dict})
+        tree = schema.validate(unvalidated_tree)
+
+        self.target_folder = join(config.target_folder, 'trees', name)
+
+        # Fall back to master setting + tree name:
+        if tree['log_folder'] is None:
+            tree['log_folder'] = join(config.log_folder, name)
+        if tree['temp_folder'] is None:
+            tree['temp_folder'] = join(config.temp_folder, name)
+
+        # Convert enabled_plugins to a list of plugins:
+        if tree['disabled_plugins'].is_all:
+            # * doesn't really mean "all" in a tree. It means "everything the
+            # [DXR] section enabled".
+            tree['disabled_plugins'] = config.enabled_plugins
+        else:
+            # Add anything globally disabled to our local disabled list:
+            tree['disabled_plugins'].extend(p for p in config.disabled_plugins
+                                            if p not in
+                                            tree['disabled_plugins'])
+
+        if tree['enabled_plugins'].is_all:
+            tree['enabled_plugins'] = [p for p in config.enabled_plugins
+                                       if p not in tree['disabled_plugins']]
+        tree['enabled_plugins'].insert(0, all_plugins()['core'])
+
+        # Split ignores into paths and filenames:
+        tree['ignore_paths'] = [i for i in tree['ignore_patterns']
+                                if i.startswith('/')]
+        tree['ignore_filenames'] = [i for i in tree['ignore_patterns']
+                                    if not i.startswith('/')]
+
+        # Delete misleading, useless, or raw values people shouldn't use:
+        del tree['ignore_patterns']
+        del tree['disabled_plugins']
+
+        # Validate plugin config:
+        enableds_with_all_optional_config = set(
+            p for p in tree['enabled_plugins']
+            if all(isinstance(k, Optional) for k in p.config_schema.iterkeys()))
+        plugin_schema = Schema(merge(
+            dict((Optional(name) if plugin in enableds_with_all_optional_config
+                                 or plugin not in tree['enabled_plugins']
+                  else name,
+                  plugin.config_schema)
+                 for name, plugin in all_plugins().iteritems()
+                 if name != 'core'),
+            # And whatever isn't a plugin section, that we don't care about:
+            {object: object}))
+        # Insert empty missing sections for enabled plugins with entirely
+        # optional config so their defaults get filled in. (Don't insert them
+        # if the plugin has any required options; then we wouldn't produce the
+        # proper error message about the section being absent.)
+        for plugin in enableds_with_all_optional_config:
+            tree.setdefault(plugin.name, {})
+        tree = plugin_schema.validate(tree)
+
+        super(TreeConfig, self).__init__(tree)
+
+
+class ListAndAll(list):
+    """A list we can also store an ``all`` attr on, indicating whether it
+    was derived from a configuration value of ``*``"""
+
+
+def plugin_list(value):
+    """Turn a space-delimited series of plugin names into ALL (for "*") or a
+    list of Plugins.
+
+    """
+    if not isinstance(value, basestring):
+        raise SchemaError('"%s" is neither * nor a whitespace-delimited list '
+                          'of plugin names.' % (value,))
+
+    plugins = all_plugins()
+    names = value.strip().split()
+    is_all = names == ['*']
+    if is_all:
+        names = plugins.keys()
+    try:
+        ret = ListAndAll([plugins[name] for name in names])
+        ret.is_all = is_all
+        return ret
+    except KeyError:
+        raise SchemaError('Never heard of plugin "%s". I\'ve heard of '
+                          'these: %s.' % (name, ', '.join(plugins.keys())))
+Plugins = Use(plugin_list)
+
+
+WhitespaceList = And(basestring,
+                     Use(lambda value: value.strip().split()),
+                     error='This should be a whitespace-separated list.')
+
+
+# Turn a filesystem path into an absolute one so changing the working
+# directory doesn't keep us from finding them.
+AbsPath = And(basestring, Use(abspath), error='This should be a path.')

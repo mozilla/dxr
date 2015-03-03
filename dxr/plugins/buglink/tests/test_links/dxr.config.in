@@ -9,5 +9,7 @@ es_alias            = dxr_test_{format}_{tree}
 source_folder       = PWD/code
 object_folder       = PWD/code
 build_command       = /bin/true
-plugin_buglink_name = Fred's Bugzilla
-plugin_buglink_url = http://bugs.com/%s
+
+    [[buglink]]
+    name = Fred's Bugzilla
+    url = http://bugs.example.com/%s
