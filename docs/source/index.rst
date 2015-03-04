@@ -30,6 +30,7 @@ Contents
     deployment
     use
     development
+    indexing-mozilla-central
 
 
 Back Matter
