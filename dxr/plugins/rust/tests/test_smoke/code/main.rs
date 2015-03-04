@@ -1,6 +1,8 @@
 #![ crate_name = "test" ]
 #![allow(unstable)]
 #![feature(box_syntax)]
+#![feature(io)]
+
 
 extern crate graphviz;
 // A simple rust project
@@ -9,10 +11,10 @@ extern crate krate2;
 extern crate "krate2" as krate3;
 extern crate "flate" as myflate;
 
-use graphviz::maybe_owned_vec::MaybeOwnedVector;
+use graphviz::RenderOption;
 use std::collections::{HashMap,HashSet};
 use std::cell::RefCell;
-use std::io::stdio::println;
+use std::old_io::stdio::println;
 
 
 use sub::sub2 as msalias;
@@ -28,7 +30,7 @@ use std::mem::size_of;
 static uni: &'static str = "Les Miséééééééérables";
 static yy: usize = 25us;
 
-static bob: Option<graphviz::maybe_owned_vec::MaybeOwnedVector<'static, isize>> = None;
+static bob: Option<graphviz::RenderOption> = None;
 
 // buglink test - see issue #1337.
 
@@ -49,17 +51,17 @@ fn test_alias<I: Iterator>(i: Option<<I as Iterator>::Item>) {
     let y = x.1;
 }
 
-struct TupStruct(int, int, Box<str>);
+struct TupStruct(isize, isize, Box<str>);
 
-fn test_tup_struct(x: TupStruct) -> int {
+fn test_tup_struct(x: TupStruct) -> isize {
     x.1
 }
 
 mod sub {
     pub mod sub2 {
-        use std::io::stdio::println;
+        use std::old_io::stdio::println;
         pub mod sub3 {
-            use std::io::stdio::println;
+            use std::old_io::stdio::println;
             pub fn hello() {
                 println("hello from module 3");
             }          

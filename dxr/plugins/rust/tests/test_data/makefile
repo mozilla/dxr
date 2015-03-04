@@ -5,7 +5,7 @@ all:
 	# Navigate into the DXR folder, build using config file
 	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:../../trilite PYTHONPATH=$$PYTHONPATH:../../ dxr-build.py
 	# Launch test server at port 8000:
-	# dxr-serve.py target
+	# dxr-serve.py --all target
 clean:
 	rm -rf dxr.config
 	rm -rf temp

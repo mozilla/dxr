@@ -37,13 +37,25 @@ class ImplFilter(_QualifiedNameFilter):
     name = 'impl'
     description = 'Implementations'
 
+class ModuleFilter(_QualifiedNameFilter):
+    name = 'module'
+    description = 'Module defintions'
+
 class ModuleUseFilter(_QualifiedNameFilter):
     name = 'module-use'
     description = 'Module imports'
 
+class VarFilter(_QualifiedNameFilter):
+    name = 'var'
+    description = 'Variable definitions'
+
 class VarRefFilter(_QualifiedNameFilter):
     name = 'var-ref'
     description = 'Variable references'
+
+class TypeFilter(_QualifiedNameFilter):
+    name = 'type'
+    description = 'Type (struct, enum, type, trait) definition'
 
 class TypeRefFilter(_QualifiedNameFilter):
     name = 'type-ref'

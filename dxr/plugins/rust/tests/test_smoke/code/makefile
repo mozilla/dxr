@@ -1,4 +1,4 @@
-all: code  
+all: code
 krate2: krate2.rs
 	$(RUSTC) $< 
 code: main.rs krate2

@@ -119,8 +119,11 @@ class FileToIndex(indexers.FileToIndex):
         return iterable_per_line(with_start_and_end(split_into_lines(chain(
             self.file_needles('function', 'functions'),
             self.file_needles('function_ref', 'function_refs'),
+            self.file_needles('var', 'variables'),
             self.file_needles('var_ref', 'variable_refs'),
+            self.file_needles('type', 'types'),
             self.file_needles('type_ref', 'type_refs'),
+            self.file_needles('module', 'modules'),
             self.file_needles('module_ref', 'module_refs'),
             self.file_needles('module_alias_ref', 'module_aliases'),
             self.alias_needles(),
@@ -771,6 +774,7 @@ class TreeToIndex(indexers.TreeToIndex):
         return self.find_id(self.crate_map[0][0], node)
 
     def fixup_qualname(self, datum):
+        # FIXME(#19) we should not do this here, we should do it in the compiler
         if 'qualname' in datum and datum['qualname'] and datum['qualname'][:2] == '::':
             datum['qualname'] = self.crate_name + datum['qualname']
 
@@ -936,6 +940,8 @@ def process_method_call(args, tree):
 
 
 def process_mod_ref(args, tree):
+    args['name'] = args['qualname'].split('::')[-1]
+
     if tree.add_external_item(args):
         return;
     args['aliasid'] = 0
@@ -944,6 +950,7 @@ def process_mod_ref(args, tree):
     tree.fixup_qualname(args)
     tree.data.module_refs.append(args)
     tree.add_to_lines(args, ('module_refs', args))
+    print args
 
 
 def process_use_alias(args, tree):
@@ -1043,8 +1050,11 @@ mappings = {
         'properties': {
             'rust_function': QUALIFIED_NEEDLE,
             'rust_function_ref': QUALIFIED_NEEDLE,
+            'rust_var': QUALIFIED_NEEDLE,
             'rust_var_ref': QUALIFIED_NEEDLE,
+            'rust_type': QUALIFIED_NEEDLE,
             'rust_type_ref': QUALIFIED_NEEDLE,
+            'rust_module': QUALIFIED_NEEDLE,
             'rust_module_ref': QUALIFIED_NEEDLE,
             'rust_module_alias_ref': QUALIFIED_NEEDLE,
             'rust_extern_ref': QUALIFIED_NEEDLE,
