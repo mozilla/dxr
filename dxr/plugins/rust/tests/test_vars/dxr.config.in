@@ -3,7 +3,6 @@ enabled_plugins     = pygmentize rust
 disabled_plugins    = clang
 temp_folder         = PWD/temp
 target_folder       = PWD/target
-nb_jobs             = 4
 es_index            = dxr_{format}_{tree}_{unique}
 es_alias            = dxr_{format}_{tree}
 

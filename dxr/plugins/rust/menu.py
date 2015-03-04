@@ -3,7 +3,7 @@ from dxr.utils import search_url
 
 def search(tree_config, query):
     """ Auxiliary function for getting the search url for query """
-    return search_url(tree_config.config.wwwroot,
+    return search_url(tree_config.config.www_root,
                       tree_config.name,
                       query)
 
@@ -49,7 +49,7 @@ def add_jump_definition_to_line(tree, tree_config, menu, path, line, text="Jump 
         return
 
     # Definition url
-    url = tree_config.config.wwwroot + '/' + tree_config.name + '/source/' + path
+    url = tree_config.config.www_root + '/' + tree_config.name + '/source/' + path
     url += "#%s" % line
     menu.insert(0, { 
         'html':   text,

@@ -59,8 +59,8 @@ def next_id():
     return id
 
 class FileToIndex(indexers.FileToIndex):
-    def __init__(self, path, contents, tti):
-        super(FileToIndex, self).__init__(path, contents, tti.tree)
+    def __init__(self, path, contents, plugin_name, tti):
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tti.tree)
         self.tree_index = tti
 
     def needles_by_line(self):
@@ -306,8 +306,8 @@ class TreeData:
 
 
 class TreeToIndex(indexers.TreeToIndex):
-    def __init__(self, tree):
-        super(TreeToIndex, self).__init__(tree)
+    def __init__(self, plugin_name, tree):
+        super(TreeToIndex, self).__init__(plugin_name, tree)
         self.tree = tree
 
         src_folder = self.tree.source_folder
@@ -402,7 +402,7 @@ class TreeToIndex(indexers.TreeToIndex):
 
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self)
+        return FileToIndex(path, contents, self.plugin_name, self)
 
 
     # Just record the crates we index (process_crate).
@@ -950,7 +950,6 @@ def process_mod_ref(args, tree):
     tree.fixup_qualname(args)
     tree.data.module_refs.append(args)
     tree.add_to_lines(args, ('module_refs', args))
-    print args
 
 
 def process_use_alias(args, tree):

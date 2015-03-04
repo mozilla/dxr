@@ -3,7 +3,6 @@ enabled_plugins     = pygmentize rust buglink
 disabled_plugins    = clang
 temp_folder         = PWD/temp
 target_folder       = PWD/target
-nb_jobs             = 4
 es_index            = dxr_{format}_{tree}_{unique}
 es_alias            = dxr_{format}_{tree}
 
@@ -11,7 +10,11 @@ es_alias            = dxr_{format}_{tree}
 source_folder=PWD/code
 object_folder=PWD/code
 build_command=make clean; make -j $jobs
-plugin_buglink_name=github
-plugin_buglink_url=https://github.com/mozilla/rust/issues/%s
-plugin_buglink_regex=#([0-9]+)
+
+
+    [[buglink]]
+    name = github
+    url = https://github.com/mozilla/rust/issues/%s
+    # TODO there needs to be a # at the start, but I have no idea how to make that work
+    regex = ([0-9]+)
 

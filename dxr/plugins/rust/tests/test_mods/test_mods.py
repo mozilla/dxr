@@ -43,7 +43,7 @@ class ModTests(DxrInstanceTestCase):
                               ('<b>mod12</b>::bar();', 66)])
         self.found_lines_eq('module-ref:mod111',
                             [('::mod1::mod11::<b>mod111</b>::bar();', 25),
-                             ('<b>mod111</b><b></b>::bar();', 33),
+                             ('<b>mod111</b>::bar();', 33),
                              ('<b>moda</b>::bar();', 34),
                              ('mod11::<b>mod111</b>::bar();', 46)])
         self.found_line_eq('module-ref:moda', '<b>moda</b>::bar();', 34)
