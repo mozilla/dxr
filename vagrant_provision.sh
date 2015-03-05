@@ -28,14 +28,20 @@ ln -sf /usr/bin/nodejs /usr/local/bin/node
 apt-get install -y sphinx-common
 
 # Python:
-apt-get install -y libapache2-mod-wsgi python-pip
-pip install nose
+apt-get install -y libapache2-mod-wsgi python-pip python-virtualenv python2.7-dev
+# Build a virtualenv, and install requirements:
+VENV=/home/vagrant/venv
+sudo -H -u vagrant -s -- <<THEEND
+virtualenv $VENV
+source $VENV/bin/activate
 cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop
-
-# A few debugging tools:
 pip install pdbpp nose-progressive
+THEEND
+# Activate the virtualenv all the time:
+grep /bin/activate .bashrc > /dev/null || echo ". $VENV/bin/activate" >> /home/vagrant/.bashrc
+
 if [ ! -e ~vagrant/.pdbrc.py ]; then
     cat >~vagrant/.pdbrc.py <<THEEND
 from pdb import DefaultConfig
