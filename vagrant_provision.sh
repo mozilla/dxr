@@ -101,6 +101,8 @@ apt-get install -y git llvm-3.5 libclang-3.5-dev clang-3.5 pkg-config
 # --force overrides any older-version LLVM alternative lying around, letting
 # us upgrade by provisioning rather than destroying the whole box:
 update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
+# There is no clang++ until we do this:
+update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
 
 # Elasticsearch:
 apt-get install -y openjdk-7-jdk elasticsearch
