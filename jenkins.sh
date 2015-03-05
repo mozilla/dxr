@@ -7,7 +7,7 @@ if [ ! "$VBGUEST" ]; then
 fi;
 
 /opt/vagrant/bin/vagrant up
-/opt/vagrant/bin/vagrant ssh -c 'cd /home/vagrant/dxr && make clean && make test'
+/opt/vagrant/bin/vagrant ssh -c 'cd /home/vagrant/dxr && source /home/vagrant/venv/bin/activate && make clean && make test'
 RESULT=$?
 /opt/vagrant/bin/vagrant destroy --force || exit $?
 exit $RESULT
