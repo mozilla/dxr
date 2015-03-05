@@ -30,7 +30,7 @@ Contents
     deployment
     use
     development
-    indexing-mozilla-central
+    indexing-firefox
 
 
 Back Matter

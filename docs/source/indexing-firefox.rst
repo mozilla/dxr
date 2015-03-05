@@ -1,9 +1,10 @@
-=============================================
-Appendix A: Indexing mozilla-central With DXR
-=============================================
+============================
+Appendix A: Indexing Firefox
+============================
 
 As both a practical example and a specific reference, here is how to tweak the
-included Vagrant box to build a DXR index of Firefox.
+included Vagrant box to build a DXR index of mozilla-central, the repository
+from which Firefox is built.
 
 Increase Your RAM
 =================
