@@ -559,9 +559,9 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
                 'lines': zip(build_lines(contents,
                                          chain.from_iterable(refses),
                                          chain.from_iterable(regionses)),
-                             annotations_by_line) if is_text else [],
+                             annotations_by_line),
 
-                'is_text': is_text,
+                'is_text': True,
                 'sections': build_sections(chain.from_iterable(linkses))}))
 
 
@@ -705,6 +705,7 @@ def build_sections(links):
     links = sorted(links, key=lambda section: (section[0], section[1]))
     # Return list of section and items (without importance)
     return [(section, list(items)) for importance, section, items in links]
+
 
 _template_env = None
 def load_template_env():
