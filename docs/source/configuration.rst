@@ -75,6 +75,13 @@ Here are the options that can live in the ``[DXR]`` section:
   Google analytics key. If set, the analytics snippet will added automatically
   to every page.
 
+``es_alias``
+    A ``format()``-style template for coming up with elasticsearch alias
+    names. These live in the same namespace as indices, so don't pave over any
+    index name you're already using. The variables ``{format}`` and ``{tree}``
+    will be substituted, and their meanings are as in ``es_index``. Default:
+    ``dxr_{format}_{tree}``.
+
 ``es_hosts``
     A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
     include port numbers. Default: http://127.0.0.1:9200/. Remember that you
@@ -90,12 +97,17 @@ Here are the options that can live in the ``[DXR]`` section:
     build hosts's MAC address so errant concurrent builds on different hosts
     at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
 
-``es_alias``
-    A ``format()``-style template for coming up with elasticsearch alias
-    names. These live in the same namespace as indices, so don't pave over any
-    index name you're already using. The variables ``{format}`` and ``{tree}``
-    will be substituted, and their meanings are as in ``es_index``. Default:
-    ``dxr_{format}_{tree}``.
+``es_indexing_timeout``
+    The number of seconds DXR should wait for elasticsearch responses during
+    indexing. Default: 60
+
+``es_refresh_interval``
+    The number of seconds between elasticsearch's consolidation passes during
+    indexing. Turn this up for higher IO efficiency and fewer segments in the
+    final index. Turn it down to avoid timeouts at the end of indexing runs.
+    (You can also dodge these by cranking up ``es_indexing_timeout``.) Set to
+    -1 to do no refreshes at all, except directly after an indexing run
+    completes. Default: 60
 
 ``max_thumbnail_size``
     A number that specifies the file size in bytes at which images will not be

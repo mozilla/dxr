@@ -118,7 +118,16 @@ class Config(DotSection):
                 Optional('max_thumbnail_size', default=20000):
                     And(Use(int),
                         lambda v: v >= 0,
-                        error='"max_thumbnail_size" must be an integer.')
+                        error='"max_thumbnail_size" must be a non-negative '
+                              'integer.'),
+                Optional('es_indexing_timeout', default=60):
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"es_indexing_timeout" must be a non-negative '
+                              'integer.'),
+                Optional('es_refresh_interval', default=60):
+                    And(Use(int),
+                        error='"es_indexing_timeout" must be an integer.')
             },
             basestring: dict
         })

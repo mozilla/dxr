@@ -31,6 +31,7 @@ from dxr.query import filter_menu_items
 from dxr.utils import (open_log, parallel_url, raw_url, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)
 
+
 def linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be
     used to display linked path components in the headers of file or folder
@@ -97,7 +98,7 @@ def build_instance(config_input, tree=None, verbose=False):
         # Build everything if no tree is provided
         trees = config.trees.values()
 
-    es = ElasticSearch(config.es_hosts)
+    es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
 
     print " - Generating target folder."
     create_skeleton(config)
@@ -248,7 +249,8 @@ def index_tree(tree, es, verbose=False):
                         # done indexing, but it is unthrottled; we'd have to
                         # use shard allocation to do the indexing on one box
                         # and then move it elsewhere for actual use.
-                        'refresh_interval': '1m'
+                        'refresh_interval':
+                            '%is' % tree.config.es_refresh_interval
                     },
                     'mappings': reduce(deep_update,
                                        (p.mappings for p in
