@@ -24,9 +24,11 @@ class WarningTestCase(PythonSingleFileTestCase):
         cls.warnings = caught_warnings
 
 
-# Store common test method on a mixin so nose doesn't try to run it
-# except on the TestCase subclasses.
 class ParseErrorTestMixin(object):
+    """Store common test method on a mixin so nose doesn't try to run it
+    except on the TestCase subclasses.
+
+    """
     def test_parse_error(self):
         """Make sure nothing is indexed for a file with invalid Python
         code, and that the build process raised warnings about it.
