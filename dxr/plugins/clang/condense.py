@@ -150,9 +150,6 @@ def process_impl(parents, children, props):
 
 @without('callloc', 'calllocend')
 def process_call(props):
-    # This is a pilot test of outputting row/col for both start and end from
-    # the compiler plugin. It lets us construct reliable Extents, with no
-    # assumption that they don't span lines.
     _, call_start = _process_loc(props['callloc'])
     _, (call_end_row, call_end_col) = _process_loc(props['calllocend'])
     if call_end_col > call_start.col + 1:
