@@ -1,18 +1,18 @@
 import ast
-import os
 import token
 import tokenize
-from collections import defaultdict
 from StringIO import StringIO
-from warnings import warn
 
-from dxr.build import file_contents, unignored
+from dxr.build import unignored
 from dxr.filters import LINE
 from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_NEEDLE, with_start_and_end)
+from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import class_menu
+from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
+                                      convert_node_to_name, path_to_module)
 
 
 mappings = {
@@ -24,6 +24,8 @@ mappings = {
             'py_bases': QUALIFIED_NEEDLE,
             'py_callers': QUALIFIED_NEEDLE,
             'py_called_by': QUALIFIED_NEEDLE,
+            'py_overrides': QUALIFIED_NEEDLE,
+            'py_overridden': QUALIFIED_NEEDLE,
         },
     },
 }
@@ -39,127 +41,38 @@ class _FileToIgnore(object):
 FILE_TO_IGNORE = _FileToIgnore()
 
 
-class AnalyzingNodeVisitor(ast.NodeVisitor):
-    """Node visitor that analyzes code for data we need prior to
-    indexing, including:
-
-    - A graph of imported names and the files that they were originally
-      defined in.
-    - A mapping of class names to the classes they inherit from.
-
-    """
-    def __init__(self, module_path, names, base_classes):
-        self.module_path = module_path
-        self.names = names
-        self.base_classes = base_classes
-
-    def visit_ClassDef(self, node):
-        # Save the base classes of any class we find.
-        class_path = self.module_path + '.' + node.name
-        bases = []
-        for base in node.bases:
-            base_name = convert_node_to_name(base)
-            if base_name:
-                bases.append(self.module_path + '.' + base_name)
-
-        self.base_classes[class_path] = bases
-        self.generic_visit(node)
-
-    def visit_Import(self, node):
-        self.analyze_import(node)
-        self.generic_visit(node)
-
-    def visit_ImportFrom(self, node):
-        self.analyze_import(node)
-        self.generic_visit(node)
-
-    def analyze_import(self, node):
-        # Whenever we import something, remember the local name
-        # of what was imported and where it actually lives.
-        for alias in node.names:
-            local_name = alias.asname or alias.name
-            absolute_local_name = self.module_path + '.' + local_name
-
-            import_name = alias.name
-            if isinstance(node, ast.ImportFrom):
-                # `from . import x` means node.module is None.
-                if node.module:
-                    import_name = node.module + '.' + import_name
-                else:
-                    package_path = package_for_module(self.module_path)
-                    if package_path:
-                        import_name = package_path + '.' + import_name
-
-            self.names[absolute_local_name] = import_name
-
-
 class TreeToIndex(TreeToIndexBase):
-    def __init__(self, *args, **kwargs):
-        super(TreeToIndex, self).__init__(*args, **kwargs)
-
-        self.python_path = self.plugin_config.python_path
-
-        # Post-build analysis results.
-        self.base_classes = defaultdict(list)
-        self.derived_classes = defaultdict(list)
-        self.names = {}
-        self.ignore_paths = set()
-
     @property
     def unignored_files(self):
         return unignored(self.tree.source_folder, self.tree.ignore_paths,
                          self.tree.ignore_filenames)
 
     def post_build(self):
-        for path in self.unignored_files:
-            if is_interesting(path):
-                self.analyze(path)
-
-        # Once we've got all the base classes, store the opposite
-        # direction: derived classes!
-        for class_name, bases in self.base_classes.iteritems():
-            for base_name in bases:
-                base_name = normalize_name(self.names, base_name)
-                self.derived_classes[base_name].append(class_name)
-
-    def analyze(self, path):
-        """Parse a Python file and analyze it for import and class data
-        that we need to find the inheritance tree for classes later on.
-
-        Stores the results in self.base_classes and self.names.
-
-        """
-        module_path = path_to_module(self.python_path, path)
-
-        try:
-            syntax_tree = ast.parse(file_contents(path, self.tree.source_encoding))
-        except SyntaxError as err:
-            rel_path = os.path.relpath(path, self.tree.source_folder)
-            warn('Failed to analyze {filename} due to error "{error}".'.format(
-                 filename=rel_path, error=err))
-            self.ignore_paths.add(rel_path)
-            return
-
-        visitor = AnalyzingNodeVisitor(module_path, self.names, self.base_classes)
-        visitor.visit(syntax_tree)
+        paths = ((path, self.tree.source_encoding) for path in self.unignored_files)
+        self.tree_analysis = TreeAnalysis(
+            python_path=self.plugin_config.python_path,
+            source_folder=self.tree.source_folder,
+            paths=paths)
 
     def file_to_index(self, path, contents):
-        if path in self.ignore_paths:
+        if path in self.tree_analysis.ignore_paths:
             return FILE_TO_IGNORE
         else:
             return FileToIndex(path, contents, self.plugin_name, self.tree,
-                               self.python_path, self.base_classes,
-                               self.derived_classes, self.names)
+                               tree_analysis=self.tree_analysis)
 
 
-class IndexingNodeVisitor(ast.NodeVisitor):
+class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     """Node visitor that walks through the nodes in an abstract syntax
     tree and finds interesting things to index.
 
     """
 
-    def __init__(self, file_to_index):
+    def __init__(self, file_to_index, tree_analysis):
+        super(IndexingNodeVisitor, self).__init__()
+
         self.file_to_index = file_to_index
+        self.tree_analysis = tree_analysis
         self.function_call_stack = []  # List of lists of function names.
         self.needles = []
         self.refs = []
@@ -172,7 +85,7 @@ class IndexingNodeVisitor(ast.NodeVisitor):
         # Index function calls within this function for the callers: and
         # called-by filters.
         self.function_call_stack.append([])
-        self.generic_visit(node)
+        super(IndexingNodeVisitor, self).visit_FunctionDef(node)
         call_needles = self.function_call_stack.pop()
         for name, call_start, call_end in call_needles:
             self.yield_needle('py_callers', name, start, end)
@@ -196,18 +109,16 @@ class IndexingNodeVisitor(ast.NodeVisitor):
 
         # Index the class hierarchy for classes for the derived: and
         # bases: filters.
-        class_name = self.file_to_index.module_name + '.' + node.name
+        class_name = self.get_class_name(node)
 
-        # Index both the full absolute base name and the
-        # local name for conveniece.
-        bases = self.file_to_index.get_bases_for_class(class_name)
+        bases = self.tree_analysis.get_base_classes(class_name)
         for qualname in bases:
             name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_derived',
                               name=name, qualname=qualname,
                               start=start, end=end)
 
-        derived_classes = self.file_to_index.get_derived_for_class(class_name)
+        derived_classes = self.tree_analysis.get_derived_classes(class_name)
         for qualname in derived_classes:
             name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_bases',
@@ -218,7 +129,31 @@ class IndexingNodeVisitor(ast.NodeVisitor):
         self.yield_ref(start, end,
                        class_menu(self.file_to_index.tree, class_name))
 
-        self.generic_visit(node)
+        super(IndexingNodeVisitor, self).visit_ClassDef(node)
+
+    def visit_ClassFunction(self, class_node, function_node):
+        class_name = self.get_class_name(class_node)
+        function_qualname = class_name + '.' + function_node.name
+        start, end = self.file_to_index.get_node_start_end(function_node)
+
+        # Index this function as being overridden by other functions for
+        # the overridden: filter.
+        for qualname in self.tree_analysis.overridden_functions[function_qualname]:
+            name = qualname.rsplit('.')[-1]
+            self.yield_needle(needle_type='py_overridden',
+                              name=name, qualname=qualname,
+                              start=start, end=end)
+
+        # Index this function as overriding other functions for the
+        # overrides: filter.
+        for qualname in self.tree_analysis.overriding_functions[function_qualname]:
+            name = qualname.rsplit('.')[-1]
+            self.yield_needle(needle_type='py_overrides',
+                              name=name, qualname=qualname,
+                              start=start, end=end)
+
+    def get_class_name(self, class_node):
+        return self.file_to_index.module_name + '.' + class_node.name
 
     def yield_needle(self, *args, **kwargs):
         needle = line_needle(*args, **kwargs)
@@ -233,31 +168,16 @@ class IndexingNodeVisitor(ast.NodeVisitor):
 
 
 class FileToIndex(FileToIndexBase):
-    def __init__(self, path, contents, plugin_name, tree, python_path,
-                 base_classes, derived_classes, names):
+    def __init__(self, path, contents, plugin_name, tree, tree_analysis):
         """
-        :arg python_path: Absolute path to the root folder where Python
-        modules for the tree are stored.
-
-        :arg base_classes: Dictionary mapping absolute class names to a
-        list of their base class names.
-
-        :arg derived_classes: Dictionary mapping absolute class names to
-        a list of the class names that derive from them.
-
-        :arg names: Dictionary mapping local names to the actual name
-        they point to. For example, if you have `from os import path`
-        in a module called `foo.bar`, then the key `foo.bar.path` would
-        map to `os.path`.
+        :arg tree_analysis: TreeAnalysisResult object with the results
+        from the post-build analysis.
 
         """
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
-        self.python_path = python_path
-        self.base_classes = base_classes
-        self.derived_classes = derived_classes
-        self.names = names
-        self.module_name = path_to_module(self.python_path, self.path)
+        self.tree_analysis = tree_analysis
+        self.module_name = path_to_module(tree_analysis.python_path, self.path)
 
         self._visitor = None
 
@@ -272,8 +192,7 @@ class FileToIndex(FileToIndexBase):
         """
         if not self._visitor:
             self.node_start_table = self.analyze_tokens()
-
-            self._visitor = IndexingNodeVisitor(self)
+            self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
             syntax_tree = ast.parse(self.contents)
             self._visitor.visit(syntax_tree)
         return self._visitor
@@ -334,27 +253,6 @@ class FileToIndex(FileToIndexBase):
 
         return start, end
 
-    def get_bases_for_class(self, absolute_class_name):
-        """Return a list of all the classes that the given class
-        inherits from in their canonical form.
-
-        """
-        for base in self.base_classes[absolute_class_name]:
-            base = normalize_name(self.names, base)
-            yield base
-            for base_parent in self.get_bases_for_class(base):
-                yield base_parent
-
-    def get_derived_for_class(self, absolute_class_name):
-        """Return a list of all the classes that derive from the given
-        class in their canonical form.
-
-        """
-        for derived in self.derived_classes[absolute_class_name]:
-            yield derived
-            for derived_child in self.get_derived_for_class(derived):
-                yield derived_child
-
 
 def line_needle(needle_type, name, start, end, qualname=None):
     data = {
@@ -376,68 +274,9 @@ def line_needle(needle_type, name, start, end, qualname=None):
     )
 
 
-def package_for_module(module_path):
-    return module_path.rsplit('.', 1)[0] if '.' in module_path else None
-
-
-def convert_node_to_name(node):
-    """Convert an AST node to a name if possible. Return None if we
-    can't (such as function calls).
-
-    """
-    if isinstance(node, ast.Name):
-        return node.id
-    elif isinstance(node, ast.Attribute):
-        value_name = convert_node_to_name(node.value)
-        if value_name:
-            return value_name + '.' + node.attr
-    else:
-        return None
-
-
-def normalize_name(names, absolute_local_name):
-    """Given a local name, figure out the actual module that the
-    thing that name points to lives and return that name.
-
-    For example, if you have `from os import path` in a module
-    called `foo.bar`, then the name `foo.bar.path` would return
-    `os.path`.
-
-    """
-    while absolute_local_name in names:
-        absolute_local_name = names[absolute_local_name]
-
-    # For cases when you `import foo.bar` and refer to `foo.bar.baz`, we
-    # need to normalize the `foo.bar` prefix in case it's not the
-    # canonical name of that module.
-    if '.' in absolute_local_name:
-        prefix, local_name = absolute_local_name.rsplit('.', 1)
-        return normalize_name(names, prefix) + '.' + local_name
-    else:
-        return absolute_local_name
-
-
 def is_interesting(path):
     """Determine if the file at the given path is interesting enough to
     analyze.
 
     """
     return path.endswith('.py')
-
-
-def path_to_module(python_path, module_path):
-    """Convert a file path into a dotted module path, using the given
-    python_path as the base directory that modules live in.
-
-    """
-    module_path = trim_end(module_path, '.py')
-    module_path = trim_end(module_path, '/__init__')
-    common_path = os.path.commonprefix([python_path, module_path])
-    return module_path.replace(common_path, '', 1).replace('/', '.').strip('.')
-
-
-def trim_end(string, end):
-    if string.endswith(end):
-        return string[:-len(end)]
-    else:
-        return string
