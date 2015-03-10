@@ -22,14 +22,17 @@ Vagrant.configure("2") do |config|
     config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
     config.vm.box = "ubuntu/trusty64"
 
+    is_jenkins = ENV['USER'] == 'jenkins'
+
     config.vm.provider "virtualbox" do |v|
-        v.name = "DXR_VM"
+        # On Jenkins, choose a unique box name so test runs don't collide if
+        # they get assigned to the same worker:
+        v.name = is_jenkins ? ("DXR_VM_" + ENV['JOB_NAME'] + "_" + ENV['BUILD_NUMBER']) : "DXR_VM"
+
         v.customize ["modifyvm", :id, "--memory", CONF['memory']]
         v.customize ["setextradata", :id,
             "VBoxInternal2/SharedFoldersEnableSymlinksCreate//home/vagrant/dxr", "1"]
     end
-
-    is_jenkins = ENV['USER'] == 'jenkins'
 
     if not is_jenkins
         # Don't share these resources when on Jenkins. We want to be able to
