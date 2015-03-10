@@ -39,6 +39,60 @@ class _FileToIgnore(object):
 FILE_TO_IGNORE = _FileToIgnore()
 
 
+class AnalyzingNodeVisitor(ast.NodeVisitor):
+    """Node visitor that analyzes code for data we need prior to
+    indexing, including:
+
+    - A graph of imported names and the files that they were originally
+      defined in.
+    - A mapping of class names to the classes they inherit from.
+
+    """
+    def __init__(self, module_path, names, base_classes):
+        self.module_path = module_path
+        self.names = names
+        self.base_classes = base_classes
+
+    def visit_ClassDef(self, node):
+        # Save the base classes of any class we find.
+        class_path = self.module_path + '.' + node.name
+        bases = []
+        for base in node.bases:
+            base_name = convert_node_to_name(base)
+            if base_name:
+                bases.append(self.module_path + '.' + base_name)
+
+        self.base_classes[class_path] = bases
+        self.generic_visit(node)
+
+    def visit_Import(self, node):
+        self.analyze_import(node)
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node):
+        self.analyze_import(node)
+        self.generic_visit(node)
+
+    def analyze_import(self, node):
+        # Whenever we import something, remember the local name
+        # of what was imported and where it actually lives.
+        for alias in node.names:
+            local_name = alias.asname or alias.name
+            absolute_local_name = self.module_path + '.' + local_name
+
+            import_name = alias.name
+            if isinstance(node, ast.ImportFrom):
+                # `from . import x` means node.module is None.
+                if node.module:
+                    import_name = node.module + '.' + import_name
+                else:
+                    package_path = package_for_module(self.module_path)
+                    if package_path:
+                        import_name = package_path + '.' + import_name
+
+            self.names[absolute_local_name] = import_name
+
+
 class TreeToIndex(TreeToIndexBase):
     def __init__(self, *args, **kwargs):
         super(TreeToIndex, self).__init__(*args, **kwargs)
@@ -86,35 +140,8 @@ class TreeToIndex(TreeToIndexBase):
             self.ignore_paths.add(rel_path)
             return
 
-        for node in ast.walk(syntax_tree):
-            # Save the base classes of any class we find.
-            if isinstance(node, ast.ClassDef):
-                class_path = module_path + '.' + node.name
-                bases = []
-                for base in node.bases:
-                    base_name = convert_node_to_name(base)
-                    if base_name:
-                        bases.append(module_path + '.' + base_name)
-                self.base_classes[class_path] = bases
-
-            # Whenever we import something, remember the local name
-            # of what was imported and where it actually lives.
-            if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
-                for alias in node.names:
-                    local_name = alias.asname or alias.name
-                    absolute_local_name = module_path + '.' + local_name
-
-                    import_name = alias.name
-                    if isinstance(node, ast.ImportFrom):
-                        # `from . import x` means node.module is None.
-                        if node.module:
-                            import_name = node.module + '.' + import_name
-                        else:
-                            package_path = package_for_module(module_path)
-                            if package_path:
-                                import_name = package_path + '.' + import_name
-
-                    self.names[absolute_local_name] = import_name
+        visitor = AnalyzingNodeVisitor(module_path, self.names, self.base_classes)
+        visitor.visit(syntax_tree)
 
     def file_to_index(self, path, contents):
         if path in self.ignore_paths:
@@ -207,12 +234,12 @@ class IndexingNodeVisitor(ast.NodeVisitor):
 
 class FileToIndex(FileToIndexBase):
     def __init__(self, path, contents, plugin_name, tree, python_path,
-                 class_bases, derived_classes, names):
+                 base_classes, derived_classes, names):
         """
         :arg python_path: Absolute path to the root folder where Python
         modules for the tree are stored.
 
-        :arg class_bases: Dictionary mapping absolute class names to a
+        :arg base_classes: Dictionary mapping absolute class names to a
         list of their base class names.
 
         :arg derived_classes: Dictionary mapping absolute class names to
@@ -227,7 +254,7 @@ class FileToIndex(FileToIndexBase):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
         self.python_path = python_path
-        self.class_bases = class_bases
+        self.base_classes = base_classes
         self.derived_classes = derived_classes
         self.names = names
         self.module_name = path_to_module(self.python_path, self.path)
@@ -312,7 +339,7 @@ class FileToIndex(FileToIndexBase):
         inherits from in their canonical form.
 
         """
-        for base in self.class_bases[absolute_class_name]:
+        for base in self.base_classes[absolute_class_name]:
             base = normalize_name(self.names, base)
             yield base
             for base_parent in self.get_bases_for_class(base):
