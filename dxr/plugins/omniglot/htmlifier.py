@@ -177,9 +177,9 @@ class Git(VCS):
             if repo.endswith(".git"):
                 repo = repo[:-len(".git")]
             return "https" + repo[len("git"):]
-        elif repo.startswith("https://github.com/"):
+        elif "http://github.com/" in repo or "https://github.com/" in repo:
             self._is_github = True
-            return repo
+            return repo[:-len(".git")]
         else:
             self._is_github = False
             return repo
