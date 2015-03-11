@@ -53,7 +53,7 @@ Here are the options that can live in the ``[DXR]`` section:
 ``enabled_plugins``
     Names of plugins to enable. Default: ``*``
 
-``filter_lang``
+``filter_language``
     The default programming language for this instance. Only filters registered
     for this language will be used. Default: ``C``
 
