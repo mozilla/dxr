@@ -177,7 +177,12 @@ class Git(VCS):
             if repo.endswith(".git"):
                 repo = repo[:-len(".git")]
             return "https" + repo[len("git"):]
-        raise Exception("I don't know what's going on")
+        elif repo.startswith("https://github.com/"):
+            self._is_github = True
+            return repo
+        else:
+            self._is_github = False
+            return repo
 
 
 class Perforce(VCS):
