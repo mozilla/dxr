@@ -426,7 +426,7 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
                 yield join(root, f)
 
 
-def index_file(tree, tree_indexers, path, es, index, jinja_env):
+def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.
 
     For the moment, we execute plugins in series, figuring that we have plenty
@@ -554,14 +554,13 @@ def index_chunk(tree,
     path = '(no file yet)'
     try:
         es = ElasticSearch(tree.config.es_hosts)
-        jinja_env = load_template_env()
         try:
             # Don't log if single-process:
             log = (worker_number and
                    open_log(tree, 'index-chunk-%s.log' % worker_number))
             for path in paths:
                 log and log.write('Starting %s.\n' % path)
-                index_file(tree, tree_indexers, path, es, index, jinja_env)
+                index_file(tree, tree_indexers, path, es, index)
             log and log.write('Finished chunk.\n')
         finally:
             log and log.close()
