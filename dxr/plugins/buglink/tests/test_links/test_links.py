@@ -1,4 +1,4 @@
-"Tests for whether buglink finds and links bug references"""
+"""Tests for whether buglink finds and links bug references"""
 
 from dxr.testing import DxrInstanceTestCase, menu_on
 

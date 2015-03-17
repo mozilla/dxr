@@ -12,14 +12,14 @@
         Navigation
       </button>
       <section id="panel-content" aria-expanded="true" aria-hidden="false">
-        {% for section, items in sections %}
-          <h4>{{ section }}</h4>
+        {% for section in sections %}
+          <h4>{{ section.heading }}</h4>
           <ul>
-          {% for icon, title, href in items %}
-            <li>
-              <a href="{{ href }}" title="{{ title }}" class="{{ icon }} icon">{{ title }}</a>
-            </li>
-          {%- endfor %}
+            {% for item in section['items'] %}
+              <li>
+                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon">{{ item.title }}</a>
+              </li>
+            {%- endfor %}
           </ul>
         {% endfor %}
       </section>

@@ -65,8 +65,8 @@ Here are the options that can live in the ``[DXR]`` section:
     debugging.
 
 ``skip_stages``
-    Build/indexing stages to skip, for debugging: zero or more of ``build``,
-    ``index``, and ``html``, whitespace-separated. Default: none
+    Build/indexing stages to skip, for debugging: ``build``, ``index``, or
+    both, whitespace-separated. Default: none
 
 ``www_root``
     URL path prefix to the root of DXR's web app. Default: empty

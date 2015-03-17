@@ -1,6 +1,8 @@
 """Machinery for interspersing lines of text with linked and colored regions
 
-The only typical entry point is build_lines().
+The typical entrypoints are es_lines() and html_line().
+
+Within this file, "tag" means a tuple of (file-wide offset, is_start, payload).
 
 """
 import cgi
@@ -49,10 +51,10 @@ class Region(TagWriter):
                     # them.
 
     def opener(self):
-        return u'<span class="%s">' % cgi.escape(self.payload, True)
+        return {'class': self.payload}
 
     def closer(self):
-        return u'</span>'
+        return {'closer': False}
 
 
 class Ref(TagWriter):
@@ -60,42 +62,14 @@ class Ref(TagWriter):
     sort_order = 1
 
     def opener(self):
-        menu, value = self.payload
-        menu = cgi.escape(json.dumps(menu), True)
-        css_class = ''
-        title = ''
-        if value:
-            title = ' title="' + cgi.escape(value, True) + '"'
-        return u'<a data-menu="%s"%s%s>' % (menu, css_class, title)
+        menuitems, hover = self.payload
+        ret = {'menuitems': menuitems}
+        if hover:
+            ret['hover'] = hover
+        return ret
 
     def closer(self):
-        return u'</a>'
-
-
-def html_lines(tags, slicer):
-    """Render tags to HTML, and interleave them with the text they decorate.
-
-    :arg tags: An iterable of ordered, non-overlapping, non-empty tag
-        boundaries with Line endpoints at (and outermost at) the index of the
-        end of each line.
-    :arg slicer: A callable taking the args (start, end), returning a Unicode
-        slice of the source code we're decorating. ``start`` and ``end`` are
-        Python-style slice args.
-
-    """
-    up_to = 0
-    segments = []
-
-    for point, is_start, payload in tags:
-        segments.append(cgi.escape(slicer(up_to, point).strip(u'\r\n')))
-        up_to = point
-        if payload is LINE:
-            if not is_start and segments:
-                yield Markup(u''.join(segments))
-                segments = []
-
-        else:
-            segments.append(payload.opener() if is_start else payload.closer())
+        return {'closer': True}
 
 
 def balanced_tags(tags):
@@ -347,8 +321,9 @@ def nesting_order((point, is_start, payload)):
                              -payload.sort_order)
 
 
-def build_lines(text, refs, regions):
-    """Yield lines of Markup, with links and syntax coloring applied.
+def finished_tags(text, refs, regions):
+    """Return an ordered iterable of properly nested tags which fully describe
+    the refs and regions and their places in a file's text.
 
     :arg text: Unicode text of the file to htmlify. ``build_lines`` may not be
         used on binary files.
@@ -366,4 +341,66 @@ def build_lines(text, refs, regions):
     tags.sort(key=nesting_order)  # balanced_tags undoes this, but we tolerate
                                   # that in html_lines().
     remove_overlapping_refs(tags)
-    return html_lines(balanced_tags(tags), text.__getslice__)
+    return balanced_tags(tags)
+
+
+def es_lines(tags):
+    """Yield a list of dicts, one per source code line, that can be indexed
+    into the ``tags`` field of the ``line`` doctype in elasticsearch.
+
+    Convert from the per-file offsets of refs() and regions() to per-line ones.
+    We include explicit, separate closers in the hashes because, in order to
+    divide tags into line-based sets (including cutting some in half if they
+    spanned lines), we already had to do all the work of ordering and
+    balancing. There's no sense doing that again at request time.
+
+    :arg tags: An iterable of ordered, non-overlapping, non-empty tag
+        boundaries with Line endpoints at (and outermost at) the index of the
+        end of each line.
+
+    """
+    line_offset = 0  # file-wide offset of the beginning of the line
+    hashes = []
+    for point, is_start, payload in tags:
+        if payload is LINE:
+            if not is_start:
+                yield hashes
+                hashes = []
+                line_offset = point
+        else:
+            hash = payload.opener() if is_start else payload.closer()
+            hash['pos'] = point - line_offset
+            hashes.append(hash)
+    # tags always ends with a LINE closer, so we don't need any additional
+    # yield here to catch remnants.
+
+
+def html_line(text, es_tags):
+    """Return a line of Markup, interleaved with the refs and regions that
+    decorate it.
+
+    :arg es_tags: An ordered iterable of tags from an ES ``lines`` doc,
+        representing regions and refs
+    :arg text: The unicode text to decorate
+
+    """
+    def segments(text, es_tags):
+        up_to = 0
+        for tag in es_tags:
+            pos = tag['pos']
+            yield cgi.escape(text[up_to:pos].strip(u'\r\n'))
+            up_to = pos
+            if 'closer' in tag:  # It's a closer. Most common.
+                yield '</a>' if tag['closer'] else '</span>'
+            elif 'class' in tag:  # It's a span.
+                yield u'<span class="%s">' % cgi.escape(tag['class'], True)
+            else:  # It's a menu.
+                menu = cgi.escape(json.dumps(tag['menuitems']), True)
+                if 'hover' in tag:
+                    title = ' title="' + cgi.escape(tag['hover'], True) + '"'
+                else:
+                    title = ''
+                yield u'<a data-menu="%s"%s>' % (menu, title)
+        yield text[up_to:]
+
+    return Markup(u''.join(segments(text, es_tags)))

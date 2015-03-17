@@ -1,25 +1,29 @@
+from cStringIO import StringIO
 from functools import partial
+from itertools import chain
 from logging import StreamHandler
-from os.path import isdir, isfile, join, basename
+from os.path import join, basename
 from sys import stderr
 from time import time
-from cStringIO import StringIO
 from mimetypes import guess_type
 from urllib import quote_plus
 
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
+from funcy import merge
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
 from dxr.build import linked_pathname
 from dxr.exceptions import BadTerm
-from dxr.filters import FILE
-from dxr.mime import icon
+from dxr.filters import FILE, LINE
+from dxr.lines import html_line
+from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
-from dxr.utils import non_negative_int, search_url, TEMPLATE_DIR, decode_es_datetime
+from dxr.utils import (non_negative_int, search_url, TEMPLATE_DIR,
+                       decode_es_datetime, parallel_url, raw_url)
 
 
 # Look in the 'dxr' package for static files, etc.:
@@ -82,7 +86,7 @@ def search(tree):
     query = Query(partial(current_app.es.search,
                           index=config['ES_ALIASES'][tree]),
                   query_text,
-                  plugins_named(config['ENABLED_PLUGINS']),
+                  plugins_named(config['TREES'][tree]['enabled_plugins']),
                   is_case_sensitive=is_case_sensitive)
 
     # Fire off one of the two search routines:
@@ -134,8 +138,8 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     # Try a normal search:
     template_vars = {
-            'filters': filter_menu_items(plugins_named(
-                    config['ENABLED_PLUGINS'])),
+            'filters': filter_menu_items(
+                plugins_named(config['TREES'][tree]['enabled_plugins'])),
             'generated_date': config['GENERATED_DATE'],
             'google_analytics_key': config['GOOGLE_ANALYTICS_KEY'],
             'is_case_sensitive': is_case_sensitive,
@@ -164,8 +168,9 @@ def _tree_tuples(trees, tree, query_text, is_case_sensitive):
                      tree=t,
                      q=query_text,
                      **({'case': 'true'} if is_case_sensitive else {})),
-             description)
-            for t, description in trees.iteritems()]
+             values['description'])
+            for t, values in trees.iteritems()]
+
 
 @dxr_blueprint.route('/<tree>/raw/<path:path>')
 def raw(tree, path):
@@ -191,6 +196,7 @@ def raw(tree, path):
     data_file = StringIO(data.decode('base64'))
     return send_file(data_file, mimetype=guess_type(path)[0])
 
+
 def _es_alias_or_not_found(tree):
     """Return the elasticsearch alias for a tree, or raise NotFound."""
     try:
@@ -203,66 +209,175 @@ def _es_alias_or_not_found(tree):
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees."""
-    tree_folder = _tree_folder(tree)
+    # Fetch ES FILE doc.
+    # Else:
+    #   Query for the FILE where path == path.
+    #   Query for all the LINEs.
+    #   Render it up.
+
+
+    config = current_app.config
+
     try:
-        return send_from_directory(tree_folder, _html_file_path(tree_folder, path))
-    except NotFound as exc:  # It was a folder or a path not found on disk.
-        config = current_app.config
+        return _browse_folder(tree, path, config)
+    except NotFound:
+        return _browse_file(tree, path, config)
 
-        # It's a folder (or nonexistent), not a file. Serve it out of ES.
-        # Eventually, we want everything to be in ES.
-        files_and_folders = [x['_source'] for x in current_app.es.search(
-            {
-                'query': {
-                    'filtered': {
-                        'query': {
-                            'match_all': {}
-                        },
-                        'filter': {
-                            'term': {'folder': path}
-                        }
+
+def _filtered_query(index, doc_type, filter, sort=None, size=1, include=None, exclude=None):
+    """Do a simple, filtered term query, returning an iterable of _sources.
+
+    This is just a mindless upfactoring. It probably shouldn't be blown up
+    into a full-fledged API.
+
+    ``include`` and ``exclude`` are mutually exclusive for now.
+
+    """
+    query = {
+            'query': {
+                'filtered': {
+                    'query': {
+                        'match_all': {}
+                    },
+                    'filter': {
+                        'term': filter
                     }
-                },
-                'sort': [{'is_folder': 'desc'}, 'name'],
-                '_source': {
-                    'exclude': ['raw_data']
-                },
-            },
-            index=_es_alias_or_not_found(tree),
-            doc_type=FILE,
-            size=10000)['hits']['hits']]
+                }
+            }
+        }
+    if sort:
+        query['sort'] = sort
+    if include is not None:
+        query['_source'] = {'include': include}
+    elif exclude is not None:
+        query['_source'] = {'exclude': exclude}
+    return [x['_source'] for x in current_app.es.search(
+        query,
+        index=index,
+        doc_type=doc_type,
+        size=size)['hits']['hits']]
 
-        if not files_and_folders:
-            raise NotFound
 
+def _browse_folder(tree, path, config):
+    """Return a rendered folder listing for folder ``path``.
+
+    Search for FILEs having folder == path. If any matches, render the folder
+    listing. Otherwise, raise NotFound.
+
+    """
+    files_and_folders = _filtered_query(
+        _es_alias_or_not_found(tree),
+        FILE,
+        filter={'folder': path},
+        sort=[{'is_folder': 'desc'}, 'name'],
+        size=10000,
+        exclude=['raw_data'])
+    if not files_and_folders:
+        raise NotFound
+
+    return render_template(
+        'folder.html',
+        # Common template variables:
+        www_root=config['WWW_ROOT'],
+        tree=tree,
+        tree_tuples=[
+            (t_name,
+             url_for('.parallel', tree=t_name, path=path),
+             t_value['description'])
+            for t_name, t_value in config['TREES'].iteritems()],
+        generated_date=config['GENERATED_DATE'],
+        google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
+        paths_and_names=linked_pathname(path, tree),
+        filters=filter_menu_items(
+            plugins_named(config['TREES'][tree]['enabled_plugins'])),
+        # Autofocus only at the root of each tree:
+        should_autofocus_query=path == '',
+
+        # Folder template variables:
+        name=basename(path) or tree,
+        path=path,
+        files_and_folders=[
+            (_icon_class_name(f),
+             f['name'],
+             decode_es_datetime(f['modified']) if 'modified' in f else None,
+             f.get('size'),
+             url_for('.browse', tree=tree, path=f['path'][0]))
+            for f in files_and_folders])
+
+
+def _browse_file(tree, path, config):
+    """Return a rendered page displaying a source file.
+
+    If there is no such file, raise NotFound.
+
+    """
+    def sidebar_links(sections):
+        """Return data structure to build nav sidebar from. ::
+
+            [('Section Name', [{'icon': ..., 'title': ..., 'href': ...}])]
+
+        """
+        # Sort by order, resolving ties by section name:
+        return sorted(sections, key=lambda section: (section['order'],
+                                                     section['heading']))
+
+    # Grab the FILE doc, just for the sidebar nav links:
+    files = _filtered_query(
+        _es_alias_or_not_found(tree),
+        FILE,
+        filter={'path': path},
+        size=1,
+        include=['links'])
+    if not files:
+        raise NotFound
+    links = files[0].get('links', [])
+
+    lines = _filtered_query(
+        _es_alias_or_not_found(tree),
+        LINE,
+        filter={'path': path},
+        size=1000000,
+        include=['content', 'tags', 'annotations'])
+
+    # Common template variables:
+    common = {
+        'www_root': config['WWW_ROOT'],
+        'tree': tree,
+        'tree_tuples':
+            [(tree_name,
+              parallel_url(tree_name, config['WWW_ROOT'], path),
+              tree_values['description'])
+            for tree_name, tree_values in config['TREES'].iteritems()],
+        'generated_date': config['GENERATED_DATE'],
+        'google_analytics_key': config['GOOGLE_ANALYTICS_KEY'],
+        'filters': filter_menu_items(
+            plugins_named(config['TREES'][tree]['enabled_plugins'])),
+    }
+
+    # File template variables
+    file_vars = {
+        'paths_and_names': linked_pathname(path, tree),
+        'icon': icon(path),
+        'path': path,
+        'name': basename(path),
+    }
+
+    if is_image(path):
         return render_template(
-            'folder.html',
-            # Common template variables:
-            www_root=config['WWW_ROOT'],
-            tree=tree,
-            tree_tuples=[
-                (t_name,
-                 url_for('.parallel', tree=t_name, path=path),
-                 t_description)
-                for t_name, t_description in config['TREES'].iteritems()],
-            generated_date=config['GENERATED_DATE'],
-            google_analytics_key=config['GOOGLE_ANALYTICS_KEY'],
-            paths_and_names=linked_pathname(path, tree),
-            filters=filter_menu_items(plugins_named(
-                    config['ENABLED_PLUGINS'])),
-            # Autofocus only at the root of each tree:
-            should_autofocus_query=path == '',
-
-            # Folder template variables:
-            name=basename(path) or tree,
-            path=path,
-            files_and_folders=[
-                (_icon_class_name(f),
-                 f['name'],
-                 decode_es_datetime(f['modified']) if 'modified' in f else None,
-                 f.get('size'),
-                 url_for('.browse', tree=tree, path=f['path'][0]))
-                for f in files_and_folders])
+            'image_file.html',
+            **merge(common, file_vars, {
+                'image_src': raw_url(tree, path) }))
+    else:  # For now, we don't index binary files, so this is always a text one
+        return render_template(
+            'text_file.html',
+            **merge(common, file_vars, {
+                # Someday, it would be great to stream this and not concretize
+                # the whole thing in RAM. The template will have to quit
+                # looping through the whole thing 3 times.
+                'lines': [(html_line(doc['content'][0], doc.get('tags', [])),
+                           doc.get('annotations', [])) for doc in lines],
+                'is_text': True,
+                'sections': sidebar_links(links)}))
 
 
 @dxr_blueprint.route('/<tree>/')
@@ -280,34 +395,24 @@ def parallel(tree, path=''):
     """If a file or dir parallel to the given path exists in the given tree,
     redirect to it. Otherwise, redirect to the root of the given tree.
 
-    We do this with the future in mind, in which pages may be rendered at
-    request time. To make that fast, we wouldn't want to query every one of 50
-    other trees, when drawing the Switch Tree menu, to see if a parallel file
-    or folder exists. So we use this controller to put off the querying until
-    the user actually choose another tree.
+    Deferring this test lets us avoid doing 50 queries when drawing the Switch
+    Tree menu when 50 trees are indexed: we check only when somebody actually
+    chooses something.
 
     """
-    tree_folder = _tree_folder(tree)
-    try:
-        disk_path = _html_file_path(tree_folder, path)
-    except NotFound:
-        disk_path = None  # A folder was found.
-    www_root = current_app.config['WWW_ROOT']
-    if disk_path is None or isfile(join(tree_folder, disk_path)):
-        return redirect('{root}/{tree}/source/{path}'.format(
-            root=www_root,
-            tree=tree,
-            path=path))
-    else:
-        return redirect('{root}/{tree}/source/'.format(
-            root=www_root,
-            tree=tree))
+    config = current_app.config
+    www_root = config['WWW_ROOT']
 
-
-def _tree_folder(tree):
-    """Return the on-disk path to the root of the given tree's folder in
-    the instance."""
-    return join(current_app.instance_path, 'trees', tree)
+    files = _filtered_query(
+        _es_alias_or_not_found(tree),
+        FILE,
+        filter={'path': path.rstrip('/')},
+        size=1,
+        include=[])  # We don't really need anything.
+    return redirect(('{root}/{tree}/source/{path}' if files else
+                     '{root}/{tree}/source/').format(root=www_root,
+                                                     tree=tree,
+                                                     path=path))
 
 
 def _icon_class_name(file_doc):
@@ -320,26 +425,6 @@ def _icon_class_name(file_doc):
     if file_doc['size'] > current_app.config['MAX_THUMBNAIL_SIZE']:
         class_name += " too_fat"
     return class_name
-
-
-def _html_file_path(tree_folder, url_path):
-    """Return the on-disk path, relative to the tree folder, of the HTML file
-    that should be served when a certain path is browsed to. If a path to a
-    folder, raise NotFound.
-
-    :arg tree_folder: The on-disk path to the tree's folder in the instance
-    :arg url_path: The URL path browsed to, rooted just inside the tree
-
-    If you provide a path to a non-existent file or folder, I will happily
-    return a path which has no corresponding FS entity.
-
-    """
-    if isdir(join(tree_folder, url_path)):
-        # It's a bare directory. We generate these listings at request time now.
-        raise NotFound
-    else:
-        # It's a file. Add the .html extension:
-        return url_path + '.html'
 
 
 def _request_wants_json():

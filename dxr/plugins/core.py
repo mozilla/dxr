@@ -26,7 +26,7 @@ __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
 
 PATH_MAPPING = {  # path/to/a/folder/filename.cpp
     'type': 'string',
-    'index': 'not_analyzed',  # support JS source fetching & sorting
+    'index': 'not_analyzed',  # support JS source fetching & sorting & browse() lookups
     'fields': {
         'trigrams_lower': {
             'type': 'string',
@@ -43,6 +43,18 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 EXT_MAPPING = {
     'type': 'string',
     'index': 'not_analyzed'
+}
+
+
+UNINDEXED_STRING = {
+    'type': 'string',
+    'index': 'no',
+}
+
+
+UNINDEXED_INT = {
+    'type': 'integer',
+    'index': 'no',
 }
 
 
@@ -70,10 +82,7 @@ mappings = {
                 'type': 'string',
                 'index': 'not_analyzed'
             },
-            'size': {  # not present for folders
-                'type': 'integer',  # bytes
-                'index': 'no'
-            },
+            'size': UNINDEXED_INT,  # bytes. not present for folders.
             'modified': {  # not present for folders
                 'type': 'date',
                 'index': 'no'
@@ -81,9 +90,26 @@ mappings = {
             'is_folder': {
                 'type': 'boolean'
             },
-            'raw_data': { # only present if the file is an image
+            'raw_data': {  # present only if the file is an image
                 'type': 'binary',
                 'index': 'no'
+            },
+
+            # Sidebar nav links:
+            'links': {
+                'type': 'object',
+                'properties': {
+                    'order': UNINDEXED_INT,
+                    'heading': UNINDEXED_STRING,
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'icon': UNINDEXED_STRING,
+                            'title': UNINDEXED_STRING,
+                            'href': UNINDEXED_STRING
+                        }
+                    }
+                }
             }
         }
     },
@@ -122,6 +148,45 @@ mappings = {
                         'type': 'string',
                         'analyzer': 'trigramalyzer'
                     }
+                }
+            },
+
+            # An ordered array of refs, regions, and close tags on this line.
+            # We might need to change this when we implement any FileToSkims
+            # with regions or refs; we'll see.
+            'tags': {
+                'type': 'object',
+                'properties': {
+                    'pos': UNINDEXED_INT,
+
+                    # A tag has either a menu (in which case it's a ref)...
+                    'menuitems': {
+                        'type': 'object',
+                        'properties': {
+                            'html': UNINDEXED_STRING,
+                            'href': UNINDEXED_STRING,
+                            'icon': UNINDEXED_STRING
+                        }
+                    },
+                    'hover': UNINDEXED_STRING,
+
+                    # ...or a class, in which case it's a region...
+                    'class': UNINDEXED_STRING,
+
+                    # ...or it's a closer:
+                    'closer': {
+                        'type': 'boolean',  # true -> </a>, false -> </span>
+                        'index': 'no'
+                    }
+                }
+            },
+
+            'annotations': {
+                'type': 'object',
+                'properties': {
+                    'title': UNINDEXED_STRING,
+                    'class': UNINDEXED_STRING,
+                    'style': UNINDEXED_STRING
                 }
             }
         }

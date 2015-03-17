@@ -1,7 +1,7 @@
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
-from itertools import chain
+from itertools import chain, izip
 from operator import attrgetter
 import os
 from os import stat, mkdir, makedirs
@@ -25,10 +25,10 @@ import dxr
 from dxr.config import Config, FORMAT
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
-from dxr.lines import build_lines
+from dxr.lines import es_lines, finished_tags
 from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
-from dxr.utils import (open_log, parallel_url, raw_url, deep_update, append_update,
+from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)
 
 
@@ -114,7 +114,10 @@ def build_instance(config_input, tree=None, verbose=False):
         load_template_env(),
         'config.py.jinja',
         join(config.target_folder, 'config.py'),
-        dict(trees=repr(OrderedDict((t.name, t.description)
+        dict(trees=repr(OrderedDict((t.name, {'description': t.description,
+                                              'enabled_plugins':
+                                                  [p.name for p in
+                                                   t.enabled_plugins]})
                                     for t in config.alphabetical_trees)),
              www_root=repr(config.www_root),
              generated_date=repr(config.generated_date),
@@ -123,7 +126,6 @@ def build_instance(config_input, tree=None, verbose=False):
              es_hosts=repr(config.es_hosts),
              es_aliases=repr(dict((name, alias) for
                                   name, alias, index in indices)),
-             enabled_plugins=repr([p.name for p in tree.enabled_plugins]),
              max_thumbnail_size=repr(config.max_thumbnail_size)))
 
     # Make new indices live:
@@ -202,7 +204,6 @@ def index_tree(tree, es, verbose=False):
     skip_cleanup  = skip_indexing or skip_rebuild
 
     # Create folders (delete if exists)
-    ensure_folder(tree.target_folder, not skip_indexing) # <config.target_folder>/<tree.name>
     ensure_folder(tree.object_folder,                    # Object folder (user defined!)
         tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
     ensure_folder(tree.temp_folder, not skip_cleanup)   # <config.temp_folder>/<tree.name>
@@ -257,7 +258,6 @@ def index_tree(tree, es, verbose=False):
                                             tree.enabled_plugins),
                                        {})
                 })
-
 
             # Run pre-build hooks:
             with new_pool() as pool:
@@ -328,12 +328,7 @@ def create_skeleton(config):
     ensure_folder(config.temp_folder, not skip_cleanup)
     ensure_folder(config.log_folder, not skip_cleanup)
 
-    # Create jinja cache folder in target folder
-    ensure_folder(join(config.target_folder, 'jinja_dxr_cache'))
-
     # TODO: Make open-search.xml once we go to request-time rendering.
-
-    ensure_folder(join(config.target_folder, 'trees'))
 
 
 def ensure_folder(folder, clean=False):
@@ -492,23 +487,46 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
         if is_text or is_image(rel_path):
             file_info = stat(path)
             folder_name, file_name = split(rel_path)
-            yield es.index_op(
-                # Hard-code the keys that are hard-coded in the browse()
-                # controller. Merge with the pluggable ones from needles:
-                dict(folder=folder_name,
-                     name=file_name,
-                     size=file_info.st_size,
-                     modified=datetime.fromtimestamp(file_info.st_mtime),
-                     is_folder=False,
-                     **needles),
-                doc_type=FILE)
+            # Hard-code the keys that are hard-coded in the browse()
+            # controller. Merge with the pluggable ones from needles:
+            doc = dict(# Some non-array fields:
+                       folder=folder_name,
+                       name=file_name,
+                       size=file_info.st_size,
+                       modified=datetime.fromtimestamp(file_info.st_mtime),
+                       is_folder=False,
 
-        # Index all the lines, attaching the file-wide needles to each line as
-        # well. If it's an empty file (no lines), don't bother ES. It hates
-        # empty dicts.
+                       # And these, which all get mashed into arrays:
+                       **needles)
+            links = [{'order': order,
+                      'heading': heading,
+                      'items': [{'icon': icon,
+                                 'title': title,
+                                 'href': href}
+                                for icon, title, href in items]}
+                     for order, heading, items in
+                     chain.from_iterable(linkses)]
+            if links:
+                doc['links'] = links
+            yield es.index_op(doc, doc_type=FILE)
+
+        # Index all the lines. If it's an empty file (no lines), don't bother
+        # ES. It hates empty dicts.
         if is_text and needles_by_line:
-            for n in needles_by_line:
-                yield es.index_op(merge(n, needles))
+            for total, annotations_for_this_line, tags in izip(
+                    needles_by_line,
+                    annotations_by_line,
+                    es_lines(finished_tags(contents,
+                                           chain.from_iterable(refses),
+                                           chain.from_iterable(regionses)))):
+                # Duplicate the file-wide needles into this line:
+                total.update(needles)
+
+                if tags:
+                    total['tags'] = tags
+                if annotations_for_this_line:
+                    total['annotations'] = annotations_for_this_line
+                yield es.index_op(total)
 
     # Indexing a 277K-line file all in one request makes ES time out (>60s),
     # so we chunk it up. 300 docs is optimal according to the benchmarks in
@@ -517,52 +535,6 @@ def index_file(tree, tree_indexers, path, es, index, jinja_env):
     # well: 10000 is based on the 300 and an average of 31 chars per line.
     for chunk in bulk_chunks(docs(), docs_per_chunk=300, bytes_per_chunk=10000):
         es.bulk(chunk, index=index, doc_type=LINE)
-
-    # Render some HTML:
-    if 'html' not in tree.config.skip_stages:
-        # Common template variables:
-        common = {
-            'www_root': tree.config.www_root,
-            'tree': tree.name,
-            'tree_tuples': [(t.name,
-                parallel_url(t.name, tree.config.www_root, rel_path), t.description)
-                for t in tree.config.alphabetical_trees],
-            'generated_date': tree.config.generated_date,
-            'google_analytics_key': tree.config.google_analytics_key,
-            'filters': filter_menu_items(tree.enabled_plugins),
-        }
-
-        # File template variables
-        file_vars = {
-            'paths_and_names': linked_pathname(rel_path, tree.name),
-            'icon': icon(rel_path),
-            'path': rel_path,
-            'name': os.path.basename(rel_path),
-        }
-
-        if is_image(rel_path):
-            _fill_and_write_template(
-                jinja_env,
-                'image_file.html',
-                join(tree.target_folder, rel_path + '.html'),
-                merge(common, file_vars, {
-                'image_src': raw_url(tree.name, rel_path) }))
-        elif is_text:
-            _fill_and_write_template(
-                jinja_env,
-                'text_file.html',
-                join(tree.target_folder, rel_path + '.html'),
-                merge(common, file_vars, {
-                # Someday, it would be great to stream this and not concretize
-                # the whole thing in RAM. The template will have to quit
-                # looping through the whole thing 3 times.
-                'lines': zip(build_lines(contents,
-                                         chain.from_iterable(refses),
-                                         chain.from_iterable(regionses)),
-                             annotations_by_line),
-
-                'is_text': True,
-                'sections': build_sections(chain.from_iterable(linkses))}))
 
 
 def index_chunk(tree,
@@ -601,18 +573,14 @@ def index_chunk(tree,
             raise
 
 
-def create_and_index_folders(tree, index, es):
-    """Make the folder tree to contain the HTML files, and index the folder
-    hierarchy into ES.
-
-    """
+def index_folders(tree, index, es):
+    """Index the folder hierarchy into ES."""
     for folder in unignored(
             tree.source_folder,
             tree.ignore_paths,
             tree.ignore_filenames,
             want_folders=True):
         rel_path = relpath(folder, tree.source_folder)
-        mkdir(join(tree.target_folder, rel_path))
         superfolder_path, folder_name = split(rel_path)
         es.index(index, FILE, {
             'path': [rel_path],  # array for consistency with non-folder file docs
@@ -630,9 +598,7 @@ def index_files(tree, tree_indexers, index, pool, es):
                                      tree.ignore_paths,
                                      tree.ignore_filenames))
 
-    # We lay down all the containing folders up front so we can generate the
-    # file HTML in parallel.
-    create_and_index_folders(tree, index, es)
+    index_folders(tree, index, es)
 
     if not tree.config.workers:
         for paths in path_chunks(tree):
@@ -697,14 +663,6 @@ def build_tree(tree, tree_indexers, verbose):
             with open(log.name) as log_file:
                 print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         raise BuildError
-
-
-def build_sections(links):
-    """Build navigation pane for template."""
-    # Sort by importance (resolve ties by section name)
-    links = sorted(links, key=lambda section: (section[0], section[1]))
-    # Return list of section and items (without importance)
-    return [(section, list(items)) for importance, section, items in links]
 
 
 _template_env = None

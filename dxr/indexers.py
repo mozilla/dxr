@@ -215,23 +215,25 @@ class FileToSkim(PluginConfig):
         """Provide cross references for various spans of text, accessed
         through a context menu.
 
-        Yield an ordered list of extents and menu items for each line::
+        Yield an ordered list of extents and menu items::
 
-            (start, end, (menu, title))
+            (start, end, (menu, hover))
 
         ``start`` and ``end`` are the bounds of a slice of a Unicode string
         holding the contents of the file. (``refs()`` will not be called for
         binary files.)
 
-        ``title`` is the contents of the <a> tag's title attribute. (The first
+        ``hover`` is the contents of the <a> tag's title attribute. (The first
         one wins.)
 
-        ``menu`` is a mapping representing an item of the context menu::
+        ``menu`` is a list of mappings, each representing an item of the
+        context menu::
 
-            {'html': 'description',
-             'title': 'longer description',
-             'href': 'URL',
-             'icon': 'extensionless name of a PNG from the icons folder'}
+            [{'html': 'description',
+              'title': 'longer description',
+              'href': 'URL',
+              'icon': 'extensionless name of a PNG from the icons folder'},
+             ...]
 
         """
         return []
@@ -240,7 +242,7 @@ class FileToSkim(PluginConfig):
         """Yield instructions for syntax coloring and other inline formatting
         of code.
 
-        Yield an ordered list of extents and CSS classes for each line::
+        Yield an ordered list of extents and CSS classes::
 
             (start, end, class)
 
@@ -306,7 +308,7 @@ class FileToSkim(PluginConfig):
             lines = self.contents.splitlines(True)
             self._line_offset_list = []
             chars = 0
-            for i in range(0, len(lines)):
+            for i in xrange(0, len(lines)):
                 self._line_offset_list.append(chars)
                 chars += len(lines[i])
         return self._line_offset_list

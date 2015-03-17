@@ -5,11 +5,13 @@ from unittest import TestCase
 import warnings
 from warnings import catch_warnings
 
+from more_itertools import first
 from nose.tools import eq_
 
 from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
-                       Ref, balanced_tags, build_lines, tag_boundaries,
-                       html_lines, nesting_order, balanced_tags_with_empties)
+                       Ref, balanced_tags, finished_tags, tag_boundaries,
+                       html_line, nesting_order, balanced_tags_with_empties,
+                       es_lines)
 
 
 def test_line_boundaries():
@@ -197,13 +199,14 @@ class BalancedTagTests(TestCase):
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 """
-        eq_(list(html_lines(balanced_tags(tags), text.__getslice__)),
+        eq_([html_line(text_line, e) for text_line, e in
+             zip(text.splitlines(),
+                 es_lines(balanced_tags(tags)))],
             ['<span class="c">/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */</span>',
              '<span class="c">/* This Source Code Form is subject to the terms of the Mozilla Public</span>',
              '<span class="c"> * License, v. 2.0. If a copy of the MPL was not distributed with this</span>',
              '<span class="c"> * file, You can obtain one at http://mozilla.org/MPL/2.0/. */</span>',
              ''])
-
 
     def test_empty(self):
         """Some files are empty. Make sure they work."""
@@ -217,42 +220,45 @@ def test_tag_boundaries():
         '(3, True, Region("b")), (5, False, Region("b"))]')
 
 
-def test_simple_html_lines():
+def test_simple_html_line():
     """See if the offsets are right in simple HTML stitching."""
     a = Region('a')
     b = Region('b')
     line = LINE
-    eq_(''.join(html_lines([(0, True, line),
-                            (0, True, a), (3, False, a),
-                            (3, True, b), (5, False, b),
-                            (5, False, line)],
-                           'hello'.__getslice__)),
+    text = 'hello'
+    eq_(html_line(text, first(es_lines([(0, True, line),
+                                        (0, True, a), (3, False, a),
+                                        (3, True, b), (5, False, b),
+                                        (5, False, line)]))),
         '<span class="a">hel</span><span class="b">lo</span>')
+
+
+def text_to_html_lines(text, refs=(), regions=()):
+    """Run the full pipeline, and return a list of htmlified lines of ``text``
+    with markup interspersed for ``regions``."""
+    return [html_line(text_line.rstrip('\r\n'), e) for (text_line, e) in
+            zip(text.splitlines(), es_lines(finished_tags(text,
+                                                          refs,
+                                                          regions)))]
 
 
 class IntegrationTests(TestCase):
     """Tests for several layers at once, though not necessarily all of them"""
 
     def test_simple(self):
-        """Sanity-check build_lines, which ties the whole shootin' match
-        together."""
-        eq_(''.join(build_lines('hello',
-                                [],
-                                [(0, 3, 'a'), (3, 5, 'b')])),
-            u'<span class="a">hel</span><span class="b">lo</span>')
+        """Sanity-check the combination of finished_tags, es_lines and
+        html_line, which constitutes an end-to-end run of the pipeline."""
+        eq_(text_to_html_lines('hello', regions=[(0, 3, 'a'), (3, 5, 'b')]),
+            [u'<span class="a">hel</span><span class="b">lo</span>'])
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
-        eq_(''.join(build_lines('this that',
-                                [(0, 9, ({}, ''))],
-                                [(0, 4, 'k')])),
-            u'<a data-menu="{}"><span class="k">this</span> that</a>')
+        eq_(text_to_html_lines('this that', [(0, 9, ({}, ''))], [(0, 4, 'k')]),
+            [u'<a data-menu="{}"><span class="k">this</span> that</a>'])
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
-        eq_(list(build_lines('this\nthat',
-                             [(0, 9, ({}, ''))],
-                             [])),
+        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, ({}, ''))]),
             [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
 
     def test_horrors(self):
@@ -261,12 +267,11 @@ class IntegrationTests(TestCase):
         # This is a little brittle. All we really want to test is that each
         # span of text is within the right spans. We don't care what order the
         # span tags are in.
-        eq_(list(build_lines('this&that',
-                             [],
-                             [(0, 9, 'a'), (1, 8, 'b'),
-                              (4, 7, 'c'), (3, 4, 'd'),
-                              (3, 5, 'e'), (0, 4, 'm'),
-                              (5, 9, 'n')])),
+        eq_(text_to_html_lines('this&that',
+                               regions=[(0, 9, 'a'), (1, 8, 'b'),
+                                        (4, 7, 'c'), (3, 4, 'd'),
+                                        (3, 5, 'e'), (0, 4, 'm'),
+                                        (5, 9, 'n')]),
             [u'<span class="a"><span class="m">t<span class="b">hi<span class="d"><span class="e">s</span></span></span></span><span class="b"><span class="e"><span class="c">&amp;</span></span><span class="c"><span class="n">th</span></span><span class="n">a</span></span><span class="n">t</span></span>'])
 
     def test_empty_tag_boundaries(self):
@@ -276,6 +281,5 @@ class IntegrationTests(TestCase):
         the tag balancer.
 
         """
-        list(build_lines('hello!',
-                         [],
-                         [(3, 3, 'a'), (3, 5, 'b')]))
+        text_to_html_lines('hello!',
+                           regions=[(3, 3, 'a'), (3, 5, 'b')])
