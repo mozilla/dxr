@@ -2,10 +2,10 @@
 
 {% block site_css %}
   {{ super() }}
-  <link href="{{ www_root }}/static/css/image_file.css" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{{ url_for('static', filename='/css/image_file.css') }}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
 {% block content %}
   {{ super() }}
-  <img src="{{www_root}}/{{ image_src }}" id="image_file">
+  <img src="{{ url_for('.raw', tree=tree, path=path) }}" id="image_file">
 {% endblock %}

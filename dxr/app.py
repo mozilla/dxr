@@ -22,8 +22,7 @@ from dxr.lines import html_line
 from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
-from dxr.utils import (non_negative_int, search_url, TEMPLATE_DIR,
-                       decode_es_datetime, parallel_url, raw_url)
+from dxr.utils import non_negative_int, TEMPLATE_DIR, decode_es_datetime
 
 
 # Look in the 'dxr' package for static files, etc.:
@@ -345,7 +344,7 @@ def _browse_file(tree, path, config):
         'tree': tree,
         'tree_tuples':
             [(tree_name,
-              parallel_url(tree_name, config['WWW_ROOT'], path),
+              url_for('.parallel', tree=tree_name, path=path),
               tree_values['description'])
             for tree_name, tree_values in config['TREES'].iteritems()],
         'generated_date': config['GENERATED_DATE'],
@@ -365,8 +364,7 @@ def _browse_file(tree, path, config):
     if is_image(path):
         return render_template(
             'image_file.html',
-            **merge(common, file_vars, {
-                'image_src': raw_url(tree, path) }))
+            **merge(common, file_vars))
     else:  # For now, we don't index binary files, so this is always a text one
         return render_template(
             'text_file.html',

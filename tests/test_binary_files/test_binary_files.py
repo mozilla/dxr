@@ -3,6 +3,7 @@ from nose.tools import ok_
 
 class BinaryFileTests(DxrInstanceTestCase):
     """Tests that we show something for binary files like images."""
+
     def test_png(self):
         """Make sure we show a preview of the png."""
         response = self.client().get('/code/source/red_circle.png')
@@ -20,7 +21,7 @@ class BinaryFileTests(DxrInstanceTestCase):
     def test_jpg(self):
         """Make sure we show a preview of the jpg."""
         response = self.client().get('/code/source/Green circle.jpg')
-        ok_('src="/code/raw/Green circle.jpg"' in response.data)
+        ok_('src="/code/raw/Green%20circle.jpg"' in response.data)
         response = self.client().get('/code/raw/Green circle.jpg')
         ok_(response.status_code, 200)
 
