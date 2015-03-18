@@ -5,10 +5,10 @@ from os.path import basename
 from flask import url_for
 
 from dxr.app import DXR_BLUEPRINT
-from dxr.utils import search_url
 
 
 BROWSE = DXR_BLUEPRINT + '.browse'
+SEARCH = DXR_BLUEPRINT + '.search'
 
 
 def quote(qualname):
@@ -20,7 +20,7 @@ def quote(qualname):
 
 def search(tree, query):
     """Auxiliary function for getting the search url for query."""
-    return search_url(tree.config.www_root, tree.name, query)
+    return url_for(SEARCH, tree=tree.name, q=query)
 
 
 def include_menu(tree, include):
