@@ -53,13 +53,6 @@ def search_url(www_root, tree, query, **query_string_params):
     return ret
 
 
-def browse_url(tree, www_root, path):
-    return quote('{www_root}/{tree}/source/{path}'.format(
-            www_root=www_root,
-            tree=tree,
-            path=path))
-
-
 def deep_update(dest, source):
     """Overlay two dictionaries recursively.
 

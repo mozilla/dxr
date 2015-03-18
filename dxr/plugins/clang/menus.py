@@ -2,7 +2,13 @@
 
 from os.path import basename
 
-from dxr.utils import search_url, browse_url
+from flask import url_for
+
+from dxr.app import DXR_BLUEPRINT
+from dxr.utils import search_url
+
+
+BROWSE = DXR_BLUEPRINT + '.browse'
 
 
 def quote(qualname):
@@ -23,9 +29,9 @@ def include_menu(tree, include):
     # won't build pages for.
     return [{'html': 'Jump to file',
              'title': 'Jump to what is included here.',
-             'href': browse_url(tree.name,
-                                tree.config.www_root,
-                                include['target_path']),
+             'href': url_for(BROWSE,
+                             tree=tree.name,
+                             path=include['target_path']),
              'icon': 'jump'}]
 
 
@@ -146,7 +152,5 @@ def definition_menu(tree, path, row):
     """Return a one-item menu for jumping directly to something's definition."""
     return [{'html': "Jump to definition",
              'title': "Jump to the definition in '%s'" % basename(path),
-             'href': browse_url(tree.name,
-                                tree.config.www_root,
-                                path) + '#{0}'.format(row),
+             'href': url_for(BROWSE, tree=tree.name, path=path, _anchor=row),
              'icon': 'jump'}]

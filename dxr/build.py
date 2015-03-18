@@ -22,6 +22,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
                              bulk_chunks)
 
 import dxr
+from dxr.app import make_app
 from dxr.config import Config, FORMAT
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
@@ -30,33 +31,6 @@ from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, TEMPLATE_DIR)
-
-
-def linked_pathname(path, tree_name):
-    """Return a list of (server-relative URL, subtree name) tuples that can be
-    used to display linked path components in the headers of file or folder
-    pages.
-
-    :arg path: The path that will be split
-
-    """
-    # Hold the root of the tree:
-    components = [('/%s/source' % tree_name, tree_name)]
-
-    # Populate each subtree:
-    dirs = path.split(os.sep)  # TODO: Trips on \/ in path.
-
-    # A special case when we're dealing with the root tree. Without
-    # this, it repeats:
-    if not path:
-        return components
-
-    for idx in range(1, len(dirs)+1):
-        subtree_path = join('/', tree_name, 'source', *dirs[:idx])
-        subtree_name = split(subtree_path)[1] or tree_name
-        components.append((subtree_path, subtree_name))
-
-    return components
 
 
 def full_traceback(callable, *args, **kwargs):
@@ -553,17 +527,19 @@ def index_chunk(tree,
     """
     path = '(no file yet)'
     try:
-        es = ElasticSearch(tree.config.es_hosts)
-        try:
-            # Don't log if single-process:
-            log = (worker_number and
-                   open_log(tree, 'index-chunk-%s.log' % worker_number))
-            for path in paths:
-                log and log.write('Starting %s.\n' % path)
-                index_file(tree, tree_indexers, path, es, index)
-            log and log.write('Finished chunk.\n')
-        finally:
-            log and log.close()
+        # So we can use Flask's url_from():
+        with make_app(www_root=tree.config.www_root).test_request_context():
+            es = ElasticSearch(tree.config.es_hosts)
+            try:
+                # Don't log if single-process:
+                log = (worker_number and
+                       open_log(tree, 'index-chunk-%s.log' % worker_number))
+                for path in paths:
+                    log and log.write('Starting %s.\n' % path)
+                    index_file(tree, tree_indexers, path, es, index)
+                log and log.write('Finished chunk.\n')
+            finally:
+                log and log.close()
     except Exception as exc:
         if swallow_exc:
             type, value, traceback = exc_info()

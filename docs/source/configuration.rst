@@ -69,7 +69,8 @@ Here are the options that can live in the ``[DXR]`` section:
     both, whitespace-separated. Default: none
 
 ``www_root``
-    URL path prefix to the root of DXR's web app. Default: empty
+    URL path prefix to the root of DXR's web app. Example: ``/smoo``. Default:
+    empty
 
 ``google_analytics_key``
   Google analytics key. If set, the analytics snippet will added automatically
