@@ -1,0 +1,10 @@
+crate,file_name,kinds.rs,file_line,1,file_col,0,extent_start,0,file_line_end,11,file_col_end,0,extent_end,151,name,"kinds"
+external_crate,name,"std",crate,"1",file_name,"kinds.rs"
+external_crate,name,"native",crate,"2",file_name,"kinds.rs"
+end_external_crates
+trait,file_name,kinds.rs,file_line,3,file_col,6,extent_start,30,file_line_end,3,file_col_end,16,extent_end,40,id,"4",qualname,"kinds::SuperTrait",scopeid,"0"
+function,file_name,kinds.rs,file_line,5,file_col,3,extent_start,48,file_line_end,5,file_col_end,14,extent_end,59,id,"5",qualname,"kinds::kind_bounds",declid,"",declidcrate,"",scopeid,"0"
+type_ref,file_name,kinds.rs,file_line,5,file_col,19,extent_start,64,file_line_end,5,file_col_end,29,extent_end,74,refid,"4",refidcrate,"0",qualname,"kinds::",scopeid,"0"
+type_ref,file_name,kinds.rs,file_line,5,file_col,40,extent_start,85,file_line_end,5,file_col_end,50,extent_end,95,refid,"4",refidcrate,"0",qualname,"kinds::",scopeid,"0"
+type_ref,file_name,kinds.rs,file_line,5,file_col,64,extent_start,109,file_line_end,5,file_col_end,74,extent_end,119,refid,"4",refidcrate,"0",qualname,"kinds::",scopeid,"0"
+function,file_name,kinds.rs,file_line,9,file_col,3,extent_start,142,file_line_end,9,file_col_end,7,extent_end,146,id,"27",qualname,"kinds::main",declid,"",declidcrate,"",scopeid,"0"

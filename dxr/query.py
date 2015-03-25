@@ -683,7 +683,7 @@ filters = [
         neg_filter_sql    = """files.path NOT LIKE ? ESCAPE "\\" """,
         ext_sql           = None,
         formatter         = lambda arg: ['%' + like_escape(arg) + '%'],
-        languages          = ["C"]
+        languages          = ["C","Rust"]
     ),
 
     # ext filter
@@ -695,7 +695,7 @@ filters = [
         ext_sql           = None,
         formatter         = lambda arg: ['%' +
             like_escape(arg if arg.startswith(".") else "." + arg)],
-        languages          = ["C"]
+        languages          = ["C","Rust"]
     ),
 
     TriLiteSearchFilter(),
@@ -715,7 +715,7 @@ filters = [
                         """,
         like_name     = "functions.name",
         qual_name     = "functions.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # function-ref filter
@@ -724,18 +724,18 @@ filters = [
         param         = "function-ref",
         filter_sql    = """SELECT 1 FROM functions, function_refs AS refs
                            WHERE %s
-                             AND functions.id = refs.refid AND refs.file_id = files.id
+                             AND (functions.id = refs.refid OR functions.id = refs.declid) AND refs.file_id = files.id
                         """,
         ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM function_refs AS refs
                            WHERE refs.file_id = ?
                              AND EXISTS (SELECT 1 FROM functions
                                          WHERE %s
-                                           AND functions.id = refs.refid)
+                                           AND (functions.id = refs.refid OR functions.id = refs.declid))
                            ORDER BY refs.extent_start
                         """,
         like_name     = "functions.name",
         qual_name     = "functions.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # function-decl filter
@@ -809,7 +809,7 @@ filters = [
           qual_name     = "target.qualname")],
 
       description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>'),
-      languages    = ["C"]
+      languages    = ["C","Rust"]
     ),
 
     UnionFilter([
@@ -864,7 +864,7 @@ filters = [
       )],
 
       description = 'Functions or methods which are called by the given one',
-      languages    = ["C"]
+      languages    = ["C","Rust"]
     ),
 
     # type filter
@@ -897,7 +897,7 @@ filters = [
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
       description=Markup('Type or class definition: <code>type:Stack</code>'),
-      languages   = ["C"]
+      languages   = ["C","Rust"]
     ),
 
     # type-ref filter
@@ -934,14 +934,13 @@ filters = [
         like_name     = "typedefs.name",
         qual_name     = "typedefs.qualname")],
       description='Type or class references, uses, or instantiations',
-      languages   = ["C"]
+      languages   = ["C","Rust"]
     ),
 
     # type-decl filter
     ExistsLikeFilter(
       description   = 'Type or class declaration',
       param         = "type-decl",
-      languages      = ["C"],
       filter_sql    = """SELECT 1 FROM types, type_decldef AS decldef
                          WHERE %s
                            AND types.id = decldef.defid AND decldef.file_id = files.id
@@ -954,7 +953,8 @@ filters = [
                          ORDER BY decldef.extent_start
                       """,
       like_name     = "types.name",
-      qual_name     = "types.qualname"
+      qual_name     = "types.qualname",
+      languages      = ["C"]
     ),
 
     # var filter
@@ -972,7 +972,7 @@ filters = [
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # var-ref filter
@@ -992,7 +992,7 @@ filters = [
                         """,
         like_name     = "variables.name",
         qual_name     = "variables.qualname",
-        languages      = ["C"]
+        languages      = ["C","Rust"]
     ),
 
     # var-decl filter
@@ -1013,6 +1013,166 @@ filters = [
         like_name     = "variables.name",
         qual_name     = "variables.qualname",
         languages      = ["C"]
+    ),
+
+    # module filter
+    ExistsLikeFilter(
+        description   = 'Modules',
+        param         = "module",
+        filter_sql    = """SELECT 1 FROM modules
+                           WHERE %s
+                             AND modules.file_id = files.id
+                        """,
+        ext_sql       = """SELECT modules.extent_start, modules.extent_end FROM modules
+                           WHERE modules.file_id = ?
+                             AND %s
+                           ORDER BY modules.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # module-ref filter
+    ExistsLikeFilter(
+        description   = 'Module references',
+        param         = "module-ref",
+        filter_sql    = """SELECT 1 FROM modules, module_refs AS refs
+                           WHERE %s
+                             AND modules.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM module_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM modules
+                                         WHERE %s
+                                           AND modules.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # module-alias filter
+    ExistsLikeFilter(
+        description   = 'Modules aliases',
+        param         = "module-alias",
+        filter_sql    = """SELECT 1 FROM module_aliases
+                           WHERE %s
+                             AND module_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT module_aliases.extent_start, module_aliases.extent_end FROM module_aliases
+                           WHERE module_aliases.file_id = ?
+                             AND %s
+                           ORDER BY module_aliases.extent_start
+                        """,
+        like_name     = "module_aliases.name",
+        qual_name     = "module_aliases.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # module-use filter
+    ExistsLikeFilter(
+        description   = 'Module imports',
+        param         = "module-use",
+        filter_sql    = """SELECT 1 FROM modules, module_aliases
+                           WHERE %s
+                             AND modules.id = module_aliases.refid
+                             AND module_aliases.file_id = files.id
+                        """,
+        ext_sql       = """SELECT module_aliases.extent_start, module_aliases.extent_end FROM module_aliases
+                           WHERE module_aliases.file_id = ?
+                             AND EXISTS (SELECT 1 FROM modules
+                                         WHERE %s
+                                           AND modules.id = module_aliases.refid)
+                           ORDER BY module_aliases.extent_start
+                        """,
+        like_name     = "modules.name",
+        qual_name     = "modules.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # module-alias-ref filter
+    ExistsLikeFilter(
+        description   = 'Module alias reference',
+        param         = "module-alias-ref",
+        filter_sql    = """SELECT 1 FROM module_aliases, module_refs AS refs
+                           WHERE %s
+                             AND module_aliases.id = refs.aliasid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM module_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM module_aliases
+                                         WHERE %s
+                                           AND module_aliases.id = refs.aliasid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "module_aliases.name",
+        qual_name     = "module_aliases.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # impl filter
+    ExistsLikeFilter(
+        description   = 'Implementations',
+        param         = "impl",
+        filter_sql    = """SELECT 1 FROM impl_defs, types
+                           WHERE %s
+                             AND types.id = impl_defs.refid
+                             AND impl_defs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT impl_defs.extent_start, impl_defs.extent_end FROM impl_defs
+                           WHERE impl_defs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND types.id = impl_defs.refid)
+                           ORDER BY impl_defs.extent_start
+                        """,
+        like_name     = "types.name",
+        qual_name     = "types.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # find implementations of a trait method
+    ExistsLikeFilter(
+        description   = 'Implementations of a trait method',
+        param         = "fn-impls",
+        filter_sql    = """SELECT 1 FROM functions AS def, functions AS decl
+                           WHERE %s
+                             AND decl.id = def.declid
+                             AND def.file_id = files.id
+                        """,
+        ext_sql       = """SELECT def.extent_start, def.extent_end
+                           FROM functions AS def, functions AS decl
+                           WHERE def.file_id = ?
+                             AND EXISTS (SELECT 1 FROM types
+                                         WHERE %s
+                                           AND decl.id = def.declid)
+                           ORDER BY def.extent_start
+                        """,
+        like_name     = "decl.name",
+        qual_name     = "decl.qualname",
+        languages      = ["Rust"]
+    ),
+
+    # external items filter
+    ExistsLikeFilter(
+        description   = 'References to external items',
+        param         = "extern-ref",
+        filter_sql    = """SELECT 1 FROM unknowns, unknown_refs AS refs
+                           WHERE %s
+                             AND unknowns.id = refs.refid AND refs.file_id = files.id
+                        """,
+        ext_sql       = """SELECT refs.extent_start, refs.extent_end FROM unknown_refs AS refs
+                           WHERE refs.file_id = ?
+                             AND EXISTS (SELECT 1 FROM unknowns
+                                         WHERE %s
+                                           AND unknowns.id = refs.refid)
+                           ORDER BY refs.extent_start
+                        """,
+        like_name     = "unknowns.id",
+        qual_name     = "unknowns.id",
+        languages      = ["Rust"]
     ),
 
     # macro filter
@@ -1235,7 +1395,6 @@ filters = [
     ExistsLikeFilter(
         description   = Markup('Methods which are overridden by the given one. Useful mostly with fully qualified methods, like <code>+overridden:Derived::foo()</code>.'),
         param         = "overridden",
-        languages      = ["C"],
         filter_sql    = """SELECT 1
                              FROM functions as base, functions as derived, targets
                             WHERE %s
@@ -1256,7 +1415,8 @@ filters = [
                            ORDER BY functions.extent_start
                         """,
         like_name     = "derived.name",
-        qual_name     = "derived.qualname"
+        qual_name     = "derived.qualname",
+        languages      = ["C"]
     ),
 
     # overrides filter

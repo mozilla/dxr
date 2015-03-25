@@ -2,6 +2,8 @@
 Configuration
 =============
 
+
+
 DXR learns how to index your source trees by means of an ini-formatted
 configuration file:
 

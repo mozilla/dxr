@@ -121,6 +121,7 @@ schema = dxr.schema.Schema({
     # References to functions
     "function_refs": [
         ("refid", "INTEGER", True),      # ID of the function being referenced
+        ("declid", "INTEGER", True),     # Sadly this exists for compatability with the Rust plugin
         ("extent_start", "INTEGER", True),
         ("extent_end", "INTEGER", True),
         ("_location", True),

@@ -1,7 +1,14 @@
-#include <stdio.h>
+        #define MACRO
 
-// Hello World Example
-int main(int argc, char* argv[]){
-  printf("Hello World");
-  return 0;
-}
+        #ifdef MACRO
+        #endif
+
+        #ifndef MACRO
+        #endif
+        
+        #if defined(MACRO)
+        #endif
+
+        #undef MACRO
+        int main() {
+        }

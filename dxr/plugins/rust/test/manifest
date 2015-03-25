@@ -1,0 +1,7 @@
+# Test manifest file
+'test.sh all.rs' 'all.csv'
+'test.sh hello.rs' 'hello.csv'
+'test.sh double-gt.rs' 'double-gt.csv'
+'test.sh aliases.rs' 'aliases.csv'
+'test.sh kinds.rs' 'kinds.csv'
+'test.sh struct-match.rs' 'struct-match.csv'
