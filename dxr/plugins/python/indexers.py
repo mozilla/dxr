@@ -7,11 +7,12 @@ from StringIO import StringIO
 from warnings import warn
 
 from dxr.build import file_contents, unignored
+from dxr.filters import LINE
 from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_NEEDLE, with_start_and_end)
-from dxr.filters import LINE
+from dxr.plugins.python.menus import class_menu
 
 
 mappings = {
@@ -133,16 +134,8 @@ class IndexingNodeVisitor(ast.NodeVisitor):
     def __init__(self, file_to_index):
         self.file_to_index = file_to_index
         self.function_call_stack = []  # List of lists of function names.
-        self.needles = None
-
-    def get_needles(self, node):
-        """Walk through the given AST and return needles to index from
-        the tree.
-
-        """
         self.needles = []
-        self.visit(node)
-        return self.needles
+        self.refs = []
 
     def visit_FunctionDef(self, node):
         # Index the function itself for the function: filter.
@@ -194,11 +187,22 @@ class IndexingNodeVisitor(ast.NodeVisitor):
                               name=name, qualname=qualname,
                               start=start, end=end)
 
+        # Show a menu when hovering over this class.
+        self.yield_ref(start, end,
+                       class_menu(self.file_to_index.tree, class_name))
+
         self.generic_visit(node)
 
     def yield_needle(self, *args, **kwargs):
         needle = line_needle(*args, **kwargs)
         self.needles.append(needle)
+
+    def yield_ref(self, start, end, menu):
+        self.refs.append((
+            self.file_to_index.char_offset(*start),
+            self.file_to_index.char_offset(*end),
+            (menu, None),
+        ))
 
 
 class FileToIndex(FileToIndexBase):
@@ -226,25 +230,38 @@ class FileToIndex(FileToIndexBase):
         self.class_bases = class_bases
         self.derived_classes = derived_classes
         self.names = names
-
         self.module_name = path_to_module(self.python_path, self.path)
+
+        self._visitor = None
 
     def is_interesting(self):
         return is_interesting(self.path)
 
+    @property
+    def visitor(self):
+        """Return IndexingNodeVisitor for this file, lazily creating and
+        running it if it doesn't exist yet.
+
+        """
+        if not self._visitor:
+            self.node_start_table = self.analyze_tokens()
+
+            self._visitor = IndexingNodeVisitor(self)
+            syntax_tree = ast.parse(self.contents)
+            self._visitor.visit(syntax_tree)
+        return self._visitor
+
     def needles_by_line(self):
-        self.node_start_table = self.analyze_tokens()
-
-        visitor = IndexingNodeVisitor(self)
-        syntax_tree = ast.parse(self.contents)
-
         return iterable_per_line(
             with_start_and_end(
                 split_into_lines(
-                    visitor.get_needles(syntax_tree)
+                    self.visitor.needles
                 )
             )
         )
+
+    def refs(self):
+        return self.visitor.refs
 
     def analyze_tokens(self):
         """Split the file into tokens and analyze them for data needed

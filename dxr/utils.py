@@ -7,8 +7,16 @@ from os.path import join
 from itertools import izip
 from sys import stdout
 
+from flask import url_for
+
 
 TEMPLATE_DIR = 'static/templates'
+
+
+def search_url(tree, query):
+    """Get the search url for a query."""
+    from dxr.app import DXR_BLUEPRINT
+    return url_for(DXR_BLUEPRINT + '.search', tree=tree.name, q=query)
 
 
 def open_log(config_or_tree, name, use_stdout=False):
