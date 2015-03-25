@@ -1,3 +1,6 @@
+# sha256: yZcvTSuAV1u5ESUAz-x1Dq9PBOB6vaSyxE5FPN5l7nc
+click==3.3
+
 # sha256: ovVlB3DhyH-zNa8Zqbfrc_wFzPIhROto230AzSvLCQI
 configobj==5.0.6
 

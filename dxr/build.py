@@ -6,7 +6,7 @@ from operator import attrgetter
 import os
 from os import stat, mkdir, makedirs
 from os.path import dirname, islink, relpath, join, split
-import shutil
+from shutil import rmtree
 import subprocess
 import sys
 from sys import exc_info
@@ -19,11 +19,12 @@ import jinja2
 from more_itertools import chunked
 from ordereddict import OrderedDict
 from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
-                             bulk_chunks)
+                             IndexAlreadyExistsError, bulk_chunks)
 
 import dxr
 from dxr.app import make_app
-from dxr.config import Config, FORMAT
+from dxr.config import FORMAT
+from dxr.es import UNINDEXED_STRING, TREE
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
@@ -48,66 +49,85 @@ def full_traceback(callable, *args, **kwargs):
         raise Exception(format_exc())
 
 
-def build_instance(config_input, tree=None, verbose=False):
-    """Build a DXR instance, point the ES aliases to the new indices, and
-    delete the old ones.
+def index_and_deploy_tree(tree, verbose=False):
+    """Index a tree, and make it accessible.
 
-    :arg config_input: A string holding the contents of the DXR config file or
-        a nested dict representation of the same, with a dict representing
-        each ``[section]``
-    :arg tree: A single tree to build. Defaults to all the trees in the config
-        file.
+    :arg tree: The TreeConfig of the tree to build
 
     """
-    # Load configuration file. This will throw ConfigError if invalid.
-    config = Config(config_input)
-
-    # Find trees to make, fail if requested tree isn't available
-    if tree:
-        try:
-            trees = [config.trees[tree]]
-        except KeyError:
-            raise BuildError("Tree '%s' is not defined in config file." % tree)
-    else:
-        # Build everything if no tree is provided
-        trees = config.trees.values()
-
+    config = tree.config
     es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
+    index_name = index_tree(tree, es, verbose=verbose)
+    deploy_tree(tree, es, index_name)
 
-    print " - Generating target folder."
-    create_skeleton(config)
 
-    # Index the trees, collecting (tree name, alias, index name):
-    indices = [(tree.name,
-                config.es_alias.format(format=FORMAT, tree=tree.name),
-                index_tree(tree, es, verbose=verbose))
-               for tree in trees]
+def deploy_tree(tree, es, index_name):
+    """Point the ES aliases and catalog records to a newly built tree, and
+    delete any obsoleted index.
 
-    # Lay down config file:
-    _fill_and_write_template(
-        load_template_env(),
-        'config.py.jinja',
-        join(config.target_folder, 'config.py'),
-        dict(trees=repr(OrderedDict((t.name, {'description': t.description,
-                                              'enabled_plugins':
-                                                  [p.name for p in
-                                                   t.enabled_plugins]})
-                                    for t in config.alphabetical_trees)),
-             www_root=repr(config.www_root),
-             generated_date=repr(config.generated_date),
-             google_analytics_key=repr(config.google_analytics_key),
-             default_tree=repr(config.default_tree),
-             es_hosts=repr(config.es_hosts),
-             es_aliases=repr(dict((name, alias) for
-                                  name, alias, index in indices)),
-             max_thumbnail_size=repr(config.max_thumbnail_size)))
+    """
+    config = tree.config
 
-    # Make new indices live:
-    for _, alias, index in indices:
-        swap_alias(alias, index, es)
+    # Make new index live:
+    alias = config.es_alias.format(format=FORMAT, tree=tree.name)
+    swap_alias(alias, index_name, es)
 
-    # Deploy script should immediately move new FS dirs into place. There's a
-    # little race here; it will go away once we dispense with FS artifacts.
+    # Create catalog index if it doesn't exist.
+    try:
+        es.create_index(
+            config.es_catalog_index,
+            settings={
+                'settings': {
+                    'index': {
+                        # Fewer should be faster:
+                        'number_of_shards': 1,
+                        # This should be cranked up until it's on all nodes,
+                        # so it's always a fast read:
+                        'number_of_replicas': config.es_catalog_replicas
+                    },
+                },
+                'mappings': {
+                    TREE: {
+                        '_all': {
+                            'enabled': False
+                        },
+                        'properties': {
+                            'name': {
+                                'type': 'string',
+                                'index': 'not_analyzed'
+                            },
+                            'format': {
+                                'type': 'string',
+                                'index': 'not_analyzed'
+                            },
+                            # In case es_alias changes in the conf file:
+                            'es_alias': UNINDEXED_STRING,
+                            # Needed so new trees or edited descriptions can show
+                            # up without a WSGI restart:
+                            'description': UNINDEXED_STRING,
+                            # ["clang", "pygmentize"]:
+                            'enabled_plugins': UNINDEXED_STRING,
+                            'generated_date': UNINDEXED_STRING
+                            # We may someday also need to serialize some plugin
+                            # configuration here.
+                        }
+                    }
+                }
+            })
+    except IndexAlreadyExistsError:
+        pass
+
+    # Insert or update the doc representing this tree. There'll be a little
+    # race between this and the alias swap. We'll live.
+    es.index(config.es_catalog_index,
+             doc_type=TREE,
+             doc=dict(name=tree.name,
+                      format=FORMAT,
+                      es_alias=alias,
+                      description=tree.description,
+                      enabled_plugins=[p.name for p in tree.enabled_plugins],
+                      generated_date=config.generated_date),
+             id='%s/%s' % (FORMAT, tree.name))
 
 
 def swap_alias(alias, index, es):
@@ -134,8 +154,10 @@ def index_tree(tree, es, verbose=False):
     name of the new ES index.
 
     """
+    config = tree.config
+
     def new_pool():
-        return ProcessPoolExecutor(max_workers=tree.config.workers)
+        return ProcessPoolExecutor(max_workers=config.workers)
 
     def farm_out(method_name):
         """Farm out a call to all tree indexers across a process pool.
@@ -146,7 +168,7 @@ def index_tree(tree, es, verbose=False):
         Show progress while doing it.
 
         """
-        if not tree.config.workers:
+        if not config.workers:
             return [save_scribbles(ti, method_name) for ti in tree_indexers]
         else:
             futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
@@ -173,21 +195,18 @@ def index_tree(tree, es, verbose=False):
     # Note starting time
     start_time = datetime.now()
 
-    skip_indexing = 'index' in tree.config.skip_stages
-    skip_rebuild = 'build' in tree.config.skip_stages
+    skip_indexing = 'index' in config.skip_stages
+    skip_rebuild = 'build' in config.skip_stages
     skip_cleanup  = skip_indexing or skip_rebuild
 
-    # Create folders (delete if exists)
-    ensure_folder(tree.object_folder,                    # Object folder (user defined!)
-        tree.source_folder != tree.object_folder)        # Only clean if not the srcdir
-    ensure_folder(tree.temp_folder, not skip_cleanup)   # <config.temp_folder>/<tree.name>
-                                                         # (or user defined)
-    ensure_folder(tree.log_folder, not skip_cleanup)    # <config.log_folder>/<tree.name>
-                                                         # (or user defined)
-    # Temporary folders for plugins
+    # Create and/or clear out folders:
+    ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
+    ensure_folder(tree.temp_folder, not skip_cleanup)
+    ensure_folder(tree.log_folder, not skip_cleanup)
     ensure_folder(join(tree.temp_folder, 'plugins'), not skip_cleanup)
-    for plugin in tree.enabled_plugins:     # <tree.config>/plugins/<plugin>
-        ensure_folder(join(tree.temp_folder, 'plugins', plugin.name), not skip_cleanup)
+    for plugin in tree.enabled_plugins:
+        ensure_folder(join(tree.temp_folder, 'plugins', plugin.name),
+                      not skip_cleanup)
 
     tree_indexers = [p.tree_to_index(p.name, tree) for p in
                      tree.enabled_plugins if p.tree_to_index]
@@ -199,9 +218,9 @@ def index_tree(tree, es, verbose=False):
         # and format version in it. TODO: The prefix should come out of
         # the tree config, falling back to the global config:
         # dxr_hot_prod_{tree}_{whatever}.
-        index = tree.config.es_index.format(format=FORMAT,
-                                            tree=tree.name,
-                                            unique=uuid1())
+        index = config.es_index.format(format=FORMAT,
+                                       tree=tree.name,
+                                       unique=uuid1())
         try:
             es.create_index(
                 index,
@@ -225,7 +244,7 @@ def index_tree(tree, es, verbose=False):
                         # use shard allocation to do the indexing on one box
                         # and then move it elsewhere for actual use.
                         'refresh_interval':
-                            '%is' % tree.config.es_refresh_interval
+                            '%is' % config.es_refresh_interval
                     },
                     'mappings': reduce(deep_update,
                                        (p.mappings for p in
@@ -260,14 +279,10 @@ def index_tree(tree, es, verbose=False):
 
     print " - Finished processing '%s' in %s." % (tree.name,
                                                   datetime.now() - start_time)
-
+    if not skip_cleanup:
+        # By default, we remove the temp files, because they're huge.
+        rmtree(tree.temp_folder)
     return index
-
-    # For each tree, flop the ES alias for this format version (pulled from the config) to the new index, and delete the old one first.
-
-    # This is temporarily asymmetrical: it flops the index but leave it to the
-    # caller to flop the static HTML. This asymmetry will go away when the
-    # static HTML does.
 
 
 def show_progress(futures, message='Doing stuff.'):
@@ -290,21 +305,6 @@ def save_scribbles(obj, method):
     return obj
 
 
-def create_skeleton(config):
-    """Make the non-tree-specific FS artifacts needed to do the build."""
-
-    skip_indexing = 'index' in config.skip_stages
-    skip_rebuild = 'build' in config.skip_stages
-    skip_cleanup = skip_indexing or skip_rebuild
-
-    # Create config.target_folder (if not exists)
-    ensure_folder(config.target_folder, False)
-    ensure_folder(config.temp_folder, not skip_cleanup)
-    ensure_folder(config.log_folder, not skip_cleanup)
-
-    # TODO: Make open-search.xml once we go to request-time rendering.
-
-
 def ensure_folder(folder, clean=False):
     """Ensure the existence of a folder.
 
@@ -312,7 +312,7 @@ def ensure_folder(folder, clean=False):
 
     """
     if clean and os.path.isdir(folder):
-        shutil.rmtree(folder, False)
+        rmtree(folder)
     if not os.path.isdir(folder):
         makedirs(folder)
 
@@ -533,7 +533,8 @@ def index_chunk(tree,
             try:
                 # Don't log if single-process:
                 log = (worker_number and
-                       open_log(tree, 'index-chunk-%s.log' % worker_number))
+                       open_log(tree.log_folder,
+                                'index-chunk-%s.log' % worker_number))
                 for path in paths:
                     log and log.write('Starting %s.\n' % path)
                     index_file(tree, tree_indexers, path, es, index)
@@ -611,17 +612,21 @@ def _fill_and_write_template(jinja_env, template_name, out_path, vars):
 def build_tree(tree, tree_indexers, verbose):
     """Set up env vars, and run the build command."""
 
+    if not tree.build_command:
+        return
+
     # Set up build environment variables:
     environ = os.environ.copy()
     for ti in tree_indexers:
         environ.update(ti.environment(environ))
 
     # Call make or whatever:
-    with open_log(tree, 'build.log', verbose) as log:
+    with open_log(tree.log_folder, 'build.log', verbose) as log:
         print "Building the '%s' tree" % tree.name
+        workers = max(tree.config.workers, 1)
         r = subprocess.call(
-            tree.build_command.replace('$jobs',
-                                       str(max(tree.config.workers, 1))),
+            tree.build_command.replace('$jobs', str(workers))
+                              .format(workers=workers),
             shell   = True,
             stdout  = log,
             stderr  = log,
@@ -638,19 +643,3 @@ def build_tree(tree, tree_indexers, verbose):
             with open(log.name) as log_file:
                 print >> sys.stderr, '    | %s ' % '    | '.join(log_file)
         raise BuildError
-
-
-_template_env = None
-def load_template_env():
-    """Load template environment (lazily)"""
-    global _template_env
-    if not _template_env:
-        # Cache folder for jinja2
-        # Create jinja2 environment
-        _template_env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(
-                        join(dirname(dxr.__file__), TEMPLATE_DIR)),
-                auto_reload=False,
-                autoescape=lambda template_name: template_name is None or template_name.endswith('.html')
-        )
-    return _template_env

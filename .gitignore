@@ -2,11 +2,10 @@
 *.o
 *.so
 /dxr/static/js/templates.js
-**/tests/*/target
-**/tests/*/temp
+**/tests/*/dxr-logs-*
+**/tests/*/dxr-temp-*
 **/tests/*/code/code
 **/tests/*/code2/code
-**/tests/*/dxr.config
 /tests/test_diff_link/code/.hg/dirstate
 /vagrantconfig_local.yaml
 /.vagrant

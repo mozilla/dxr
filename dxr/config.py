@@ -7,6 +7,7 @@ from datetime import datetime
 from multiprocessing import cpu_count
 from ordereddict import OrderedDict
 from operator import attrgetter
+from os import getcwd
 from os.path import abspath, join
 
 from configobj import ConfigObj
@@ -17,7 +18,7 @@ from schema import Schema, Optional, Use, And, Schema, SchemaError
 
 from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins
-from dxr.utils import if_raises
+from dxr.utils import cd, if_raises
 
 
 # Format version, signifying the instance format this web frontend code is
@@ -56,7 +57,7 @@ class Config(DotSection):
     Examples::
 
         # Settings from the [DXR] section:
-        >>> Config(...).target_folder
+        >>> Config(...).default_tree
 
         # Settings from individual trees:
         >>> Config(...).trees['some-tree'].build_command
@@ -80,18 +81,19 @@ class Config(DotSection):
     #   validators are strings. The downside is we only report 1 error at a
     #   time, but this can and should be fixed in the schema lib.
 
-    def __init__(self, input):
+    def __init__(self, input, relative_to=None):
         """Pull in and validate a config file.
 
         :arg input: A string or dict from which to populate the config
+        :arg relative_to: The dir relative to which to interpret relative paths
 
         Raise ConfigError if the configuration is invalid.
 
         """
         schema = Schema({
             'DXR': {
-                'target_folder': AbsPath,
-                Optional('temp_folder', default='/tmp/dxr-temp'): AbsPath,
+                Optional('temp_folder', default=abspath('dxr-temp-{tree}')):
+                    AbsPath,
                 Optional('default_tree', default=None): basestring,
                 Optional('disabled_plugins', default=plugin_list('')): Plugins,
                 Optional('enabled_plugins', default=plugin_list('*')): Plugins,
@@ -99,7 +101,8 @@ class Config(DotSection):
                          default=datetime.utcnow()
                                          .strftime("%a, %d %b %Y %H:%M:%S +0000")):
                     basestring,
-                Optional('log_folder', default=None): AbsPath,
+                Optional('log_folder', default=abspath('dxr-logs-{tree}')):
+                    AbsPath,
                 Optional('workers', default=if_raises(NotImplementedError,
                                                       cpu_count,
                                                       1)):
@@ -114,6 +117,10 @@ class Config(DotSection):
                 Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
                     basestring,
                 Optional('es_alias', default='dxr_{format}_{tree}'):
+                    basestring,
+                Optional('es_catalog_index', default='dxr_catalog'):
+                    basestring,
+                Optional('es_catalog_replicas', default=1):
                     basestring,
                 Optional('max_thumbnail_size', default=20000):
                     And(Use(int),
@@ -137,41 +144,37 @@ class Config(DotSection):
                                                                 basestring)
                                else input,
                                list_values=False)
-        try:
-            config = schema.validate(config_obj.dict())
-        except SchemaError as exc:
-            raise ConfigError(exc.code, ['DXR'])
 
-        self._section = config['DXR']
+        if not relative_to:
+            relative_to = getcwd()
+        with cd(relative_to):
+            try:
+                config = schema.validate(config_obj.dict())
+            except SchemaError as exc:
+                raise ConfigError(exc.code, ['DXR'])
 
-        # Fill in log_folder if blank:
-        if self.log_folder is None:
-            self._section['log_folder'] = join(self.temp_folder, 'logs')
+            self._section = config['DXR']
 
-        # Normalize enabled_plugins:
-        if self.enabled_plugins.is_all:
-            # Then explicitly enable anything that isn't explicitly
-            # disabled:
-            self._section['enabled_plugins'] = [
-                    p for p in all_plugins().values()
-                    if p not in self.disabled_plugins]
+            # Normalize enabled_plugins:
+            if self.enabled_plugins.is_all:
+                # Then explicitly enable anything that isn't explicitly
+                # disabled:
+                self._section['enabled_plugins'] = [
+                        p for p in all_plugins().values()
+                        if p not in self.disabled_plugins]
 
-        # Now that enabled_plugins and the other keys that TreeConfig depends
-        # on are filled out, make some TreeConfigs:
-        self.trees = OrderedDict()  # name -> TreeConfig
-        for section in config_obj.sections:
-            if section != 'DXR':
-                try:
-                    self.trees[section] = TreeConfig(section,
-                                                     config[section],
-                                                     config_obj[section].sections,
-                                                     self)
-                except SchemaError as exc:
-                    raise ConfigError(exc.code, [section])
-
-        # Trees in alphabetical order for Switch Tree menu:
-        self.alphabetical_trees = sorted(self.trees.itervalues(),
-                                         key=attrgetter('name'))
+            # Now that enabled_plugins and the other keys that TreeConfig
+            # depends on are filled out, make some TreeConfigs:
+            self.trees = OrderedDict()  # name -> TreeConfig
+            for section in config_obj.sections:
+                if section != 'DXR':
+                    try:
+                        self.trees[section] = TreeConfig(section,
+                                                         config[section],
+                                                         config_obj[section].sections,
+                                                         self)
+                    except SchemaError as exc:
+                        raise ConfigError(exc.code, [section])
 
         # Make sure default_tree is defined:
         if not self.default_tree:
@@ -197,14 +200,14 @@ class TreeConfig(DotSectionWrapper):
         self.name = name
 
         schema = Schema({
-            Optional('build_command', default='make -j $jobs'): basestring,
+            Optional('build_command', default='make -j {workers}'): basestring,
+            Optional('clean_command', default='make clean'): basestring,
             Optional('description', default=''): basestring,
             Optional('disabled_plugins', default=plugin_list('')): Plugins,
             Optional('enabled_plugins', default=plugin_list('*')): Plugins,
             Optional('ignore_patterns',
                      default=['.hg', '.git', 'CVS', '.svn', '.bzr',
                               '.deps', '.libs']): WhitespaceList,
-            Optional('log_folder', default=None): AbsPath,
             'object_folder': AbsPath,
             'source_folder': AbsPath,
             Optional('source_encoding', default='utf-8'): basestring,
@@ -212,13 +215,8 @@ class TreeConfig(DotSectionWrapper):
             Optional(basestring): dict})
         tree = schema.validate(unvalidated_tree)
 
-        self.target_folder = join(config.target_folder, 'trees', name)
-
-        # Fall back to master setting + tree name:
-        if tree['log_folder'] is None:
-            tree['log_folder'] = join(config.log_folder, name)
         if tree['temp_folder'] is None:
-            tree['temp_folder'] = join(config.temp_folder, name)
+            tree['temp_folder'] = config.temp_folder
 
         # Convert enabled_plugins to a list of plugins:
         if tree['disabled_plugins'].is_all:
@@ -269,6 +267,16 @@ class TreeConfig(DotSectionWrapper):
 
         super(TreeConfig, self).__init__(tree)
 
+    @property
+    def log_folder(self):
+        """Return the global log_folder with the tree name subbed in."""
+        return self.config.log_folder.format(tree=self.name)
+
+    @property
+    def temp_folder(self):
+        """Return ``self.temp_folder`` with the tree name subbed in."""
+        return self.config.temp_folder.format(tree=self.name)
+
 
 class ListAndAll(list):
     """A list we can also store an ``all`` attr on, indicating whether it
@@ -276,8 +284,8 @@ class ListAndAll(list):
 
 
 def plugin_list(value):
-    """Turn a space-delimited series of plugin names into ALL (for "*") or a
-    list of Plugins.
+    """Turn a space-delimited series of plugin names into a ListAndAll of
+    Plugins.
 
     """
     if not isinstance(value, basestring):

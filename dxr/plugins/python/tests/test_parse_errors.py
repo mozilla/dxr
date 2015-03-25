@@ -8,10 +8,10 @@ from dxr.plugins.python.tests import PythonSingleFileTestCase
 
 class WarningTestCase(PythonSingleFileTestCase):
     @classmethod
-    def get_config(cls, config_dir_path):
+    def config_input(cls, config_dir_path):
         # We need to disable workers because catch_warnings does not
         # support multi-threaded or multi-process capturing.
-        config = super(WarningTestCase, cls).get_config(config_dir_path)
+        config = super(WarningTestCase, cls).config_input(config_dir_path)
         config['DXR']['workers'] = 0
         return config
 

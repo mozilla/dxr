@@ -24,16 +24,22 @@ save repetition.
 [DXR] Section
 -------------
 
-Here are the options that can live in the ``[DXR]`` section:
-
-``target_folder``
-    Where to put the built :term:`index`. **Required.**
+Here are the options that can live in the ``[DXR]`` section. For options
+representing path names, relative paths are considered relative to the
+directory containing the config file.
 
 ``temp_folder``
-    The default container for individual tree-specific temp folders. Default:
-    ``/tmp/dxr-temp``. **Recommended** to avoid exceeding the size of the
-    :file:`/tmp` volume and to avoid collisions between concurrent indexing
-    runs
+    A ``format()``-style template for deciding where to store temporary files
+    used while indexing. The token ``{tree}`` will be replaced with the name
+    of each tree you index. Default: ``dxr-temp-{tree}``. It's a good idea to
+    keep this out of :file:`/tmp` if it's on a small partition, since it can
+    grow to tens of gigabytes on a large codebase.
+
+``log_folder``
+    A ``format()``-style template for deciding where to store log files
+    written while indexing. The token ``{tree}`` will be replaced with the name
+    of the tree being indexed. Default: ``dxr-logs-{tree}`` (in the current
+    working directory).
 
 ``default_tree``
     The tree to redirect to when you visit the root of the site. Default: the
@@ -54,10 +60,6 @@ Here are the options that can live in the ``[DXR]`` section:
     RFC-822 (also known as RFC 2822) format. Default: the time the indexing run
     started
 
-``log_folder``
-    The default container for individual tree-specific log folders. Default:
-    ``<temp_folder>/logs``.
-
 ``workers``
     Number of concurrent processes to use for building and indexing projects.
     Default: the number of CPUs on the system. Set to 0 to use no worker
@@ -73,8 +75,8 @@ Here are the options that can live in the ``[DXR]`` section:
     empty
 
 ``google_analytics_key``
-  Google analytics key. If set, the analytics snippet will added automatically
-  to every page.
+    Google analytics key. If set, the analytics snippet will added
+    automatically to every page.
 
 ``es_alias``
     A ``format()``-style template for coming up with elasticsearch alias
@@ -97,6 +99,21 @@ Here are the options that can live in the ``[DXR]`` section:
     colliding with the old one. The unique ID includes a random number and the
     build hosts's MAC address so errant concurrent builds on different hosts
     at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
+
+``es_catalog_index``
+     The name to use for the elasticsearch index which tracks built trees,
+     their format versions, and other frozen-at-index-time information. You
+     probably don't need to change this unless you want multiple
+     otherwise-independent DXR deployments, with disjoint Switch Tree menus,
+     sharing the same ES cluster.
+     Default: ``dxr_catalog``
+
+``es_catalog_replicas``
+    The number of elasticsearch replicas to make of the catalog index. This is
+    read often and written only when an indexing run completes, so crank it up
+    so there's a replica on every node for best performance. But remember that
+    writes will hang if at least half of the attempted copies aren't
+    available. Default: ``1``
 
 ``es_indexing_timeout``
     The number of seconds DXR should wait for elasticsearch responses during
@@ -124,9 +141,15 @@ Any section that is not named ``[DXR]`` represents a tree to be indexed. Here
 are the options that can go inside a tree:
 
 ``build_command``
-    Command for building your source code. Default: ``make -j $jobs``. Note
-    that ``$jobs`` will be replaced with ``workers`` from the config file
-    (though 1 if ``workers`` is set to 0).
+    Command for building your source code. Default: ``make -j {workers}``.
+    This is run within ``object_folder``. Note that ``{workers}`` will be
+    replaced with ``workers`` from the ``[DXR]`` section (though 1 if
+    ``workers`` is set to 0).
+
+``clean_command``
+    Command for deleting the build products of ``build_command``, restoring
+    things to the pre-built state. Default: ``make clean``. This is run within
+    ``object_folder``.
 
 ``disabled_plugins``
    Plugins disabled in this tree, in addition to ones already disabled in the
@@ -143,11 +166,9 @@ are the options that can go inside a tree:
     containing whitespace can be expressed by enclosing them in double quotes:
     ``"Lovely readable name.human"``.
 
-``log_folder``
-    Folder for indexing logs. Default: ``<global log_folder>/<tree>``
-
 ``object_folder``
-    Folder where object files will be stored. **Required.**
+    Folder where the ``build_command`` will be run. This is generally the
+    folder where object files will be stored. **Required.**
 
 ``source_folder``
     The folder containing the source code to index. **Required.**
@@ -156,8 +177,10 @@ are the options that can go inside a tree:
     The Unicode encoding of the tree's source files. Default: ``utf-8``
 
 ``temp_folder``
-    Folder for temporary items made during indexing. Default: ``<global
-    temp_folder>/<tree>``. You generally shouldn't set this.
+    A ``format()``-style template for deciding where to store temporary files
+    used while indexing. The token ``{tree}`` will be replaced with the name
+    of each tree you index. Default: ``temp_folder`` setting from ``[DXR]``
+    section. You generally don't need to set this.
 
 
 Plugin Configuration

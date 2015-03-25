@@ -1,21 +1,24 @@
 from collections import Mapping
+from commands import getstatusoutput
+from contextlib import contextmanager
 from datetime import datetime
 import fnmatch
 from functools import wraps
-from os import dup, fdopen
+from os import chdir, dup, fdopen, getcwd
 from os.path import join
 from itertools import izip
 from sys import stdout
+
+from dxr.exceptions import CommandFailure
 
 
 TEMPLATE_DIR = 'static/templates'
 
 
-def open_log(config_or_tree, name, use_stdout=False):
+def open_log(folder, name, use_stdout=False):
     """Return a writable file-like object representing a log file.
 
-    :arg config_or_tree: a Config or Tree object which tells us which folder to
-        put the log file in
+    :arg folder: The folder to put the log file in
     :arg name: The name of the log file
     :arg use_stdout: If True, return a handle to stdout for verbose output,
         duplicated so it can be closed with impunity.
@@ -23,7 +26,7 @@ def open_log(config_or_tree, name, use_stdout=False):
     """
     if use_stdout:
         return fdopen(dup(stdout.fileno()), 'w')
-    return open(join(config_or_tree.log_folder, name), 'w', 1)
+    return open(join(folder, name), 'w', 1)
 
 
 def non_negative_int(s, default):
@@ -156,3 +159,28 @@ def if_raises(exception, callable, fallback, *args, **kwargs):
         return callable(*args, **kwargs)
     except exception:
         return fallback
+
+
+def run(command):
+    """Run a shell command, and return its stdout. On failure, raise
+    `CommandFailure`.
+
+    """
+    status, output = getstatusoutput(command)
+    if status:
+        raise CommandFailure(command, status, output)
+    return output
+
+
+def file_text(file_path):
+    with open(file_path) as file:
+        return file.read()
+
+
+@contextmanager
+def cd(path):
+    """Change the working dir on enter, and change it back on exit."""
+    old_dir = getcwd()
+    chdir(path)
+    yield
+    chdir(old_dir)

@@ -202,11 +202,11 @@ something like this::
 
    WSGIScriptAlias / /path/to/dxr/dxr/wsgi.py
 
-You must also specify the path to the generated index. This is done with a
-:envvar:`DXR_FOLDER` environment variable. For example, add this to your Apache
+You must also specify the path to the config file. This is done with the
+:envvar:`DXR_CONFIG` environment variable. For example, add this to your Apache
 configuration::
 
-   SetEnv DXR_FOLDER /path/to/target
+   SetEnv DXR_CONFIG /path/to/dxr.config
 
 Because we used virtualenv to install DXR's runtime dependencies, add the path
 to the virtualenv to your Apache configuration::
@@ -252,8 +252,8 @@ Here is a complete example config, for reference::
         # it if you're on a woefully underpowered machine, but I'm not maintaining
         # it.
 
-        # Tell this instance of DXR where its target folder is:
-        SetEnv DXR_FOLDER /home/vagrant/dxr/tests/test_basic/target/
+        # Tell this instance of DXR where its config file is:
+        SetEnv DXR_CONFIG /home/vagrant/dxr/tests/test_basic/dxr.config
 
         WSGIScriptAlias / /usr/local/lib/python2.7/site-packages/dxr/dxr.wsgi
     </VirtualHost>

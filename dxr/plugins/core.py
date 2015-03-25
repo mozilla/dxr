@@ -9,6 +9,7 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
+from dxr.es import UNINDEXED_STRING, UNINDEXED_INT
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -43,18 +44,6 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 EXT_MAPPING = {
     'type': 'string',
     'index': 'not_analyzed'
-}
-
-
-UNINDEXED_STRING = {
-    'type': 'string',
-    'index': 'no',
-}
-
-
-UNINDEXED_INT = {
-    'type': 'integer',
-    'index': 'no',
 }
 
 

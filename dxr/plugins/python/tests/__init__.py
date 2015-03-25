@@ -6,8 +6,8 @@ class PythonSingleFileTestCase(SingleFileTestCase):
     source_filename = 'main.py'
 
     @classmethod
-    def get_config(cls, config_dir_path):
-        config = super(PythonSingleFileTestCase, cls).get_config(config_dir_path)
+    def config_input(cls, config_dir_path):
+        config = super(PythonSingleFileTestCase, cls).config_input(config_dir_path)
 
         config['DXR']['enabled_plugins'] = 'pygmentize python'
         config['code']['build_command'] = '/bin/true $jobs'

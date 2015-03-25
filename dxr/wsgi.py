@@ -1,5 +1,9 @@
-from dxr.app import make_app
 import os
+from os.path import dirname
+
+from dxr.app import make_app
+from dxr.config import Config
+from dxr.utils import file_text
 
 
 def application(environ, start_response):
@@ -12,9 +16,11 @@ def application(environ, start_response):
 
     """
     try:
-        dxr_folder = environ['DXR_FOLDER']
+        config_path = environ['DXR_CONFIG']
     except KeyError:
         # Not found in WSGI env. Try process env:
         # If this still fails, this is a fatal error.
-        dxr_folder = os.environ['DXR_FOLDER']
-    return make_app(dxr_folder)(environ, start_response)
+        config_path = os.environ['DXR_CONFIG']
+    return make_app(Config(file_text(config_path),
+                           relative_to=dirname(config_path)))(environ,
+                                                              start_response)
