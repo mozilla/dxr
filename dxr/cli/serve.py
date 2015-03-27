@@ -25,7 +25,7 @@ from dxr.cli.utils import config_option
         default=False,
         help='Use a separate thread for each request')
 def serve(config, host, workers, port, threaded):
-    """Run the web frontend.
+    """Run a toy version of the web app.
 
     This is a simply test server for DXR, not suitable for production use. For
     actual deployments, use a web server with WSGI support.

@@ -3,10 +3,11 @@
 from os.path import basename
 from sys import argv
 
-from click import ClickException, group, option
+from click import ClickException, group
 
 from dxr.cli.clean import clean
 from dxr.cli.delete import delete
+from dxr.cli.deploy import deploy
 from dxr.cli.index import index
 from dxr.cli.serve import serve
 from dxr.cli.utils import tree_objects, config_option, tree_names_argument
@@ -39,3 +40,4 @@ dxr.add_command(index)
 dxr.add_command(clean)
 dxr.add_command(delete)
 dxr.add_command(serve)
+dxr.add_command(deploy)

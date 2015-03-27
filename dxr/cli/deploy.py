@@ -41,40 +41,40 @@ from pipes import quote
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
 
+from click import command, option
 import requests
 
+from dxr.cli.utils import config_option
+from dxr.utils import cd
 
-def main():
-    """Handle command-line munging, and pass off control to the interesting
-    stuff."""
-    parser = OptionParser(
-        usage='usage: %prog [options] <staging | prod>',
-        description='Deploy a new version of DXR.')
-    parser.add_option('-b', '--base', dest='base_path',
-                      help='Path to the dir containing the builds, instances, '
-                           'and deployment links')
-    parser.add_option('-c', '--branch', dest='branch',
-                      help='Deploy the revision from this branch which last '
-                           'passed Jenkins.')
-    parser.add_option('-p', '--python', dest='python_path',
-                      help='Path to the Python executable on which to base the'
-                           ' virtualenvs')
-    parser.add_option('-e', '--repo', dest='repo',
-                      help='URL of the git repo from which to download DXR. '
-                           'Use HTTPS if possible to ward off spoofing.')
-    parser.add_option('-r', '--rev', dest='manual_rev',
-                      help='A hash of the revision to deploy. Defaults to the '
-                           'last successful Jenkins build on the branch '
-                           'specified by -c (or master, by default).')
 
-    options, args = parser.parse_args()
-    if len(args) == 1:
-        non_none_options = dict((k, getattr(options, k)) for k in
-                                (o.dest for o in parser.option_list if o.dest)
-                                if getattr(options, k))
-        Deployment(args[0], **non_none_options).deploy_if_appropriate()
-    else:
-        parser.print_usage()
+@command()
+@config_option
+@option('-b', '--base',
+        'base_path',
+        help='Path to the dir containing the builds, instances, and '
+             'deployment links')
+@option('-h', '--branch',
+        help='Deploy the revision from this branch which last passed Jenkins.')
+@option('-p', '--python',
+        'python_path',
+        help='Path to the Python executable on which to base the virtualenvs')
+@option('-e', '--repo',
+        help='URL of the git repo from which to download DXR. Use HTTPS if '
+             'possible to ward off spoofing.')
+@option('-r', '--rev',
+        'manual_rev',
+        help='A hash of the revision to deploy. Defaults to the last '
+             'successful Jenkins build on the branch specified by -c (or '
+             'master, by default).')
+@option('-k', '--kind',
+        default='prod',
+        help='A token distinguishing an independent installation of DXR. 2 '
+             'deploy jobs of the same kind will never run simultaneously.')
+def deploy(config, **kwargs):
+    """Deploy a new version of the web app."""
+    non_none_options = dict((k, v) for k, v in kwargs.iteritems() if v)
+    Deployment(**non_none_options).deploy_if_appropriate()
 
 
 class Deployment(object):
@@ -84,7 +84,7 @@ class Deployment(object):
 
     """
     def __init__(self,
-                 kind,
+                 kind='prod',
                  base_path='/data',
                  python_path='/usr/bin/python2.7',
                  repo='https://github.com/mozilla/dxr.git',
@@ -92,8 +92,8 @@ class Deployment(object):
                  manual_rev=None):
         """Construct.
 
-        :arg kind: The type of deployment this is, either "staging" or "prod".
-            Affects only some folder names.
+        :arg kind: The type of deployment this is, like "staging" or "prod".
+            Affects only the lockfile name.
         :arg base_path: Path to the dir containing the builds, instances, and
             deployment links
         :arg python_path: Path to the Python executable on which to base the
@@ -260,15 +260,6 @@ def run(command, **kwargs):
 
 
 @contextmanager
-def cd(path):
-    """Change the working dir on enter, and change it back on exit."""
-    old_dir = getcwd()
-    chdir(path)
-    yield
-    chdir(old_dir)
-
-
-@contextmanager
 def nonblocking_lock(lock_name):
     """Context manager that acquires and releases a file-based lock.
 
@@ -295,7 +286,3 @@ def nonblocking_lock(lock_name):
 class ShouldNotDeploy(Exception):
     """We should not deploy this build at the moment, though there was no
     programming error."""
-
-
-if __name__ == '__main__':
-    main()
