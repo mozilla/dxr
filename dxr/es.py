@@ -1,6 +1,7 @@
 """Elasticsearch utilities not general enough to lift into pyelasticsearch"""
 
 from flask import current_app
+from pyelasticsearch import ElasticHttpNotFoundError
 from werkzeug.exceptions import NotFound
 
 from dxr.config import FORMAT
@@ -35,15 +36,15 @@ def frozen_config(tree_name):
     """Return the bits of config that are "frozen" in place upon indexing.
 
     Return the ES "tree" doc for the given tree at the current format
-    version.
+    version. Raise NotFound if the tree
 
     """
-    frozen = current_app.es.get(current_app.dxr_config.es_catalog_index,
-                                TREE,
-                                '%s/%s' % (FORMAT, tree_name))
     try:
+        frozen = current_app.es.get(current_app.dxr_config.es_catalog_index,
+                                    TREE,
+                                    '%s/%s' % (FORMAT, tree_name))
         return frozen['_source']
-    except KeyError:
+    except (ElasticHttpNotFoundError, KeyError):
         # If nothing is found, we still get a hash, but it has no _source key.
         raise NotFound('No such tree as %s' % tree_name)
 
