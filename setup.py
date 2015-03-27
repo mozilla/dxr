@@ -19,7 +19,6 @@ setup(
     author_email='erik@mozilla.com',
     license='MIT',
     packages=find_packages(exclude=['ez_setup']),
-    scripts=['bin/dxr-serve.py'],
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
                                   'buglink = dxr.plugins.buglink:plugin',
                                   'clang = dxr.plugins.clang:plugin',

@@ -9,6 +9,7 @@ from sys import argv
 from click import ClickException, echo, group, option, Path, argument
 from pyelasticsearch import ElasticSearch
 
+from dxr.app import make_app
 from dxr.build import index_and_deploy_tree
 from dxr.config import Config
 from dxr.utils import run, CommandFailure
@@ -148,3 +149,35 @@ def delete(config, tree_names, all, force):
     if all:
         echo('Deleting catalog...')
         es.delete_index(config.es_catalog_index)
+
+
+@dxr.command()
+@config_option
+@option('--all', '-a',
+        'host',
+        is_flag=True,
+        flag_value='0.0.0.0',
+        help='Serve on all interfaces.  Equivalent to --host 0.0.0.0')
+@option('--host', '-h',
+        default='localhost',
+        help='The host address to serve on')
+@option('--workers', '-w',
+        default=1,
+        help='The number of processes or threads to use')
+@option('--port', '-p',
+        default=8000,
+        help='The port to serve on')
+@option('--threaded', '-t',
+        is_flag=True,
+        default=False,
+        help='Use a separate thread for each request')
+def serve(config, host, workers, port, threaded):
+    """Run the web frontend.
+
+    This is a simply test server for DXR, not suitable for production use. For
+    actual deployments, use a web server with WSGI support.
+
+    """
+    app = make_app(config)
+    app.debug = True
+    app.run(host=host, port=port, processes=workers, threaded=threaded)
