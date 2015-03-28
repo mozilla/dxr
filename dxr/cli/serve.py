@@ -13,12 +13,15 @@ from dxr.cli.utils import config_option
         help='Serve on all interfaces.  Equivalent to --host 0.0.0.0')
 @option('--host', '-h',
         default='localhost',
+        show_default=True,
         help='The host address to serve on')
 @option('--workers', '-w',
         default=1,
+        show_default=True,
         help='The number of processes or threads to use')
 @option('--port', '-p',
         default=8000,
+        show_default=True,
         help='The port to serve on')
 @option('--threaded', '-t',
         is_flag=True,

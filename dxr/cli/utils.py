@@ -42,5 +42,6 @@ config_option = option('--config', '-c',
                        type=ConfigObject(exists=True,
                                          dir_okay=False,
                                          readable=True),
+                       show_default=True,
                        help='The configuration file')
 tree_names_argument = argument('tree_names', metavar='TREES', nargs=-1)
