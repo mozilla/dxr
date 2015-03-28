@@ -4,10 +4,9 @@ Glossary
 ========
 
 build directory - A folder, typically in the ``builds`` folder, containing
-    these folders...
+these folders...
 
     dxr - A checkout of the DXR source code
-    target - A symlink to the instance to serve
     virtualenv - A virtualenv with DXR and its dependencies installed
 
     Builds are named after an excerpt of their git hashes and are symlinked
@@ -17,9 +16,7 @@ base directory - The folder containing these folders...
 
     builds - A folder of builds, including the current production and staging
         ones
-    dxr-prod - A symlink to the current production build
-    dxr-staging - A symlink to the current staging build
-    instances - A folder of DXR instances organized according to format version
+    dxr-<kind> - A symlink to the current build of a given kind
 
 """
 # When we need to make this work across multiple nodes:
@@ -33,15 +30,15 @@ base directory - The folder containing these folders...
 # it.
 
 from contextlib import contextmanager
-from optparse import OptionParser
 import os
-from os import chdir, O_CREAT, O_EXCL, remove, getcwd
+from os import O_CREAT, O_EXCL, remove
 from os.path import join, exists
 from pipes import quote
+from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
 
-from click import command, option
+from click import command, option, Path
 import requests
 
 from dxr.cli.utils import config_option
@@ -52,12 +49,14 @@ from dxr.utils import cd
 @config_option
 @option('-b', '--base',
         'base_path',
-        help='Path to the dir containing the builds, instances, and '
-             'deployment links')
+        type=Path(exists=True, file_okay=False, resolve_path=True),
+        help='Path to the dir containing the builds and symlinks to the '
+             'current builds of each kind')
 @option('-h', '--branch',
         help='Deploy the revision from this branch which last passed Jenkins.')
 @option('-p', '--python',
         'python_path',
+        type=Path(exists=True, dir_okay=False, resolve_path=True),
         help='Path to the Python executable on which to base the virtualenvs')
 @option('-e', '--repo',
         help='URL of the git repo from which to download DXR. Use HTTPS if '
@@ -65,13 +64,14 @@ from dxr.utils import cd
 @option('-r', '--rev',
         'manual_rev',
         help='A hash of the revision to deploy. Defaults to the last '
-             'successful Jenkins build on the branch specified by -c (or '
+             'successful Jenkins build on the branch specified by -h (or '
              'master, by default).')
 @option('-k', '--kind',
         default='prod',
         help='A token distinguishing an independent installation of DXR. 2 '
-             'deploy jobs of the same kind will never run simultaneously.')
-def deploy(config, **kwargs):
+             'deploy jobs of the same kind will never run simultaneously. '
+             'The deployment symlink contains the kind in its name.')
+def deploy(**kwargs):
     """Deploy a new version of the web app."""
     non_none_options = dict((k, v) for k, v in kwargs.iteritems() if v)
     Deployment(**non_none_options).deploy_if_appropriate()
@@ -84,6 +84,7 @@ class Deployment(object):
 
     """
     def __init__(self,
+                 config,
                  kind='prod',
                  base_path='/data',
                  python_path='/usr/bin/python2.7',
@@ -92,9 +93,10 @@ class Deployment(object):
                  manual_rev=None):
         """Construct.
 
+        :arg config: The Config
         :arg kind: The type of deployment this is, like "staging" or "prod".
             Affects only the lockfile name.
-        :arg base_path: Path to the dir containing the builds, instances, and
+        :arg base_path: Path to the dir containing the builds and
             deployment links
         :arg python_path: Path to the Python executable on which to base the
             virtualenvs
@@ -105,6 +107,7 @@ class Deployment(object):
         :arg manual_rev: A hash of the revision to deploy. Defaults to the last
             successful Jenkins build on ``branch``.
         """
+        self.config = config
         self.kind = kind
         self.base_path = base_path
         self.python_path = python_path
@@ -123,10 +126,9 @@ class Deployment(object):
         """
         with cd(join(self._deployment_path(), 'dxr')):
             old_hash = run('git rev-parse --verify HEAD').strip()
-        new_hash = self._latest_successful_build()
+        new_hash = self.manual_rev or self._latest_successful_build()
         if old_hash == new_hash:
-            raise ShouldNotDeploy('The latest test-passing revision is already'
-                                  ' deployed.')
+            raise ShouldNotDeploy('Version %s is already deployed.' % new_hash)
         return new_hash
 
     def _latest_successful_build(self):
@@ -134,10 +136,13 @@ class Deployment(object):
         response = requests.get('https://ci.mozilla.org/job/dxr/'
                                 'lastSuccessfulBuild/git/api/json',
                                 verify=True)
-        return (response.json()['buildsByBranchName']
-                               ['origin/%s' % self.branch]
-                               ['revision']
-                               ['SHA1'])
+        try:
+            return (response.json()['buildsByBranchName']
+                                   ['origin/%s' % self.branch]
+                                   ['revision']
+                                   ['SHA1'])
+        except ValueError:
+            raise ShouldNotDeploy("Couldn't decode JSON from Jenkins.")
 
     def build(self, rev):
         """Create and return the path of a new directory containing a new
@@ -153,49 +158,69 @@ class Deployment(object):
         VENV_NAME = 'virtualenv'
         new_build_path = mkdtemp(prefix='%s-' % rev[:6],
                                  dir=join(self.base_path, 'builds'))
-        with cd(new_build_path):
-            # Make a fresh, blank virtualenv:
-            run('virtualenv -p {python} --no-site-packages {venv_name}',
-                python=self.python_path,
-                venv_name=VENV_NAME)
+        try:
+            with cd(new_build_path):
+                # Make a fresh, blank virtualenv:
+                run('virtualenv -p {python} --no-site-packages {venv_name}',
+                    python=self.python_path,
+                    venv_name=VENV_NAME)
 
-            # Check out the source, and install DXR and dependencies:
-            run('git clone {repo}', repo=self.repo)
-            with cd('dxr'):
-                run('git checkout -q {rev}', rev=rev)
+                # Check out the source, and install DXR and dependencies:
+                run('git clone {repo}', repo=self.repo)
+                with cd('dxr'):
+                    run('git checkout -q {rev}', rev=rev)
+                    
+                    old_format = file_text('%s/dxr/dxr/format' % self._deployment_path()).rstrip()
+                    new_format = file_text('dxr/format').rstrip()
+                    self._check_deployed_trees(old_format, new_format)
 
-                # If there's no instance of a suitable version, bail out:
-                with open('dxr/format') as format_file:
-                    format = format_file.read().rstrip()
-                target_path = '{base_path}/instances/{format}/target'.format(
-                    base_path=self.base_path, format=format)
-                if not exists(target_path):
-                    raise ShouldNotDeploy('A version-{format} instance is not ready yet.'.format(format=format))
+                    run('git submodule update -q --init --recursive')
+                    # Make sure a malicious server didn't slip us a mickey. TODO:
+                    # Does this recurse into submodules?
+                    run('git fsck --no-dangling')
 
-                run('git submodule update -q --init --recursive')
-                # Make sure a malicious server didn't slip us a mickey. TODO:
-                # Does this recurse into submodules?
-                run('git fsck --no-dangling')
+                    # Install stuff, using the new copy of peep from the checkout:
+                    python = join(new_build_path, VENV_NAME, 'bin', 'python')
+                    run('{python} ./peep.py install -r requirements.txt',
+                        python=python)
+                    # Compile nunjucks templates:
+                    run('make templates &> /dev/null')
+                    # Quiet the complaint about there being no matches for *.so:
+                    run('{python} setup.py install 2>/dev/null', python=python)
 
-                # Install stuff, using the new copy of peep from the checkout:
-                python = join(new_build_path, VENV_NAME, 'bin', 'python')
-                run('{python} ./peep.py install -r requirements.txt',
-                    python=python)
-                # Compile nunjucks templates:
-                run('make templates &> /dev/null')
-                # Quiet the complaint about there being no matches for *.so:
-                run('{python} setup.py install 2>/dev/null', python=python)
+                # After installing, you always have to re-run this, even if we
+                # were reusing a venv:
+                run('virtualenv --relocatable {venv}',
+                    venv=join(new_build_path, VENV_NAME))
 
-            # After installing, you always have to re-run this, even if we
-            # were reusing a venv:
-            run('virtualenv --relocatable {venv}',
-                venv=join(new_build_path, VENV_NAME))
-
-            # Link to the built DXR instance:
-            run('ln -s {points_to} target', points_to=target_path)
-
-            run('chmod 755 .')  # mkdtemp uses a very conservative mask.
+                run('chmod 755 .')  # mkdtemp uses a very conservative mask.
+        except Exception:
+            rmtree(new_build_path)
+            raise
         return new_build_path
+
+    def _check_deployed_trees(old_format, new_format):
+        """Raise ShouldNotDeploy iff we'd be losing currently available
+        indices by deploying."""
+        olds = self._trees_of_version(old_format)
+        news = self._trees_of_version(new_format)
+        olds_still_wanted = set(self.config.trees.iterkeys()) & olds
+        not_done = olds_still_wanted - news
+        if not_done:
+            # There are still some wanted trees that aren't built in the new
+            # format yet.
+            raise ShouldNotDeploy(
+                'We need to wait for trees {trees} to be built in format '
+                '{format}.'.format(trees=', '.join(sorted(not_done)),
+                                   format=new_format))
+
+    def _trees_of_version(version):
+        """Return a set of the names of trees of a given format version."""
+        return set(t['name'] for t in filtered_query(self.config.es_catalog_index,
+                                                     TREE,
+                                                     {'format': version},
+                                                     size=10000,
+                                                     include=['name']))
 
     def install(self, new_build_path):
         """Install a build at ``self.deployment_path``.
@@ -208,21 +233,22 @@ class Deployment(object):
             run('ln -s {points_to} {sits_at}',
                 points_to=new_build_path,
                 sits_at='new-link')
-            # Big, fat atomic (nay, nuclear) mv:
+            # Big, fat atomic (as in nuclear) mv:
             run('mv -T new-link {dest}', dest=self._deployment_path())
         # TODO: Delete the old build or maybe all the builds that aren't this
         # one or the previous one (which we can get by reading the old symlink).
 
-        # TODO: Does just frobbing the symlink count as touching the wsgi file?
+        # Just frobbing the symlink counts as touching the wsgi file.
 
     def deploy_if_appropriate(self):
         """Deploy a new build if we should."""
         with nonblocking_lock('dxr-deploy-%s' % self.kind) as got_lock:
             if got_lock:
                 try:
-                    rev = self.manual_rev or self.rev_to_deploy()
+                    rev = self.rev_to_deploy()
                     new_build_path = self.build(rev)
                     self.install(new_build_path)
+                    # TODO: Also, delete all the tree docs of version 11, just to keep the index from growing forever.
                 except ShouldNotDeploy:
                     pass
                 else:
