@@ -1,5 +1,4 @@
 import ast
-import os
 from contextlib import contextmanager
 
 
@@ -22,15 +21,23 @@ def convert_node_to_name(node):
         return None
 
 
+def relative_module_path(python_path, module_path):
+    """Covert an absolute path to a module to a path relative to the
+    given python path.
+
+    """
+    return module_path.replace(python_path, '', 1).strip('/')
+
+
 def path_to_module(python_path, module_path):
     """Convert a file path into a dotted module path, using the given
     python_path as the base directory that modules live in.
 
     """
+    module_path = relative_module_path(python_path, module_path)
     module_path = trim_end(module_path, '.py')
     module_path = trim_end(module_path, '/__init__')
-    common_path = os.path.commonprefix([python_path, module_path])
-    return module_path.replace(common_path, '', 1).replace('/', '.').strip('.')
+    return module_path.replace('/', '.')
 
 
 def trim_end(string, end):

@@ -5,13 +5,13 @@ entire codebase.
 """
 import ast
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from warnings import warn
 
 from dxr.build import file_contents
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, package_for_module,
-                                      path_to_module)
+                                      path_to_module, relative_module_path)
 
 
 class TreeAnalysis(object):
@@ -38,7 +38,7 @@ class TreeAnalysis(object):
         self.class_functions = defaultdict(list)
         self.overridden_functions = defaultdict(list)
         self.overriding_functions = defaultdict(list)
-        self.names = {}
+        self.definition_tree = DefinitionTree()
         self.ignore_paths = set()
 
         for path, encoding in paths:
@@ -59,8 +59,7 @@ class TreeAnalysis(object):
             self.ignore_paths.add(rel_path)
             return
 
-        module_path = path_to_module(self.python_path, path)
-        visitor = AnalyzingNodeVisitor(module_path, self)
+        visitor = AnalyzingNodeVisitor(path, self)
         visitor.visit(syntax_tree)
 
     def _finish_analysis(self):
@@ -121,26 +120,9 @@ class TreeAnalysis(object):
             for derived_child in self.get_derived_classes(derived):
                 yield derived_child
 
-    def normalize_name(self, absolute_local_name):
-        """Given a local name, figure out the actual module that the
-        thing that name points to lives and return that name.
-
-        For example, if you have `from os import path` in a module
-        called `foo.bar`, then the name `foo.bar.path` would return
-        `os.path`.
-
-        """
-        while absolute_local_name in self.names:
-            absolute_local_name = self.names[absolute_local_name]
-
-        # For cases when you `import foo.bar` and refer to `foo.bar.baz`, we
-        # need to normalize the `foo.bar` prefix in case it's not the
-        # canonical name of that module.
-        if '.' in absolute_local_name:
-            prefix, local_name = absolute_local_name.rsplit('.', 1)
-            return self.normalize_name(prefix) + '.' + local_name
-        else:
-            return absolute_local_name
+    def normalize_name(self, absolute_name):
+        """Defer name normalization to the definition tree."""
+        return self.definition_tree.normalize_name(absolute_name)
 
 
 class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
@@ -152,10 +134,11 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     - A mapping of class names to the classes they inherit from.
 
     """
-    def __init__(self, module_path, tree_analysis):
+    def __init__(self, path, tree_analysis):
         super(AnalyzingNodeVisitor, self).__init__()
 
-        self.module_path = module_path
+        self.path = relative_module_path(tree_analysis.python_path, path)
+        self.module_path = path_to_module(tree_analysis.python_path, path)
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
@@ -169,6 +152,11 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
             if base_name:
                 bases.append(self.module_path + '.' + base_name)
         self.tree_analysis.base_classes[class_path] = bases
+
+        # Store the definition of this class.
+        class_def = Definition(absolute_name=class_path, line=node.lineno,
+                               col=node.col_offset, path=self.path)
+        self.tree_analysis.definition_tree.add(class_def)
 
     def visit_ClassFunction(self, class_node, function_node):
         """Save any member functions we find on a class."""
@@ -202,4 +190,70 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                     if package_path:
                         import_name = package_path + '.' + import_name
 
-            self.tree_analysis.names[absolute_local_name] = import_name
+            import_tuple = Import(absolute_name=absolute_local_name,
+                                  line=node.lineno, col=node.col_offset,
+                                  import_name=import_name)
+            self.tree_analysis.definition_tree.add(import_tuple)
+
+
+# Namedtuples that are stored in DefinitionTree.
+Definition = namedtuple('Definition', ('absolute_name', 'line', 'col', 'path'))
+Import = namedtuple('Import', ('absolute_name', 'line', 'col', 'import_name'))
+
+
+class DefinitionTree(object):
+    """Stores definitions across the entire project, such as classes and
+    functions, as well as the imports that link them together.
+
+    """
+    def __init__(self):
+        self.modules = {}
+
+    def add(self, definition):
+        """Add a definition to the tree. """
+        names = definition.absolute_name.split('.')
+        scope = self.modules
+
+        for name in names[:-1]:
+            scope = scope.setdefault(name, {})
+        scope[names[-1]] = definition
+
+    def get(self, name):
+        """Fetch the definition for the given name, following imports if
+        necessary.
+
+        If the definition is not found, return None. Top-level modules
+        that have not been added to the tree are assumed external and
+        valid, and definitions will be returned for them with no path
+        or position data.
+        """
+        names = name.split('.')
+        module_name = names.pop(0)
+        value = self.modules.get(module_name, None)
+
+        # If we don't even find the top-level module, assume this is a
+        # built-in or external library.
+        if not value:
+            return Definition(name)
+
+        for name in names:
+            value = value.get(name, None)
+            if not value:
+                return None
+
+            while isinstance(value, Import):  # Follow imports.
+                value = self.get(value.import_name)
+
+        return value
+
+    def normalize_name(self, absolute_name):
+        """Given a name, figure out the actual module that the thing
+        that name points to lives and return that name.
+
+        For example, if you have `from os import path` in a module
+        called `foo.bar`, then the name `foo.bar.path` would return
+        `os.path`.
+
+        """
+        definition = self.get(absolute_name)
+        return definition.absolute_name if definition else absolute_name
