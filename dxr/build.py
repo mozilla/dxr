@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from flask import current_app
 from funcy import merge, chunks, first, suppress
 import jinja2
 from more_itertools import chunked
@@ -528,8 +529,8 @@ def index_chunk(tree,
     path = '(no file yet)'
     try:
         # So we can use Flask's url_from():
-        with make_app(www_root=tree.config.www_root).test_request_context():
-            es = ElasticSearch(tree.config.es_hosts)
+        with make_app(tree.config).test_request_context():
+            es = current_app.es
             try:
                 # Don't log if single-process:
                 log = (worker_number and

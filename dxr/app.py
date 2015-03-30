@@ -41,30 +41,21 @@ dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           static_folder='static')
 
 
-def make_app(config=None, www_root=''):
+def make_app(config):
     """Return a DXR application which uses ``config`` as its configuration.
-
-    Alternately, you can pass in ``www_root``, which will cause a bare-bones
-    app to be returned. It will not have full configuration available, but it
-    will suffice to support ``url_for()``.
 
     Also set up the static and template folder.
 
     """
     app = Flask('dxr')
+    app.dxr_config = config
+    app.register_blueprint(dxr_blueprint, url_prefix=config.www_root)
 
-    if config:
-        app.dxr_config = config
-        www_root = config.www_root
+    # Log to Apache's error log in production:
+    app.logger.addHandler(StreamHandler(stderr))
 
-    app.register_blueprint(dxr_blueprint, url_prefix=www_root)
-
-    if config:
-        # Log to Apache's error log in production:
-        app.logger.addHandler(StreamHandler(stderr))
-
-        # Make an ES connection pool shared among all threads:
-        app.es = ElasticSearch(config.es_hosts)
+    # Make an ES connection pool shared among all threads:
+    app.es = ElasticSearch(config.es_hosts)
 
     return app
 
