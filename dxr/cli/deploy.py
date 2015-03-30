@@ -32,17 +32,20 @@ base directory - The folder containing these folders...
 from contextlib import contextmanager
 import os
 from os import O_CREAT, O_EXCL, remove
-from os.path import join, exists
+from os.path import join, exists, realpath
 from pipes import quote
 from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
 
 from click import command, option, Path
+from flask import current_app
 import requests
 
+from dxr.app import make_app
 from dxr.cli.utils import config_option
-from dxr.utils import cd
+from dxr.es import filtered_query_hits, TREE
+from dxr.utils import cd, file_text, rmtree_if_exists
 
 
 @command()
@@ -169,9 +172,12 @@ class Deployment(object):
                 run('git clone {repo}', repo=self.repo)
                 with cd('dxr'):
                     run('git checkout -q {rev}', rev=rev)
-                    
+
                     old_format = file_text('%s/dxr/dxr/format' % self._deployment_path()).rstrip()
                     new_format = file_text('dxr/format').rstrip()
+                    self._format_changed_from = (old_format
+                                                 if old_format != new_format
+                                                 else None)
                     self._check_deployed_trees(old_format, new_format)
 
                     run('git submodule update -q --init --recursive')
@@ -199,11 +205,11 @@ class Deployment(object):
             raise
         return new_build_path
 
-    def _check_deployed_trees(old_format, new_format):
+    def _check_deployed_trees(self, old_format, new_format):
         """Raise ShouldNotDeploy iff we'd be losing currently available
         indices by deploying."""
-        olds = self._trees_of_version(old_format)
-        news = self._trees_of_version(new_format)
+        olds = self._tree_names_of_version(old_format)
+        news = self._tree_names_of_version(new_format)
         olds_still_wanted = set(self.config.trees.iterkeys()) & olds
         not_done = olds_still_wanted - news
         if not_done:
@@ -214,47 +220,68 @@ class Deployment(object):
                 '{format}.'.format(trees=', '.join(sorted(not_done)),
                                    format=new_format))
 
-    def _trees_of_version(version):
+    def _tree_names_of_version(self, version):
         """Return a set of the names of trees of a given format version."""
-        return set(t['name'] for t in filtered_query(self.config.es_catalog_index,
-                                                     TREE,
-                                                     {'format': version},
-                                                     size=10000,
-                                                     include=['name']))
+        return set(t['_source']['name'] for t in
+                   self._trees_of_version(version))
+
+    def _trees_of_version(self, version):
+        """Return an iterable of tree docs of a given format version."""
+        return filtered_query_hits(self.config.es_catalog_index,
+                                   TREE,
+                                   {'format': version},
+                                   size=10000)
 
     def install(self, new_build_path):
-        """Install a build at ``self.deployment_path``.
+        """Install a build at ``self.deployment_path``, and return the path to
+        the build we replaced.
 
         Avoid race conditions as much as possible. If it turns out we should
         not deploy for some anticipated reason, raise ShouldNotDeploy.
 
         """
+        old_build_path = realpath(self._deployment_path())
         with cd(new_build_path):
             run('ln -s {points_to} {sits_at}',
                 points_to=new_build_path,
                 sits_at='new-link')
             # Big, fat atomic (as in nuclear) mv:
             run('mv -T new-link {dest}', dest=self._deployment_path())
-        # TODO: Delete the old build or maybe all the builds that aren't this
-        # one or the previous one (which we can get by reading the old symlink).
+            # Just frobbing the symlink counts as touching the wsgi file.
+        return old_build_path
 
-        # Just frobbing the symlink counts as touching the wsgi file.
+    def delete_old(self, old_build_path):
+        """Delete all indices and catalog entries of old format."""
+        rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+        if self._format_changed_from:
+            # Loop over the trees, get the alias of each, and delete:
+            for tree in self._trees_of_version(self._format_changed_from):
+                # Do one at a time, because it could be more than a URL's
+                # max length, assuming netty has one.
+                current_app.es.delete_index(tree['_source']['es_alias'])
+
+                # Delete as we go in case we fail partway through. Then at
+                # least we can come back with `dxr delete` and clean up.
+                current_app.es.delete(self.config.es_catalog_index,
+                                      TREE,
+                                      tree['_id'])
 
     def deploy_if_appropriate(self):
         """Deploy a new build if we should."""
         with nonblocking_lock('dxr-deploy-%s' % self.kind) as got_lock:
             if got_lock:
-                try:
-                    rev = self.rev_to_deploy()
-                    new_build_path = self.build(rev)
-                    self.install(new_build_path)
-                    # TODO: Also, delete all the tree docs of version 11, just to keep the index from growing forever.
-                except ShouldNotDeploy:
-                    pass
-                else:
-                    # if not self.passes_smoke_test():
-                    #     self.rollback()
-                    pass
+                with make_app(self.config).app_context():
+                    try:
+                        rev = self.rev_to_deploy()
+                        new_build_path = self.build(rev)
+                        old_build_path = self.install(new_build_path)
+                    except ShouldNotDeploy:
+                        pass
+                    else:
+                        # if not self.passes_smoke_test():
+                        #     self.rollback()
+                        # else:
+                        self.delete_old(old_build_path)
 
     def _deployment_path(self):
         """Return the path of the symlink to the deployed build of DXR."""

@@ -54,7 +54,7 @@ def es_alias_or_not_found(tree):
     return frozen_config(tree)['es_alias']
 
 
-def filtered_query(index, doc_type, filter, sort=None, size=1, include=None, exclude=None):
+def filtered_query(*args, **kwargs):
     """Do a simple, filtered term query, returning an iterable of _sources.
 
     This is just a mindless upfactoring. It probably shouldn't be blown up
@@ -63,6 +63,11 @@ def filtered_query(index, doc_type, filter, sort=None, size=1, include=None, exc
     ``include`` and ``exclude`` are mutually exclusive for now.
 
     """
+    return _sources(filtered_query_hits(*args, **kwargs))
+
+
+def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None, exclude=None):
+    """Do a simple, filtered term query, returning an iterable of hit hashes."""
     query = {
             'query': {
                 'filtered': {
@@ -81,13 +86,13 @@ def filtered_query(index, doc_type, filter, sort=None, size=1, include=None, exc
         query['_source'] = {'include': include}
     elif exclude is not None:
         query['_source'] = {'exclude': exclude}
-    return _sources(current_app.es.search(
+    return current_app.es.search(
         query,
         index=index,
         doc_type=doc_type,
-        size=size))
+        size=size)['hits']['hits']
 
 
 def _sources(search_results):
     """Return just the _source attributes of some ES search results."""
-    return [r['_source'] for r in search_results['hits']['hits']]
+    return [r['_source'] for r in search_results]

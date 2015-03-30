@@ -2,11 +2,13 @@ from collections import Mapping
 from commands import getstatusoutput
 from contextlib import contextmanager
 from datetime import datetime
+from errno import ENOENT
 import fnmatch
 from functools import wraps
+from itertools import izip
 from os import chdir, dup, fdopen, getcwd
 from os.path import join
-from itertools import izip
+from shutil import rmtree
 from sys import stdout
 
 from dxr.exceptions import CommandFailure
@@ -184,3 +186,12 @@ def cd(path):
     chdir(path)
     yield
     chdir(old_dir)
+
+
+def rmtree_if_exists(folder):
+    """Remove a folder if it exists. Otherwise, do nothing."""
+    try:
+        rmtree(folder)
+    except OSError as exc:
+        if exc.errno != ENOENT:
+            raise

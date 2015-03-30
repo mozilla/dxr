@@ -1,11 +1,9 @@
-from errno import ENOENT
 from os import chdir
-from shutil import rmtree
 
 from click import ClickException, command
 
 from dxr.cli.utils import tree_objects, config_option, tree_names_argument
-from dxr.utils import run, CommandFailure
+from dxr.utils import run, CommandFailure, rmtree_if_exists
 
 
 @command()
@@ -19,17 +17,9 @@ def clean(config, tree_names):
     `make clean` (or other clean_command from the config file) on trees.
 
     """
-    def rmtree_quietly(folder):
-        """Remove a folder if it exists. Otherwise, do nothing."""
-        try:
-            rmtree(folder)
-        except OSError as exc:
-            if exc.errno != ENOENT:
-                raise
-
     for tree in tree_objects(tree_names, config):
-        rmtree_quietly(tree.log_folder)
-        rmtree_quietly(tree.temp_folder)
+        rmtree_if_exists(tree.log_folder)
+        rmtree_if_exists(tree.temp_folder)
         chdir(tree.object_folder)
         if tree.clean_command:
             try:
