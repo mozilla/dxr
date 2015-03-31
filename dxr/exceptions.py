@@ -21,6 +21,18 @@ class BuildError(Exception):
     # calling sys.exit, which is what was happening before.
 
 
+class CommandFailure(Exception):
+    """A ``run()`` command exited with a non-zero status code."""
+
+    def __init__(self, command, status, output):
+        self.command, self.status, self.output = command, status, output
+
+    def __str__(self):
+        return "'%s' exited with status %s. Output:\n%s" % (self.command,
+                                                            self.status,
+                                                            self.output)
+
+
 class ConfigError(Exception):
     """A single error in the configuration file"""
 

@@ -1,9 +1,7 @@
 import cgi
-from commands import getstatusoutput
 import json
 from os import chdir, mkdir
-import os.path
-from os.path import dirname
+from os.path import dirname, join
 import re
 from shutil import rmtree
 import sys
@@ -21,41 +19,23 @@ except ImportError:
         ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
 from dxr.app import make_app
-from dxr.build import build_instance
-
-
-class CommandFailure(Exception):
-    """A command exited with a non-zero status code."""
-
-    def __init__(self, command, status, output):
-        self.command, self.status, self.output = command, status, output
-
-    def __str__(self):
-        return "'%s' exited with status %s. Output:\n%s" % (self.command,
-                                                            self.status,
-                                                            self.output)
-
-
-def run(command):
-    """Run a shell command, and return its stdout. On failure, raise
-    `CommandFailure`.
-
-    """
-    status, output = getstatusoutput(command)
-    if status:
-        raise CommandFailure(command, status, output)
-    return output
+from dxr.build import index_and_deploy_tree
+from dxr.config import Config
+from dxr.utils import file_text, run
 
 
 class TestCase(unittest.TestCase):
     """Abstract container for general convenience functions for DXR tests"""
 
     def client(self):
-        # TODO: DRY between here and the config file with 'target'.
-        app = make_app(os.path.join(self._config_dir_path, 'target'))
-
+        app = make_app(self.config())
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
+
+    @classmethod
+    def config(cls):
+        return Config(cls.config_input(cls._config_dir_path),
+                      relative_to=cls._config_dir_path)
 
     def source_page(self, path):
         """Return the text of a source page."""
@@ -167,6 +147,7 @@ class TestCase(unittest.TestCase):
 
         """
         # When you delete an index, any alias to it goes with it.
+        # This takes care of dxr_test_catalog as well.
         cls._es().delete_index('dxr_test_*')
 
 
@@ -185,14 +166,18 @@ class DxrInstanceTestCase(TestCase):
         # multiple test modules with the same name:
         cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
         chdir(cls._config_dir_path)
-        run('make')
+        run('dxr index')
         cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
         chdir(cls._config_dir_path)
-        cls._delete_es_indices()
-        run('make clean')
+        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
+        run('dxr clean')
+
+    @classmethod
+    def config_input(cls, config_dir_path):
+        return file_text(join(cls._config_dir_path, 'dxr.config'))
 
 
 class SingleFileTestCase(TestCase):
@@ -215,16 +200,16 @@ class SingleFileTestCase(TestCase):
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
         cls._config_dir_path = mkdtemp()
-        code_path = os.path.join(cls._config_dir_path, 'code')
+        code_path = join(cls._config_dir_path, 'code')
         mkdir(code_path)
         _make_file(code_path, cls.source_filename, cls.source)
 
-        chdir(cls._config_dir_path)
-        build_instance(cls.get_config(cls._config_dir_path))
+        for tree in cls.config().trees.itervalues():
+            index_and_deploy_tree(tree)
         cls._es().refresh()
 
     @classmethod
-    def get_config(cls, config_dir_path):
+    def config_input(cls, config_dir_path):
         """Return a dictionary of config options for building the tree.
 
         Override this in subclasses to customize the config.
@@ -233,14 +218,14 @@ class SingleFileTestCase(TestCase):
             'DXR': {
                 'enabled_plugins': 'pygmentize clang',
                 'temp_folder': '{0}/temp'.format(config_dir_path),
-                'target_folder': '{0}/target'.format(config_dir_path),
                 'es_index': 'dxr_test_{format}_{tree}_{unique}',
                 'es_alias': 'dxr_test_{format}_{tree}',
+                'es_catalog_index': 'dxr_test_catalog'
             },
             'code': {
                 'source_folder': '{0}/code'.format(config_dir_path),
                 'object_folder': '{0}/code'.format(config_dir_path),
-                'build_command': '$CXX -o main main.cpp',
+                'build_command': '$CXX -o main main.cpp'
             }
         }
 
@@ -313,7 +298,7 @@ class SingleFileTestCase(TestCase):
 
 def _make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
-    with open(os.path.join(path, filename), 'w') as file:
+    with open(join(path, filename), 'w') as file:
         file.write(contents.encode('utf-8'))
 
 

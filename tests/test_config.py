@@ -14,7 +14,6 @@ def test_enabled_star():
     config = Config("""
         [DXR]
         enabled_plugins = *
-        target_folder = /some/path
 
         [some_tree]
         source_folder = /some/path
@@ -37,7 +36,6 @@ def test_enabled_plugins():
     """
     config = Config("""
         [DXR]
-        target_folder = /some/path
 
         [mozilla-central]
         enabled_plugins = urllink   omniglot
@@ -57,7 +55,6 @@ def test_plugin_section_required():
         config = Config("""
             [DXR]
             enabled_plugins = buglink
-            target_folder = /some/path
 
             [mozilla-central]
             source_folder = /some/path
@@ -75,7 +72,6 @@ def test_deep_attrs():
     config = Config("""
         [DXR]
         enabled_plugins = buglink
-        target_folder = /some/path
 
         [mozilla-central]
         source_folder = /some/path
@@ -95,7 +91,6 @@ def test_multi_word_strings():
     config = Config("""
         [DXR]
         enabled_plugins = clang buglink
-        target_folder = /some/path
 
         [mozilla-central]
         source_folder = /some/path
@@ -119,7 +114,6 @@ def test_unknown_options():
         config = Config("""
             [DXR]
             enabled_plugins = clang
-            target_folder = /some/path
             disabled_plugins = buglink
             smoop = 5
 
@@ -144,7 +138,6 @@ def test_and_error():
         config = Config("""
             [DXR]
             enabled_plugins = clang
-            target_folder = /some/path
             workers = -5
 
             [mozilla-central]
