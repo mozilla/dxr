@@ -23,19 +23,33 @@ Make sure your drive is big: at least 80GB. The temp files are 15GB, and the ES 
 
 1. Convert disk from VMDK to the resizable VDI::
 
-    cd ~/VirtualBox VMs/DXR_VM
+    cd ~/VirtualBox\ VMs/DXR_VM
     VBoxManage clonehd box-disk1.vmdk box-disk1.vdi --format VDI
     VBoxManage modifyhd box-disk1.vdi --resize 100000
 
-2. Attach it to the VM using the VirtualBox GUI. (This seems to suffice. We
-   don't have to continue with creating new partitions, merging them, and
-   extending the FS as at
+2. Attach the new VDI to the VM using the VirtualBox GUI. (This seems to
+   suffice. We don't have to continue with creating new partitions, merging
+   them, and extending the FS as at
    http://blog.lenss.nl/2012/09/resize-a-vagrant-vmdk-drive/.)
+
+3. Delete the old VMDK file if you want.
+
+4. Fire up the VM to make sure it still works::
+
+    vagrant up && vagrant ssh
+
+Add More CPUs
+=============
+
+Use the VirtualBox GUI to crank up the number of processors on your VM to the
+number on your physical host.
 
 Configure The Source Tree
 =========================
 
-1. Put moz-central checkout in :file:`src`.
+1. Put moz-central checkout in :file:`src`. You can use ``hg clone`` as
+   documented at https://developer.mozilla.org/en-US/docs/Simple_Firefox_build.
+
 2. Have the compiler include the debug code so it can be analyzed, and enable
    standard C++ compatibility so we can build with clang. Put this in
    :file:`src/mozilla-central/.mozconfig`::
@@ -48,10 +62,10 @@ Configure The Source Tree
     cd src/mozilla-central
     ./mach bootstrap``
 
-4. Put this into a new :file:`dxr.config` file::
+4. Put this into a new :file:`dxr.config` file. It doesn't matter where it is,
+   but it's a good idea to keep it outside the checkout. ::
 
     [DXR]
-    target_folder=target
     enabled_plugins=clang pygmentize
 
     [mozilla-central]
@@ -76,12 +90,12 @@ Bump Up Elasticsearch's RAM
 Kick Off The Build
 ==================
 
-::
+In the folder where you put ``dxr.config``, run this::
 
-    dxr-build.py
+    dxr index
 
-This should result in a :file:`target` folder. You can run ``dxr-serve.py -a
-target`` to spin up the web interface against it.
+This builds your source tree and indexes it into elasticsearch. You can then
+run ``dxr serve -a`` to spin up the web interface against it.
 
 .. note::
     Between builds, do a ``mach clobber`` to make sure you build everything
