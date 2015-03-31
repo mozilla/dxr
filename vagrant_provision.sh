@@ -10,7 +10,7 @@ set -x
 # Elasticsearch isn't in Debian proper yet, so we get it from
 # elasticsearch.org's repo.
 wget -qO - http://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -
-echo 'deb http://packages.elasticsearch.org/elasticsearch/1.1/debian stable main' > /etc/apt/sources.list.d/elasticsearch.list
+echo 'deb http://packages.elasticsearch.org/elasticsearch/1.4/debian stable main' > /etc/apt/sources.list.d/elasticsearch.list
 
 apt-get update
 # clean out redundant packages from vagrant base image
@@ -108,14 +108,16 @@ update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/cl
 apt-get install -y openjdk-7-jdk elasticsearch
 # Make it keep to itself, rather than forming a cluster with everything on the
 # subnet:
-sed -i 's/# \(discovery\.zen\.ping\.multicast\.enabled: false\)/\1/' /etc/elasticsearch/elasticsearch.yml
-sed -i 's/# network\.bind_host: 192\.168\.0\.1/network.bind_host: 127.0.0.1/' /etc/elasticsearch/elasticsearch.yml
+sed -i 's/#\(discovery\.zen\.ping\.multicast\.enabled: false\)/\1/' /etc/elasticsearch/elasticsearch.yml
+sed -i 's/#network\.bind_host: 192\.168\.0\.1/network.bind_host: 127.0.0.1/' /etc/elasticsearch/elasticsearch.yml
 # Cut RAM so it doesn't take up the whole VM. This should be MUCH bigger for
 # production.
 sed -i 's/#ES_HEAP_SIZE=2g/ES_HEAP_SIZE=128m/' /etc/init.d/elasticsearch
 # And don't swap:
-sed -i 's/# \(bootstrap\.mlockall: true\)/\1/' /etc/elasticsearch/elasticsearch.yml
+sed -i 's/#\(bootstrap\.mlockall: true\)/\1/' /etc/elasticsearch/elasticsearch.yml
+# And let us use JS in request payloads:
+grep 'script.disable_dynamic: false' /etc/elasticsearch/elasticsearch.yml > /dev/null || echo 'script.disable_dynamic: false' >> /etc/elasticsearch/elasticsearch.yml
 # Come up on startup:
 update-rc.d elasticsearch defaults 95 10
-[ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-lang-javascript/2.1.0
+[ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-lang-javascript/2.4.1
 /etc/init.d/elasticsearch start

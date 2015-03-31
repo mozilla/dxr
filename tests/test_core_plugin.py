@@ -56,7 +56,7 @@ class PathFilterTests(TestCase):
                     {
                         'script': {
                             'lang': 'js',
-                            'script': '(new RegExp(pattern, flags)).test(doc["path"].value)',
+                            'script': '(new RegExp(pattern, flags)).test(doc["path"][0])',
                             'params': {
                                 'pattern': r'.*hi.*hork.*\.cp.',
                                 'flags': 'i'
@@ -92,7 +92,7 @@ class PathFilterTests(TestCase):
                     {
                         'script': {
                             'lang': 'js',
-                            'script': '(new RegExp(pattern, flags)).test(doc["path"].value)',
+                            'script': '(new RegExp(pattern, flags)).test(doc["path"][0])',
                             'params': {
                                 'pattern': r'fooba[rz]',
                                 'flags': ''

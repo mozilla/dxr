@@ -639,7 +639,7 @@ def es_regex_filter(parsed_regex, raw_field, is_case_sensitive):
                     'script': {
                         'lang': 'js',
                         # test() tests for containment, not matching:
-                        'script': '(new RegExp(pattern, flags)).test(doc["%s"].value)' % raw_field,
+                        'script': '(new RegExp(pattern, flags)).test(doc["%s"][0])' % raw_field,
                         'params': {
                             'pattern': js_regex,
                             'flags': '' if is_case_sensitive else 'i'
