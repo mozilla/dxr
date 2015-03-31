@@ -32,7 +32,7 @@ from dxr.lines import es_lines, finished_tags
 from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line, TEMPLATE_DIR)
+                       append_update_by_line, append_by_line)
 
 
 def full_traceback(callable, *args, **kwargs):

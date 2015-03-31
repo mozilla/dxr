@@ -16,12 +16,11 @@ from flask import url_for
 from dxr.exceptions import CommandFailure
 
 
-TEMPLATE_DIR = 'static/templates'
+DXR_BLUEPRINT = 'dxr_blueprint'
 
 
 def search_url(tree, query):
     """Get the search url for a query."""
-    from dxr.app import DXR_BLUEPRINT
     return url_for(DXR_BLUEPRINT + '.search', tree=tree.name, q=query)
 
 

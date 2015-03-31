@@ -26,14 +26,13 @@ from dxr.lines import html_line
 from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
-from dxr.utils import non_negative_int, TEMPLATE_DIR, decode_es_datetime
+from dxr.utils import non_negative_int, decode_es_datetime, DXR_BLUEPRINT
 
 
 # Look in the 'dxr' package for static files, etc.:
-DXR_BLUEPRINT = 'dxr_blueprint'
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           'dxr',
-                          template_folder=TEMPLATE_DIR,
+                          template_folder='static/templates',
                           # static_folder seems to register a "static" route
                           # with the blueprint so the url_prefix (set later)
                           # takes effect for static files when found through
