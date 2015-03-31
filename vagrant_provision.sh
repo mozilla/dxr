@@ -103,6 +103,8 @@ apt-get install -y git llvm-3.5 libclang-3.5-dev clang-3.5 pkg-config
 update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
 # There is no clang++ until we do this:
 update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
+# And we might as well make a clang link so we can compile mozilla-central:
+update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
 
 # Elasticsearch:
 apt-get install -y openjdk-7-jdk elasticsearch
