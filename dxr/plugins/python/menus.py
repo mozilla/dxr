@@ -6,10 +6,10 @@ def class_menu(tree, qualname):
     return [
         {'html': 'Find subclasses',
          'title': 'Find subclasses of this class',
-         'href': search_url(tree, '+derived:' + qualname),
+         'href': search_url(tree.name, '+derived:' + qualname),
          'icon': 'type'},
         {'html': 'Find base classes',
          'title': 'Find base classes of this class',
-         'href': search_url(tree, '+bases:' + qualname),
+         'href': search_url(tree.name, '+bases:' + qualname),
          'icon': 'type'},
     ]

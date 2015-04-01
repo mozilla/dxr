@@ -9,10 +9,12 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_NEEDLE, with_start_and_end)
+from dxr.menus import definition_menu
 from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import class_menu
-from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
-                                      convert_node_to_name, path_to_module)
+from dxr.plugins.python.utils import (ClassFunctionVisitor,
+                                      convert_node_to_name, path_to_module,
+                                      QualNameVisitor)
 
 
 mappings = {
@@ -63,13 +65,14 @@ class TreeToIndex(TreeToIndexBase):
                                tree_analysis=self.tree_analysis)
 
 
-class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
-    """Node visitor that walks through the nodes in an abstract syntax
+class IndexingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
+    """NodeVisitor that walks through the nodes in an abstract syntax
     tree and finds interesting things to index.
 
     """
 
     def __init__(self, file_to_index, tree_analysis):
+        self.module_path = file_to_index.module_path  # For QualNameVisitor
         super(IndexingNodeVisitor, self).__init__()
 
         self.file_to_index = file_to_index
@@ -93,33 +96,42 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
             self.yield_needle('py_called_by', node.name, call_start, call_end)
 
     def visit_Call(self, node):
-        # Save this call if we're currently tracking function calls.
-        if self.function_call_stack:
-            call_needles = self.function_call_stack[-1]
-            name = convert_node_to_name(node.func)
-            if name:
-                start, end = self.file_to_index.get_node_start_end(node)
-                call_needles.append((name, start, end))
+        start, end = self.file_to_index.get_node_start_end(node)
+        function_name = convert_node_to_name(node.func)
+
+        if function_name:
+            # Save this call if we're currently tracking function calls.
+            if self.function_call_stack:
+                call_needles = self.function_call_stack[-1]
+                call_needles.append((function_name, start, end))
+
+            # Show menu for jumping to the definition of this function.
+            qualname = self.module_path + '.' + function_name
+            function_def = self.tree_analysis.get_definition(qualname)
+            if function_def:
+                menu = definition_menu(self.file_to_index.tree,
+                                       function_def.path, function_def.line)
+                self.yield_ref(start, end, menu)
 
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
+        super(IndexingNodeVisitor, self).visit_ClassDef(node)
+
         # Index the class itself for the type: filter.
         start, end = self.file_to_index.get_node_start_end(node)
         self.yield_needle('py_type', node.name, start, end)
 
         # Index the class hierarchy for classes for the derived: and
         # bases: filters.
-        class_name = self.get_class_name(node)
-
-        bases = self.tree_analysis.get_base_classes(class_name)
+        bases = self.tree_analysis.get_base_classes(node.qualname)
         for qualname in bases:
             name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_derived',
                               name=name, qualname=qualname,
                               start=start, end=end)
 
-        derived_classes = self.tree_analysis.get_derived_classes(class_name)
+        derived_classes = self.tree_analysis.get_derived_classes(node.qualname)
         for qualname in derived_classes:
             name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_bases',
@@ -128,13 +140,11 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
         # Show a menu when hovering over this class.
         self.yield_ref(start, end,
-                       class_menu(self.file_to_index.tree, class_name))
+                       class_menu(self.file_to_index.tree, node.qualname))
 
-        super(IndexingNodeVisitor, self).visit_ClassDef(node)
 
     def visit_ClassFunction(self, class_node, function_node):
-        class_name = self.get_class_name(class_node)
-        function_qualname = class_name + '.' + function_node.name
+        function_qualname = class_node.qualname + '.' + function_node.name
         start, end = self.file_to_index.get_node_start_end(function_node)
 
         # Index this function as being overridden by other functions for
@@ -152,9 +162,6 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
             self.yield_needle(needle_type='py_overrides',
                               name=name, qualname=qualname,
                               start=start, end=end)
-
-    def get_class_name(self, class_node):
-        return self.file_to_index.module_name + '.' + class_node.name
 
     def yield_needle(self, *args, **kwargs):
         needle = line_needle(*args, **kwargs)
@@ -178,7 +185,7 @@ class FileToIndex(FileToIndexBase):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
         self.tree_analysis = tree_analysis
-        self.module_name = path_to_module(tree_analysis.python_path, self.path)
+        self.module_path = path_to_module(tree_analysis.python_path, self.path)
 
         self._visitor = None
 

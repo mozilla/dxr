@@ -21,7 +21,15 @@ DXR_BLUEPRINT = 'dxr_blueprint'
 
 def search_url(tree, query):
     """Get the search url for a query."""
-    return url_for(DXR_BLUEPRINT + '.search', tree=tree.name, q=query)
+    return url_for(DXR_BLUEPRINT + '.search', tree=tree, q=query)
+
+
+def browse_url(tree, path, line=None):
+    """Get the URL for browsing the file at the given path."""
+    kwargs = {'tree': tree, 'path': path}
+    if line is not None:
+        kwargs['_anchor'] = line
+    return url_for(DXR_BLUEPRINT + '.browse', **kwargs)
 
 
 def open_log(folder, name, use_stdout=False):

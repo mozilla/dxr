@@ -9,9 +9,10 @@ from collections import defaultdict, namedtuple
 from warnings import warn
 
 from dxr.build import file_contents
-from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
+from dxr.plugins.python.utils import (ClassFunctionVisitor,
                                       convert_node_to_name, package_for_module,
-                                      path_to_module, relative_module_path)
+                                      path_to_module, QualNameVisitor,
+                                      relative_module_path)
 
 
 class TreeAnalysis(object):
@@ -124,8 +125,12 @@ class TreeAnalysis(object):
         """Defer name normalization to the definition tree."""
         return self.definition_tree.normalize_name(absolute_name)
 
+    def get_definition(self, absolute_name):
+        """Defer definitions to the definition tree."""
+        return self.definition_tree.get(absolute_name)
 
-class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
+
+class AnalyzingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
     """Node visitor that analyzes code for data we need prior to
     indexing, including:
 
@@ -135,28 +140,36 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
     """
     def __init__(self, path, tree_analysis):
+        # Set before calling super().__init__ for QualNameVisitor.
+        self.module_path = path_to_module(tree_analysis.python_path, path)
         super(AnalyzingNodeVisitor, self).__init__()
 
         self.path = relative_module_path(tree_analysis.python_path, path)
-        self.module_path = path_to_module(tree_analysis.python_path, path)
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
         super(AnalyzingNodeVisitor, self).visit_ClassDef(node)
 
         # Save the base classes of any class we find.
-        class_path = self.module_path + '.' + node.name
         bases = []
         for base in node.bases:
             base_name = convert_node_to_name(base)
             if base_name:
                 bases.append(self.module_path + '.' + base_name)
-        self.tree_analysis.base_classes[class_path] = bases
+        self.tree_analysis.base_classes[node.qualname] = bases
 
         # Store the definition of this class.
-        class_def = Definition(absolute_name=class_path, line=node.lineno,
+        class_def = Definition(absolute_name=node.qualname, line=node.lineno,
                                col=node.col_offset, path=self.path)
         self.tree_analysis.definition_tree.add(class_def)
+
+    def visit_FunctionDef(self, node):
+        super(AnalyzingNodeVisitor, self).visit_FunctionDef(node)
+
+        # Store definition of this function.
+        function_def = Definition(absolute_name=node.qualname, line=node.lineno,
+                                  col=node.col_offset, path=self.path)
+        self.tree_analysis.definition_tree.add(function_def)
 
     def visit_ClassFunction(self, class_node, function_node):
         """Save any member functions we find on a class."""
