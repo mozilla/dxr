@@ -10,7 +10,8 @@ if [ ! "$VBGUEST" ]; then
 fi;
 
 /opt/vagrant/bin/vagrant up
-/opt/vagrant/bin/vagrant ssh -c 'cd /home/vagrant/dxr && make clean && make test'
+/opt/vagrant/bin/vagrant ssh -c 'sudo adduser vagrant docker'
+/opt/vagrant/bin/vagrant ssh -c '/bin/bash /home/vagrant/dxr/docker-build.sh'
 RESULT=$?
 /opt/vagrant/bin/vagrant destroy --force || exit $?
 exit $RESULT
