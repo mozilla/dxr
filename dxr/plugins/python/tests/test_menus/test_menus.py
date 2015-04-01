@@ -39,3 +39,32 @@ class MenuTests(DxrInstanceTestCase):
             {'html': 'Jump to definition',
              'href': browse('functions.py', 1)},
         )
+
+    def test_definition_menu_function(self):
+        """Make sure the definition menu works for calls within a
+        function.
+
+        """
+        menu_on(self.source_page('main.py'), 'foo_func',
+            {'html': 'Jump to definition',
+             'href': browse('functions.py', 1)},
+        )
+
+    def test_definition_menu_method(self):
+        """Make sure the definition menu works for calls within a
+        method.
+
+        """
+        menu_on(self.source_page('main.py'), 'foo_method',
+            {'html': 'Jump to definition',
+             'href': browse('functions.py', 1)},
+        )
+
+    def test_definition_menu_class(self):
+        """Make sure the definition menu works for class construction.
+
+        """
+        menu_on(self.source_page('main.py'), 'BarClass',
+            {'html': 'Jump to definition',
+             'href': browse('classes.py', 1)},
+        )
