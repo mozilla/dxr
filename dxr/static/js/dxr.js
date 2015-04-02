@@ -140,7 +140,7 @@ $(function() {
         requestsInFlight = 0,  // Number of search requests in flight, so we know whether to hide the activity indicator
         displayedRequestNumber = 0,
         didScroll = false,
-        resultCount = 0,
+        resultsLineCount = 0,
         dataOffset = 0,
         previousDataLimit = 0,
         defaultDataLimit = 100;
@@ -235,11 +235,11 @@ $(function() {
             didScroll = false;
 
             // If the previousDataLimit is 0 we are on the search.html page and doQuery
-            // has not yet been called, get the previousDataLimit and resultCount from
-            // the page constants.
+            // has not yet been called, get the previousDataLimit and resultsLineCount
+            // from the page constants.
             if (previousDataLimit === 0) {
                 previousDataLimit = stateConstants.data('limit');
-                resultCount = stateConstants.data('result-count');
+                resultsLineCount = stateConstants.data('results-line-count');
             }
 
             var maxScrollY = getMaxScrollY(),
@@ -247,7 +247,7 @@ $(function() {
                 threshold = window.innerHeight + 500;
 
             // Has the user reached the scrolling threshold and are there more results?
-            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultCount) {
+            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultsLineCount) {
                 clearInterval(scrollPoll);
 
                 // If a user hits enter on the landing page and there was no direct result,
@@ -264,7 +264,7 @@ $(function() {
                         var state = {};
 
                         // Update result count
-                        resultCount = data.results.length;
+                        resultsLineCount = countLines(data.results);
                         // Use the results.html partial so we do not inject the entire container again.
                         populateResults('partial/results.html', data, true);
                         // update URL with new offset
@@ -279,6 +279,18 @@ $(function() {
                 });
             }
         }
+    }
+
+    /**
+     * Given a list of results from the search API, return the total number of
+     * lines across all results.
+     */
+    function countLines(results) {
+        var total = 0;
+        for (var k = 0; k < results.length; k++) {
+            total += results[k].lines.length;
+        }
+        return total;
     }
 
     /**
@@ -330,7 +342,7 @@ $(function() {
         } else {
 
             var results = data.results;
-            resultCount = results.length;
+            resultsLineCount = countLines(results);
 
             for (var result in results) {
                 var icon = results[result].icon;

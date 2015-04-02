@@ -154,12 +154,15 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     try:
         results = list(query.results(offset, limit))
+        results_line_count = sum(len(r[2]) for r in results)
     except BadTerm as exc:
         return render_template('error.html',
                                error_html=exc.reason,
                                **template_vars), 400
 
-    return render_template('search.html', results=results, **template_vars)
+    return render_template('search.html', results=results,
+                           results_line_count=results_line_count,
+                           **template_vars)
 
 
 def _tree_tuples(query_text, is_case_sensitive):
