@@ -575,6 +575,7 @@ def index_files(tree, tree_indexers, index, pool, es):
                                      tree.ignore_paths,
                                      tree.ignore_filenames))
 
+    print ' - Indexing folders.'
     index_folders(tree, index, es)
 
     if not tree.config.workers:
