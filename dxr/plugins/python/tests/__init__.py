@@ -10,7 +10,7 @@ class PythonSingleFileTestCase(SingleFileTestCase):
         config = super(PythonSingleFileTestCase, cls).config_input(config_dir_path)
 
         config['DXR']['enabled_plugins'] = 'pygmentize python'
-        config['code']['build_command'] = '/bin/true $jobs'
+        config['code']['build_command'] = ''
         config['code']['python'] = {
             'python_path': '{0}/code'.format(config_dir_path)
         }
