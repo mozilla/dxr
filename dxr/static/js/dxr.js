@@ -266,7 +266,7 @@ $(function() {
                         // Update result count
                         resultsLineCount = countLines(data.results);
                         // Use the results.html partial so we do not inject the entire container again.
-                        populateResults('partial/results.html', data, true);
+                        populateResults(data, true);
                         // update URL with new offset
                         setHistoryState(dataOffset);
                         // start the scrolling poller
@@ -320,11 +320,10 @@ $(function() {
 
     /**
      * Populates the results template.
-     * @param {object} tmpl - The template to use to render results.
      * @param {object} data - The data returned from the query
      * @param {bool} append - Should the content be appended or overwrite
      */
-    function populateResults(tmpl, data, append) {
+    function populateResults(data, append) {
         data.www_root = dxr.wwwRoot;
         data.tree = dxr.tree;
         data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
@@ -337,10 +336,10 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
-            data.user_message = contentContainer.data('no-results');
-            contentContainer.empty().append(nunjucks.render(tmpl, data));
+            contentContainer
+                .empty()
+                .append(nunjucks.render('partial/results_container.html', data));
         } else {
-
             var results = data.results;
             resultsLineCount = countLines(results);
 
@@ -351,8 +350,33 @@ $(function() {
                 results[result].pathLine = resultHead[1];
             }
 
-            var container = append ? contentContainer : contentContainer.empty();
-            container.append(nunjucks.render(tmpl, data));
+            if (!append) {
+                contentContainer
+                    .empty()
+                    .append(nunjucks.render('partial/results_container.html', data));
+            } else {
+                var resultsList = contentContainer.find('.results');
+
+                // If the first result is already on the page (meaning we showed
+                // some of its lines but just fetched more), add new lines to
+                // it instead of adding a new result section.
+                var firstResult = data.results[0];
+                var domFirstResult = resultsList.find(
+                    '.result[data-path="' + firstResult.path + '"]');
+                if (domFirstResult.length) {
+                    data.results = data.results.splice(1);
+                    domFirstResult.append(nunjucks.render('partial/result_lines.html', {
+                        www_root: dxr.wwwRoot,
+                        tree: dxr.tree,
+                        result: firstResult,
+                    }));
+                }
+
+                // Don't render if there was only the first result and it was rendered.
+                if (data.results.length) {
+                    resultsList.append(nunjucks.render('partial/results.html', data));
+                }
+            }
         }
 
         if (!append) {
@@ -384,7 +408,7 @@ $(function() {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
-            limit = previousDataLimit = parseInt((window.innerHeight / lineHeight) + 25);
+            limit = Math.floor((window.innerHeight / lineHeight) + 25);
 
         if (query.length === 0) {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
@@ -397,13 +421,17 @@ $(function() {
         hideBubble();
         nextRequestNumber += 1;
         oneMoreRequest();
-        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
+        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0), function(data) {
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
-                populateResults('results_container.html', data, false);
+                populateResults(data, false);
                 historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
+
+            previousDataLimit = limit;
+            dataOffset = 0;
+
             oneFewerRequest();
         })
         .fail(function(jqxhr) {
