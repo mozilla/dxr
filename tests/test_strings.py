@@ -1,6 +1,7 @@
 """Tests for string searches"""
 
-from nose.tools import eq_
+from nose import SkipTest
+from nose.tools import eq_, ok_
 
 from dxr.query import highlight
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
@@ -71,3 +72,36 @@ class RegexpTests(SingleFileTestCase):
             [('// The paddle-<b>shaped</b> tail is a dead giveaway.', 2),
              ("// We know it's you, <b>Shahad</b>.", 3)],
             is_case_sensitive=False)
+
+
+
+class LongLineTests(SingleFileTestCase):
+    # Bigger than the ES term length limit: an "immense term":
+    source = '1234' * (32768 / 4) + 'EOL'
+
+    @classmethod
+    def config_input(cls, config_dir_path):
+        config = super(LongLineTests, cls).config_input(config_dir_path)
+
+        config['DXR']['enabled_plugins'] = ''
+        config['code']['build_command'] = ''
+        config['code']['clean_command'] = ''
+
+        return config
+
+    def test_immense_term(self):
+        """Test that long lines index without crashing and can be searched all
+        the way to their ends.
+
+        """
+        results = self.search_results('regexp:4?EOL')
+
+        raise SkipTest("At the moment, this is as far as we can get: not crashing.")
+        # It seems that as soon as we mention _source in a script filter, it
+        # loads the _source and takes 5x longer, even if the mention is in an
+        # untaken branch of an if. Maybe try another language. Or maybe it's
+        # an ES thing.
+
+        # Should return that one line:
+        eq_(len(results), 1)
+        ok_('<b>4EOL</b>' in results[0]['lines'][0]['line'])

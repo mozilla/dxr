@@ -127,7 +127,17 @@ mappings = {
             # pulling just plain content, to the point of crashing.
             'content': {
                 'type': 'string',
-                'index': 'not_analyzed',  # support JS source fetching
+                'index': 'not_analyzed',  # Support fast fetching from JS.
+
+                # ES supports terms of only length 32766 (by UTF-8 encoded
+                # length). The limit here (in Unicode points, in an
+                # unfortunate violation of consistency) keeps us under that,
+                # even if every point encodes to a 4-byte sequence. In
+                # real-world terms, this get past all the Chinese in zh.txt in
+                # mozilla-central.
+                'ignore_above': 32766 / 4,
+
+                # These get populated even if the ignore_above kicks in:
                 'fields': {
                     'trigrams_lower': {
                         'type': 'string',
