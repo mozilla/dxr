@@ -35,7 +35,7 @@ from os import O_CREAT, O_EXCL, remove
 from os.path import join, exists, realpath
 from pipes import quote
 from shutil import rmtree
-from subprocess import check_output
+from subprocess import CalledProcessError, check_output
 from tempfile import mkdtemp, gettempdir
 
 from click import command, echo, option, Path
@@ -253,8 +253,8 @@ class Deployment(object):
     def delete_old(self, old_build_path):
         """Delete all indices and catalog entries of old format."""
         try:
-            rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
-        except OSError as exc:
+            run('rm -rf {path}', path=old_build_path)
+        except CalledProcessError as exc:
             echo('Failed to delete old build dir: %s' % exc, err=True)
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:
