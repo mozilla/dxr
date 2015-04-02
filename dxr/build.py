@@ -229,7 +229,7 @@ def index_tree(tree, es, verbose=False):
                     'settings': {
                         'index': {
                             'number_of_shards': 1,  # Fewer should be faster, assuming enough RAM.
-                            'number_of_replicas': 1  # fairly arbitrary
+                            'number_of_replicas': 0  # for speed
                         },
                         # Default analyzers and mappings are in the core plugin.
                         'analysis': reduce(
@@ -269,8 +269,18 @@ def index_tree(tree, es, verbose=False):
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool, es)
 
-            # Don't wait for the (long) refresh interval:
-            es.refresh(index=index)
+            # Don't wait for the (long) refresh interval. We can't just call
+            # refresh(), because it doesn't return within 60s.
+            es.update_settings(
+                index,
+                {
+                    'settings': {
+                        'index': {
+                            'number_of_replicas': 1  # fairly arbitrary
+                        },
+                        'refresh_interval': '1s'
+                    }
+                })
         except Exception as exc:
             # If anything went wrong, delete the index, because we're not
             # going to have a way of returning its name if we raise an
