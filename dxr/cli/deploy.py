@@ -38,7 +38,7 @@ from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
 
-from click import command, option, Path
+from click import command, echo, option, Path
 from flask import current_app
 import requests
 
@@ -252,7 +252,10 @@ class Deployment(object):
 
     def delete_old(self, old_build_path):
         """Delete all indices and catalog entries of old format."""
-        rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+        try:
+            rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+        except OSError as exc:
+            echo('Failed to delete old build dir: %s' % exc, err=True)
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:
             for tree in self._trees_of_version(self._format_changed_from):
