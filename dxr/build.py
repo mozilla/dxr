@@ -1,7 +1,7 @@
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
-from itertools import chain, izip
+from itertools import chain, izip, repeat
 from operator import attrgetter
 import os
 from os import stat, mkdir, makedirs
@@ -20,7 +20,8 @@ import jinja2
 from more_itertools import chunked
 from ordereddict import OrderedDict
 from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
-                             IndexAlreadyExistsError, bulk_chunks)
+                             IndexAlreadyExistsError, bulk_chunks, Timeout,
+                             ConnectionError)
 
 import dxr
 from dxr.app import make_app
@@ -269,16 +270,24 @@ def index_tree(tree, es, verbose=False):
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool, es)
 
-            # Don't wait for the (long) refresh interval. We can't just call
-            # refresh(), because it doesn't return within 60s.
+            # refresh() times out in prod. Wait until it doesn't. That
+            # probably means things are ready to rock again.
+            with progressbar(repeat(None), label='Refeshing index') as bar:
+                for _ in bar:
+                    try:
+                        es.refresh(index=index)
+                    except (ConnectionError, Timeout) as exc:
+                        pass
+                    else:
+                        break
+
             es.update_settings(
                 index,
                 {
                     'settings': {
                         'index': {
                             'number_of_replicas': 1  # fairly arbitrary
-                        },
-                        'refresh_interval': '1s'
+                        }
                     }
                 })
         except Exception as exc:
