@@ -35,8 +35,9 @@ from os import O_CREAT, O_EXCL, remove
 from os.path import join, exists, realpath
 from pipes import quote
 from shutil import rmtree
-from subprocess import CalledProcessError, check_output
+from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
+from time import sleep
 
 from click import command, echo, option, Path
 from flask import current_app
@@ -252,10 +253,24 @@ class Deployment(object):
 
     def delete_old(self, old_build_path):
         """Delete all indices and catalog entries of old format."""
-        try:
-            run('rm -rf {path}', path=old_build_path)
-        except CalledProcessError as exc:
-            echo('Failed to delete old build dir: %s' % exc, err=True)
+
+        # A sleep loop around deleting the old build dir. It can take a few
+        # seconds for the web servers to restart and relinquish their holds on
+        # the shared libs in the old virtualenv. NFS won't let us delete the
+        # libs until that happens, we suspect.
+        for duration in [1, 5, 10, 30]:
+            try:
+                rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+            except OSError as exc:
+                sleep(duration)
+            else:
+                break
+        else:
+            echo("Failed to delete old build dir (%s). Perhaps the web app "
+                 "hasn't restarted yet and surrendered its grip on the shared "
+                 "libs built in the old virtualenv." % exc,
+                 err=True)
+
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:
             for tree in self._trees_of_version(self._format_changed_from):
