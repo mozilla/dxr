@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from click import progressbar
 from flask import current_app
 from funcy import merge, chunks, first, suppress
 import jinja2
@@ -176,7 +177,7 @@ def index_tree(tree, es, verbose=False):
             futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
                        for ti in tree_indexers]
             return [future.result() for future in
-                    show_progress(futures, message='Running %s.' % method_name)]
+                    show_progress(futures, 'Running %s' % method_name)]
 
     def delete_index_quietly(es, index):
         """Delete an index, and ignore any error.
@@ -192,7 +193,7 @@ def index_tree(tree, es, verbose=False):
         except Exception:
             pass
 
-    print "Processing tree '%s'." % tree.name
+    print "Starting tree '%s'." % tree.name
 
     # Note starting time
     start_time = datetime.now()
@@ -214,7 +215,7 @@ def index_tree(tree, es, verbose=False):
                      tree.enabled_plugins if p.tree_to_index]
 
     if skip_indexing:
-        print " - Skipping indexing (due to 'index' in 'skip_stages')"
+        print "Skipping indexing (due to 'index' in 'skip_stages')"
     else:
         # Make a new index with a semi-random name, having the tree name
         # and format version in it. TODO: The prefix should come out of
@@ -263,7 +264,7 @@ def index_tree(tree, es, verbose=False):
                 # Set up env vars, and build:
                 build_tree(tree, tree_indexers, verbose)
             else:
-                print " - Skipping rebuild (due to 'build' in 'skip_stages')"
+                print "Skipping rebuild (due to 'build' in 'skip_stages')"
 
             # Post-build, and index files:
             with new_pool() as pool:
@@ -297,21 +298,21 @@ def index_tree(tree, es, verbose=False):
             delete_index_quietly(es, index)
             raise
 
-    print " - Finished processing '%s' in %s." % (tree.name,
-                                                  datetime.now() - start_time)
+    print "Finished '%s' in %s." % (tree.name, datetime.now() - start_time)
     if not skip_cleanup:
         # By default, we remove the temp files, because they're huge.
         rmtree(tree.temp_folder)
     return index
 
 
-def show_progress(futures, message='Doing stuff.'):
+def show_progress(futures, message):
     """Show progress and yield results as futures complete."""
-    print message
-    num_jobs = len(futures)
-    for num_done, future in enumerate(as_completed(futures), 1):
-        print num_done, 'of', num_jobs, 'jobs done.'
-        yield future
+    with progressbar(as_completed(futures),
+                     length=len(futures),
+                     show_eta=False,  # never even close
+                     label=message) as bar:
+        for future in bar:
+            yield future
 
 
 def save_scribbles(obj, method):
@@ -571,18 +572,20 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
-    for folder in unignored(
-            tree.source_folder,
-            tree.ignore_paths,
-            tree.ignore_filenames,
-            want_folders=True):
-        rel_path = relpath(folder, tree.source_folder)
-        superfolder_path, folder_name = split(rel_path)
-        es.index(index, FILE, {
-            'path': [rel_path],  # array for consistency with non-folder file docs
-            'folder': superfolder_path,
-            'name': folder_name,
-            'is_folder': True})
+    with progressbar(unignored(tree.source_folder,
+                               tree.ignore_paths,
+                               tree.ignore_filenames,
+                               want_folders=True),
+                     show_eta=False,  # never even close
+                     label='Indexing folders') as folders:
+        for folder in folders:
+            rel_path = relpath(folder, tree.source_folder)
+            superfolder_path, folder_name = split(rel_path)
+            es.index(index, FILE, {
+                'path': [rel_path],  # array for consistency with non-folder file docs
+                'folder': superfolder_path,
+                'name': folder_name,
+                'is_folder': True})
 
 
 def index_files(tree, tree_indexers, index, pool, es):
@@ -594,7 +597,6 @@ def index_files(tree, tree_indexers, index, pool, es):
                                      tree.ignore_paths,
                                      tree.ignore_filenames))
 
-    print ' - Indexing folders.'
     index_folders(tree, index, es)
 
     if not tree.config.workers:
@@ -613,7 +615,7 @@ def index_files(tree, tree_indexers, index, pool, es):
                                worker_number=worker_number,
                                swallow_exc=True)
                    for worker_number, paths in enumerate(path_chunks(tree), 1)]
-        for future in show_progress(futures, message=' - Indexing files.'):
+        for future in show_progress(futures, 'Indexing files'):
             result = future.result()
             if result:
                 formatted_tb, type, value, path = result
@@ -643,7 +645,7 @@ def build_tree(tree, tree_indexers, verbose):
 
     # Call make or whatever:
     with open_log(tree.log_folder, 'build.log', verbose) as log:
-        print "Building the '%s' tree" % tree.name
+        print 'Building tree'
         workers = max(tree.config.workers, 1)
         r = subprocess.call(
             tree.build_command.replace('$jobs', str(workers))
