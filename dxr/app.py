@@ -290,6 +290,7 @@ def _browse_file(tree, path, config):
         frozen['es_alias'],
         LINE,
         filter={'path': path},
+        sort=['number'],
         size=1000000,
         include=['content', 'tags', 'annotations'])
 
