@@ -264,7 +264,7 @@ $(function() {
                         var state = {};
 
                         // Update result count
-                        resultCount = data.results.length;
+                        resultCount = data.results[0].lines.length;
                         // Use the results.html partial so we do not inject the entire container again.
                         populateResults('partial/results.html', data, true);
                         // update URL with new offset
@@ -330,7 +330,7 @@ $(function() {
         } else {
 
             var results = data.results;
-            resultCount = results.length;
+            resultCount = results[0].lines.length;
 
             for (var result in results) {
                 var icon = results[result].icon;
