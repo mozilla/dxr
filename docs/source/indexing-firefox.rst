@@ -47,8 +47,9 @@ number on your physical host.
 Configure The Source Tree
 =========================
 
-1. Put moz-central checkout in :file:`src`. You can use ``hg clone`` as
-   documented at https://developer.mozilla.org/en-US/docs/Simple_Firefox_build.
+1. Put moz-central checkout in a folder somewhere. Let's call it :file:`src`.
+   You can use ``hg clone`` as documented at
+   https://developer.mozilla.org/en-US/docs/Simple_Firefox_build.
 
 2. Have the compiler include the debug code so it can be analyzed, and enable
    standard C++ compatibility so we can build with clang. Put this in
@@ -72,14 +73,6 @@ Configure The Source Tree
     source_folder=/home/vagrant/src/mozilla-central
     object_folder=/home/vagrant/src/mozilla-central/obj-x86_64-unknown-linux-gnu
     build_command=cd $source_folder && make -f client.mk build MOZ_OBJDIR=$object_folder MOZ_MAKE_FLAGS="-s -j$jobs"
-
-5. Work around a build bug. This will probably not be necessary for very long.
-
-   1. ``apt-get install libvpx-dev``
-   2. Add ``ac_add_options --with-system-libvpx`` to your :file:`.mozconfig`.
-   3. Maybe apply the ``AC_DEFINE(MOZ_NATIVE_LIBVPX)`` part from the patch
-      linked from https://bugzilla.mozilla.org/show_bug.cgi?id=982693#c6. It
-      may not be necessary.
 
 Bump Up Elasticsearch's RAM
 ===========================
