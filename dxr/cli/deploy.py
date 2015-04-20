@@ -256,8 +256,8 @@ class Deployment(object):
 
         # A sleep loop around deleting the old build dir. It can take a few
         # seconds for the web servers to restart and relinquish their holds on
-        # the shared libs in the old virtualenv. NFS won't let us delete the
-        # libs until that happens, we suspect.
+        # the shared libs in the old virtualenv. Until that happens, NFS
+        # creates .nfs* files in the dir that get in the way of deletion.
         for duration in [1, 5, 10, 30]:
             try:
                 rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
