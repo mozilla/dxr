@@ -266,9 +266,9 @@ class Deployment(object):
             else:
                 break
         else:
-            echo("Failed to delete old build dir (%s). Perhaps the web app "
-                 "hasn't restarted yet and surrendered its grip on the shared "
-                 "libs built in the old virtualenv." % exc,
+            echo("Non-fatal: failed to delete old build dir (%s). Perhaps the "
+                 "web app hasn't restarted yet and surrendered its grip on "
+                 "the shared libs built in the old virtualenv." % exc,
                  err=True)
 
         if self._format_changed_from:
