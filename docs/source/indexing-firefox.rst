@@ -72,7 +72,7 @@ Configure The Source Tree
     [mozilla-central]
     source_folder=/home/vagrant/src/mozilla-central
     object_folder=/home/vagrant/src/mozilla-central/obj-x86_64-unknown-linux-gnu
-    build_command=cd $source_folder && make -f client.mk build MOZ_OBJDIR=$object_folder MOZ_MAKE_FLAGS="-s -j$jobs"
+    build_command=cd $source_folder && ./mach clobber && make -f client.mk build MOZ_OBJDIR=$object_folder MOZ_MAKE_FLAGS="-s -j$jobs"
 
 Bump Up Elasticsearch's RAM
 ===========================
@@ -89,7 +89,3 @@ In the folder where you put ``dxr.config``, run this::
 
 This builds your source tree and indexes it into elasticsearch. You can then
 run ``dxr serve -a`` to spin up the web interface against it.
-
-.. note::
-    Between builds, do a ``mach clobber`` to make sure you build everything
-    over again (and thus don't miss laying down CSVs).
