@@ -15,9 +15,5 @@ if 'RUSTC' not in os.environ:
 class RustTests(DxrInstanceTestCase):
     """Test indexing of Rust projects"""
 
-    def test_smoke(self):
-        """Test the index exists and didn't crash."""
-
-        response = self.client().get('/')
-        eq_(response.status_code, 302)
-        ok_(response.headers['Location'].endswith('/code/source/'))
+    def test_nothing(self):
+        """A null test just to make the setup method run"""

@@ -456,10 +456,11 @@ class TreeToIndex(indexers.TreeToIndex):
         finally:
             f.close()
 
-    """ Sadness. Structs have an id for their definition and an id for their ctor.
-        Sometimes, we get one, sometimes the other. This method fixes up any refs
-        to the latter into refs to the former."""
     def fixup_struct_ids(self):
+        """ Sadness. Structs have an id for their definition and an id for their ctor.
+            Sometimes, we get one, sometimes the other. This method fixes up any refs
+            to the latter into refs to the former."""
+
         type_refs_by_ref = self.data.index('type_refs', 'refid')
         for ctor in self.ctor_ids.keys():
             if ctor in type_refs_by_ref:
@@ -469,12 +470,12 @@ class TreeToIndex(indexers.TreeToIndex):
         self.data.delete_indices()
 
 
-    """ When we have a path like a::b::c, we want to have info for a and a::b.
-        Unfortunately Rust does not give us much info, so we have to
-        construct it ourselves from the module info we have.
-        We have the qualname for the module (e.g, a or a::b) but we do not have
-        the refid. """
     def fixup_sub_mods(self):
+        """ When we have a path like a::b::c, we want to have info for a and a::b.
+            Unfortunately Rust does not give us much info, so we have to
+            construct it ourselves from the module info we have.
+            We have the qualname for the module (e.g, a or a::b) but we do not have
+            the refid. """
         self.fixup_sub_mods_impl('modules', 'module_refs')
         # paths leading up to a static method have a module path, then a type at the end,
         # so we have to fixup the type in the same way as we do modules.
@@ -486,9 +487,9 @@ class TreeToIndex(indexers.TreeToIndex):
     # FIXME - does not seem to work for external crates - refid = 0, crateid = 0
     # they must be in the same module crate as their parent though, and we can cache
     # module name and scope -> crate and always get a hit, so maybe we can win.
-    """ NOTE table_name and table_ref_name should not come from user input, otherwise
-        there is potential for SQL injection attacks. """
     def fixup_sub_mods_impl(self, table_name, table_ref_name):
+        """ NOTE table_name and table_ref_name should not come from user input, otherwise
+            there is potential for SQL injection attacks. """
         # First create refids for module refs whose qualnames match the qualname of
         # the module (i.e., no aliases).
         table_refs = getattr(self.data, table_ref_name)
@@ -656,8 +657,9 @@ class TreeToIndex(indexers.TreeToIndex):
             self.data.module_aliases[id] = args
 
 
-    """ Compute the (non-refexive) transitive closure of a list."""
     def closure(self, input):
+        """ Compute the (non-refexive) transitive closure of a list."""
+
         closure = set(input)
         while True:
             next_set = set([(b,dd) for (b,d) in closure for (bb,dd) in closure if d == bb])
@@ -669,8 +671,8 @@ class TreeToIndex(indexers.TreeToIndex):
             closure = next_set
 
 
-    """ Maps a crate name and a node number to a globally unique id. """
     def find_id(self, crate, node):
+        """ Maps a crate name and a node number to a globally unique id. """
         if node == None:
             return None
 
@@ -687,8 +689,8 @@ class TreeToIndex(indexers.TreeToIndex):
         return self.id_map[(crate, node)][0]
 
 
-    """ Returns True if the refid in the args points to an item in an external crate. """
     def add_external_item(self, args):
+        """ Returns True if the refid in the args points to an item in an external crate. """
         node, crate = args['refid'], args['refidcrate']
         if not node:
             return False
@@ -769,8 +771,8 @@ class TreeToIndex(indexers.TreeToIndex):
         return new_args
 
 
-    """ Shorthand for nodes in the current crate. """
     def find_id_cur(self, node):
+        """ Shorthand for nodes in the current crate. """
         return self.find_id(self.crate_map[0][0], node)
 
     def fixup_qualname(self, datum):
@@ -781,10 +783,11 @@ class TreeToIndex(indexers.TreeToIndex):
 
 # FIXME(#15) all these process_* methods would be better off in TreeToIndex
 
-""" There should only be one of these per crate and it gives info about the current
-    crate.
-    Note that this gets called twice for the same crate line - once per pass. """
 def process_crate(args, tree):
+    """ There should only be one of these per crate and it gives info about the current
+        crate.
+        Note that this gets called twice for the same crate line - once per pass. """
+
     if args['name'] not in tree.local_libs:
         tree.local_libs.append(args['name'])
     args = tree.convert_ids(args)
@@ -794,9 +797,10 @@ def process_crate(args, tree):
     tree.crate_name = args['name']
 
 
-""" These have to happen before anything else in the csv and have to be concluded
-    by 'end_external_crate'. """
 def process_external_crate(args, tree):
+    """ These have to happen before anything else in the csv and have to be concluded
+        by 'end_external_crate'. """
+
     mod_id = next_id()
     name = args['name']
     id = int(args['crate'])

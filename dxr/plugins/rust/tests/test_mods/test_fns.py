@@ -1,7 +1,7 @@
-from dxr.testing import DxrInstanceTestCase
+"""These tests are testing references involving modules, as opposed to modules themselves.
+   All the tests are on funtions, but I believe any other item will be similar."""
 
-# These tests are testing references involving modules, as opposed to modules themselves.
-# All the tests are on funtions, but I believe any other item will be similar
+from dxr.testing import DxrInstanceTestCase
 
 class ModFnTests(DxrInstanceTestCase):
     def test_fn_def(self):

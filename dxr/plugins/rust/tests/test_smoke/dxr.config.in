@@ -15,6 +15,5 @@ build_command=make clean; make -j $jobs
     [[buglink]]
     name = github
     url = https://github.com/mozilla/rust/issues/%s
-    # TODO there needs to be a # at the start, but I have no idea how to make that work
-    regex = ([0-9]+)
+    regex = "#([0-9]+)"
 

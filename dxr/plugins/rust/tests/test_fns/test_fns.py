@@ -9,10 +9,13 @@ class FunctionTests(DxrInstanceTestCase):
                            is_case_sensitive=False)
 
     def test_methods_are_functions_too(self):
+        # Test a method in an inherant impl.
         self.found_line_eq('function:baz', "fn <b>baz</b>(&amp;self) {}", 10)
+        # Test the declaration and definition of a required trait method.
         self.found_lines_eq('function:qux',
                             [('fn <b>qux</b>(&amp;self);', 16),
                              ('fn <b>qux</b>(&amp;self) {}', 23)])
+        # Test a provided trait method.
         self.found_line_eq('function:norf', 'fn <b>norf</b>(&amp;self) {', 17)
 
     def test_multiple_with_same_name(self):

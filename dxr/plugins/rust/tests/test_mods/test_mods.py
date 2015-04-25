@@ -2,8 +2,11 @@ from dxr.testing import DxrInstanceTestCase
 
 class ModTests(DxrInstanceTestCase):
     def test_mod_def(self):
+        # Test top level module.
         self.found_line_eq('module:mod1', "mod <b>mod1</b> {", 3)
+        # Test nested module.
         self.found_line_eq('module:mod111', "pub mod <b>mod111</b> {", 5)
+        # Test module name with multiple definitions.
         self.found_lines_eq('module:mod3',
                             [("pub mod <b>mod3</b> {}", 13),
                              ("pub mod <b>mod3</b> {}", 21)])
@@ -15,6 +18,12 @@ class ModTests(DxrInstanceTestCase):
         self.found_line_eq('+module:test::mod2::mod3', "pub mod <b>mod3</b> {}", 21)
 
     def test_mod_ref(self):
+        # This method tests different kinds of module references. Each name
+        # defines a different kind of module declaration (top-level vs nested,
+        # single def vs multiple defs). We also test different kinds of references:
+        # relative vs absolute paths, references in paths vs references in imports
+        # (use items, specifically single imports, list imports, and glob imports),
+        # reference via alias (pub use and use, with implicit and explicit alias).
         self.found_lines_eq('module-ref:mod1',
                             [('pub use <b>mod1</b>::mod12::bar;', 18),
                              ('::<b>mod1</b>::mod11::mod111::bar();', 25),
@@ -116,5 +125,3 @@ class ModTests(DxrInstanceTestCase):
                             [('use mod1::mod11::<b>mod111</b>;', 30),
                              ('use mod1::mod11::mod111 as <b>moda</b>;', 31)])
 
-
-# TODO qualnames, fun refs
