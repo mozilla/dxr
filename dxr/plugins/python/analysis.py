@@ -52,7 +52,7 @@ class TreeAnalysis(object):
         """
         try:
             syntax_tree = ast.parse(file_contents(path, encoding))
-        except (SyntaxError, TypeError) as error:
+        except (IOError, SyntaxError, TypeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
                  filename=rel_path, error=error))
