@@ -59,8 +59,8 @@ class TreeAnalysis(object):
             self.ignore_paths.add(rel_path)
             return
 
-        module_path = path_to_module(self.python_path, path)
-        visitor = AnalyzingNodeVisitor(module_path, self)
+        abs_module_name = path_to_module(self.python_path, path) # e.g. package.sub.current_file
+        visitor = AnalyzingNodeVisitor(abs_module_name, self)
         visitor.visit(syntax_tree)
 
     def _finish_analysis(self):
@@ -152,27 +152,27 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     - A mapping of class names to the classes they inherit from.
 
     """
-    def __init__(self, module_path, tree_analysis):
+    def __init__(self, abs_module_name, tree_analysis):
         super(AnalyzingNodeVisitor, self).__init__()
 
-        self.module_path = module_path
+        self.abs_module_name = abs_module_name # name of the module we're walking
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
         super(AnalyzingNodeVisitor, self).visit_ClassDef(node)
 
         # Save the base classes of any class we find.
-        class_path = self.module_path + '.' + node.name
+        class_path = self.abs_module_name + '.' + node.name
         bases = []
         for base in node.bases:
             base_name = convert_node_to_name(base)
             if base_name:
-                bases.append(self.module_path + '.' + base_name)
+                bases.append(self.abs_module_name + '.' + base_name)
         self.tree_analysis.base_classes[class_path] = bases
 
     def visit_ClassFunction(self, class_node, function_node):
         """Save any member functions we find on a class."""
-        class_path = self.module_path + '.' + class_node.name
+        class_path = self.abs_module_name + '.' + class_node.name
         self.tree_analysis.class_functions[class_path].append(function_node.name)
 
     def visit_Import(self, node):
@@ -188,18 +188,27 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         was imported and where it actually lives.
 
         """
+
+        # We're processing statements like the following in the file
+        # corresponding to <self.abs_module_name>:
+        #   [from <node.module>] import <alias.name> as <alias.asname>
+        #
+        # Try to find `abs_import_name`, so that the above is equivalent to
+        #   import <abs_import_name> as <local_name>
+        # ...and store the mapping
+        #   (abs_module_name, local_name) -> (abs_import_name)
         for alias in node.names:
             local_name = alias.asname or alias.name
-            absolute_local_name = self.module_path + '.' + local_name
+            absolute_local_name = self.abs_module_name + '.' + local_name
 
-            import_name = alias.name
+            abs_import_name = alias.name
             if isinstance(node, ast.ImportFrom):
                 # `from . import x` means node.module is None.
                 if node.module:
-                    import_name = node.module + '.' + import_name
+                    abs_import_name = node.module + '.' + alias.name
                 else:
-                    package_path = package_for_module(self.module_path)
+                    package_path = package_for_module(self.abs_module_name)
                     if package_path:
-                        import_name = package_path + '.' + import_name
+                        abs_import_name = package_path + '.' + alias.name
 
-            self.tree_analysis.names[absolute_local_name] = import_name
+            self.tree_analysis.names[absolute_local_name] = abs_import_name
