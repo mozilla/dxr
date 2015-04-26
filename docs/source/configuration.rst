@@ -2,14 +2,15 @@
 Configuration
 =============
 
-DXR learns how to index your source trees by means of an ini-formatted
+DXR learns how to index and serve your source trees by means of an ini-formatted
 configuration file:
 
 .. include:: example-configuration.rst
 
-It gets passed to :program:`dxr-build.py` at indexing time::
+When you invoke :program:`dxr`, it defaults to reading :file:`dxr.config`
+in the current directory::
 
-    dxr-build.py my_config_file.config
+    dxr index
 
 Sections
 ========

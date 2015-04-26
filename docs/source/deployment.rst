@@ -2,6 +2,11 @@
 Deployment
 ==========
 
+.. note::
+
+    FIXME: need to update these instructions to use the :program:`dxr` CLI
+    instead of :program:`dxr-*.py`.
+
 Once you decide to put DXR into production for use by multiple people, it's
 time to move beyond the :doc:`getting-started` instructions. You likely need
 real machines—not Vagrant VMs—and you definitely need a robust web server like

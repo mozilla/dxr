@@ -10,7 +10,7 @@ Architecture
 
 DXR divides into 2 halves:
 
-1. The indexer, :program:`dxr-build.py`, is a batch job which analyzes code and
+1. The indexer, :program:`dxr index`, is a batch job which analyzes code and
    builds on-disk indices.
 
    The indexer hosts various plugins which handle everything from syntax
@@ -26,7 +26,7 @@ DXR divides into 2 halves:
    strategies that make sense for them.
 
 2. A Flask web application which lets users query those indices.
-   :program:`dxr-serve.py` is a way to run the application for development
+   :program:`dxr serve` is a way to run the application for development
    purposes, but a more robust method should be used for :doc:`deployment`.
 
 
@@ -45,8 +45,8 @@ for manually trying out your changes. ``test_basic`` is a good one to start
 with. To get it running... ::
 
     cd ~/dxr/tests/test_basic
-    make
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite dxr-serve.py -a target
+    dxr index
+    dxr serve -a
 
 You can then surf to http://33.33.33.77:8000/ from the host machine and play
 around. When you're done, stop the server with :kbd:`Control-C`.
@@ -74,9 +74,9 @@ Changes to HTML templates that are used on the client side:
 Changes to server-side HTML templates or the format of the elasticsearch index:
     Run ``make`` inside :file:`tests/test_basic`.
 
-Stop :program:`dxr-serve.py`, run the build step, and then fire up the server
+Stop :program:`dxr serve`, run the build step, and then fire up the server
 again. If you're changing Python code that runs only at request time, you
-shouldn't need to do anything; :program:`dxr-serve.py` should notice and
+shouldn't need to do anything; :program:`dxr serve` should notice and
 restart itself a few seconds after you save.
 
 
@@ -105,7 +105,7 @@ DXR supports two kinds of tests:
    ``test_ignores`` is an example. Within these instances are one or
    more Python files containing subclasses of ``DxrInstanceTestCase``
    which express the actual tests. These instances can be built like any
-   other using ``dxr-build.py``, in case you want to do manual
+   other using ``dxr index``, in case you want to do manual
    exploration.
 
 Running the Tests
