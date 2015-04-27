@@ -225,6 +225,44 @@ analyzers = {
 }
 
 
+# An unanlyzed string property that points to a value that can be exact- or
+# prefix-matched against and carries start/end bounds for highlighting. Has
+# both a name and a qualname.
+QUALIFIED_NEEDLE = {
+    'type': 'object',
+    'properties': {
+        'name': {
+            'type': 'string',
+            'index': 'not_analyzed',
+            'fields': {
+                'lower': {
+                    'type': 'string',
+                    'analyzer': 'lowercase'
+                }
+            }
+        },
+        'qualname': {
+            'type': 'string',
+            'index': 'not_analyzed',
+            'fields': {
+                'lower': {  # for qualified_type direct searcher
+                    'type': 'string',
+                    'analyzer': 'lowercase'
+                }
+            }
+        },
+        'start': {
+            'type': 'integer',
+            'index': 'no'  # just for highlighting
+        },
+        'end': {
+            'type': 'integer',
+            'index': 'no'
+        }
+    }
+}
+
+
 def _find_iter(haystack, needle):
     """Return an iterable of indices at which string ``needle`` is found in
     ``haystack``.
