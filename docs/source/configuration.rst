@@ -7,10 +7,11 @@ configuration file:
 
 .. include:: example-configuration.rst
 
-When you invoke :program:`dxr`, it defaults to reading :file:`dxr.config`
+When you invoke :program:`dxr index`, it defaults to reading :file:`dxr.config`
 in the current directory::
 
     dxr index
+
 
 Sections
 ========

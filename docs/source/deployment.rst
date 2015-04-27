@@ -138,10 +138,7 @@ To assure yourself that everything has built correctly, you can run the tests::
 Installation
 ============
 
-Once you've built it, install DXR in the activated virtualenv. This is
-an optional step, but it lets you call the :program:`dxr-build.py` and
-:program:`dxr-serve.py` commands without specifying their full paths,
-as long as the env is activated. ::
+Once you've built it, install DXR in the activated virtualenv::
 
     python setup.py install
 
@@ -156,15 +153,12 @@ As in :doc:`getting-started`, copy your projects' source trees to the build
 server, and create a config file. (See :doc:`configuration` for details.) Then,
 kick off the indexing process::
 
-    dxr-build.py dxr.config
+    dxr index --config dxr.config
 
 .. note::
 
-    You can also pass the :option:`--tree TREE` option to generate the index
-    for just one source tree. This is useful for building each tree on a
-    different machine, though it does leave you with the task of stitching the
-    resulting single-tree indexes together, a matter of moving some directories
-    around and tweaking the generated :file:`config.py` file.
+    You can also append one or more tree names to index just those trees. This
+    is useful for parallelization.
 
 The index is generated in the directory specified by the ``target_folder``
 directive. It contains a minimal configuration file, a SQLite database to
@@ -184,14 +178,14 @@ Serving Your Index
 
 Now let's set up the web server. Here we have some alternatives.
 
-dxr-serve.py
-------------
+dxr serve
+---------
 
-The :program:`dxr-serve.py` script is a tiny web server for publishing an
-index. Though it is underpowered for production use, it can come in handy for
-testing that the index arrived undamaged and DXR's dependencies are installed::
+:program:`dxr serve` runs a tiny web server for publishing an index. Though it
+is underpowered for production use, it can come in handy for testing that the
+index arrived undamaged and DXR's dependencies are installed::
 
-    dxr-serve.py target
+    dxr serve
 
 Then visit http://localhost:8000/.
 

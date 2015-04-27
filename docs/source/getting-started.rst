@@ -25,10 +25,10 @@ Configuration
 =============
 
 Before DXR can index your code, we need to tell it where it is and, if you want
-to be able to do structural queries like find-all-the-callers, how to kick off
-a build. (Currently, DXR supports structural queries only for C and C++.) If
-you have a simple build process powered by :command:`make`, a configuration
-like this might suffice. Place the following in a file called
+to be able to do structural queries (like find-all-the-callers) for C or C++,
+how to kick off a build. (Analysis of more dynamic languages does not require
+a build step.) If you have a simple build process powered by :command:`make`,
+a configuration like this might suffice. Place the following in a file called
 :file:`dxr.config`. The location of the file doesn't matter; the usual
 place is adjacent to your source directory.
 
@@ -43,8 +43,9 @@ By building your project with clang and under the control of
 plugin that emits analysis data. It then processes that into an index.
 
 If you have a non-C++ project and simply want to index it as text, the
-``build_command`` can be set to :file:`/bin/true` or some other do-nothing
-command.
+``build_command`` can be set to blank::
+
+    build_command =
 
 Though you shouldn't need any of them yet, further config directives are
 described in :doc:`configuration`.
@@ -54,9 +55,9 @@ Indexing
 ========
 
 Now that you've told DXR about your codebase, it's time to build an
-:term:`index` (sometimes also called an :term:`instance`)::
+:term:`index`::
 
-    dxr index
+    dxr index --config dxr.config
 
 .. note::
 

@@ -10,8 +10,8 @@ Architecture
 
 DXR divides into 2 halves:
 
-1. The indexer, :program:`dxr index`, is a batch job which analyzes code and
-   builds on-disk indices.
+1. The indexer, run via :program:`dxr index`, is a batch job which analyzes
+   code and builds on-disk indices.
 
    The indexer hosts various plugins which handle everything from syntax
    coloring to static analysis. The clang plugin, for example, which handles
@@ -71,8 +71,8 @@ Changes to HTML templates that are used on the client side:
     faster.) Alternatively, leave ``node_modules/.bin/grunt watch`` running,
     and it will take care of recompiling the templates as necessary.
 
-Changes to server-side HTML templates or the format of the elasticsearch index:
-    Run ``make`` inside :file:`tests/test_basic`.
+Changes to the format of the elasticsearch index:
+    Run ``dxr index`` inside :file:`tests/test_basic`.
 
 Stop :program:`dxr serve`, run the build step, and then fire up the server
 again. If you're changing Python code that runs only at request time, you
@@ -105,8 +105,7 @@ DXR supports two kinds of tests:
    ``test_ignores`` is an example. Within these instances are one or
    more Python files containing subclasses of ``DxrInstanceTestCase``
    which express the actual tests. These instances can be built like any
-   other using ``dxr index``, in case you want to do manual
-   exploration.
+   other using ``dxr index``, in case you want to do manual exploration.
 
 Running the Tests
 =================
@@ -137,16 +136,16 @@ The Format Version
 In the top level of the :file:`dxr` package lurks a file called
 :file:`format`. Its role is to facilitate the automatic deployment of new
 versions of DXR using a script like the included :file:`deploy.py`. The format
-file contains an integer which represents the instance format expected by the
-DXR code. If a change in the code requires something new in the instance,
-generally (1) differently structured HTML or (2) a new DB schema, the format
-version must be incremented with the code change. In response, the deployment
-script will wait until a new instance, of the new format, has been built
-before deploying the change.
+file contains an integer which represents the index format expected by
+:program:`dxr serve`. If a change in the code requires a schema or semantics
+change in the index, the format version must be incremented with the code
+change. In response, the deployment script will wait until a new instance, of
+the new format, has been built before deploying the change.
 
 If you aren't sure whether to bump the format version, you can always build an
-instance using the old code, then check out the new code and try to serve the
-old instance with it. If it works, you're probably safe not bumping the version.
+index using the old code, then check out the new code and try to serve the
+old instance with it. If it works, you're probably safe not bumping the
+version.
 
 
 Coding Conventions
@@ -385,18 +384,6 @@ err on the side of crashing than to risk incorrectness. Any error that could
 make a plugin emit inaccurate output should be fatal. This keeps DXR's
 structural queries trustworthy.
 
-Configuration
-=============
-
-Configuration keys prefixed with ``plugin_`` in either a tree section or the
-DXR section of the configuration will be read and stored on the ``tree`` and
-``config`` objects, respectively. Please note that these values will not have
-any default values, nor will they be present unless defined in the config file.
-
-It's the plugins' responsibility to validate these values. Plugins should
-prefix all config keys as ``plugin_<plugin-name>_<key>``. Plugins living in
-the DXR codebase must document their keys in the plugin section of
-:doc:`configuration`.
 
 Contributing Documentation
 --------------------------
