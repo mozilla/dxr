@@ -12,8 +12,8 @@ The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
 2. Tell DXR how to build it.
-3. Run :program:`dxr-build.py` to build and index your code.
-4. Run :program:`dxr-serve.py` to present a web-based search interface.
+3. Run :program:`dxr index` to build and index your code.
+4. Run :program:`dxr serve` to present a web-based search interface.
 
 But first, we have some installation to do.
 
@@ -39,7 +39,7 @@ place is adjacent to your source directory.
    Be sure to replace the placeholder paths in the above config.
 
 By building your project with clang and under the control of
-:program:`dxr-build.py`, DXR gets a chance to interpose a custom compiler
+:program:`dxr index`, DXR gets a chance to interpose a custom compiler
 plugin that emits analysis data. It then processes that into an index.
 
 If you have a non-C++ project and simply want to index it as text, the
@@ -56,7 +56,7 @@ Indexing
 Now that you've told DXR about your codebase, it's time to build an
 :term:`index` (sometimes also called an :term:`instance`)::
 
-    dxr-build.py dxr.config
+    dxr index
 
 .. note::
 
@@ -84,7 +84,7 @@ Now that you've told DXR about your codebase, it's time to build an
     you can get one of the included test cases to work::
 
         cd ~/dxr/tests/test_basic
-        make
+        dxr index
 
     If that works, it's just a matter of getting your configuration right. Pop
     into #static on irc.mozilla.org if you need a hand.
@@ -96,7 +96,7 @@ Serving Your Index
 Congratulations; your index is built! Now, spin up DXR's development server,
 and see what you've wrought::
 
-    dxr-serve.py --all /path/to/the/output
+    dxr serve --all
 
 Surf to http://33.33.33.77:8000/ from the host machine, and poke around
 your fancy new searchable codebase.
