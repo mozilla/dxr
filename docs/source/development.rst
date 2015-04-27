@@ -398,8 +398,8 @@ prefix all config keys as ``plugin_<plugin-name>_<key>``. Plugins living in
 the DXR codebase must document their keys in the plugin section of
 :doc:`configuration`.
 
-Contributing documentation
----------------
+Contributing Documentation
+--------------------------
 
 We use `Read the Docs`_ for building and hosting the documentation, which uses
 `sphinx`_ to generate HTML documentation from reStructuredText markup.
@@ -413,7 +413,6 @@ To make changes to documentation:
 .. _Read the Docs: https://docs.readthedocs.org/
 .. _sphinx: http://sphinx-doc.org/
 .. _reStructuredText primer: http://sphinx-doc.org/rest.html
-
 
 Troubleshooting
 ---------------
