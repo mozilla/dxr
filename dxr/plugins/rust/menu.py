@@ -1,12 +1,6 @@
 import os
 from dxr.utils import search_url
 
-def search(tree_config, query):
-    """ Auxiliary function for getting the search url for query """
-    return search_url(tree_config.config.www_root,
-                      tree_config.name,
-                      query)
-
 def quote(qualname):
     """ Wrap qualname in quotes if it contains spaces """
     if ' ' in qualname:
@@ -62,7 +56,7 @@ def add_find_references(tree_config, menu, qualname, search_term, kind):
     menu.append({
         'html':   "Find references",
         'title':  "Find references to this " + kind,
-        'href':   search(tree_config, "+" + search_term + ":%s" % quote(qualname)),
+        'href':   search_url(tree_config, "+" + search_term + ":%s" % quote(qualname)),
         'icon':   'reference'
     })
 
@@ -101,13 +95,13 @@ def function_menu_generic(tree, datum, tree_config):
     menu.append({
         'html':   "Find callers",
         'title':  "Find functions that call this function",
-        'href':   search(tree_config, "+callers:%s" % quote(datum['qualname'])),
+        'href':   search_url(tree_config, "+callers:%s" % quote(datum['qualname'])),
         'icon':   'method'
     })
     menu.append({
         'html':   "Find callees",
         'title':  "Find functions that are called by this function",
-        'href':   search(tree_config, "+called-by:%s" % quote(datum['qualname'])),
+        'href':   search_url(tree_config, "+called-by:%s" % quote(datum['qualname'])),
         'icon':   'method'
     })
     add_find_references(tree_config, menu, datum['qualname'], "function-ref", "function")
@@ -129,7 +123,7 @@ def function_menu(tree, datum, tree_config):
             menu.append({
                 'html':   "Find implementations (%d)"%count,
                 'title':  "Find implementations of this trait method",
-                'href':   search(tree_config, "+fn-impls:%s" % quote(datum['qualname'])),
+                'href':   search_url(tree_config, "+fn-impls:%s" % quote(datum['qualname'])),
                 'icon':   'method'
             })
 
@@ -204,13 +198,13 @@ def type_menu_generic(tree, datum, tree_config):
         menu.append({
             'html':   "Find sub-traits",
             'title':  "Find sub-traits of this trait",
-            'href':   search(tree_config, "+derived:%s" % quote(datum['qualname'])),
+            'href':   search_url(tree_config, "+derived:%s" % quote(datum['qualname'])),
             'icon':   'type'
         })
         menu.append({
             'html':   "Find super-traits",
             'title':  "Find super-traits of this trait",
-            'href':   search(tree_config, "+bases:%s" % quote(datum['qualname'])),
+            'href':   search_url(tree_config, "+bases:%s" % quote(datum['qualname'])),
             'icon':   'type'
         })
     
@@ -218,7 +212,7 @@ def type_menu_generic(tree, datum, tree_config):
         menu.append({
             'html':   "Find impls",
             'title':  "Find impls which involve this " + kind,
-            'href':   search(tree_config, "+impl:%s" % quote(datum['qualname'])),
+            'href':   search_url(tree_config, "+impl:%s" % quote(datum['qualname'])),
             'icon':   'reference'
         })
     add_find_references(tree_config, menu, datum['qualname'], "type-ref", kind)
@@ -247,7 +241,7 @@ def module_menu_generic(tree, datum, tree_config):
     menu.append({
         'html':   "Find use items",
         'title':  "Find instances of this module in 'use' items",
-        'href':   search(tree_config, "+module-use:%s" % quote(datum['qualname'])),
+        'href':   search_url(tree_config, "+module-use:%s" % quote(datum['qualname'])),
         'icon':   'reference'
     })
     add_find_references(tree_config, menu, datum['qualname'], "module-ref", "module")

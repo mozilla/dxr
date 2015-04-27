@@ -1,31 +1,28 @@
 #![ crate_name = "test" ]
-#![allow(unstable)]
 #![feature(box_syntax)]
-#![feature(old_io)]
+#![feature(rustc_private)]
 
 
 extern crate graphviz;
 // A simple rust project
 
 extern crate krate2;
-extern crate "krate2" as krate3;
-extern crate "flate" as myflate;
+extern crate krate2 as krate3;
+extern crate flate as myflate;
 
 use graphviz::RenderOption;
 use std::collections::{HashMap,HashSet};
 use std::cell::RefCell;
-use std::old_io::stdio::println;
+use std::io::Write;
 
 
 use sub::sub2 as msalias;
 use sub::sub2;
 use sub::sub2::nested_struct as sub_struct;
-use std::num::Float;
-use std::num::cast;
-use std::num::{from_int,from_i8,from_i32};
-//use std::num::*;
 
 use std::mem::size_of;
+
+use std::char::from_u32;
 
 static uni: &'static str = "Les Miséééééééérables";
 static yy: usize = 25;
@@ -38,8 +35,8 @@ fn test_alias<I: Iterator>(i: Option<<I as Iterator>::Item>) {
     let s = sub_struct{ field2: 45u32, };
 
     // import tests
-    fn foo(x: &Float) {}
-    let _: Option<u8> = from_i32(45);
+    fn foo(x: &Write) {}
+    let _: Option<_> = from_u32(45);
 
     let x = 42usize;
 
@@ -57,17 +54,21 @@ fn test_tup_struct(x: TupStruct) -> isize {
     x.1
 }
 
+fn println(s: &str) {
+    std::io::stdout().write_all(s.as_bytes());
+}
+
 mod sub {
     pub mod sub2 {
-        use std::old_io::stdio::println;
+        use std::io::Write;
         pub mod sub3 {
-            use std::old_io::stdio::println;
+            use std::io::Write;
             pub fn hello() {
-                println("hello from module 3");
+                ::println("hello from module 3");
             }          
         }
         pub fn hello() {
-            println("hello from a module");
+            ::println("hello from a module");
         }
 
         pub struct nested_struct {
@@ -104,7 +105,7 @@ trait SomeTrait: SuperTrait {
     fn Method(&self, x: u32) -> u32;
 
     fn prov(&self, x: u32) -> u32 {
-        println(x.to_string().as_slice());
+        println(&x.to_string());
         42
     }  
     fn provided_method(&self) -> u32 {
@@ -120,7 +121,7 @@ trait SubTrait: SomeTrait {
 
 impl SomeTrait for some_fields {
     fn Method(&self, x: u32) -> u32 {
-        println(x.to_string().as_slice());
+        println(&x.to_string());
         self.field1
     }  
 }
@@ -132,7 +133,7 @@ impl SubTrait for some_fields {}
 
 impl some_fields {
     fn stat(x: u32) -> u32 {
-        println(x.to_string().as_slice());
+        println(&x.to_string());
         42
     }  
     fn stat2(x: &some_fields) -> u32 {
@@ -178,7 +179,7 @@ enum SomeEnum<'a> {
     MyTypes(MyType, MyType)
 }
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 enum SomeOtherEnum {
     SomeConst1,
     SomeConst2,
@@ -193,18 +194,18 @@ enum SomeStructEnum {
 
 fn matchSomeEnum(val: SomeEnum) {
     match val {
-        SomeEnum::Ints(int1, int2) => { println((int1+int2).to_string().as_slice()); }
-        SomeEnum::Floats(float1, float2) => { println((float2*float1).to_string().as_slice()); }
+        SomeEnum::Ints(int1, int2) => { println(&(int1+int2).to_string()); }
+        SomeEnum::Floats(float1, float2) => { println(&(float2*float1).to_string()); }
         SomeEnum::Strings(_, _, s3) => { println(s3); }
-        SomeEnum::MyTypes(mt1, mt2) => { println((mt1.field1 - mt2.field1).to_string().as_slice()); }
+        SomeEnum::MyTypes(mt1, mt2) => { println(&(mt1.field1 - mt2.field1).to_string()); }
     }
 }
 
 fn matchSomeStructEnum(se: SomeStructEnum) {
     match se {
-        SomeStructEnum::EnumStruct{a:a, ..} => println(a.to_string().as_slice()),
-        SomeStructEnum::EnumStruct2{f1:f1, f2:f_2} => println(f_2.field1.to_string().as_slice()),
-        SomeStructEnum::EnumStruct3{f1, ..} => println(f1.field1.to_string().as_slice()),
+        SomeStructEnum::EnumStruct{a:a, ..} => println(&a.to_string()),
+        SomeStructEnum::EnumStruct2{f1:f1, f2:f_2} => println(&f_2.field1.to_string()),
+        SomeStructEnum::EnumStruct3{f1, ..} => println(&f1.field1.to_string()),
     }
 }
 
@@ -212,9 +213,9 @@ fn matchSomeStructEnum(se: SomeStructEnum) {
 fn matchSomeStructEnum2(se: SomeStructEnum) {
     use SomeStructEnum::*;
     match se {
-        EnumStruct{a: ref aaa, ..} => println(aaa.to_string().as_slice()),
-        EnumStruct2{f1, f2: f2} => println(f1.field1.to_string().as_slice()),
-        EnumStruct3{f1, f3: SomeEnum::Ints(_, _), f2} => println(f1.field1.to_string().as_slice()),
+        EnumStruct{a: ref aaa, ..} => println(&aaa.to_string()),
+        EnumStruct2{f1, f2: f2} => println(&f1.field1.to_string()),
+        EnumStruct3{f1, f3: SomeEnum::Ints(_, _), f2} => println(&f1.field1.to_string()),
         _ => {},
     }
 }
@@ -230,12 +231,12 @@ fn matchSomeOtherEnum(val: SomeOtherEnum) {
 fn hello<X: SomeTrait>((z, a) : (u32, String), ex: X) {
     SameDir2::hello(43);
 
-    println(yy.to_string().as_slice());
+    println(&yy.to_string());
     let (x, y): (u32, u32) = (5, 3);
-    println(x.to_string().as_slice());
-    println(z.to_string().as_slice());
+    println(&x.to_string());
+    println(&z.to_string());
     let x: u32 = x;
-    println(x.to_string().as_slice());
+    println(&x.to_string());
     let x = "hello";
     println(x);
 
@@ -309,7 +310,7 @@ fn main() { // foo
     let s3: some_fields = some_fields{ field1: 55};
     let s4: msalias::nested_struct = sub::sub2::nested_struct{ field2: 55};
     let s4: msalias::nested_struct = sub2::nested_struct{ field2: 55};
-    println(s2.field1.to_string().as_slice());
+    println(&s2.field1.to_string());
     let s5: MyType = box some_fields{ field1: 55};
     let s = SameDir::SameStruct{name: "Bob".to_string()};
     let s = SubDir::SubStruct{name:"Bob".to_string()};
