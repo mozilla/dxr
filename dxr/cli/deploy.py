@@ -265,11 +265,6 @@ class Deployment(object):
                 sleep(duration)
             else:
                 break
-        else:
-            echo("Non-fatal: failed to delete old build dir (%s). Perhaps the "
-                 "web app hasn't restarted yet and surrendered its grip on "
-                 "the shared libs built in the old virtualenv." % exc,
-                 err=True)
 
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:
