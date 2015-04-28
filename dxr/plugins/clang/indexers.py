@@ -20,9 +20,6 @@ from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
 from dxr.plugins.clang.needles import all_needles
 
 
-PLUGIN_NAME = 'clang'
-
-
 mappings = {
     LINE: {
         'properties': {
@@ -207,7 +204,7 @@ class TreeToIndex(TreeToIndexBase):
     def pre_build(self):
         self._temp_folder = os.path.join(self.tree.temp_folder,
                                          'plugins',
-                                         PLUGIN_NAME)
+                                         self.plugin_name)
 
     def environment(self, vars_):
         """Set up environment variables to trigger analysis dumps from clang.

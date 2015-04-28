@@ -17,8 +17,6 @@ from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       path_to_module)
 
 
-PLUGIN_NAME = 'python'
-
 mappings = {
     FILE: {
         'properties': {
