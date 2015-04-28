@@ -2,7 +2,7 @@
 
 #![crate_name="test"]
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 struct NoFields;
 
 struct SomeFields {

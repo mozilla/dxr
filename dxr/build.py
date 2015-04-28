@@ -299,9 +299,10 @@ def index_tree(tree, es, verbose=False):
             raise
 
     print "Finished '%s' in %s." % (tree.name, datetime.now() - start_time)
-    if not skip_cleanup:
-        # By default, we remove the temp files, because they're huge.
-        rmtree(tree.temp_folder)
+    # TODO undo commenting
+    # if not skip_cleanup:
+    #     # By default, we remove the temp files, because they're huge.
+    #     rmtree(tree.temp_folder)
     return index
 
 
