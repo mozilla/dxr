@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 from operator import itemgetter
@@ -10,7 +11,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_LINE_NEEDLE, unsparsify)
+                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
@@ -151,55 +152,55 @@ class FileToIndex(FileToIndexBase):
                        (menu, tooltip(prop)))
 
     def links(self):
-        # For each type add a section with members
+        """Yield a section for each class, type, enum, etc., as well as one
+        for macro definitions.
 
-        getter = itemgetter('name', 'qualname', 'span', 'kind')
-        for name, tid, span, kind in imap(getter, self.condensed['type']):
-            (line, _), _ = span
-            if len(name) == 0:
-                continue
+        """
+        def get_scopes_to_members():
+            """Return a hash of qualified-scope-of-type -> set-of-members."""
+            ret = defaultdict(list)
+            for member in chain(self.condensed['function'],
+                                self.condensed['variable']):
+                try:
+                    scope, _ = member['qualname'].rsplit('::', 1)
+                except ValueError:
+                    # There was no ::, so this wasn't a member of anything.
+                    pass
+                else:
+                    ret[scope].append(member)
+            return ret
 
-            # Make sure we have a sane limitation of kind
-            if kind not in ('class', 'struct', 'enum', 'union'):
-                print >> sys.stderr, "kind '%s' was replaced for 'type'!" % kind
-                kind = 'type'
+        scopes_to_members = get_scopes_to_members()
 
-            links = chain(_members(self.condensed, 'function', tid),
-                          _members(self.condensed, 'variable', tid))
+        # Spin around the types (enums, classes, unions, etc.):
+        for type in self.condensed['type']:
+            if type['name']:
+                # First, link to the type definition itself:
+                links = [(type['kind'],
+                          type['name'],
+                          '#%s' % type['span'].start.row)]
+                # Look up the stuff with that scope in the hash, and spit out
+                # names and line numbers, sorting by line number.
+                members = list(scopes_to_members[type['qualname']])
+                members.sort(key=lambda m: m['span'].start.row)
+                links.extend(('method' if isinstance(m['type'], FuncSig)
+                                       else 'field',  # icon
+                              m['name'],
+                              '#%s' % m['span'].start.row)
+                             for m in members if m['name'])
+                yield 30, type['name'], links
 
-            links = sorted(links, key=itemgetter(1))  # by line
-
-            # Add the outer type as the first link
-            links = [(kind, name, "#%s" % line)] + links
-
-            yield 30, name, links
-
-        # Add all macros to the macro section
-        links = []
-        getter = itemgetter('name', 'span')
-        for name, span in imap(getter, self.condensed['type']):
-            (line, _), _ = span
-            links.append(('macro', name, "#%s" % line))
+        # Add all macros to the macro section:
+        links = [('macro', t['name'], '#%s' % t['span'].start.row)
+                 for t in self.condensed['macro']]
         if links:
-            yield 100, "Macros", links
+            yield 100, 'Macros', links
 
 
 @autocurry
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
     return (ref for ref in condensed.get(field) if ref.get('kind') == kind)
-
-
-def _members(condensed, key, id_):
-    """Fetch member {{key}} given a type id."""
-    pred = lambda x: id_ == x['qualname']
-    for props in ifilter(pred, condensed[key]):
-        # Skip nameless things
-        name = props['qualname']
-        (line, _), _ = props['span']
-        if not name:
-            continue
-        yield 'method', name, "#%s" % line
 
 
 class TreeToIndex(TreeToIndexBase):
