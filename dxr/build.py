@@ -61,7 +61,8 @@ def index_and_deploy_tree(tree, verbose=False):
     config = tree.config
     es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
     index_name = index_tree(tree, es, verbose=verbose)
-    deploy_tree(tree, es, index_name)
+    if 'index' not in tree.config.skip_stages:
+        deploy_tree(tree, es, index_name)
 
 
 def deploy_tree(tree, es, index_name):
@@ -199,8 +200,8 @@ def index_tree(tree, es, verbose=False):
     start_time = datetime.now()
 
     skip_indexing = 'index' in config.skip_stages
-    skip_rebuild = 'build' in config.skip_stages
-    skip_cleanup  = skip_indexing or skip_rebuild
+    skip_build = 'build' in config.skip_stages
+    skip_cleanup  = skip_indexing or skip_build
 
     # Create and/or clear out folders:
     ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
@@ -213,18 +214,15 @@ def index_tree(tree, es, verbose=False):
 
     tree_indexers = [p.tree_to_index(p.name, tree) for p in
                      tree.enabled_plugins if p.tree_to_index]
-
-    if skip_indexing:
-        print "Skipping indexing (due to 'index' in 'skip_stages')"
-    else:
-        # Make a new index with a semi-random name, having the tree name
-        # and format version in it. TODO: The prefix should come out of
-        # the tree config, falling back to the global config:
-        # dxr_hot_prod_{tree}_{whatever}.
-        index = config.es_index.format(format=FORMAT,
-                                       tree=tree.name,
-                                       unique=uuid1())
-        try:
+    try:
+        if not skip_indexing:
+            # Make a new index with a semi-random name, having the tree name
+            # and format version in it. TODO: The prefix should come out of
+            # the tree config, falling back to the global config:
+            # dxr_hot_prod_{tree}_{whatever}.
+            index = config.es_index.format(format=FORMAT,
+                                           tree=tree.name,
+                                           unique=uuid1())
             es.create_index(
                 index,
                 settings={
@@ -254,19 +252,23 @@ def index_tree(tree, es, verbose=False):
                                             tree.enabled_plugins),
                                        {})
                 })
+        else:
+            index = None
+            print "Skipping indexing (due to 'index' in 'skip_stages')"
 
-            # Run pre-build hooks:
-            with new_pool() as pool:
-                tree_indexers = farm_out('pre_build')
-                # Tear down pool to let the build process use more RAM.
+        # Run pre-build hooks:
+        with new_pool() as pool:
+            tree_indexers = farm_out('pre_build')
+            # Tear down pool to let the build process use more RAM.
 
-            if not skip_rebuild:
-                # Set up env vars, and build:
-                build_tree(tree, tree_indexers, verbose)
-            else:
-                print "Skipping rebuild (due to 'build' in 'skip_stages')"
+        if not skip_build:
+            # Set up env vars, and build:
+            build_tree(tree, tree_indexers, verbose)
+        else:
+            print "Skipping rebuild (due to 'build' in 'skip_stages')"
 
-            # Post-build, and index files:
+        # Post-build, and index files:
+        if not skip_indexing:
             with new_pool() as pool:
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool, es)
@@ -291,12 +293,13 @@ def index_tree(tree, es, verbose=False):
                         }
                     }
                 })
-        except Exception as exc:
-            # If anything went wrong, delete the index, because we're not
-            # going to have a way of returning its name if we raise an
-            # exception.
+    except Exception as exc:
+        # If anything went wrong, delete the index, because we're not
+        # going to have a way of returning its name if we raise an
+        # exception.
+        if not skip_indexing:
             delete_index_quietly(es, index)
-            raise
+        raise
 
     print "Finished '%s' in %s." % (tree.name, datetime.now() - start_time)
     if not skip_cleanup:
