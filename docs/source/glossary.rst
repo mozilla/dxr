@@ -12,14 +12,20 @@ Glossary
         A query term consisting of an explicit filter name and an argument,
         like ``regexp:hi|hello`` or ``callers:frob``
 
+    format version
+        A string (though usually looking like an int) signifying the index
+        format. It is used to control deployments, never switching to a new
+        version of the web-serving code until all indices have been brought up
+        to the format version it requires.
+
     index
-        A folder containing one or more source trees indexed for search and
-        prepared to serve as HTML. Indices are created by the
-        :program:`dxr-build.py` command.
+        The collected data used to answer queries about a tree and render the
+        web-based UI. These are stored in elasticsearch and created by
+        :program:`dxr index`.
 
     instance
         See :term:`index`.
-    
+
     mapping
         An elasticsearch schema, declaring the type and indexing strategy for
         each field

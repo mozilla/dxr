@@ -4,15 +4,15 @@ Getting Started
 
 .. note::
 
-    These instructions are suited to trying out DXR to see if you like it. If
-    you plan to contribute code to DXR itself, please see :doc:`development`
+    These instructions are for trying out DXR to see if you like it. If you
+    plan to contribute code to DXR itself, please see :doc:`development`
     instead.
 
 The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
-2. Tell DXR how to build it.
-3. Run :program:`dxr index` to build and index your code.
+2. If it's C or C++, tell DXR how to build it.
+3. Run :program:`dxr index` to index your code.
 4. Run :program:`dxr serve` to present a web-based search interface.
 
 But first, we have some installation to do.
@@ -24,13 +24,13 @@ But first, we have some installation to do.
 Configuration
 =============
 
-Before DXR can index your code, we need to tell it where it is and, if you want
+Before DXR can index your code, it needs to know where it is and, if you want
 to be able to do structural queries (like find-all-the-callers) for C or C++,
-how to kick off a build. (Analysis of more dynamic languages does not require
-a build step.) If you have a simple build process powered by :command:`make`,
-a configuration like this might suffice. Place the following in a file called
-:file:`dxr.config`. The location of the file doesn't matter; the usual
-place is adjacent to your source directory.
+how to kick off a build. (Analysis of more dynamic languages like Python does
+not require a build step.) If you have a simple build process powered by
+:command:`make`, a configuration like this might suffice. Place the following
+in a file called :file:`dxr.config`. The location of the file doesn't matter,
+but the usual place is adjacent to your source directory.
 
 .. include:: example-configuration.rst
 
@@ -70,12 +70,9 @@ Now that you've told DXR about your codebase, it's time to build an
         cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
         vi vagrantconfig_local.yaml
 
-    Then restart the VM. Within the VM... ::
+    Then restart the VM::
 
-        sudo shutdown -h now
-
-    Then, from the host machine... ::
-
+        vagrant halt
         vagrant up
         vagrant ssh
 

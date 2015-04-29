@@ -2,20 +2,15 @@
 Deployment
 ==========
 
-.. note::
-
-    FIXME: need to update these instructions to use the :program:`dxr` CLI
-    instead of :program:`dxr-*.py`.
-
 Once you decide to put DXR into production for use by multiple people, it's
 time to move beyond the :doc:`getting-started` instructions. You likely need
 real machines—not Vagrant VMs—and you definitely need a robust web server like
 Apache. This chapter helps you deploy DXR on the Linux machines [#]_ of your
 choice and configure them to handle multi-user traffic volumes.
 
-DXR generates an :term:`index` for one or more source trees offline. This is
-well suited to a dedicated build server. The generated index is then
-transferred to one or more web servers for hosting.
+DXR generates an elasticsearch-dwelling :term:`index` for one or more source
+trees as a batch process. This is well suited to a dedicated build server. One
+or more web servers then serve pages based on it.
 
 .. [#] DXR might also work with other UNIX-like operating systems, but we make no promises.
 
@@ -32,16 +27,19 @@ distributions:
 
 * make
 * build-essential
-* libclang-dev (clang dev headers 3.3 or 3.4)
-* llvm-dev (LLVM dev headers 3.3 or 3.4)
+* libclang-dev (clang dev headers). Version 3.5 is recommended, though we
+  theoretically support back to 3.2.
+* llvm-dev (LLVM dev headers, version 3.5 recommended)
 * pkg-config
 * npm (Node.js and its package manager)
 * openjdk-7-jdk
 * elasticsearch 1.1 or higher. The elasticsearch corporation maintains its own
-  packages; they aren't often found in distros.
+  packages; they aren't often found in distros. Newer is better, though I tend
+  to avoid x.0 releases.
 
 Technically, you could probably do without most of these on the web server,
-though you'd then need to build DXR on a different machine and transfer it over.
+though you'd then need to build DXR itself on a different machine and transfer
+it over.
 
 .. note::
 
@@ -108,20 +106,18 @@ but these pointers should start you off with reasonable performance:
 * Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
 * It is often recommended to use Oracle's JVM, but OpenJDK works fine.
 
-DXR will create one index per indexed tree per format version. Reindexing a
-tree automatically replaces the old index with the new one as its last step.
-This happens atomically. Be sure there's enough space on the cluster to hold
-both the old and new indices at once during indexing.
+DXR will create one index per indexed tree per :term:`format version`.
+Reindexing a tree automatically replaces the old index with the new one as its
+last step. This happens atomically. Be sure there's enough space on the
+cluster to hold both the old and new indices at once during indexing.
 
 
 Building
 ========
 
-First, if you cannot arrange for the correct versions of :command:`llvm-config`,
+First, arrange for the correct versions of :command:`llvm-config`,
 :command:`clang`, and :command:`clang++` to be available under those names,
-whether by a mechanism like Debian's alternatives system or with symlinks, you
-will need to edit the makefile in :file:`dxr/plugins/clang` to specify complete
-paths to the right ones.
+whether by a mechanism like Debian's alternatives system or with symlinks.
 
 Then, build DXR from its top-level directory::
 
@@ -130,7 +126,7 @@ Then, build DXR from its top-level directory::
 It will build :file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang`
 and compile the JavaScript-based templates.
 
-To assure yourself that everything has built correctly, you can run the tests::
+To ensure everything has built correctly, you can run the tests::
 
     make test
 
@@ -141,6 +137,12 @@ Installation
 Once you've built it, install DXR in the activated virtualenv::
 
     python setup.py install
+
+.. note::
+
+    If you intend to develop DXR itself, don't ever run ``install``, which
+    makes a copy of the code, severing its relationship with the source
+    checkout. Do ``python setup.py develop`` instead.
 
 
 Indexing
@@ -158,19 +160,10 @@ kick off the indexing process::
 .. note::
 
     You can also append one or more tree names to index just those trees. This
-    is useful for parallelization.
+    is useful for parallelization across multiple build servers.
 
-The index is generated in the directory specified by the ``target_folder``
-directive. It contains a minimal configuration file, a SQLite database to
-support search, and static HTML versions of all of the files in the source
-trees.
-
-Generally, you use something like cron to repeat indexing on a schedule or in
-response to source tree changes. After an indexing run, the index has to be
-made available to the web servers. One approach is to share it on a common NFS
-volume (and use an atomic :command:`mv` to swap the new one into place).
-Alternatively, you can simply copy the index to the web server (in which case
-an atomic :command:`mv` remains advisable, of course).
+Generally, you use something like cron or Jenkins to repeat indexing on a
+schedule or in response to source-tree changes.
 
 
 Serving Your Index
@@ -183,7 +176,7 @@ dxr serve
 
 :program:`dxr serve` runs a tiny web server for publishing an index. Though it
 is underpowered for production use, it can come in handy for testing that the
-index arrived undamaged and DXR's dependencies are installed::
+index was built properly and DXR's dependencies are installed::
 
     dxr serve
 
@@ -208,24 +201,24 @@ configuration::
    SetEnv DXR_CONFIG /path/to/dxr.config
 
 Because we used virtualenv to install DXR's runtime dependencies, add the path
-to the virtualenv to your Apache configuration::
+to the virtualenv to your Apache configuration as well::
 
    WSGIPythonHome /path/to/dxr_venv
 
 Note that the WSGIPythonHome_ directive is allowed only in the server config
-context, not in the virtual host context. It's analogous to running virtualenv's
-:program:`activate` command.
+context, not in the virtual host context. It's analogous to running
+virtualenv's :program:`activate` command.
 
 Finally, make sure mod_wsgi is installed and enabled. Then, restart Apache::
 
-    sudo apache2ctl stop
-    sudo apache2ctl start
+    sudo service apache2 stop
+    sudo service apache2 start
 
 
 .. note::
 
     Changes to :file:`/etc/apache2/envvars` don't take effect if you run only
-    :command:`sudo apache2ctl restart`.
+    :command:`sudo service apache2 restart`.
 
 Additional configuration might be required, depending on your version
 of Apache, your other Apache configuration, and where DXR is

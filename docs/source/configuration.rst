@@ -12,12 +12,16 @@ in the current directory::
 
     dxr index
 
+Or you can pass in a config file explicitly::
+
+    dxr index --config /some/place/dxr.config
+
 
 Sections
 ========
 
 The configuration file is divided into sections. The ``[DXR]`` section holds
-global options; other sections describe trees to be indexed.
+global options; each other section describes a tree to be indexed.
 
 You can use all the fancy interpolation features of Python's
 `ConfigParser <http://docs.python.org/library/configparser.html>`__ class to
@@ -27,8 +31,8 @@ save repetition.
 -------------
 
 Here are the options that can live in the ``[DXR]`` section. For options
-representing path names, relative paths are considered relative to the
-directory containing the config file.
+representing path names, relative paths are relative to the directory
+containing the config file.
 
 ``temp_folder``
     A ``format()``-style template for deciding where to store temporary files
@@ -49,10 +53,6 @@ directory containing the config file.
 
 ``disabled_plugins``
     Names of plugins to disable. Default: empty
-
-``disable_workers``
-    If non-empty, do not use a worker pool for building the static HTML.
-    Default: empty
 
 ``enabled_plugins``
     Names of plugins to enable. Default: ``*``
@@ -123,15 +123,12 @@ directory containing the config file.
 
 ``es_refresh_interval``
     The number of seconds between elasticsearch's consolidation passes during
-    indexing. Turn this up for higher IO efficiency and fewer segments in the
-    final index. Turn it down to avoid timeouts at the end of indexing runs.
-    (You can also dodge these by cranking up ``es_indexing_timeout``.) Set to
-    -1 to do no refreshes at all, except directly after an indexing run
-    completes. Default: 60
+    indexing. Set to -1 to do no refreshes at all, except directly after an
+    indexing run completes. Default: 60
 
 ``max_thumbnail_size``
-    A number that specifies the file size in bytes at which images will not be
-    used for their icon previews on folder browsing pages. Default: 20KB.
+    The file size in bytes at which images will not be used for their icon
+    previews on folder browsing pages. Default: 20000.
 
 (Refer to the Plugin Configuration section for plugin keys available here).
 
@@ -139,8 +136,8 @@ directory containing the config file.
 Tree Sections
 -------------
 
-Any section that is not named ``[DXR]`` represents a tree to be indexed. Here
-are the options that can go inside a tree:
+Any section not named ``[DXR]`` represents a tree to be indexed. Options for
+these include...
 
 ``build_command``
     Command for building your source code. Default: ``make -j {workers}``.
@@ -158,7 +155,7 @@ are the options that can go inside a tree:
    ``[DXR]`` section. Default: ``*``
 
 ``enabled_plugins``
-    Plugins enabled in this tree. Default: ``*``. ``*`` enables the same
+    Plugins enabled in this tree. Default: ``*``, which enables the same
     plugins enabled in the ``[DXR]`` section.
 
 ``ignore_patterns``
