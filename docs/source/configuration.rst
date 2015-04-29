@@ -170,7 +170,8 @@ are the options that can go inside a tree:
 
 ``object_folder``
     Folder where the ``build_command`` will be run. This is generally the
-    folder where object files will be stored. **Required.**
+    folder where object files will be stored. Default: same as
+    ``source_folder``
 
 ``source_folder``
     The folder containing the source code to index. **Required.**
