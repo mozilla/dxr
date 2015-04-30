@@ -25,7 +25,10 @@ apt-get install -y npm
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
 # Docs build system:
-apt-get install -y sphinx-common
+apt-get install -y graphviz
+# Install Sphinx in the venv rather than globally so it runs in the venv and
+# can find dxr:
+pip install Sphinx==1.3.1
 
 # Python:
 apt-get install -y libapache2-mod-wsgi python-pip python-virtualenv python2.7-dev
