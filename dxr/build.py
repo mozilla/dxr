@@ -275,7 +275,7 @@ def index_tree(tree, es, verbose=False):
 
             # refresh() times out in prod. Wait until it doesn't. That
             # probably means things are ready to rock again.
-            with progressbar(repeat(None), label='Refeshing index') as bar:
+            with aligned_progressbar(repeat(None), label='Refeshing index') as bar:
                 for _ in bar:
                     try:
                         es.refresh(index=index)
@@ -308,12 +308,19 @@ def index_tree(tree, es, verbose=False):
     return index
 
 
+def aligned_progressbar(*args, **kwargs):
+    """Fall through to click's progress bar, but line up all the bars so they
+    aren't askew."""
+    return progressbar(
+        *args, bar_template='%(label)-18s [%(bar)s] %(info)s', **kwargs)
+
+
 def show_progress(futures, message):
     """Show progress and yield results as futures complete."""
-    with progressbar(as_completed(futures),
-                     length=len(futures),
-                     show_eta=False,  # never even close
-                     label=message) as bar:
+    with aligned_progressbar(as_completed(futures),
+                             length=len(futures),
+                             show_eta=False,  # never even close
+                             label=message) as bar:
         for future in bar:
             yield future
 
@@ -575,10 +582,10 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
-    with progressbar(unignored(tree.source_folder,
-                               tree.ignore_paths,
-                               tree.ignore_filenames,
-                               want_folders=True),
+    with aligned_progressbar(unignored(tree.source_folder,
+                                       tree.ignore_paths,
+                                       tree.ignore_filenames,
+                                       want_folders=True),
                      show_eta=False,  # never even close
                      label='Indexing folders') as folders:
         for folder in folders:
