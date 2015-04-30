@@ -170,7 +170,7 @@ class Deployment(object):
                     venv_name=VENV_NAME)
 
                 # Check out the source, and install DXR and dependencies:
-                run('git clone {repo}', repo=self.repo)
+                run('git clone {repo} 2>/dev/null', repo=self.repo)
                 with cd('dxr'):
                     run('git checkout -q {rev}', rev=rev)
 
