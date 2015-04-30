@@ -14,9 +14,10 @@ Glossary
 
     format version
         A string (though usually looking like an int) signifying the index
-        format. It is used to control deployments, never switching to a new
-        version of the web-serving code until all indices have been brought up
-        to the format version it requires.
+        format. It is used to control deployments: :program:`dxr deploy` never
+        switches to a new version of the web-serving code until all indices
+        have been brought up to the format version it requires. The format
+        version is declared in :file:`dxr/format`.
 
     index
         The collected data used to answer queries about a tree and render the
