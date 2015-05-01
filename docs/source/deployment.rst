@@ -244,7 +244,7 @@ Here is a complete example config, for reference::
         # it if you're on a woefully underpowered machine, but I'm not maintaining
         # it.
 
-        # Tell this instance of DXR where its config file is:
+        # Tell DXR where its config file is:
         SetEnv DXR_CONFIG /home/vagrant/dxr/tests/test_basic/dxr.config
 
         WSGIScriptAlias / /usr/local/lib/python2.7/site-packages/dxr/dxr.wsgi

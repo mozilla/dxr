@@ -24,9 +24,6 @@ Glossary
         web-based UI. These are stored in elasticsearch and created by
         :program:`dxr index`.
 
-    instance
-        See :term:`index`.
-
     mapping
         An elasticsearch schema, declaring the type and indexing strategy for
         each field
