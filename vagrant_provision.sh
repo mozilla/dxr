@@ -16,7 +16,7 @@ apt-get update
 # clean out redundant packages from vagrant base image
 apt-get autoremove -y
 
-#configure locales:
+# Configure locales:
 apt-get install -y language-pack-en
 
 # node and npm:
@@ -24,11 +24,8 @@ apt-get install -y npm
 # Homogenize binary name with production RHEL:
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
-# Docs build system:
+# For building docs:
 apt-get install -y graphviz
-# Install Sphinx in the venv rather than globally so it runs in the venv and
-# can find dxr:
-pip install Sphinx==1.3.1
 
 # Python:
 apt-get install -y libapache2-mod-wsgi python-pip python-virtualenv python2.7-dev
@@ -40,7 +37,7 @@ source $VENV/bin/activate
 cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop
-pip install pdbpp nose-progressive
+pip install pdbpp nose-progressive Sphinx==1.3.1
 THEEND
 # Activate the virtualenv all the time:
 grep /bin/activate .bashrc > /dev/null || echo ". $VENV/bin/activate" >> /home/vagrant/.bashrc
