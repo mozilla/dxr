@@ -81,6 +81,15 @@ time, you shouldn't need to do anything; :program:`dxr serve` will notice
 and restart itself a few seconds after you save.
 
 
+Coding Conventions
+------------------
+
+Follow `PEP 8`_ for Python code, but don't sweat the line length too much. Follow `PEP  257`_ for docstrings, and use Sphinx-style argument documentation.
+
+.. _PEP 8: http://www.python.org/dev/peps/pep-0008/
+.. _PEP 257: http://www.python.org/dev/peps/pep-0257/
+
+
 Testing
 -------
 
@@ -131,33 +140,6 @@ To run a single test... ::
 
 If you have trouble, make sure you didn't mistranscribe any colons or
 periods.
-
-
-The Format Version
-------------------
-
-In the top level of the :file:`dxr` package (not the top of the source
-checkout, mind you) lurks a file called
-:file:`format`. Its role is to facilitate the automatic deployment of new
-versions of DXR using :program:`dxr deploy`. The format file contains an
-integer which represents the index format expected by
-:program:`dxr serve`. If a change in the code requires a mapping or semantics
-change in the index, the format version must be incremented. In response, the
-deployment script will wait until new indices, of the new format, have been
-built before deploying the change.
-
-If you aren't sure whether to bump the format version, you can always build an
-index using the old code, then check out the new code and try to serve the
-old index with it. If it works, you're probably safe not bumping the version.
-
-
-Coding Conventions
-------------------
-
-Follow `PEP 8`_ for Python code, but don't sweat the line length too much. Follow `PEP  257`_ for docstrings, and use Sphinx-style argument documentation.
-
-.. _PEP 8: http://www.python.org/dev/peps/pep-0008/
-.. _PEP 257: http://www.python.org/dev/peps/pep-0257/
 
 
 .. _writing-plugins:
@@ -343,6 +325,23 @@ API
     will guess mappings for the undeclared fields, and surprising search
     results will likely ensue. Worse, the bad guesses will likely happen
     intermittently.
+
+The Format Version
+``````````````````
+
+In the top level of the :file:`dxr` package (not the top of the source
+checkout, mind you) lurks a file called
+:file:`format`. Its role is to facilitate the automatic deployment of new
+versions of DXR using :program:`dxr deploy`. The format file contains an
+integer which represents the index format expected by
+:program:`dxr serve`. If a change in the code requires a mapping or semantics
+change in the index, the format version must be incremented. In response, the
+deployment script will wait until new indices, of the new format, have been
+built before deploying the change.
+
+If you aren't sure whether to bump the format version, you can always build an
+index using the old code, then check out the new code and try to serve the
+old index with it. If it works, you're probably safe not bumping the version.
 
 Analyzers
 =========
