@@ -8,25 +8,63 @@ Architecture
 
 .. image:: block-diagram.png
 
-DXR divides into 2 halves, with the index in the middle:
+DXR divides into 2 halves, with stored indices in the middle:
 
 1. The indexer, run via :program:`dxr index`, is a batch job which analyzes
-   code and builds indices in elasticsearch.
-
-   The indexer hosts various plugins which handle everything from syntax
-   coloring to static analysis. The clang plugin, for example, handles
-   structural analysis of C++ code by building the project under clang while
-   interposing a custom compiler plugin that dumps out data during
-   compilation. This is later pulled into elasticsearch, where it supports
-   structural queries like ``callers:`` and ``function:``.
+   code and builds indices in elasticsearch, one per tree, plus a
+   :term:`catalog index` that keeps track of them. The indexer hosts various
+   plugins which handle everything from syntax coloring to static analysis.
 
    Generally, the indexer is kicked off asynchronously—often even on a separate
    machine—by cron or a build system. It's up to deployers to come up with
    strategies that make sense for them.
 
-2. A Flask web application which lets users query indices. :program:`dxr
-   serve` is a way to run the application for development purposes, though a
-   more robust method should be used for :doc:`deployment`.
+2. The second half is a Flask web application which lets users run queries.
+   :program:`dxr serve` runs a toy instance of the application for development
+   purposes; a more robust method should be used for :doc:`deployment`.
+
+
+How Indexing Works
+==================
+
+We store every line of source code as an elasticsearch document of type
+``line`` (hereafter called a "LINE doc" after the name of the constant used in
+the code). This lends itself to the per-line search results DXR delivers. In
+addition to the text of the line, indexed into trigrams for fast substring and
+regex search, a LINE doc contains some structural data.
+
+* First are :term:`needles<needle>`, search targets that structural queries
+  can hunt for. For example, if we indexed the following Python source code,
+  the indicated (simplified) needles might be attached:
+
+  .. code-block:: python
+
+     def frob():     # py-function: frob
+         nic(ate())  # py-callers:  [nic, ate]
+
+  If the user runs the query ``function:frob``, we look for LINE docs with
+  "frob" in their "py-function" properties. If the user runs the query
+  ``callers:nic``, we look for docs with "py-callers" properties containing
+  "nic".
+
+  These needles are offered up by plugins via the
+  :meth:`~dxr.indexers.FileToIndex.needles_by_line()` API. For the sake of
+  sanity, we've settled on the convention of a language prefix for
+  language-specific needles. However, the names are technically arbitrary,
+  since the plugin emitting the needle is also its consumer, through the
+  implementation of a :class:`~dxr.filters.Filter`.
+* Also attached to a LINE doc are offsets/metadata pairs that attach CSS
+  classes and contextual menus to various spans of the line. These also come
+  out of plugins, via :meth:`~dxr.indexers.FileToSkim.refs()` and
+  :meth:`~dxr.indexers.FileToSkim.regions()`. Views of entire source-code files
+  are rendered by stitching multiple LINE docs together.
+
+The other major kind of entity is the FILE doc. These support directory
+listings and the storage of per-file rendering data like navigation-pane
+entries (given by :meth:`~dxr.indexers.FileToSkim.links()`) or image contents.
+FILE docs may also contain needles, supporting searches like ``ext:cpp`` which
+return entire files rather than lines. Plugins provide these needles via
+:meth:`~dxr.indexers.FileToIndex.needles()`.
 
 
 Setting Up

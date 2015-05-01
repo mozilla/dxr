@@ -1,5 +1,11 @@
-"""C and C++ plugin, using a clang compiler plugin"""
+"""C and C++ analysis using a clang compiler plugin
 
+This plugin handles structural analysis of C++ code by building the project
+under clang while interposing a custom compiler plugin that dumps out
+structural data to CSV files during compilation. This is then pulled into
+elasticsearch as a post-processing phase.
+
+"""
 from dxr.plugins import Plugin, filters_from_namespace
 from dxr.plugins.clang import direct, filters
 from dxr.plugins.clang.indexers import TreeToIndex, mappings

@@ -103,12 +103,10 @@ containing the config file.
     at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
 
 ``es_catalog_index``
-     The name to use for the elasticsearch index which tracks built trees,
-     their format versions, and other frozen-at-index-time information. You
-     probably don't need to change this unless you want multiple
-     otherwise-independent DXR deployments, with disjoint Switch Tree menus,
-     sharing the same ES cluster.
-     Default: ``dxr_catalog``
+     The name to use for the :term:`catalog index`. You probably don't need to
+     change this unless you want multiple otherwise-independent DXR
+     deployments, with disjoint Switch Tree menus, sharing the same ES
+     cluster. Default: ``dxr_catalog``
 
 ``es_catalog_replicas``
     The number of elasticsearch replicas to make of the catalog index. This is
