@@ -227,5 +227,6 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                     package_path = package_for_module(self.abs_module_name)
                     if package_path:
                         abs_import_name = (package_path, alias.name)
-            logger.debug("import (%s,%s) -> %s", self.abs_module_name, local_name, abs_import_name)
-            self.tree_analysis.names[absolute_local_name] = abs_import_name
+            if absolute_local_name != abs_import_name:
+                logger.debug("import (%s,%s) -> %s", self.abs_module_name, local_name, abs_import_name)
+                self.tree_analysis.names[absolute_local_name] = abs_import_name
