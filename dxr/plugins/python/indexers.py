@@ -15,6 +15,8 @@ from dxr.plugins.python.menus import class_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
                                       path_to_module)
+import logging
+logger = logging.getLogger(__name__)
 
 
 mappings = {
@@ -185,6 +187,7 @@ class FileToIndex(FileToIndexBase):
         self.tree_analysis = tree_analysis
         self.abs_module_name = path_to_module(tree_analysis.python_path, self.path)
 
+        logger.info('===== Indexing %s (%s)', self.path, self.abs_module_name)
         self._visitor = None
 
     def is_interesting(self):

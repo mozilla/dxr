@@ -7,12 +7,14 @@ import ast
 import os
 from collections import defaultdict
 from warnings import warn
+import logging
 
 from dxr.build import file_contents
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, package_for_module,
                                       path_to_module)
 
+logger = logging.getLogger(__name__)
 
 class TreeAnalysis(object):
     """Performs post-build analysis and stores the results."""
@@ -60,6 +62,7 @@ class TreeAnalysis(object):
             return
 
         abs_module_name = path_to_module(self.python_path, path) # e.g. package.sub.current_file
+        logger.info('===== Analyzing %s (%s)', path, abs_module_name)
         visitor = AnalyzingNodeVisitor(abs_module_name, self)
         visitor.visit(syntax_tree)
 
@@ -70,12 +73,14 @@ class TreeAnalysis(object):
         class method).
 
         """
+        logger.info('===== _finish_analysis: compute derived classes')
         # Compute derived classes from base class relations.
         for class_name, bases in self.base_classes.iteritems():
             for base_name in bases:
                 base_name = self.normalize_name(base_name)
                 self.derived_classes[base_name].append(class_name)
 
+        logger.info('===== _finish_analysis: compute overrides')
         # Compute which functions override other functions.
         for class_name, functions in self.class_functions.iteritems():
             functions = set(functions)
@@ -130,16 +135,22 @@ class TreeAnalysis(object):
         `os.path`.
 
         """
+        # First resolve imports
+        logger.debug("normalize_name(%s) =>", str(absolute_local_name))
         while absolute_local_name in self.names:
             absolute_local_name = self.names[absolute_local_name]
+            logger.debug("               %s =>", str(absolute_local_name))
+        logger.debug("               %s", str(absolute_local_name))
 
         # For cases when you `import foo.bar` and refer to `foo.bar.baz`, we
         # need to normalize the `foo.bar` prefix in case it's not the
         # canonical name of that module.
         if '.' in absolute_local_name:
             prefix, local_name = absolute_local_name.rsplit('.', 1)
+            logger.debug("...recursing %s", prefix)
             return self.normalize_name(prefix) + '.' + local_name
         else:
+            logger.debug("...returning %s", absolute_local_name)
             return absolute_local_name
 
 
@@ -211,4 +222,5 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                     if package_path:
                         abs_import_name = package_path + '.' + alias.name
 
+            logger.debug("import (%s,%s) -> %s", self.abs_module_name, local_name, abs_import_name)
             self.tree_analysis.names[absolute_local_name] = abs_import_name
