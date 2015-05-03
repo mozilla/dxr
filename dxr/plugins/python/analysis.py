@@ -7,12 +7,14 @@ import ast
 import os
 from collections import defaultdict
 from warnings import warn
+import logging
 
 from dxr.build import file_contents
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, package_for_module,
                                       path_to_module)
 
+logger = logging.getLogger(__name__)
 
 class TreeAnalysis(object):
     """Performs post-build analysis and stores the results."""
@@ -52,15 +54,16 @@ class TreeAnalysis(object):
         """
         try:
             syntax_tree = ast.parse(file_contents(path, encoding))
-        except (SyntaxError, TypeError) as error:
+        except (IOError, SyntaxError, TypeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
                  filename=rel_path, error=error))
             self.ignore_paths.add(rel_path)
             return
 
-        module_path = path_to_module(self.python_path, path)
-        visitor = AnalyzingNodeVisitor(module_path, self)
+        abs_module_name = path_to_module(self.python_path, path) # e.g. package.sub.current_file
+        logger.info('===== Analyzing %s (%s)', path, abs_module_name)
+        visitor = AnalyzingNodeVisitor(abs_module_name, self)
         visitor.visit(syntax_tree)
 
     def _finish_analysis(self):
@@ -70,12 +73,14 @@ class TreeAnalysis(object):
         class method).
 
         """
+        logger.info('===== _finish_analysis: compute derived classes')
         # Compute derived classes from base class relations.
         for class_name, bases in self.base_classes.iteritems():
             for base_name in bases:
                 base_name = self.normalize_name(base_name)
                 self.derived_classes[base_name].append(class_name)
 
+        logger.info('===== _finish_analysis: compute overrides')
         # Compute which functions override other functions.
         for class_name, functions in self.class_functions.iteritems():
             functions = set(functions)
@@ -130,17 +135,27 @@ class TreeAnalysis(object):
         `os.path`.
 
         """
+        # First resolve imports
+        logger.debug("normalize_name(%s) =>", str(absolute_local_name))
         while absolute_local_name in self.names:
             absolute_local_name = self.names[absolute_local_name]
+            logger.debug("               %s =>", str(absolute_local_name))
+        logger.debug("               %s", str(absolute_local_name))
 
-        # For cases when you `import foo.bar` and refer to `foo.bar.baz`, we
-        # need to normalize the `foo.bar` prefix in case it's not the
-        # canonical name of that module.
-        if '.' in absolute_local_name:
-            prefix, local_name = absolute_local_name.rsplit('.', 1)
-            return self.normalize_name(prefix) + '.' + local_name
+        (mod, var) = absolute_local_name
+        if mod is None: # Assuming `var` contains an absolute module name
+            return var
+
+        # When you refer to `imported_module.foo`, we need to normalize the
+        # `imported_module` prefix in case it's not the canonical name of
+        # that module.
+        if '.' in var:
+            prefix, local_name = var.rsplit('.', 1)
+            logger.debug("...recursing %s", prefix)
+            return self.normalize_name((mod, prefix)) + '.' + local_name
         else:
-            return absolute_local_name
+            logger.debug("...returning %s", mod+"."+var)
+            return mod + "." + var
 
 
 class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
@@ -152,27 +167,27 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     - A mapping of class names to the classes they inherit from.
 
     """
-    def __init__(self, module_path, tree_analysis):
+    def __init__(self, abs_module_name, tree_analysis):
         super(AnalyzingNodeVisitor, self).__init__()
 
-        self.module_path = module_path
+        self.abs_module_name = abs_module_name # name of the module we're walking
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
         super(AnalyzingNodeVisitor, self).visit_ClassDef(node)
 
         # Save the base classes of any class we find.
-        class_path = self.module_path + '.' + node.name
+        class_path = self.abs_module_name + '.' + node.name
         bases = []
         for base in node.bases:
             base_name = convert_node_to_name(base)
             if base_name:
-                bases.append(self.module_path + '.' + base_name)
+                bases.append((self.abs_module_name, base_name))
         self.tree_analysis.base_classes[class_path] = bases
 
     def visit_ClassFunction(self, class_node, function_node):
         """Save any member functions we find on a class."""
-        class_path = self.module_path + '.' + class_node.name
+        class_path = self.abs_module_name + '.' + class_node.name
         self.tree_analysis.class_functions[class_path].append(function_node.name)
 
     def visit_Import(self, node):
@@ -188,18 +203,30 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         was imported and where it actually lives.
 
         """
+
+        # We're processing statements like the following in the file
+        # corresponding to <self.abs_module_name>:
+        #   [from <node.module>] import <alias.name> as <alias.asname>
+        #
+        # Try to find `abs_import_name`, so that the above is equivalent to
+        #   import <abs_import_name> as <local_name>
+        # ...and store the mapping
+        #   (abs_module_name, local_name) -> (abs_import_name)
         for alias in node.names:
             local_name = alias.asname or alias.name
-            absolute_local_name = self.module_path + '.' + local_name
+            absolute_local_name = (self.abs_module_name, local_name)
 
-            import_name = alias.name
+            # TODO: we're assuming this is an absolute name, but it could also
+            # be relative to the current package or a var
+            abs_import_name = (None, alias.name)
             if isinstance(node, ast.ImportFrom):
                 # `from . import x` means node.module is None.
                 if node.module:
-                    import_name = node.module + '.' + import_name
+                    abs_import_name = (node.module, alias.name)
                 else:
-                    package_path = package_for_module(self.module_path)
+                    package_path = package_for_module(self.abs_module_name)
                     if package_path:
-                        import_name = package_path + '.' + import_name
-
-            self.tree_analysis.names[absolute_local_name] = import_name
+                        abs_import_name = (package_path, alias.name)
+            if absolute_local_name != abs_import_name:
+                logger.debug("import (%s,%s) -> %s", self.abs_module_name, local_name, abs_import_name)
+                self.tree_analysis.names[absolute_local_name] = abs_import_name

@@ -11,8 +11,14 @@ def local_name(absolute_name):
     return absolute_name.rsplit('.', 1)[-1]
 
 
-def package_for_module(module_path):
-    return module_path.rsplit('.', 1)[0] if '.' in module_path else None
+def package_for_module(abs_module_name):
+    """Return the absolute package name of the given absolute module name, or
+    None if this is a top-level module. For example:
+        'package.subpackage.my_module' -> 'package.subpackage'
+        'my_module' -> None
+
+    """
+    return abs_module_name.rsplit('.', 1)[0] if '.' in abs_module_name else None
 
 
 def convert_node_to_name(node):

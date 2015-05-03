@@ -15,6 +15,8 @@ from dxr.plugins.python.menus import class_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
                                       path_to_module)
+import logging
+logger = logging.getLogger(__name__)
 
 
 mappings = {
@@ -55,14 +57,15 @@ class TreeToIndex(TreeToIndexBase):
                          self.tree.ignore_filenames)
 
     def post_build(self):
-        paths = ((path, self.tree.source_encoding) for path in self.unignored_files)
+        paths = ((path, self.tree.source_encoding) \
+                    for path in self.unignored_files if is_interesting(path))
         self.tree_analysis = TreeAnalysis(
             python_path=self.plugin_config.python_path,
             source_folder=self.tree.source_folder,
             paths=paths)
 
     def file_to_index(self, path, contents):
-        if path in self.tree_analysis.ignore_paths:
+        if (not is_interesting(path)) or (path in self.tree_analysis.ignore_paths):
             return FILE_TO_IGNORE
         else:
             return FileToIndex(path, contents, self.plugin_name, self.tree,
@@ -158,7 +161,7 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                               start=start, end=end)
 
     def get_class_name(self, class_node):
-        return self.file_to_index.module_name + '.' + class_node.name
+        return self.file_to_index.abs_module_name + '.' + class_node.name
 
     def yield_needle(self, *args, **kwargs):
         needle = line_needle(*args, **kwargs)
@@ -182,12 +185,15 @@ class FileToIndex(FileToIndexBase):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
         self.tree_analysis = tree_analysis
-        self.module_name = path_to_module(tree_analysis.python_path, self.path)
+        self.abs_module_name = path_to_module(tree_analysis.python_path, self.path)
 
+        logger.info('===== Indexing %s (%s)', self.path, self.abs_module_name)
         self._visitor = None
 
     def is_interesting(self):
-        return is_interesting(self.path)
+        assert is_interesting(self.path), \
+            "FileToIndex should only be created for 'interesting' files"
+        return True
 
     @property
     def visitor(self):
@@ -207,8 +213,8 @@ class FileToIndex(FileToIndexBase):
         # __init__.py files for packages even though that's not
         # _technically_ a module.
         yield file_needle('py_module',
-                          name=local_name(self.module_name),
-                          qualname=self.module_name)
+                          name=local_name(self.abs_module_name),
+                          qualname=self.abs_module_name)
 
     def needles_by_line(self):
         return iterable_per_line(
