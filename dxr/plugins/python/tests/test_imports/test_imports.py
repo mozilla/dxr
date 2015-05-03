@@ -54,3 +54,21 @@ class ImportTests(DxrInstanceTestCase):
             ('class <b>ImportAsChildClass</b>(blarent.ParentClass):', 20),
             ('class <b>RelativeImportChildClass</b>(carent.ParentClass):', 24),
         ])
+
+    # Edge cases for the code in `package`.
+    def test_submodule_import_from(self):
+        """Make sure we handle `from package import submodule` as
+        well as `import package.submodule`.
+
+        """
+        self.found_lines_eq('derived:package.submodule.MyClass', [
+            ('class <b>FirstDerivedFromSubmodule</b>(submodule.MyClass):', 4),
+            ('class <b>SecondDerivedFromSubmodule</b>(package.submodule.MyClass):', 9),
+        ])
+
+    def test_submodule_name_collision(self):
+        """Make sure we handle `from package.sub import sub`.
+
+        """
+        self.found_line_eq('derived:package.test_import_name_collision.MyClass',
+                           'class <b>DerivedFromInaccessibleClass</b>(MyClass):', 24)
