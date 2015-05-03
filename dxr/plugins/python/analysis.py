@@ -142,16 +142,20 @@ class TreeAnalysis(object):
             logger.debug("               %s =>", str(absolute_local_name))
         logger.debug("               %s", str(absolute_local_name))
 
-        # For cases when you `import foo.bar` and refer to `foo.bar.baz`, we
-        # need to normalize the `foo.bar` prefix in case it's not the
-        # canonical name of that module.
-        if '.' in absolute_local_name:
-            prefix, local_name = absolute_local_name.rsplit('.', 1)
+        (mod, var) = absolute_local_name
+        if mod is None: # Assuming `var` contains an absolute module name
+            return var
+
+        # When you refer to `imported_module.foo`, we need to normalize the
+        # `imported_module` prefix in case it's not the canonical name of
+        # that module.
+        if '.' in var:
+            prefix, local_name = var.rsplit('.', 1)
             logger.debug("...recursing %s", prefix)
-            return self.normalize_name(prefix) + '.' + local_name
+            return self.normalize_name((mod, prefix)) + '.' + local_name
         else:
-            logger.debug("...returning %s", absolute_local_name)
-            return absolute_local_name
+            logger.debug("...returning %s", mod+"."+var)
+            return mod + "." + var
 
 
 class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
@@ -178,7 +182,7 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         for base in node.bases:
             base_name = convert_node_to_name(base)
             if base_name:
-                bases.append(self.abs_module_name + '.' + base_name)
+                bases.append((self.abs_module_name, base_name))
         self.tree_analysis.base_classes[class_path] = bases
 
     def visit_ClassFunction(self, class_node, function_node):
@@ -210,17 +214,18 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         #   (abs_module_name, local_name) -> (abs_import_name)
         for alias in node.names:
             local_name = alias.asname or alias.name
-            absolute_local_name = self.abs_module_name + '.' + local_name
+            absolute_local_name = (self.abs_module_name, local_name)
 
-            abs_import_name = alias.name
+            # TODO: we're assuming this is an absolute name, but it could also
+            # be relative to the current package or a var
+            abs_import_name = (None, alias.name)
             if isinstance(node, ast.ImportFrom):
                 # `from . import x` means node.module is None.
                 if node.module:
-                    abs_import_name = node.module + '.' + alias.name
+                    abs_import_name = (node.module, alias.name)
                 else:
                     package_path = package_for_module(self.abs_module_name)
                     if package_path:
-                        abs_import_name = package_path + '.' + alias.name
-
+                        abs_import_name = (package_path, alias.name)
             logger.debug("import (%s,%s) -> %s", self.abs_module_name, local_name, abs_import_name)
             self.tree_analysis.names[absolute_local_name] = abs_import_name
