@@ -63,7 +63,7 @@ class TreeToIndex(TreeToIndexBase):
             paths=paths)
 
     def file_to_index(self, path, contents):
-        if path in self.tree_analysis.ignore_paths:
+        if (not is_interesting(path)) or (path in self.tree_analysis.ignore_paths):
             return FILE_TO_IGNORE
         else:
             return FileToIndex(path, contents, self.plugin_name, self.tree,
@@ -188,7 +188,9 @@ class FileToIndex(FileToIndexBase):
         self._visitor = None
 
     def is_interesting(self):
-        return is_interesting(self.path)
+        assert is_interesting(self.path), \
+            "FileToIndex should only be created for 'interesting' files"
+        return True
 
     @property
     def visitor(self):
