@@ -55,8 +55,8 @@ class TreeToIndex(TreeToIndexBase):
                          self.tree.ignore_filenames)
 
     def post_build(self):
-        paths = ((path, self.tree.source_encoding) \
-                    for path in self.unignored_files if is_interesting(path))
+        paths = ((path, self.tree.source_encoding)
+                 for path in self.unignored_files if is_interesting(path))
         self.tree_analysis = TreeAnalysis(
             python_path=self.plugin_config.python_path,
             source_folder=self.tree.source_folder,
