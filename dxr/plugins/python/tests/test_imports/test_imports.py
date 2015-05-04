@@ -67,8 +67,6 @@ class ImportTests(DxrInstanceTestCase):
         ])
 
     def test_submodule_name_collision(self):
-        """Make sure we handle `from package.sub import sub`.
-
-        """
+        """Make sure we handle `from package.sub import sub`."""
         self.found_line_eq('derived:package.test_import_name_collision.MyClass',
                            'class <b>DerivedFromInaccessibleClass</b>(MyClass):', 24)

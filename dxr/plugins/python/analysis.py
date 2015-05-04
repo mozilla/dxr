@@ -59,7 +59,7 @@ class TreeAnalysis(object):
             self.ignore_paths.add(rel_path)
             return
 
-        abs_module_name = path_to_module(self.python_path, path) # e.g. package.sub.current_file
+        abs_module_name = path_to_module(self.python_path, path)  # e.g. package.sub.current_file
         visitor = AnalyzingNodeVisitor(abs_module_name, self)
         visitor.visit(syntax_tree)
 
@@ -159,7 +159,7 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     def __init__(self, abs_module_name, tree_analysis):
         super(AnalyzingNodeVisitor, self).__init__()
 
-        self.abs_module_name = abs_module_name # name of the module we're walking
+        self.abs_module_name = abs_module_name  # name of the module we're walking
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
@@ -203,7 +203,7 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         #   (abs_module_name, local_name) -> (abs_import_name)
         for alias in node.names:
             local_name = alias.asname or alias.name
-            absolute_local_name = (self.abs_module_name, local_name)
+            absolute_local_name = self.abs_module_name, local_name
 
             # TODO: we're assuming this is an absolute name, but it could also
             # be relative to the current package or a var
@@ -211,7 +211,7 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
             if isinstance(node, ast.ImportFrom):
                 # `from . import x` means node.module is None.
                 if node.module:
-                    abs_import_name = (node.module, alias.name)
+                    abs_import_name = node.module, alias.name
                 else:
                     package_path = package_for_module(self.abs_module_name)
                     if package_path:
