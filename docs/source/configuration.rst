@@ -214,3 +214,9 @@ See :ref:`writing-plugins` for more details on plugin development.
 
 ``p4web_url``
     The URL to the root of a p4web installation. Default: ``http://p4web/``
+
+[[python]]
+----------
+
+``python_path``
+    Path to the folder from which the codebase imports Python modules
