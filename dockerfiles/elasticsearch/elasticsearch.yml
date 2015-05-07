@@ -1,0 +1,5 @@
+# Customizations for DXR elasticsearch, mount into /usr/share/elasticsearch/config/elasticsearch.yml
+discovery.zen.ping.multicast.enabled: false
+network.host: 127.0.0.1
+bootstrap.mlockall: true
+script.disable_dynamic: false
