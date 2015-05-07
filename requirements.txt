@@ -21,7 +21,7 @@ Jinja2==2.7.2
 MarkupSafe==0.18
 
 # sha256: Z8YXx0CscG-SM3GibwIzmyfNbDbl0_ssytDcAjYVJ_o
-Mercurial==3.3.2
+Mercurial==3.4
 
 # sha256: k-YuBcetPaGiM972cx6ChRVnAeNBml_ieQF8Qp7GfOA
 more-itertools==2.2
