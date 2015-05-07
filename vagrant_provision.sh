@@ -123,3 +123,7 @@ grep 'script.disable_dynamic: false' /etc/elasticsearch/elasticsearch.yml > /dev
 update-rc.d elasticsearch defaults 95 10
 [ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-lang-javascript/2.4.1
 /etc/init.d/elasticsearch start
+
+# Install Rust in /usr/local:
+curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --yes
+# TODO: Pin this to a known --revision so tests are stable.
