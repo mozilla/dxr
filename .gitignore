@@ -18,3 +18,8 @@ dxr-temp-*
 /node_modules/grunt*
 /node_modules/nunjucks
 /docs/build
+
+# docker based stuff
+/venv
+.bash_history
+docker-compose.yml

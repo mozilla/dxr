@@ -1,0 +1,10 @@
+elasticsearch:
+  image: mozilla/dxr_elasticsearch
+  net: host
+  
+dxr:
+  image: mozilla/dxr_application
+  net: host
+  links:
+    - elasticsearch
+  volumes:

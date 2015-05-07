@@ -1,0 +1,64 @@
+# sha256: yZcvTSuAV1u5ESUAz-x1Dq9PBOB6vaSyxE5FPN5l7nc
+click==3.3
+
+# sha256: ovVlB3DhyH-zNa8Zqbfrc_wFzPIhROto230AzSvLCQI
+configobj==5.0.6
+
+# sha256: a7zWVNYZeqoklQWnHUNyUyzTAjhRGMnJhgdUhei-8mU
+# sha256: zWxuAeAVlxTgwdvY2yY8PtvmNpWH46_hgVhKF0lCj_A
+elasticsearch==1.3.0
+
+# sha256: L9XU_-gfdi3So-WEctaQoNu6N2Z3ZQYAOu4-16qor-8
+Flask==0.9
+
+# sha256: jE8mkbKU170cPWDs26wtQ2uxvmGITzIcBGhCUuDV7C0
+futures==2.1.4
+
+# sha256: MQo1-8ysOvE-v5Jyl_hxrGVrnaHSSLH-Z2Wv-nG1MjU
+Jinja2==2.7.2
+
+# sha256: t9XWiL3TRb-ol3d9KXdWaIzwLhs3QsVoheLlwrmW_4I
+MarkupSafe==0.18
+
+# sha256: Z8YXx0CscG-SM3GibwIzmyfNbDbl0_ssytDcAjYVJ_o
+Mercurial==3.3.2
+
+# sha256: k-YuBcetPaGiM972cx6ChRVnAeNBml_ieQF8Qp7GfOA
+more-itertools==2.2
+
+# sha256: HDW0rCBs7y0kgWyJ-Jzyid09OM98RJuz-re_bUPwGx8
+ordereddict==1.1
+
+# sha256: RPLinN6e9780jIdUsmE5pghpDZ8CPbyEnq0CRqDJXQo
+parsimonious==0.6
+
+# sha256: 9D6pnDgR_p_mwPuKXmlkjhs6964a6NZIc450y4R2gHc
+pyelasticsearch==1.1
+
+# Pygments 2.0.1 with a C++ lexer patched to fix https://bitbucket.org/birkenfeld/pygments-main/issue/1081/cpplexer-pathological-slowness-case
+# sha256: Ftr99EAuAJQ9S1PJiiUa36knAKmRQDbXsk6WPwt3V1Q
+https://bitbucket.org/erikrose/pygments-main/get/1081-pragmatic-fix.tar.gz#egg=Pygments
+
+# sha256: xawM0bwmOnGVooapeYI5Jf1CqxPW20rseVY6ULhFjTE
+https://github.com/erikrose/schema/archive/99dc4130f0f05fd3c2d4bc6663a2419851f3c90f.zip#egg=schema
+
+# sha256: KjGJ950ce4ohSaDng8C0IX-tmzCm59YEUPJVPcLA5X4
+simplejson==3.6.5
+
+# sha256: QYqTw5en7asj5ViNvAZ6x0pyPts9VBvUk295R252Rdo
+# sha256: 4kBSQR_E-9H2cmNVN8P8IzDZSBsYwDF2lbRiWVEskdU
+six==1.9.0
+
+# sha256: g0wCoeekicCbmUBFGKhARyZnTHWpijqLxf5XI4v2MQE
+# sha256: JbSn-72REuAZDzH4h3qgUjyuq4YwhyrRu92roBzdZZk
+urllib3==1.10
+
+# sha256: EIw9QftwHEr07wDo677cFHYyyCJHvreYyNhlehKBAgY
+Werkzeug==0.8.3
+
+# sha256: uyTo_df6vGRca0giqfa20IF1End-YHo_-ko4rSI_kgY
+funcy==1.1
+
+# For deployment script only:
+# sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
+requests==1.2.3
