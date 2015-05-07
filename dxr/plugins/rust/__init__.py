@@ -359,8 +359,7 @@ class TreeToIndex(indexers.TreeToIndex):
         # Setup environment variables for using the rust-dxr tool
         # We'll store all the havested metadata in the plugins temporary folder.
 
-        if 'RUSTC' in env:
-            env['RUSTC'] += RUST_DXR_FLAG
+        env['RUSTC'] = env.get('RUSTC', 'rustc') + RUST_DXR_FLAG
         if 'RUSTFLAGS_STAGE2' in env:
             env['RUSTFLAGS_STAGE2'] += RUST_DXR_FLAG
         else:
