@@ -7,7 +7,7 @@ CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
 all: build
 
 test: build
-	python2 setup.py test
+	python setup.py test
 
 build: $(BUILD_PLUGINS) templates pycs
 

@@ -25,13 +25,8 @@ A DXR query is a series of space-delimited :term:`terms<term>`:
   * ``hello``
   * ``three independent words``
 
-The way terms are combined is somewhat odd and will change in a future version.
-For now, the behavior is as follows: terms are ANDed together on a per-file
-basis and then ORed together on a per-line basis. For example, if you searched
-for ``hairy gerbils``, the results would be files containing both the words
-"hairy" and "gerbils", but the lines shown would be ones containing either
-"hairy" *or* "gerbils". The upside is that this makes multi-line comments and
-strings easy to find.
+All terms, filtered or not, are ANDed together, and lines matching all of them
+are returned as results.
 
 Quoting
 -------

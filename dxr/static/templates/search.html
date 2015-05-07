@@ -21,8 +21,8 @@
           <th scope="col">Line</th>
           <th scope="col">Code Snippet</th>
       </thead>
-      <tbody>
       {%- for icon, path, lines in results -%}
+      <tbody class="result" data-path="{{ path }}">
         <tr class="result-head">
           <td class="left-column">
             <div class="{{ icon }} icon-container"></div>
@@ -40,21 +40,21 @@
           </td>
         </tr>
         {% for number, line in lines %}
-        <tr>
-          <td class="left-column">
-            <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
-              {{ number }}
-            </a>
-          </td>
-          <td>
-<a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
-<code aria-labelledby="{{ number }}">{{ line|safe }}</code>
-</a>
-          </td>
-        </tr>
+          <tr>
+            <td class="left-column">
+              <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
+                {{ number }}
+              </a>
+            </td>
+            <td>
+              <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
+                <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
+              </a>
+            </td>
+          </tr>
         {% endfor %}
-    {% endfor %}
       </tbody>
+      {% endfor %}
     </table>
   {% else %}
     <p class="no-results">{{ no_results() }}</p>

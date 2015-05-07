@@ -170,7 +170,7 @@ class Deployment(object):
                     venv_name=VENV_NAME)
 
                 # Check out the source, and install DXR and dependencies:
-                run('git clone {repo}', repo=self.repo)
+                run('git clone {repo} 2>/dev/null', repo=self.repo)
                 with cd('dxr'):
                     run('git checkout -q {rev}', rev=rev)
 
@@ -265,11 +265,6 @@ class Deployment(object):
                 sleep(duration)
             else:
                 break
-        else:
-            echo("Non-fatal: failed to delete old build dir (%s). Perhaps the "
-                 "web app hasn't restarted yet and surrendered its grip on "
-                 "the shared libs built in the old virtualenv." % exc,
-                 err=True)
 
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:

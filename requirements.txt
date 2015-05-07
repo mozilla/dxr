@@ -20,8 +20,8 @@ Jinja2==2.7.2
 # sha256: t9XWiL3TRb-ol3d9KXdWaIzwLhs3QsVoheLlwrmW_4I
 MarkupSafe==0.18
 
-# sha256: Z8YXx0CscG-SM3GibwIzmyfNbDbl0_ssytDcAjYVJ_o
-Mercurial==3.3.2
+# sha256: _x2gVFzdRuvPRzF21Vk3oiu1X_9Rzf-dTC-QD8gLrxA
+Mercurial==3.4
 
 # sha256: k-YuBcetPaGiM972cx6ChRVnAeNBml_ieQF8Qp7GfOA
 more-itertools==2.2

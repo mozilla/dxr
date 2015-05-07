@@ -48,8 +48,8 @@ class Plugin(object):
         :arg mappings: Additional Elasticsearch mapping definitions for all the
             plugin's elasticsearch-destined data. A dict with keys for each
             doctype and values reflecting the structure described at
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/
-            current/indices-put-mapping.html. Since a FILE-domain query will
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html.
+            Since a FILE-domain query will
             be promoted to a LINE query if any other query term triggers a
             line-based query, it's important to keep field names and semantics
             the same between lines and files. In other words, a LINE mapping
@@ -57,8 +57,7 @@ class Plugin(object):
         :arg analyzers: Analyzer, tokenizer, and token and char filter
             definitions for the elasticsearch mappings. A dict with keys
             "analyzer", "tokenizer", etc., following the structure outlined at
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/
-            current/analysis.html.
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/analysis.html.
         :arg direct_searchers: Functions that provide direct search
             capability. Each must take a single query term of type 'text',
             return an elasticsearch filter clause to run against LINEs, and
