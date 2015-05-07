@@ -4,8 +4,7 @@
 # This is idempotent, even though I'm not sure the shell provisioner requires
 # it to be.
 
-set -e
-set -x
+set -euxo pipefile
 
 # Elasticsearch isn't in Debian proper yet, so we get it from
 # elasticsearch.org's repo.
@@ -32,6 +31,7 @@ apt-get install -y libapache2-mod-wsgi python-pip python-virtualenv python2.7-de
 # Build a virtualenv, and install requirements:
 VENV=/home/vagrant/venv
 sudo -H -u vagrant -s -- <<THEEND
+set -euxo pipefile
 virtualenv $VENV
 source $VENV/bin/activate
 cd ~vagrant/dxr
