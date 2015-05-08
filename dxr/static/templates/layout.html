@@ -5,17 +5,17 @@
   <head>
     <meta charset="utf-8" />
     {% block head %}
-      <link href="{{ www_root }}/static/icons/search.png" rel="shortcut icon">
+      <link href="{{ url_for('.static', filename='icons/search.png') }}" rel="shortcut icon">
     {% endblock %}
     <title>{% block title %}DXR Code Index{% endblock %}</title>
 
     {% block site_css %}
-      <link href="{{ www_root }}/static/css/dxr.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ www_root }}/static/css/forms.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ www_root }}/static/css/icons.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ www_root }}/static/css/code-style.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ www_root }}/static/css/selector-common.css" rel="stylesheet" type="text/css" media="screen" />
-      <link href="{{ www_root }}/static/css/filter.css" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/dxr.css') }}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/forms.css') }}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/icons.css') }}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/code-style.css') }}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/selector-common.css') }}" rel="stylesheet" type="text/css" media="screen" />
+      <link href="{{ url_for('.static', filename='css/filter.css') }}" rel="stylesheet" type="text/css" media="screen" />
     {% endblock %}
   </head>
   <body>
@@ -90,13 +90,13 @@
     <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-results-line-count="{{ results_line_count }}" data-eof="{{ eof }}"></span>
 
     {% block site_js %}
-      <script src="{{ www_root }}/static/js/libs/jquery203.js"></script>
-      <script src="{{ www_root }}/static/js/libs/nunjucks-min.js"></script>
-      <script src="{{ www_root }}/static/js/templates.js"></script>
-      <script src="{{ www_root }}/static/js/utils.js"></script>
-      <script src="{{ www_root }}/static/js/dxr.js"></script>
-      <script src="{{ www_root }}/static/js/context_menu.js"></script>
-      <script src="{{ www_root }}/static/js/filter.js"></script>
+      <script src="{{ url_for('.static', filename='js/libs/jquery203.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/libs/nunjucks-min.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/templates.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/utils.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/dxr.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/context_menu.js') }}"></script>
+      <script src="{{ url_for('.static', filename='js/filter.js') }}"></script>
     {% endblock %}
 
     {% if google_analytics_key %}

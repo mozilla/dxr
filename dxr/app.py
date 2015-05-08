@@ -160,7 +160,8 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
                                error_html=exc.reason,
                                **template_vars), 400
 
-    return render_template('search.html', results=results,
+    return render_template('search.html',
+                           results=results,
                            results_line_count=results_line_count,
                            **template_vars)
 

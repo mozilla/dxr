@@ -5,12 +5,12 @@
 {% block title %}{{ name }} - DXR{% endblock %}
 
 {% block head %}
-  <link rel="shortcut icon" href="{{ www_root }}/static/icons/mimetypes/{{ icon }}.png"/>
+  <link rel="shortcut icon" href="{{ url_for('.static', filename='icons/mimetypes/') }}{{ icon }}.png" />
 {% endblock %}
 
 {% block site_css %}
   {{ super() }}
-  <link href="{{ www_root }}/static/css/tree-selector.css" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
 {% block content %}
@@ -29,7 +29,7 @@
 
 {% block site_js %}
   {{ super() }}
-  <script src="{{ www_root }}/static/js/panel.js"></script>
-  <script src="{{ www_root }}/static/js/tree-selector.js"></script>
-  <script src="{{ www_root }}/static/js/code-highlighter.js"></script>
+  <script src="{{ url_for('.static', filename='js/panel.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/tree-selector.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/code-highlighter.js') }}"></script>
 {% endblock %}
