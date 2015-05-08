@@ -1,10 +1,8 @@
 {% from "partial/results.html" import results_list -%}
-{% from "partial/switch_tree.html" import tree_menu -%}
 {% from "partial/no_results.html" import no_results -%}
+{% from "partial/results_header.html" import results_header -%}
 
-<p class="top-of-tree">Results from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree:</p>
-
-{{ tree_menu(tree_tuples, tree) }}
+{{ results_header(result_count, top_of_tree, tree_tuples, tree) }}
 
 {% if results|length > 0 %}
   <table class="results">

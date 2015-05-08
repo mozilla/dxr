@@ -95,11 +95,12 @@ def search(tree):
 def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
     """Do a normal search, and return the results as JSON."""
     try:
+        count_and_results = query.results(offset, limit)
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
                     'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
-                   for icon, path, lines in query.results(offset, limit)]
+                   for icon, path, lines in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
@@ -107,6 +108,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'www_root': config.www_root,
         'tree': tree,
         'results': results,
+        'result_count': count_and_results['result_count'],
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
 
 
@@ -148,12 +150,14 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
                                   tree=tree,
                                   q=query_text,
                                   redirect='false'),
+            'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
             'tree_tuples': _tree_tuples(query_text, is_case_sensitive),
             'www_root': config.www_root}
 
     try:
-        results = list(query.results(offset, limit))
+        count_and_results = query.results(offset, limit)
+        results = list(count_and_results['results'])
         results_line_count = sum(len(r[2]) for r in results)
     except BadTerm as exc:
         return render_template('error.html',
@@ -162,6 +166,7 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     return render_template('search.html',
                            results=results,
+                           result_count=count_and_results['result_count'],
                            results_line_count=results_line_count,
                            **template_vars)
 
