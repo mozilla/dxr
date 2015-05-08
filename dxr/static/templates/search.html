@@ -33,7 +33,7 @@
               {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
               {%- set is_first_or_only = loop.first or paths|length == 1 -%}
               {%- set is_dir = not loop.last -%}
-              {%- set url = '%s/%s/source/%s' % (www_root, tree, path) -%}
+              {%- set url = url_for('.browse', tree=tree, path=path) -%}
 
               {%- include 'path_line.html' -%}
             {%- endfor -%}
@@ -42,12 +42,12 @@
         {% for number, line in lines %}
           <tr>
             <td class="left-column">
-              <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
+              <a href="{{ url_for('.browse', tree=tree, path=path, _anchor=number) }}">
                 {{ number }}
               </a>
             </td>
             <td>
-              <a href="{{ www_root }}/{{ tree }}/source/{{ path }}#{{ number }}">
+              <a href="{{ url_for('.browse', tree=tree, path=path, _anchor=number) }}">
                 <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
               </a>
             </td>
