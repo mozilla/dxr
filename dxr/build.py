@@ -486,34 +486,30 @@ def index_file(tree, tree_indexers, path, es, index):
         # indexing. We could interpose an external queueing system, but I'm
         # willing to potentially sacrifice a little speed here for the easy
         # management of self-throttling.
-        #
-        # Conditional until we figure out how to display arbitrary binary
-        # files:
-        if is_text or is_image(rel_path):
-            file_info = stat(path)
-            folder_name, file_name = split(rel_path)
-            # Hard-code the keys that are hard-coded in the browse()
-            # controller. Merge with the pluggable ones from needles:
-            doc = dict(# Some non-array fields:
-                       folder=folder_name,
-                       name=file_name,
-                       size=file_info.st_size,
-                       modified=datetime.fromtimestamp(file_info.st_mtime),
-                       is_folder=False,
+        file_info = stat(path)
+        folder_name, file_name = split(rel_path)
+        # Hard-code the keys that are hard-coded in the browse()
+        # controller. Merge with the pluggable ones from needles:
+        doc = dict(# Some non-array fields:
+                    folder=folder_name,
+                    name=file_name,
+                    size=file_info.st_size,
+                    modified=datetime.fromtimestamp(file_info.st_mtime),
+                    is_folder=False,
 
-                       # And these, which all get mashed into arrays:
-                       **needles)
-            links = [{'order': order,
-                      'heading': heading,
-                      'items': [{'icon': icon,
-                                 'title': title,
-                                 'href': href}
-                                for icon, title, href in items]}
-                     for order, heading, items in
-                     chain.from_iterable(linkses)]
-            if links:
-                doc['links'] = links
-            yield es.index_op(doc, doc_type=FILE)
+                    # And these, which all get mashed into arrays:
+                    **needles)
+        links = [{'order': order,
+                    'heading': heading,
+                    'items': [{'icon': icon,
+                                'title': title,
+                                'href': href}
+                            for icon, title, href in items]}
+                    for order, heading, items in
+                    chain.from_iterable(linkses)]
+        if links:
+            doc['links'] = links
+        yield es.index_op(doc, doc_type=FILE)
 
         # Index all the lines. If it's an empty file (no lines), don't bother
         # ES. It hates empty dicts.
