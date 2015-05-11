@@ -341,7 +341,6 @@ mark {
 .breadcrumbs,
 .top-of-tree {
     display: inline-block;
-    float: left;
     margin: 0;
     padding: .5rem 0 1rem 0;
     text-align: left;
@@ -449,10 +448,6 @@ mark {
 .panel section a:focus {
     background-color: #e0e0e0;
     text-decoration: underline;
-}
-.no-results {
-    clear: both;
-    font-style: italic;
 }
 #fetch-results {
     display: none;

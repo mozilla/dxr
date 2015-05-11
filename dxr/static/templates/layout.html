@@ -1,4 +1,3 @@
-{%- from "partial/no_results.html" import no_results -%}
 
 <!DOCTYPE html>
 <html lang="en-US">
@@ -69,7 +68,7 @@
         <input type="submit" value="Search" class="visually-hidden" />
     </form>
 
-    <div id="content" class="content" data-no-results="{{ no_results() }}">
+    <div id="content" class="content">
       {% block content %}
       {% endblock %}
     </div>
