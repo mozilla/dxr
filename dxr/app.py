@@ -372,6 +372,7 @@ def _linked_pathname(path, tree_name):
 
     return components
 
+
 @dxr_blueprint.route('/<tree>/')
 @dxr_blueprint.route('/<tree>')
 def tree_root(tree):
