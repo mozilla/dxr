@@ -26,8 +26,8 @@ from dxr.lines import html_line
 from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
-from dxr.utils import non_negative_int, decode_es_datetime, DXR_BLUEPRINT
-
+from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
+                       format_number)
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -108,7 +108,8 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'www_root': config.www_root,
         'tree': tree,
         'results': results,
-        'result_count': count_and_results['result_count'],
+        'result_count': count_and_results['result_count'],  # just for API use
+        'result_count_formatted': format_number(count_and_results['result_count']),
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
 
 
@@ -166,7 +167,7 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     return render_template('search.html',
                            results=results,
-                           result_count=count_and_results['result_count'],
+                           result_count_formatted=format_number(count_and_results['result_count']),
                            results_line_count=results_line_count,
                            **template_vars)
 
