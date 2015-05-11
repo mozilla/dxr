@@ -83,6 +83,10 @@ mappings = {
                 'type': 'binary',
                 'index': 'no'
             },
+            'is_binary': { # assumed False if not present
+                'type': 'boolean',
+                'index': 'no'
+            },
 
             # Sidebar nav links:
             'links': {
