@@ -47,10 +47,6 @@ containing the config file.
     of the tree being indexed. Default: ``dxr-logs-{tree}`` (in the current
     working directory).
 
-``default_tree``
-    The tree to redirect to when you visit the root of the site. Default: the
-    first tree in the config file
-
 ``disabled_plugins``
     Names of plugins to disable. Default: empty
 
@@ -72,26 +68,12 @@ containing the config file.
     Build/indexing stages to skip, for debugging: ``build``, ``index``, or
     both, whitespace-separated. Default: none
 
-``www_root``
-    URL path prefix to the root of DXR's web app. Example: ``/smoo``. Default:
-    empty
-
-``google_analytics_key``
-    Google analytics key. If set, the analytics snippet will added
-    automatically to every page.
-
 ``es_alias``
     A ``format()``-style template for coming up with elasticsearch alias
     names. These live in the same namespace as indices, so don't pave over any
     index name you're already using. The variables ``{format}`` and ``{tree}``
     will be substituted, and their meanings are as in ``es_index``. Default:
     ``dxr_{format}_{tree}``.
-
-``es_hosts``
-    A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
-    include port numbers. Default: http://127.0.0.1:9200/. Remember that you
-    can split whitespace-containing things across lines in an ini file by
-    leading with spaces.
 
 ``es_index``
     A ``format()``-style template for coming up with elasticsearch index
@@ -102,18 +84,12 @@ containing the config file.
     build hosts's MAC address so errant concurrent builds on different hosts
     at least won't clobber each other. Default: ``dxr_{format}_{tree}_{unique}``
 
-``es_catalog_index``
-     The name to use for the :term:`catalog index`. You probably don't need to
-     change this unless you want multiple otherwise-independent DXR
-     deployments, with disjoint Switch Tree menus, sharing the same ES
-     cluster. Default: ``dxr_catalog``
-
 ``es_catalog_replicas``
-    The number of elasticsearch replicas to make of the catalog index. This is
-    read often and written only when an indexing run completes, so crank it up
-    so there's a replica on every node for best performance. But remember that
-    writes will hang if at least half of the attempted copies aren't
-    available. Default: ``1``
+    The number of elasticsearch replicas to make of the :term:`catalog index`.
+    This is read often and written only when an indexing run completes, so
+    crank it up so there's a replica on every node for best performance. But
+    remember that writes will hang if at least half of the attempted copies
+    aren't available. Default: ``1``
 
 ``es_indexing_timeout``
     The number of seconds DXR should wait for elasticsearch responses during
@@ -124,18 +100,48 @@ containing the config file.
     indexing. Set to -1 to do no refreshes at all, except directly after an
     indexing run completes. Default: 60
 
+Web App Options That Need a Restart
+```````````````````````````````````
+
+These options are used by the DXR web app (though some are used at index time
+as well). They are not frozen into the :term:`catalog index` but rather are
+read when the web app starts up. Thus, the web app must be restarted to see
+new values of these.
+
+``default_tree``
+    The tree to redirect to when you visit the root of the site. Default: the
+    first tree in the config file
+
+``es_hosts``
+    A whitespace-delimited list of elasticsearch nodes to talk to. Be sure to
+    include port numbers. Default: http://127.0.0.1:9200/. Remember that you
+    can split whitespace-containing things across lines in an ini file by
+    leading with spaces.
+
+``es_catalog_index``
+     The name to use for the :term:`catalog index`. You probably don't need to
+     change this unless you want multiple otherwise-independent DXR
+     deployments, with disjoint Switch Tree menus, sharing the same ES
+     cluster. Default: ``dxr_catalog``.
+
+``google_analytics_key``
+    Google analytics key. If set, the analytics snippet will added
+    automatically to every page.
+
 ``max_thumbnail_size``
     The file size in bytes at which images will not be used for their icon
     previews on folder browsing pages. Default: 20000.
 
-(Refer to the Plugin Configuration section for plugin keys available here).
+``www_root``
+    URL path prefix to the root of DXR's web app. Example: ``/smoo``. Default:
+    empty.
 
 
 Tree Sections
 -------------
 
-Any section not named ``[DXR]`` represents a tree to be indexed. Options for
-these include...
+Any section not named ``[DXR]`` represents a tree to be indexed. Changes to
+per-tree options take effect when the tree is next indexed.
 
 ``build_command``
     Command for building your source code. Default: ``make -j {workers}``.
@@ -192,6 +198,9 @@ For example... ::
         [[buglink]]
         url = http://www.example.com/
         name = Example bug tracker
+
+Currently, changes to plugin configuration take effect at index time or after
+restarting the web app; none are picked up by the web app in realtime.
 
 See :ref:`writing-plugins` for more details on plugin development.
 
