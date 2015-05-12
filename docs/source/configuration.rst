@@ -34,39 +34,11 @@ Here are the options that can live in the ``[DXR]`` section. For options
 representing path names, relative paths are relative to the directory
 containing the config file.
 
-``temp_folder``
-    A ``format()``-style template for deciding where to store temporary files
-    used while indexing. The token ``{tree}`` will be replaced with the name
-    of each tree you index. Default: ``dxr-temp-{tree}``. It's a good idea to
-    keep this out of :file:`/tmp` if it's on a small partition, since it can
-    grow to tens of gigabytes on a large codebase.
-
-``log_folder``
-    A ``format()``-style template for deciding where to store log files
-    written while indexing. The token ``{tree}`` will be replaced with the name
-    of the tree being indexed. Default: ``dxr-logs-{tree}`` (in the current
-    working directory).
-
 ``disabled_plugins``
     Names of plugins to disable. Default: empty
 
 ``enabled_plugins``
     Names of plugins to enable. Default: ``*``
-
-``generated_date``
-    The "generated on" date stamped at the bottom of every DXR web page, in
-    RFC-822 (also known as RFC 2822) format. Default: the time the indexing run
-    started
-
-``workers``
-    Number of concurrent processes to use for building and indexing projects.
-    Default: the number of CPUs on the system. Set to 0 to use no worker
-    processes and do everything in the master process. This is handy for
-    debugging.
-
-``skip_stages``
-    Build/indexing stages to skip, for debugging: ``build``, ``index``, or
-    both, whitespace-separated. Default: none
 
 ``es_alias``
     A ``format()``-style template for coming up with elasticsearch alias
@@ -99,6 +71,34 @@ containing the config file.
     The number of seconds between elasticsearch's consolidation passes during
     indexing. Set to -1 to do no refreshes at all, except directly after an
     indexing run completes. Default: 60
+
+``generated_date``
+    The "generated on" date stamped at the bottom of every DXR web page, in
+    RFC-822 (also known as RFC 2822) format. Default: the time the indexing run
+    started
+
+``log_folder``
+    A ``format()``-style template for deciding where to store log files
+    written while indexing. The token ``{tree}`` will be replaced with the name
+    of the tree being indexed. Default: ``dxr-logs-{tree}`` (in the current
+    working directory).
+
+``skip_stages``
+    Build/indexing stages to skip, for debugging: ``build``, ``index``, or
+    both, whitespace-separated. Default: none
+
+``temp_folder``
+    A ``format()``-style template for deciding where to store temporary files
+    used while indexing. The token ``{tree}`` will be replaced with the name
+    of each tree you index. Default: ``dxr-temp-{tree}``. It's a good idea to
+    keep this out of :file:`/tmp` if it's on a small partition, since it can
+    grow to tens of gigabytes on a large codebase.
+
+``workers``
+    Number of concurrent processes to use for building and indexing projects.
+    Default: the number of CPUs on the system. Set to 0 to use no worker
+    processes and do everything in the master process. This is handy for
+    debugging.
 
 Web App Options That Need a Restart
 ```````````````````````````````````
