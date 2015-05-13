@@ -309,15 +309,6 @@ class QueryVisitor(NodeVisitor):
         """
         return visited_children or node
 
-# Return the the first filter in filters which is provided by a plugin in enabled_plugins.
-def first_filter_for_plugins(enabled_plugins, filters):
-    for f in filters:
-        if not f[0].description:
-            continue
-        if f[1] in enabled_plugins:
-            return f[0]
-
-    return None
 
 @cached
 def filters_by_name(plugins):
