@@ -30,10 +30,9 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
 
 from dxr import indexers
 from dxr.plugins import Plugin, filters_from_namespace
-from dxr.plugins.core import QUALIFIED_NEEDLE
 import dxr.utils as utils
 from dxr.filters import LINE
-from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines
+from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines, QUALIFIED_LINE_NEEDLE
 
 from dxr.plugins.rust import filters
 import dxr.plugins.rust.menu
@@ -1048,23 +1047,23 @@ def process_end_external_crates(args, tree):
 mappings = {
     LINE: {
         'properties': {
-            'rust_function': QUALIFIED_NEEDLE,
-            'rust_function_ref': QUALIFIED_NEEDLE,
-            'rust_var': QUALIFIED_NEEDLE,
-            'rust_var_ref': QUALIFIED_NEEDLE,
-            'rust_type': QUALIFIED_NEEDLE,
-            'rust_type_ref': QUALIFIED_NEEDLE,
-            'rust_module': QUALIFIED_NEEDLE,
-            'rust_module_ref': QUALIFIED_NEEDLE,
-            'rust_module_alias_ref': QUALIFIED_NEEDLE,
-            'rust_extern_ref': QUALIFIED_NEEDLE,
-            'rust_module_use': QUALIFIED_NEEDLE,
-            'rust_impl': QUALIFIED_NEEDLE,
-            'rust_fn_impls': QUALIFIED_NEEDLE,
-            'rust_bases': QUALIFIED_NEEDLE,
-            'rust_derived': QUALIFIED_NEEDLE,
-            'rust_callers': QUALIFIED_NEEDLE,
-            'rust_called_by': QUALIFIED_NEEDLE,
+            'rust_function': QUALIFIED_LINE_NEEDLE,
+            'rust_function_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_var': QUALIFIED_LINE_NEEDLE,
+            'rust_var_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_type': QUALIFIED_LINE_NEEDLE,
+            'rust_type_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_module': QUALIFIED_LINE_NEEDLE,
+            'rust_module_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_module_alias_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_extern_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_module_use': QUALIFIED_LINE_NEEDLE,
+            'rust_impl': QUALIFIED_LINE_NEEDLE,
+            'rust_fn_impls': QUALIFIED_LINE_NEEDLE,
+            'rust_bases': QUALIFIED_LINE_NEEDLE,
+            'rust_derived': QUALIFIED_LINE_NEEDLE,
+            'rust_callers': QUALIFIED_LINE_NEEDLE,
+            'rust_called_by': QUALIFIED_LINE_NEEDLE,
         }
     }
 }
