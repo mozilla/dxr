@@ -126,4 +126,6 @@ update-rc.d elasticsearch defaults 95 10
 
 # Install Rust in /usr/local:
 curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --yes
-# TODO: Pin this to a known --revision so tests are stable.
+# Following the Nightly channel gives us early warning of changes that would
+# break DXR. But if this happens often enough that it's disruptive to the goal
+# of testing DXR itself, pin this to a known-working --revision.

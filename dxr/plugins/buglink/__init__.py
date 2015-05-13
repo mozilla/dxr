@@ -10,7 +10,6 @@ from dxr.plugins import Plugin, AdHocTreeToIndex
 
 class FileToIndex(dxr.indexers.FileToIndex):
     def refs(self):
-        print "pattern:", self.plugin_config.regex.pattern
         for m in self.plugin_config.regex.finditer(self.contents):
             bug = m.group(1)
             yield m.start(0), m.end(0), ([{
