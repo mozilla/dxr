@@ -101,7 +101,6 @@ class Query(object):
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
         filters = [[f(term) for f in enabled_filters_by_name[term['name']]]
                    for term in self.terms]
-
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
