@@ -1,6 +1,5 @@
-"DXR plugin for Rust. Relies on output from running rustc with -Zsave-analysis"
+"""DXR plugin for Rust. Relies on output from running rustc with -Zsave-analysis
 
-"""
 It is somewhat painful dealing with the untyped-ness of the CSV input. We want
 to treat all ids as ints rather than strings, getting this wrong causes annoying
 bugs because Python will not check the type of things, but does distinguish between
@@ -12,13 +11,12 @@ bugs because Python will not check the type of things, but does distinguish betw
     Rust NodeIds/DefIds to internal ids)
 * Helper methods might take args which may or may not have been int-ified :-(
 
-This will all go away when we convery to using JSON instead of CSV for the data
+This will all go away when we convert to using JSON instead of CSV for the data
 interchange format.
 
 Line and column numbers are stored as strings though.
+
 """
-
-
 import csv
 import os
 import sys
