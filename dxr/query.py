@@ -344,12 +344,18 @@ def filter_menu_items(plugins):
     :arg plugins: An iterable of Plugins whose filters to put in the Filters
         menu
 
+    Language-agnostic filters come first (as they happen to be among the most
+    useful ones and are relatively few), then the rest, alphabetically. There
+    is room for better UI here. For instance, I'd like to badge each filter
+    with the languages it supports.
+
     """
-    # TODO: Sort these in a stable order. But maybe common ones should be near
-    # the top?
-    return (dict(name=name, description=filters[0].description)
-            for name, filters in filters_by_name(plugins).iteritems()
-            if filters[0].description)
+    sorted_filters_by_name = sorted(
+        ((name, filters[0]) for name, filters in filters_by_name(plugins).items()),
+        key=lambda (name, filter): (hasattr(filter, 'lang'), name))
+    return (dict(name=name, description=filter.description)
+            for name, filter in sorted_filters_by_name
+            if filter.description)
 
 
 def highlight(content, extents):

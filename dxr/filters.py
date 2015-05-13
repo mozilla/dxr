@@ -122,13 +122,14 @@ class NameFilterBase(Filter):
 
     Derives the needle name from the ``name`` cls attribute.
 
+    :ivar lang: A language identifier to separate structural needles from
+        those of other languages and allow for an eventual "lang:" metafilter.
+        This also shows up language badges on the Filters menu. Consider using
+        a common file extension from your language, since those are short and
+        familiar.
+
     """
     def __init__(self, term):
-        """Expects ``self.lang`` to be a language identifier, to separate
-        structural needles from those of other languages and allow for an
-        eventual "lang:" metafilter.
-
-        """
         super(NameFilterBase, self).__init__(term)
         self._needle = '{0}_{1}'.format(self.lang, self.name.replace('-', '_'))
 
