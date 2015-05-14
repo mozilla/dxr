@@ -1,0 +1,2 @@
+class BarClass(object):
+    pass

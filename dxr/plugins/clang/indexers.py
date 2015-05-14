@@ -12,11 +12,11 @@ from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
+from dxr.menus import definition_menu
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
-                                     macro_menu, include_menu, typedef_menu,
-                                     definition_menu)
+                                     macro_menu, include_menu, typedef_menu)
 from dxr.plugins.clang.needles import all_needles
 
 

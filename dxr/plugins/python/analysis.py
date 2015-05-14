@@ -5,13 +5,15 @@ entire codebase.
 """
 import ast
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+from contextlib import contextmanager
 from warnings import warn
 
 from dxr.build import file_contents
-from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
+from dxr.plugins.python.utils import (ClassFunctionVisitor,
                                       convert_node_to_name, package_for_module,
-                                      path_to_module)
+                                      path_to_module, QualNameVisitor,
+                                      relative_module_path)
 
 
 class TreeAnalysis(object):
@@ -38,7 +40,7 @@ class TreeAnalysis(object):
         self.class_functions = defaultdict(list)
         self.overridden_functions = defaultdict(list)
         self.overriding_functions = defaultdict(list)
-        self.names = {}
+        self.definition_tree = DefinitionTree()
         self.ignore_paths = set()
 
         for path, encoding in paths:
@@ -59,8 +61,13 @@ class TreeAnalysis(object):
             self.ignore_paths.add(rel_path)
             return
 
-        abs_module_name = path_to_module(self.python_path, path)  # e.g. package.sub.current_file
-        visitor = AnalyzingNodeVisitor(abs_module_name, self)
+        abs_module_name = path_to_module(self.python_path, path)
+        relative_path = relative_module_path(self.python_path, path)
+        module = Module(abs_module_name, relative_path)
+        import q
+        q(abs_module_name)
+        q(module.path)
+        visitor = AnalyzingNodeVisitor(module, self)
         visitor.visit(syntax_tree)
 
     def _finish_analysis(self):
@@ -121,33 +128,16 @@ class TreeAnalysis(object):
             for derived_child in self.get_derived_classes(derived):
                 yield derived_child
 
-    def normalize_name(self, absolute_local_name):
-        """Given a local name, figure out the actual module that the
-        thing that name points to lives and return that name.
+    def normalize_name(self, absolute_name):
+        """Defer name normalization to the definition tree."""
+        return self.definition_tree.normalize_name(absolute_name)
 
-        For example, if you have `from os import path` in a module
-        called `foo.bar`, then the name `foo.bar.path` would return
-        `os.path`.
-
-        """
-        while absolute_local_name in self.names:
-            absolute_local_name = self.names[absolute_local_name]
-
-        mod, var = absolute_local_name
-        if mod is None:  # Assuming `var` contains an absolute module name
-            return var
-
-        # When you refer to `imported_module.foo`, we need to normalize the
-        # `imported_module` prefix in case it's not the canonical name of
-        # that module.
-        if '.' in var:
-            prefix, local_name = var.rsplit('.', 1)
-            return self.normalize_name((mod, prefix)) + '.' + local_name
-        else:
-            return mod + "." + var
+    def get_definition(self, absolute_name):
+        """Defer definitions to the definition tree."""
+        return self.definition_tree.get(absolute_name)
 
 
-class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
+class AnalyzingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
     """Node visitor that analyzes code for data we need prior to
     indexing, including:
 
@@ -156,23 +146,40 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     - A mapping of class names to the classes they inherit from.
 
     """
-    def __init__(self, abs_module_name, tree_analysis):
+    def __init__(self, module, tree_analysis):
+        # Set before calling super().__init__ for QualNameVisitor.
+        # Name of the module we're walking, e.g. package.sub.current_file
+        self.abs_module_name = module.name
         super(AnalyzingNodeVisitor, self).__init__()
 
-        self.abs_module_name = abs_module_name  # name of the module we're walking
+        self.module = module
         self.tree_analysis = tree_analysis
 
     def visit_ClassDef(self, node):
         super(AnalyzingNodeVisitor, self).visit_ClassDef(node)
 
         # Save the base classes of any class we find.
-        class_path = self.abs_module_name + '.' + node.name
         bases = []
         for base in node.bases:
             base_name = convert_node_to_name(base)
             if base_name:
-                bases.append((self.abs_module_name, base_name))
-        self.tree_analysis.base_classes[class_path] = bases
+                bases.append(self.abs_module_name + '.' + base_name)
+        self.tree_analysis.base_classes[node.qualname] = bases
+
+        # Store the definition of this class.
+        class_def = Definition(name=node.name, line=node.lineno,
+                               col=node.col_offset)
+        self.module.add(node.name, class_def)
+
+    def visit_FunctionDef(self, node):
+        super(AnalyzingNodeVisitor, self).visit_FunctionDef(node)
+
+        # Store definition of this function.
+        function_def = Definition(name=node.name, line=node.lineno,
+                                  col=node.col_offset)
+        import q
+        q(self.module.name + ':' + node.name)
+        self.module.add(node.name, function_def)
 
     def visit_ClassFunction(self, class_node, function_node):
         """Save any member functions we find on a class."""
@@ -180,41 +187,189 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         self.tree_analysis.class_functions[class_path].append(function_node.name)
 
     def visit_Import(self, node):
-        self.analyze_import(node)
+        """
+        Save this import to the DefinitionTree. Handles imports of the
+        form:
+
+        import <alias.name> [as <alias.asname>]
+
+        """
+        for alias in node.names:
+            local_name = alias.asname or alias.name
+            _import = Import(name=local_name,
+                             line=node.lineno, col=node.col_offset,
+                             module_name=alias.name,
+                             as_name=alias.asname)
+            self.module.add(local_name, _import)
+
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node):
-        self.analyze_import(node)
-        self.generic_visit(node)
+        """
+        Save this import to the DefinitionTree. Handles imports of the
+        form:
 
-    def analyze_import(self, node):
-        """Whenever we import something, remember the local name of what
-        was imported and where it actually lives.
+        from <node.module> import <alias.name> [as <alias.asname>]
 
         """
-
-        # We're processing statements like the following in the file
-        # corresponding to <self.abs_module_name>:
-        #   [from <node.module>] import <alias.name> as <alias.asname>
-        #
-        # Try to find `abs_import_name`, so that the above is equivalent to
-        #   import <abs_import_name> as <local_name>
-        # ...and store the mapping
-        #   (abs_module_name, local_name) -> (abs_import_name)
         for alias in node.names:
             local_name = alias.asname or alias.name
-            absolute_local_name = self.abs_module_name, local_name
 
-            # TODO: we're assuming this is an absolute name, but it could also
-            # be relative to the current package or a var
-            abs_import_name = None, alias.name
-            if isinstance(node, ast.ImportFrom):
-                # `from . import x` means node.module is None.
-                if node.module:
-                    abs_import_name = node.module, alias.name
-                else:
-                    package_path = package_for_module(self.abs_module_name)
-                    if package_path:
-                        abs_import_name = package_path, alias.name
-            if absolute_local_name != abs_import_name:
-                self.tree_analysis.names[absolute_local_name] = abs_import_name
+            _import = ImportFrom(name=local_name,
+                                 line=node.lineno, col=node.col_offset,
+                                 module_name=node.module,
+                                 import_name=alias.name,
+                                 as_name=alias.asname)
+            self.module.add(local_name, _import)
+
+        self.generic_visit(node)
+
+
+class Definition(object):
+    """
+    Represents the definition of a name, whether it be defining a value,
+    class, function, or even an imported value.
+    """
+    def __init__(self, name, line, col, module=None):
+        self.name = name
+        self.module = module
+        self.line = line
+        self.col = col
+
+    @property
+    def absolute_name(self):
+        return self.module.name + '.' + self.name
+
+
+class Import(Definition):
+    """
+    Represents an import statement of the form:
+
+    import <self.module_name> [as <self.as_name>]
+
+    """
+    def __init__(self, name, line, col, module_name, as_name=None):
+        super(Import, self).__init__(name, line, col)
+        self.module_name = module_name
+        self.as_name = as_name
+
+
+class ImportFrom(Definition):
+    """
+    Represents an import statement of the form:
+
+    from <self.module_name> import <self.import_name> [as <self.as_name>]
+
+    """
+    def __init__(self, name, line, col, module_name, import_name, as_name=None):
+        super(ImportFrom, self).__init__(name, line, col)
+        self.module_name = module_name
+        self.import_name = import_name
+        self.as_name = as_name
+
+
+def is_import(definition):
+    return isinstance(defintion, (Import, ImportFrom))
+
+
+class Module(object):
+    def __init__(self, name, path):
+        self.name = name  # Absolute name
+        self.path = path
+        self.tree = None
+        self.submodules = {}
+        self.definitions = {}
+
+    def add(self, name, definition):
+        self.definitions[name] = definition
+        definition.module = self
+
+    @property
+    def parent(self):
+        if '.' not in self.name:
+            return None
+        else:
+            parent_name = self.name.rsplit('.', 1)[0]
+            return self.tree.get(parent_name)
+
+
+class DefinitionTree(object):
+    """Stores definitions across the entire project, such as classes and
+    functions, as well as the imports that link them together.
+
+    """
+    def __init__(self):
+        self.modules = {}
+
+    def add_module(self, module):
+        self.modules[module.name] = module
+        module.tree = self
+
+    def get(self, name):
+        """Fetch the definition for the given name, following imports if
+        necessary.
+
+        If the definition is not found, return None. Top-level modules
+        that have not been added to the tree are assumed external and
+        valid, and definitions will be returned for them with no path
+        or position data.
+        """
+        if '.' not in name:
+            return self.modules.get(name, Module(name=name, path=None))
+
+        abs_module_name, definition_name = name.rsplit('.', 1)
+        module_names = abs_module_name.split('.')
+
+        # If we don't even find the top-level module, assume this is a
+        # built-in or external library.
+        root_module_name = module_names.pop(0)
+        module = self.modules.get(root_module_name, None)
+        if not module:
+            module = Module(name=root_module_name, path=None)
+            import q
+            q('EXTERNAL: ' + name)
+            return Definition(name=name, line=None, col=None, module=module)
+
+        for name in module_names:
+            next_module = module.submodules.get(name, None)
+            if not next_module:
+                _import = module.definitions.get(name, None)
+                if not is_import(_import):
+                    return None
+
+                module = self.follow_import(_import)
+
+        definition = module.definitions.get(names[-1], None)
+        if is_import(defintion):
+            definition = self.follow_import(definition)
+        return definition
+
+    def follow_import(self, _import):
+        if _import.module_name:
+            module = self.get(_import.module_name)
+        else:
+            # Relative import.
+            module = _import.module.parent
+
+        if isinstance(_import, ImportFrom):
+            definition = module.definitions.get(_import.import_name)
+            if not definition:
+                return module.submodules.get(_import.import_name)
+            elif is_import(definition):
+                return self.follow_import(definition)
+            else:
+                return definition
+        else:
+            return module
+
+    def normalize_name(self, absolute_name):
+        """Given a name, figure out the actual module that the thing
+        that name points to lives and return that name.
+
+        For example, if you have `from os import path` in a module
+        called `foo.bar`, then the name `foo.bar.path` would return
+        `os.path`.
+
+        """
+        definition = self.get(absolute_name)
+        return definition.absolute_name if definition else absolute_name
