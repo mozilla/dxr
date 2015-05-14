@@ -6,8 +6,6 @@ from errno import ENOENT
 import fnmatch
 from functools import wraps
 from itertools import izip
-import locale
-from locale import setlocale
 from os import chdir, dup, fdopen, getcwd
 from os.path import join
 from shutil import rmtree
@@ -16,10 +14,6 @@ from sys import stdout
 from flask import url_for
 
 from dxr.exceptions import CommandFailure
-
-
-# Make locale.format() work. Not threadsafe, so do it early.
-setlocale(locale.LC_ALL, '')
 
 
 DXR_BLUEPRINT = 'dxr_blueprint'
@@ -57,14 +51,17 @@ def non_negative_int(s, default):
 
 
 def format_number(n):
-    """Add thousands separators to a number.
+    """Add thousands separators to an integer.
 
     At the moment, this is hard-coded, but this should be internationalized if
     we ever do that to DXR at large. It is not registered as a template filter
     because it wouldn't work client-side with the AJAX search results.
 
     """
-    return locale.format('%d', n, grouping=True)
+    try:
+        return format(n, ',d')
+    except ValueError:  # Give up on 2.6.
+        return str(n)
 
 
 def deep_update(dest, source):
