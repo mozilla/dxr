@@ -37,8 +37,9 @@ from pipes import quote
 from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
+from time import sleep
 
-from click import command, option, Path
+from click import command, echo, option, Path
 from flask import current_app
 import requests
 
@@ -169,7 +170,7 @@ class Deployment(object):
                     venv_name=VENV_NAME)
 
                 # Check out the source, and install DXR and dependencies:
-                run('git clone {repo}', repo=self.repo)
+                run('git clone {repo} 2>/dev/null', repo=self.repo)
                 with cd('dxr'):
                     run('git checkout -q {rev}', rev=rev)
 
@@ -252,7 +253,19 @@ class Deployment(object):
 
     def delete_old(self, old_build_path):
         """Delete all indices and catalog entries of old format."""
-        rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+
+        # A sleep loop around deleting the old build dir. It can take a few
+        # seconds for the web servers to restart and relinquish their holds on
+        # the shared libs in the old virtualenv. Until that happens, NFS
+        # creates .nfs* files in the dir that get in the way of deletion.
+        for duration in [1, 5, 10, 30]:
+            try:
+                rmtree_if_exists(old_build_path)  # doesn't resolve symlinks
+            except OSError as exc:
+                sleep(duration)
+            else:
+                break
+
         if self._format_changed_from:
             # Loop over the trees, get the alias of each, and delete:
             for tree in self._trees_of_version(self._format_changed_from):

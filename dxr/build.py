@@ -1,7 +1,7 @@
 from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
-from itertools import chain, izip
+from itertools import chain, izip, repeat
 from operator import attrgetter
 import os
 from os import stat, mkdir, makedirs
@@ -14,13 +14,15 @@ from traceback import format_exc
 from uuid import uuid1
 
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from click import progressbar
 from flask import current_app
 from funcy import merge, chunks, first, suppress
 import jinja2
 from more_itertools import chunked
 from ordereddict import OrderedDict
 from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
-                             IndexAlreadyExistsError, bulk_chunks)
+                             IndexAlreadyExistsError, bulk_chunks, Timeout,
+                             ConnectionError)
 
 import dxr
 from dxr.app import make_app
@@ -59,7 +61,8 @@ def index_and_deploy_tree(tree, verbose=False):
     config = tree.config
     es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
     index_name = index_tree(tree, es, verbose=verbose)
-    deploy_tree(tree, es, index_name)
+    if 'index' not in tree.config.skip_stages:
+        deploy_tree(tree, es, index_name)
 
 
 def deploy_tree(tree, es, index_name):
@@ -175,7 +178,7 @@ def index_tree(tree, es, verbose=False):
             futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
                        for ti in tree_indexers]
             return [future.result() for future in
-                    show_progress(futures, message='Running %s.' % method_name)]
+                    show_progress(futures, 'Running %s' % method_name)]
 
     def delete_index_quietly(es, index):
         """Delete an index, and ignore any error.
@@ -191,14 +194,14 @@ def index_tree(tree, es, verbose=False):
         except Exception:
             pass
 
-    print "Processing tree '%s'." % tree.name
+    print "Starting tree '%s'." % tree.name
 
     # Note starting time
     start_time = datetime.now()
 
     skip_indexing = 'index' in config.skip_stages
-    skip_rebuild = 'build' in config.skip_stages
-    skip_cleanup  = skip_indexing or skip_rebuild
+    skip_build = 'build' in config.skip_stages
+    skip_cleanup  = skip_indexing or skip_build
 
     # Create and/or clear out folders:
     ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
@@ -211,25 +214,22 @@ def index_tree(tree, es, verbose=False):
 
     tree_indexers = [p.tree_to_index(p.name, tree) for p in
                      tree.enabled_plugins if p.tree_to_index]
-
-    if skip_indexing:
-        print " - Skipping indexing (due to 'index' in 'skip_stages')"
-    else:
-        # Make a new index with a semi-random name, having the tree name
-        # and format version in it. TODO: The prefix should come out of
-        # the tree config, falling back to the global config:
-        # dxr_hot_prod_{tree}_{whatever}.
-        index = config.es_index.format(format=FORMAT,
-                                       tree=tree.name,
-                                       unique=uuid1())
-        try:
+    try:
+        if not skip_indexing:
+            # Make a new index with a semi-random name, having the tree name
+            # and format version in it. TODO: The prefix should come out of
+            # the tree config, falling back to the global config:
+            # dxr_hot_prod_{tree}_{whatever}.
+            index = config.es_index.format(format=FORMAT,
+                                           tree=tree.name,
+                                           unique=uuid1())
             es.create_index(
                 index,
                 settings={
                     'settings': {
                         'index': {
                             'number_of_shards': 1,  # Fewer should be faster, assuming enough RAM.
-                            'number_of_replicas': 1  # fairly arbitrary
+                            'number_of_replicas': 0  # for speed
                         },
                         # Default analyzers and mappings are in the core plugin.
                         'analysis': reduce(
@@ -252,47 +252,77 @@ def index_tree(tree, es, verbose=False):
                                             tree.enabled_plugins),
                                        {})
                 })
+        else:
+            index = None
+            print "Skipping indexing (due to 'index' in 'skip_stages')"
 
-            # Run pre-build hooks:
-            with new_pool() as pool:
-                tree_indexers = farm_out('pre_build')
-                # Tear down pool to let the build process use more RAM.
+        # Run pre-build hooks:
+        with new_pool() as pool:
+            tree_indexers = farm_out('pre_build')
+            # Tear down pool to let the build process use more RAM.
 
-            if not skip_rebuild:
-                # Set up env vars, and build:
-                build_tree(tree, tree_indexers, verbose)
-            else:
-                print " - Skipping rebuild (due to 'build' in 'skip_stages')"
+        if not skip_build:
+            # Set up env vars, and build:
+            build_tree(tree, tree_indexers, verbose)
+        else:
+            print "Skipping rebuild (due to 'build' in 'skip_stages')"
 
-            # Post-build, and index files:
+        # Post-build, and index files:
+        if not skip_indexing:
             with new_pool() as pool:
                 tree_indexers = farm_out('post_build')
                 index_files(tree, tree_indexers, index, pool, es)
 
-            # Don't wait for the (long) refresh interval:
-            es.refresh(index=index)
-        except Exception as exc:
-            # If anything went wrong, delete the index, because we're not
-            # going to have a way of returning its name if we raise an
-            # exception.
-            delete_index_quietly(es, index)
-            raise
+            # refresh() times out in prod. Wait until it doesn't. That
+            # probably means things are ready to rock again.
+            with aligned_progressbar(repeat(None), label='Refeshing index') as bar:
+                for _ in bar:
+                    try:
+                        es.refresh(index=index)
+                    except (ConnectionError, Timeout) as exc:
+                        pass
+                    else:
+                        break
 
-    print " - Finished processing '%s' in %s." % (tree.name,
-                                                  datetime.now() - start_time)
+            es.update_settings(
+                index,
+                {
+                    'settings': {
+                        'index': {
+                            'number_of_replicas': 1  # fairly arbitrary
+                        }
+                    }
+                })
+    except Exception as exc:
+        # If anything went wrong, delete the index, because we're not
+        # going to have a way of returning its name if we raise an
+        # exception.
+        if not skip_indexing:
+            delete_index_quietly(es, index)
+        raise
+
+    print "Finished '%s' in %s." % (tree.name, datetime.now() - start_time)
     if not skip_cleanup:
         # By default, we remove the temp files, because they're huge.
         rmtree(tree.temp_folder)
     return index
 
 
-def show_progress(futures, message='Doing stuff.'):
+def aligned_progressbar(*args, **kwargs):
+    """Fall through to click's progress bar, but line up all the bars so they
+    aren't askew."""
+    return progressbar(
+        *args, bar_template='%(label)-18s [%(bar)s] %(info)s', **kwargs)
+
+
+def show_progress(futures, message):
     """Show progress and yield results as futures complete."""
-    print message
-    num_jobs = len(futures)
-    for num_done, future in enumerate(as_completed(futures), 1):
-        print num_done, 'of', num_jobs, 'jobs done.'
-        yield future
+    with aligned_progressbar(as_completed(futures),
+                             length=len(futures),
+                             show_eta=False,  # never even close
+                             label=message) as bar:
+        for future in bar:
+            yield future
 
 
 def save_scribbles(obj, method):
@@ -456,34 +486,30 @@ def index_file(tree, tree_indexers, path, es, index):
         # indexing. We could interpose an external queueing system, but I'm
         # willing to potentially sacrifice a little speed here for the easy
         # management of self-throttling.
-        #
-        # Conditional until we figure out how to display arbitrary binary
-        # files:
-        if is_text or is_image(rel_path):
-            file_info = stat(path)
-            folder_name, file_name = split(rel_path)
-            # Hard-code the keys that are hard-coded in the browse()
-            # controller. Merge with the pluggable ones from needles:
-            doc = dict(# Some non-array fields:
-                       folder=folder_name,
-                       name=file_name,
-                       size=file_info.st_size,
-                       modified=datetime.fromtimestamp(file_info.st_mtime),
-                       is_folder=False,
+        file_info = stat(path)
+        folder_name, file_name = split(rel_path)
+        # Hard-code the keys that are hard-coded in the browse()
+        # controller. Merge with the pluggable ones from needles:
+        doc = dict(# Some non-array fields:
+                    folder=folder_name,
+                    name=file_name,
+                    size=file_info.st_size,
+                    modified=datetime.fromtimestamp(file_info.st_mtime),
+                    is_folder=False,
 
-                       # And these, which all get mashed into arrays:
-                       **needles)
-            links = [{'order': order,
-                      'heading': heading,
-                      'items': [{'icon': icon,
-                                 'title': title,
-                                 'href': href}
-                                for icon, title, href in items]}
-                     for order, heading, items in
-                     chain.from_iterable(linkses)]
-            if links:
-                doc['links'] = links
-            yield es.index_op(doc, doc_type=FILE)
+                    # And these, which all get mashed into arrays:
+                    **needles)
+        links = [{'order': order,
+                    'heading': heading,
+                    'items': [{'icon': icon,
+                                'title': title,
+                                'href': href}
+                            for icon, title, href in items]}
+                    for order, heading, items in
+                    chain.from_iterable(linkses)]
+        if links:
+            doc['links'] = links
+        yield es.index_op(doc, doc_type=FILE)
 
         # Index all the lines. If it's an empty file (no lines), don't bother
         # ES. It hates empty dicts.
@@ -552,18 +578,20 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
-    for folder in unignored(
-            tree.source_folder,
-            tree.ignore_paths,
-            tree.ignore_filenames,
-            want_folders=True):
-        rel_path = relpath(folder, tree.source_folder)
-        superfolder_path, folder_name = split(rel_path)
-        es.index(index, FILE, {
-            'path': [rel_path],  # array for consistency with non-folder file docs
-            'folder': superfolder_path,
-            'name': folder_name,
-            'is_folder': True})
+    with aligned_progressbar(unignored(tree.source_folder,
+                                       tree.ignore_paths,
+                                       tree.ignore_filenames,
+                                       want_folders=True),
+                     show_eta=False,  # never even close
+                     label='Indexing folders') as folders:
+        for folder in folders:
+            rel_path = relpath(folder, tree.source_folder)
+            superfolder_path, folder_name = split(rel_path)
+            es.index(index, FILE, {
+                'path': [rel_path],  # array for consistency with non-folder file docs
+                'folder': superfolder_path,
+                'name': folder_name,
+                'is_folder': True})
 
 
 def index_files(tree, tree_indexers, index, pool, es):
@@ -593,7 +621,7 @@ def index_files(tree, tree_indexers, index, pool, es):
                                worker_number=worker_number,
                                swallow_exc=True)
                    for worker_number, paths in enumerate(path_chunks(tree), 1)]
-        for future in show_progress(futures, message=' - Indexing files.'):
+        for future in show_progress(futures, 'Indexing files'):
             result = future.result()
             if result:
                 formatted_tb, type, value, path = result
@@ -623,7 +651,7 @@ def build_tree(tree, tree_indexers, verbose):
 
     # Call make or whatever:
     with open_log(tree.log_folder, 'build.log', verbose) as log:
-        print "Building the '%s' tree" % tree.name
+        print 'Building tree'
         workers = max(tree.config.workers, 1)
         r = subprocess.call(
             tree.build_command.replace('$jobs', str(workers))

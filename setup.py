@@ -32,7 +32,7 @@ setup(
                       'funcy>=1.0,<2.0',
                       'futures>=2.1.1,<3.0',
                       'Jinja2>=2.6,<3.0',
-                      'Mercurial>=3.3.2',
+                      'Mercurial>=3.4',
                       'more-itertools>=2.0,<3.0',
                       'ordereddict>=1.1,<2.0',
                       'parsimonious==0.6',

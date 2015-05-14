@@ -1,5 +1,6 @@
 #include "extern.c"
 #include "deeper_folder/deeper.c"
+#include "../very_extern.h"
 
 int main(int argc, char* argv[]) {
   numba a = another_file();
@@ -13,3 +14,5 @@ int main(int argc, char* argv[]) {
 
   return var;
 }
+
+VERY_EXTERNAL

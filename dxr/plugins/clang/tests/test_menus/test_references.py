@@ -11,7 +11,7 @@ class ReferenceTests(DxrInstanceTestCase):
     def test_function(self):
         self.found_lines_eq(
                 'function-ref:foo',
-                [('Space::<b>foo</b>();', 9), ('Bar::<b>foo</b>();', 10)])
+                [('Space::<b>foo</b>();', 10), ('Bar::<b>foo</b>();', 11)])
 
     def test_classes(self):
         """Make sure we can find classes.
@@ -22,8 +22,8 @@ class ReferenceTests(DxrInstanceTestCase):
         self.found_line_eq(
                 'type-ref:numba path:main.cpp',
                 '<b>numba</b> a = another_file();',
-                5)
-        self.found_line_eq('type-ref:MyClass', '<b>MyClass</b> c;', 6)
+                6)
+        self.found_line_eq('type-ref:MyClass', '<b>MyClass</b> c;', 7)
 
     def test_var(self):
         """Test var-refs.
@@ -31,4 +31,4 @@ class ReferenceTests(DxrInstanceTestCase):
         Plain old var: queries are covered in test_c_vardecl.
 
         """
-        self.found_line_eq('var-ref:var', 'return <b>var</b>;', 14)
+        self.found_line_eq('var-ref:var', 'return <b>var</b>;', 15)

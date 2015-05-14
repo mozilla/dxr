@@ -26,8 +26,8 @@ from dxr.lines import html_line
 from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
-from dxr.utils import non_negative_int, decode_es_datetime, DXR_BLUEPRINT
-
+from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
+                       format_number)
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -95,11 +95,12 @@ def search(tree):
 def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
     """Do a normal search, and return the results as JSON."""
     try:
+        count_and_results = query.results(offset, limit)
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
                     'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
-                   for icon, path, lines in query.results(offset, limit)]
+                   for icon, path, lines in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
@@ -107,6 +108,8 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'www_root': config.www_root,
         'tree': tree,
         'results': results,
+        'result_count': count_and_results['result_count'],
+        'result_count_formatted': format_number(count_and_results['result_count']),
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
 
 
@@ -148,18 +151,26 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
                                   tree=tree,
                                   q=query_text,
                                   redirect='false'),
+            'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
             'tree_tuples': _tree_tuples(query_text, is_case_sensitive),
             'www_root': config.www_root}
 
     try:
-        results = list(query.results(offset, limit))
+        count_and_results = query.results(offset, limit)
+        results = list(count_and_results['results'])
+        results_line_count = sum(len(r[2]) for r in results)
     except BadTerm as exc:
         return render_template('error.html',
                                error_html=exc.reason,
                                **template_vars), 400
 
-    return render_template('search.html', results=results, **template_vars)
+    return render_template('search.html',
+                           results=results,
+                           result_count=count_and_results['result_count'],
+                           result_count_formatted=format_number(count_and_results['result_count']),
+                           results_line_count=results_line_count,
+                           **template_vars)
 
 
 def _tree_tuples(query_text, is_case_sensitive):
@@ -253,7 +264,8 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(f['modified']) if 'modified' in f else None,
              f.get('size'),
-             url_for('.browse', tree=tree, path=f['path'][0]))
+             url_for('.browse', tree=tree, path=f['path'][0]),
+             f.get('is_binary', [False])[0])
             for f in files_and_folders])
 
 
@@ -290,6 +302,7 @@ def _browse_file(tree, path, config):
         frozen['es_alias'],
         LINE,
         filter={'path': path},
+        sort=['number'],
         size=1000000,
         include=['content', 'tags', 'annotations'])
 

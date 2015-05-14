@@ -9,32 +9,34 @@ from funcy import group_by, decorator, imapcat
 from os.path import join
 
 
+STRING_PROPERTY = {
+    'type': 'string',
+    'index': 'not_analyzed',
+    'fields': {
+        'lower': {  # for qualified_type direct searcher
+            'type': 'string',
+            'analyzer': 'lowercase'
+        }
+    }
+}
+
+
 # An unanlyzed string property that points to a value that can be exact- or
 # prefix-matched against and carries start/end bounds for highlighting. Has
 # both a name and a qualname.
-QUALIFIED_NEEDLE = {
+QUALIFIED_FILE_NEEDLE = {
     'type': 'object',
     'properties': {
-        'name': {
-            'type': 'string',
-            'index': 'not_analyzed',
-            'fields': {
-                'lower': {
-                    'type': 'string',
-                    'analyzer': 'lowercase'
-                }
-            }
-        },
-        'qualname': {
-            'type': 'string',
-            'index': 'not_analyzed',
-            'fields': {
-                'lower': {  # for qualified_type direct searcher
-                    'type': 'string',
-                    'analyzer': 'lowercase'
-                }
-            }
-        },
+        'name': STRING_PROPERTY,
+        'qualname': STRING_PROPERTY,
+    }
+}
+
+QUALIFIED_LINE_NEEDLE = {
+    'type': 'object',
+    'properties': {
+        'name': STRING_PROPERTY,
+        'qualname': STRING_PROPERTY,
         'start': {
             'type': 'integer',
             'index': 'no'  # just for highlighting

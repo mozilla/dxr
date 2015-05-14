@@ -2,8 +2,22 @@ import ast
 from contextlib import contextmanager
 
 
-def package_for_module(module_path):
-    return module_path.rsplit('.', 1)[0] if '.' in module_path else None
+def local_name(absolute_name):
+    """Return the local part of an absolute name. For example,
+    `os.path.join` would become `join`.
+
+    """
+    return absolute_name.rsplit('.', 1)[-1]
+
+
+def package_for_module(abs_module_name):
+    """Return the absolute package name of the given absolute module name, or
+    None if this is a top-level module. For example:
+        'package.subpackage.my_module' -> 'package.subpackage'
+        'my_module' -> None
+
+    """
+    return abs_module_name.rsplit('.', 1)[0] if '.' in abs_module_name else None
 
 
 def convert_node_to_name(node):
@@ -29,7 +43,7 @@ def relative_module_path(python_path, module_path):
     return module_path.replace(python_path, '', 1).strip('/')
 
 
-def path_to_module(python_path, module_path):
+def path_to_module(python_path, module_path, keep_init=False):
     """Convert a file path into a dotted module path, using the given
     python_path as the base directory that modules live in.
 
@@ -116,13 +130,13 @@ class QualNameVisitor(GenericNodeVisitor):
     """
 
     def __init__(self, *args, **kwargs):
-        """Expects self.module_path to have the dotted path for the
+        """Expects self.abs_module_name to have the dotted name for the
         module being visited before this is called.
 
         """
         super(QualNameVisitor, self).__init__(*args, **kwargs)
 
-        self._current_qualname_parts = [self.module_path]
+        self._current_qualname_parts = [self.abs_module_name]
 
     def visit_FunctionDef(self, node):
         with self._enter_qualname(node.name):

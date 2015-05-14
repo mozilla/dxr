@@ -5,7 +5,7 @@ right stuff and that that stuff makes it through the DXR clang plugin
 unscathed.
 
 """
-from dxr.testing import DxrInstanceTestCase, menu_on
+from dxr.testing import DxrInstanceTestCase, menu_on, menu_item_not_on
 
 
 class MenuTests(DxrInstanceTestCase):
@@ -139,3 +139,10 @@ class MenuTests(DxrInstanceTestCase):
                 'deep_thing',
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3Adeep_thing'})
+
+    def test_external_definition(self):
+        """Things included from outside the source tree shouldn't generate
+        links to their (missing) definitions."""
+        menu_item_not_on(self.source_page('main.cpp'),
+                         'VERY_EXTERNAL',
+                         'Jump to definition')

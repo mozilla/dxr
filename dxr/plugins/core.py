@@ -83,6 +83,10 @@ mappings = {
                 'type': 'binary',
                 'index': 'no'
             },
+            'is_binary': { # assumed False if not present
+                'type': 'boolean',
+                'index': 'no'
+            },
 
             # Sidebar nav links:
             'links': {
@@ -127,7 +131,17 @@ mappings = {
             # pulling just plain content, to the point of crashing.
             'content': {
                 'type': 'string',
-                'index': 'not_analyzed',  # support JS source fetching
+                'index': 'not_analyzed',  # Support fast fetching from JS.
+
+                # ES supports terms of only length 32766 (by UTF-8 encoded
+                # length). The limit here (in Unicode points, in an
+                # unfortunate violation of consistency) keeps us under that,
+                # even if every point encodes to a 4-byte sequence. In
+                # real-world terms, this get past all the Chinese in zh.txt in
+                # mozilla-central.
+                'ignore_above': 32766 / 4,
+
+                # These get populated even if the ignore_above kicks in:
                 'fields': {
                     'trigrams_lower': {
                         'type': 'string',
@@ -371,6 +385,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
+        # binary, but not an image
+        elif not self.contains_text():
+            yield 'is_binary', True
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
@@ -379,8 +396,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    ('content', text)]
 
     def is_interesting(self):
-        """Core plugin puts text and image files in the search index."""
-        return self.contains_text() or is_image(self.path)
+        """Core plugin puts all files in the search index."""
+        return True
 
 
 # Match file name and line number: filename:n. Strip leading slashes because

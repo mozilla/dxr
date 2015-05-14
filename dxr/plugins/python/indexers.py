@@ -4,30 +4,39 @@ import tokenize
 from StringIO import StringIO
 
 from dxr.build import unignored
-from dxr.filters import LINE
+from dxr.filters import FILE, LINE
 from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_NEEDLE, with_start_and_end)
+                          QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
+                          with_start_and_end)
 from dxr.menus import definition_menu
 from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import class_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitor,
-                                      convert_node_to_name, path_to_module,
-                                      QualNameVisitor)
+                                      convert_node_to_name, local_name,
+                                      path_to_module, QualNameVisitor)
+
+
+PLUGIN_NAME = 'python'
 
 
 mappings = {
+    FILE: {
+        'properties': {
+            'py_module': QUALIFIED_FILE_NEEDLE,
+        },
+    },
     LINE: {
         'properties': {
-            'py_type': QUALIFIED_NEEDLE,
-            'py_function': QUALIFIED_NEEDLE,
-            'py_derived': QUALIFIED_NEEDLE,
-            'py_bases': QUALIFIED_NEEDLE,
-            'py_callers': QUALIFIED_NEEDLE,
-            'py_called_by': QUALIFIED_NEEDLE,
-            'py_overrides': QUALIFIED_NEEDLE,
-            'py_overridden': QUALIFIED_NEEDLE,
+            'py_type': QUALIFIED_LINE_NEEDLE,
+            'py_function': QUALIFIED_LINE_NEEDLE,
+            'py_derived': QUALIFIED_LINE_NEEDLE,
+            'py_bases': QUALIFIED_LINE_NEEDLE,
+            'py_callers': QUALIFIED_LINE_NEEDLE,
+            'py_called_by': QUALIFIED_LINE_NEEDLE,
+            'py_overrides': QUALIFIED_LINE_NEEDLE,
+            'py_overridden': QUALIFIED_LINE_NEEDLE,
         },
     },
 }
@@ -50,8 +59,8 @@ class TreeToIndex(TreeToIndexBase):
                          self.tree.ignore_filenames)
 
     def post_build(self):
-        paths = ((path, self.tree.source_encoding) for path in self.unignored_files
-                 if is_interesting(path))
+        paths = ((path, self.tree.source_encoding)
+                 for path in self.unignored_files if is_interesting(path))
         self.tree_analysis = TreeAnalysis(
             python_path=self.plugin_config.python_path,
             source_folder=self.tree.source_folder,
@@ -72,7 +81,7 @@ class IndexingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
     """
 
     def __init__(self, file_to_index, tree_analysis):
-        self.module_path = file_to_index.module_path  # For QualNameVisitor
+        self.abs_module_name = file_to_index.abs_module_name  # For QualNameVisitor
         super(IndexingNodeVisitor, self).__init__()
 
         self.file_to_index = file_to_index
@@ -106,11 +115,15 @@ class IndexingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
                 call_needles.append((function_name, start, end))
 
             # Show menu for jumping to the definition of this function.
-            qualname = self.module_path + '.' + function_name
+            qualname = self.abs_module_name + '.' + function_name
             function_def = self.tree_analysis.get_definition(qualname)
             if function_def:
+                import q
+                q(function_def.name)
+                q(function_def.module.name)
+                q(function_def.module.path)
                 menu = definition_menu(self.file_to_index.tree,
-                                       function_def.path, function_def.line)
+                                       function_def.module.path, function_def.line)
                 self.yield_ref(start, end, menu)
 
         self.generic_visit(node)
@@ -126,22 +139,19 @@ class IndexingNodeVisitor(ClassFunctionVisitor, QualNameVisitor):
         # bases: filters.
         bases = self.tree_analysis.get_base_classes(node.qualname)
         for qualname in bases:
-            name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_derived',
-                              name=name, qualname=qualname,
+                              name=local_name(qualname), qualname=qualname,
                               start=start, end=end)
 
         derived_classes = self.tree_analysis.get_derived_classes(node.qualname)
         for qualname in derived_classes:
-            name = qualname.split('.')[-1]
             self.yield_needle(needle_type='py_bases',
-                              name=name, qualname=qualname,
+                              name=local_name(qualname), qualname=qualname,
                               start=start, end=end)
 
         # Show a menu when hovering over this class.
         self.yield_ref(start, end,
                        class_menu(self.file_to_index.tree, node.qualname))
-
 
     def visit_ClassFunction(self, class_node, function_node):
         function_qualname = class_node.qualname + '.' + function_node.name
@@ -185,7 +195,7 @@ class FileToIndex(FileToIndexBase):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
 
         self.tree_analysis = tree_analysis
-        self.module_path = path_to_module(tree_analysis.python_path, self.path)
+        self.abs_module_name = path_to_module(tree_analysis.python_path, self.path)
 
         self._visitor = None
 
@@ -204,6 +214,14 @@ class FileToIndex(FileToIndexBase):
             syntax_tree = ast.parse(self.contents)
             self._visitor.visit(syntax_tree)
         return self._visitor
+
+    def needles(self):
+        # Index module name. For practical purposes, this includes
+        # __init__.py files for packages even though that's not
+        # _technically_ a module.
+        yield file_needle('py_module',
+                          name=local_name(self.abs_module_name),
+                          qualname=self.abs_module_name)
 
     def needles_by_line(self):
         return iterable_per_line(
@@ -260,6 +278,14 @@ class FileToIndex(FileToIndexBase):
                 end = start[0], start[1] + len(name)
 
         return start, end
+
+
+def file_needle(needle_type, name, qualname=None):
+    data = {'name': name}
+    if qualname:
+        data['qualname'] = qualname
+
+    return needle_type, data
 
 
 def line_needle(needle_type, name, start, end, qualname=None):

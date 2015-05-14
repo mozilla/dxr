@@ -53,12 +53,45 @@ class Query(object):
             if term['name'] == 'text' and not term['not']:
                 return term
 
-    def results(self, offset=0, limit=100):
-        """Return search results as an iterable of these::
+    def _line_query_results(self, filters, results, path_highlighters):
+        """Return an iterable of results of a LINE-domain query."""
+        content_highlighters = [f.highlight_content for f in chain.from_iterable(filters)
+                                if hasattr(f, 'highlight_content')]
 
-            (icon,
-             path within tree,
-             [(line_number, highlighted_line_of_code), ...])
+        # Group lines into files:
+        for path, lines in groupby(results, lambda r: r['path'][0]):
+            lines = list(lines)
+            highlit_path = highlight(
+                path,
+                chain.from_iterable((h(lines[0]) for h in
+                                     path_highlighters)))
+            icon_for_path = icon(path)
+            yield (icon_for_path,
+                   highlit_path,
+                   [(line['number'][0],
+                     highlight(line['content'][0],
+                               chain.from_iterable(h(line) for h in
+                                                   content_highlighters)))
+                    for line in lines])
+
+    def _file_query_results(self, results, path_highlighters):
+        """Return an iterable of results of a FILE-domain query."""
+        for file in results:
+            yield (icon(file['path'][0]),
+                   highlight(file['path'][0],
+                             chain.from_iterable(
+                                 h(file) for h in path_highlighters)),
+                   [])
+
+    def results(self, offset=0, limit=100):
+        """Return a count of search results and, as an iterable, the results
+        themselves::
+
+            {'result_count': 12,
+             'results': [(icon,
+                          path within tree,
+                          [(line_number, highlighted_line_of_code), ...]),
+                         ...]}
 
         """
         # Instantiate applicable filters, yielding a list of lists, each inner
@@ -105,36 +138,16 @@ class Query(object):
              'sort': ['path', 'number'] if is_line_query else ['path'],
              'from': offset,
              'size': limit},
-            doc_type=LINE if is_line_query else FILE)['hits']['hits']
-        results = [r['_source'] for r in results]
+            doc_type=LINE if is_line_query else FILE)['hits']
+        result_count = results['total']
+        results = [r['_source'] for r in results['hits']]
 
         path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
                              if hasattr(f, 'highlight_path')]
-        content_highlighters = [f.highlight_content for f in chain.from_iterable(filters)
-                                if hasattr(f, 'highlight_content')]
-        if is_line_query:
-            # Group lines into files:
-            for path, lines in groupby(results, lambda r: r['path'][0]):
-                lines = list(lines)
-                highlit_path = highlight(
-                    path,
-                    chain.from_iterable((h(lines[0]) for h in
-                                         path_highlighters)))
-                icon_for_path = icon(path)
-                yield (icon_for_path,
-                       highlit_path,
-                       [(line['number'][0],
-                         highlight(line['content'][0],
-                                   chain.from_iterable(h(line) for h in
-                                                       content_highlighters)))
-                        for line in lines])
-        else:
-            for file in results:
-                yield (icon(file['path'][0]),
-                       highlight(file['path'][0],
-                                 chain.from_iterable(
-                                     h(file) for h in path_highlighters)),
-                       [])
+        return {'result_count': result_count,
+                'results': self._line_query_results(filters, results, path_highlighters)
+                           if is_line_query
+                           else self._file_query_results(results, path_highlighters)}
 
         # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 

@@ -311,10 +311,32 @@ MINIMAL_MAIN = """
     """
 
 
+def _decoded_menu_on(haystack, text):
+    """Return the JSON-decoded menu found around the source code ``text`` in
+    the HTML ``haystack``.
+
+    Raise an AssertionError if there is no menu there.
+
+    """
+    # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
+    # compiling the entirety of lxml to run pyquery.
+    match = re.search(
+            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+            haystack)
+    if match:
+        return json.loads(match.group(1).replace('&quot;', '"')
+                                        .replace('&lt;', '<')
+                                        .replace('&gt;', '>')
+                                        .replace('&amp;', '&'))
+    else:
+        ok_(False, "No menu around '%s' was found." % text)
+
+
 def menu_on(haystack, text, *menu_items):
     """Assert that there is a context menu on certain text that contains
     certain menu items.
 
+    :arg haystack: The HTML source of a page to search
     :arg text: The text contained by the menu's anchor tag. The first
         menu-having anchor tag containing the text is the one compared against.
     :arg menu_items: Dicts whose pairs must be contained in some item of the
@@ -348,19 +370,24 @@ def menu_on(haystack, text, *menu_items):
                 return True
         return False
 
-    # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
-    # compiling the entirety of lxml to run pyquery.
-    match = re.search(
-            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
-            haystack)
-    if match:
-        found_items = json.loads(match.group(1).replace('&quot;', '"')
-                                               .replace('&lt;', '<')
-                                               .replace('&gt;', '>')
-                                               .replace('&amp;', '&'))
-        for expected in menu_items:
-            removed = removed_match(expected, found_items)
-            if not removed:
-                ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
-    else:
-        ok_(False, "No menu around '%s' was found." % text)
+    found_items = _decoded_menu_on(haystack, text)
+    for expected in menu_items:
+        removed = removed_match(expected, found_items)
+        if not removed:
+            ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
+
+
+def menu_item_not_on(haystack, text, menu_item_html):
+    """Assert that there is a context menu on certain text that doesn't
+    contain a given menu item.
+
+    :arg haystack: The HTML source of a page to search
+    :arg text: The text contained by the menu's anchor tag. The first
+        menu-having anchor tag containing the text is the one compared against.
+    :arg menu_item_html: The title of a menu item that should be missing from
+        the menu, given in HTML
+
+    """
+    found_items = _decoded_menu_on(haystack, text)
+    ok_(all(menu_item_html != item['html'] for item in found_items),
+        '"%s" was found in the menu around "%s".' % (menu_item_html, text))

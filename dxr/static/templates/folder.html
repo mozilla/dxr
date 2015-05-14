@@ -1,12 +1,11 @@
 {% extends "layout.html" %}
 {% from "partial/switch_tree.html" import tree_menu %}
-{% from "partial/no_results.html" import no_results %}
 
 {% block title %}{{ name }} - DXR{% endblock %}
 
 {% block site_css %}
   {{ super() }}
-  <link href="{{ url_for('static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
 {% set state_eof = True %}
@@ -33,12 +32,20 @@
       </tr>
     </thead>
     <tbody>
-      {% for icon, name, modified, size, relative_url in files_and_folders %}
-        <tr>
-          <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
-          <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
-          <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
-        </tr>
+      {% for icon, name, modified, size, relative_url, is_binary in files_and_folders %}
+        {% if is_binary %}
+          <tr class="binary_row">
+            <td><span class="icon {{ icon }}">{{ name }}</span></td>
+            <td>{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</td>
+            <td>{{ '' if size is none else size|filesizeformat }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
+            <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
+            <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
+          </tr>
+        {% endif %}
       {% endfor %}
     </tbody>
   </table>
@@ -46,5 +53,5 @@
 
 {% block site_js %}
   {{ super() }}
-  <script src="{{ www_root }}/static/js/tree-selector.js"></script>
+  <script src="{{ url_for('.static', filename='js/tree-selector.js') }}"></script>
 {% endblock %}

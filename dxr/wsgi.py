@@ -7,8 +7,8 @@ from dxr.utils import file_text
 
 
 def application(environ, start_response):
-    """Pull the instance path out of an env var, and then instantiate the WSGI
-    app as normal.
+    """Pull the config file path out of an env var, and then instantiate the
+    WSGI app as normal.
 
     This prefers the Apache SetEnv sort of environment; but if that's missing,
     try the process-level env var instead since it's easier to set for some

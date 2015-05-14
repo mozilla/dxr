@@ -1,0 +1,19 @@
+{% macro result_lines(result, www_root, tree) -%}
+  {% for entry in result.lines %}
+    <tr>
+      <td class="left-column">
+        <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+          {{ entry.line_number }}
+        </a>
+      </td>
+      <td>
+        <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+          <code aria-labelledby="{{ entry.line_number }}">{{ entry.line|safe }}</code>
+        </a>
+      </td>
+    </tr>
+  {% endfor %}
+{%- endmacro %}
+
+{# When not being included as a macro, render the code above. #}
+{{ result_lines(result, www_root, tree) }}

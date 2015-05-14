@@ -207,8 +207,9 @@ class TreeConfig(DotSectionWrapper):
             Optional('enabled_plugins', default=plugin_list('*')): Plugins,
             Optional('ignore_patterns',
                      default=['.hg', '.git', 'CVS', '.svn', '.bzr',
-                              '.deps', '.libs']): WhitespaceList,
-            'object_folder': AbsPath,
+                              '.deps', '.libs', '.DS_Store', '.nfs*', '*~',
+                              '._*']): WhitespaceList,
+            Optional('object_folder', default=None): AbsPath,
             'source_folder': AbsPath,
             Optional('source_encoding', default='utf-8'): basestring,
             Optional('temp_folder', default=None): AbsPath,
@@ -217,6 +218,8 @@ class TreeConfig(DotSectionWrapper):
 
         if tree['temp_folder'] is None:
             tree['temp_folder'] = config.temp_folder
+        if tree['object_folder'] is None:
+            tree['object_folder'] = tree['source_folder']
 
         # Convert enabled_plugins to a list of plugins:
         if tree['disabled_plugins'].is_all:

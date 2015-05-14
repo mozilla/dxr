@@ -1,6 +1,6 @@
 from jinja2 import Markup
 
-from dxr.filters import NameFilterBase, QualifiedNameFilterBase
+from dxr.filters import FILE, NameFilterBase, QualifiedNameFilterBase
 
 
 class _QualifiedPyFilter(QualifiedNameFilterBase):
@@ -9,6 +9,12 @@ class _QualifiedPyFilter(QualifiedNameFilterBase):
 
 class _PyFilter(NameFilterBase):
     lang = 'py'
+
+
+class ModuleFilter(_QualifiedPyFilter):
+    name = 'module'
+    domain = FILE
+    description = Markup("Module definition: <code>module:module.name</code>")
 
 
 class TypeFilter(_PyFilter):
