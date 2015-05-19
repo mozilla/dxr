@@ -154,6 +154,6 @@ class MemberTests(SingleFileTestCase):
              ('size_t <b>_size</b>;', 23),
              ('<b>BitField</b>(size_t size){', 27),
              ('<b>BitField</b>(const BitField&amp; bf){', 33),
-             ('<b>~BitField</b>(){', 41),
+             ('<b>~BitField</b>(){' if self.clang_at_least(3.5) else '<b>~</b>BitField(){', 41),
              ('BitField&amp; <b>operator=</b> (const BitField&amp; rhs){', 48),
              ('BitField&amp; <b>operator&amp;=</b> (const BitField&amp; rhs){', 54)])

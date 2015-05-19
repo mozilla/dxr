@@ -1,0 +1,31 @@
+{
+    "name": "DXR",
+    "description": "Mozilla's code search and navigation tool, aimed at making sense of large projects like Firefox.",
+    "repository": {
+        "url": "https://github.com/mozilla/dxr",
+        "license": "MIT",
+        "tests": "https://ci.mozilla.org/job/dxr/"
+    },
+    "participate": {
+        "home": "https://dxr.readthedocs.org/en/latest/community.html",
+        "docs": "https://dxr.readthedocs.org/en/latest/development.html",
+        "irc": "irc://irc.mozilla.org/#static",
+        "irc-contacts": ["ErikRose"]
+    },
+    "bugs": {
+        "list": "https://bugzilla.mozilla.org/buglist.cgi?order=Importance&resolution=---&query_format=advanced&component=DXR&product=Webtools",
+        "report": "https://bugzilla.mozilla.org/enter_bug.cgi?product=Webtools&component=DXR",
+        "mentored": "https://bugzilla.mozilla.org/buglist.cgi?quicksearch=whiteboard%3Aeasy%20component%3ADXR&list_id=6127603"
+    },
+    "urls": {
+        "prod": "https://dxr.mozilla.org/",
+        "stage": "https://dxr.allizom.org/"
+    },
+    "keywords": [
+        "flask",
+        "jquery",
+        "python",
+        "javascript",
+        "static analysis"
+    ]
+}

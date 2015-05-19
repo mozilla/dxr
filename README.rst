@@ -1,3 +1,7 @@
+.. note::
+
+     Most development is now taking place on the ``es`` branch. ``master`` is in maintenance mode for the moment.
+
 ===
 DXR
 ===

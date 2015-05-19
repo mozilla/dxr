@@ -1,4 +1,5 @@
 import cgi
+from commands import getoutput, getstatusoutput
 import json
 from os import chdir, mkdir
 from os.path import dirname, join
@@ -133,6 +134,17 @@ class TestCase(unittest.TestCase):
         response = self.search_response(query,
                                         is_case_sensitive=is_case_sensitive)
         return json.loads(response.data)['results']
+
+    def clang_at_least(self, version):
+        output = getoutput("clang --version")
+        if not output:
+            return False
+        # search() rather than match() because Ubuntu changes the version
+        # string to be "Ubuntu clang version 3.5", for instance:
+        match = re.search('clang version ([0-9]+\.[0-9]+)', output)
+        if not match:
+            return False
+        return float(match.group(1)) >= version
 
     @classmethod
     def _es(cls):

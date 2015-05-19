@@ -273,7 +273,7 @@ public:
     {
       const std::string &filename = ci.getFrontendOpts().Inputs[0].getFile().str();
       const std::string &realname = getFileInfo(filename)->realname;
-      ret = "<anonymous namespace in " + realname + ">" + ret.substr(anon_ns.size());
+      ret = "(" + ret.substr(1, anon_ns.size() - 2) + " in " + realname + ")" + ret.substr(anon_ns.size());
     }
     return ret;
   }
