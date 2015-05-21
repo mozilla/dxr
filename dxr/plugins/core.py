@@ -391,7 +391,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
-        for number, text in enumerate(self.contents.splitlines(), 1):
+        for number, text in enumerate(self.contents.splitlines(True), 1):
             yield [('number', number),
                    ('content', text)]
 
