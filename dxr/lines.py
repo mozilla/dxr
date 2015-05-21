@@ -328,6 +328,10 @@ def finished_tags(text, refs, regions):
     :arg text: Unicode text of the file to htmlify. ``build_lines`` may not be
         used on binary files.
 
+    Benchmarking reveals that this function is O(number of tags) in practice,
+    on inputs on the order of thousands of lines. On my laptop, it takes .02s
+    for a 3000-line file with some pygmentize regions and some python refs.
+
     """
     # Plugins return unicode offsets, not byte ones.
 

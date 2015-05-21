@@ -202,6 +202,8 @@ class SingleFileTestCase(TestCase):
     """
     # Set this to False in a subclass to keep the generated instance around and
     # print its path so you can examine it:
+    # Note: this is currently broken because no on-disk artifiact is actually
+    # created; everything goes into Elasticsearch directly.
     should_delete_instance = True
 
     # Override this in a subclass to change the filename used for the

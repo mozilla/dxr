@@ -457,7 +457,7 @@ def index_file(tree, tree_indexers, path, es, index):
     rel_path = relpath(path, tree.source_folder)
     is_text = isinstance(contents, unicode)
 
-    num_lines = len(contents.splitlines())
+    num_lines = len(contents.splitlines())  # TODO: Stop counting lines of binary files.
     needles = {}
     linkses, refses, regionses = [], [], []
     needles_by_line = [{} for _ in xrange(num_lines)]
