@@ -25,10 +25,10 @@ from dxr.filters import FILE, LINE
 from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
                        triples_from_es_regions, finished_tags)
 from dxr.mime import icon, is_image
-from dxr.plugins import plugins_named
+from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number)
+                       format_number, append_update, append_by_line)
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -227,7 +227,6 @@ def browse(tree, path=''):
             include=['links'])
         if not files:
             raise NotFound
-        links = files[0].get('links', [])
 
         lines = filtered_query(
             frozen['es_alias'],
@@ -241,7 +240,7 @@ def browse(tree, path=''):
         for doc in lines:
             doc['content'] = doc['content'][0]
 
-        return _browse_file(tree, path, lines, links, config, frozen['generated_date'])
+        return _browse_file(tree, path, lines, files[0], config, frozen['generated_date'])
 
 
 def _browse_folder(tree, path, config):
@@ -294,6 +293,23 @@ def _browse_folder(tree, path, config):
             for f in files_and_folders])
 
 
+def skim_file(skimmers, num_lines):
+    """
+    Skim contents with all the skimmers, returning the things we need to make a
+    template.
+    Compare to dxr.build.index_file
+    """
+    links, refses, regionses = [], [], []
+    annotations_by_line = [[] for _ in xrange(num_lines)]
+    for file_to_skim in skimmers:
+        if file_to_skim.is_interesting():
+            links.extend(file_to_skim.links())
+            refses.append(file_to_skim.refs())
+            regionses.append(file_to_skim.regions())
+            append_by_line(annotations_by_line, file_to_skim.annotations_by_line())
+    return links, refses, regionses, annotations_by_line
+
+
 def _build_common_file_template(tree, path, date, config):
     """
     Return a dictionary of the common required file template parameters.
@@ -319,7 +335,7 @@ def _build_common_file_template(tree, path, date, config):
     }
 
 
-def _browse_file(tree, path, line_docs, links, config, date = None):
+def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents = None):
     """Return a rendered page displaying a source file.
 
     If there is no such file, raise NotFound.
@@ -353,17 +369,31 @@ def _browse_file(tree, path, line_docs, links, config, date = None):
         date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     common = _build_common_file_template(tree, path, date, config)
+    links = file_doc.get('links', [])
     if is_image(path):
         return render_template(
             'image_file.html',
             common)
     else:  # For now, we don't index binary files, so this is always a text one
-        index_refs = list(triples_from_es_refs(doc.get('refs', []) for doc in line_docs))
-        index_regions = list(triples_from_es_regions(doc.get('regions', []) for doc in line_docs))
-        # We concretize this into a list because we iterate over it multiple times
+        # We concretize the lines into a list because we iterate over it multiple times
         lines = [doc['content'] for doc in line_docs]
+        if not contents:
+            # If contents are not provided, we can reconstruct them by
+            # stitching the lines together.
+            contents = ''.join(lines)
         offsets = cumulative_sum(map(len, lines))
-        tags = finished_tags(lines, index_refs, index_regions)
+        # Construct skimmer objects for all enabled plugins that define a
+        # file_to_skim class.
+        skimmers = [plugin.file_to_skim(path, contents, name,
+                    config.trees[tree], file_doc, line_docs) for name, plugin in
+                    all_plugins().items() if plugin in
+                    config.trees[tree].enabled_plugins and plugin.file_to_skim]
+        skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
+        index_refs = triples_from_es_refs(doc.get('refs', []) for doc in line_docs)
+        index_regions = triples_from_es_regions(doc.get('regions', []) for doc in line_docs)
+        tags = finished_tags(lines,
+                             chain(chain.from_iterable(refses), index_refs),
+                             chain(chain.from_iterable(regionses), index_regions))
         return render_template(
             'text_file.html',
             **merge(common, {
@@ -371,11 +401,11 @@ def _browse_file(tree, path, line_docs, links, config, date = None):
                 # the whole thing in RAM. The template will have to quit
                 # looping through the whole thing 3 times.
                 'lines': [(html_line(doc['content'], tags_in_line, offset),
-                           doc.get('annotations', []))
-                          for doc, tags_in_line, offset
-                              in izip(line_docs, tags_per_line(tags), offsets)],
+                           doc.get('annotations', []) + skim_annotations)
+                          for doc, tags_in_line, offset, skim_annotations
+                              in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
                 'is_text': True,
-                'sections': sidebar_links(links)}))
+                'sections': sidebar_links(links + skim_links)}))
 
 
 def _linked_pathname(path, tree_name):
