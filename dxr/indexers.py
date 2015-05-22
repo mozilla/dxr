@@ -6,7 +6,6 @@ from os.path import join
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
-from os.path import join
 
 
 STRING_PROPERTY = {

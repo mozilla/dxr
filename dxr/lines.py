@@ -14,6 +14,7 @@ except ImportError:
         return (d for d, s in izip(data, selectors) if s)
 import json
 from warnings import warn
+from itertools import chain
 
 from jinja2 import Markup
 
@@ -331,7 +332,6 @@ def finished_tags(lines, refs, regions):
     # Plugins return unicode offsets, not byte ones.
 
     # Get start and endpoints of intervals:
-    from pprint import pprint
     tags = list(tag_boundaries(refs, regions))
 
     tags.extend(line_boundaries(lines))
@@ -344,8 +344,12 @@ def finished_tags(lines, refs, regions):
     return balanced_tags(tags)
 
 def tags_per_line(flat_tags):
-    """
-    Split tags on LINE tags, yielding the tags of one line at a time.
+    """Split tags on LINE tags, yielding the tags of one line at a time
+        (no LINE tags are yielded)
+
+    :arg flat_tags: An iterable of ordered, non-overlapping, non-empty tag
+        boundaries with Line endpoints at (and outermost at) the index of the
+        end of each line.
     """
     tags = []
     for tag in flat_tags:
@@ -385,22 +389,19 @@ def es_lines(tags):
 
 def triples_from_es_refs(es_refs):
     """
-    Undo list of lists of es refs per lines back to (start, end, payload) triples.
+    Convert list of lists of es refs per lines to (start, end, payload) triples.
     """
-    for line in es_refs:
-        for item in line:
-            ref = (item['payload']['menuitems'], item['payload'].get('hover'))
-            yield (item['start'], item['end'], ref)
+    for item in chain.from_iterable(es_refs):
+        ref = (item['payload']['menuitems'], item['payload'].get('hover'))
+        yield (item['start'], item['end'], ref)
 
 def triples_from_es_regions(es_regions):
     """
-    Undo list of lists es regions back to (start, end, payload) triples.
+    Convert list of lists es regions to (start, end, payload) triples.
     """
-    # TODO: refactor with triples_from_es_regions
-    for line in es_regions:
-        for item in line:
-            region = item['payload']
-            yield (item['start'], item['end'], region)
+    for item in chain.from_iterable(es_regions):
+        region = item['payload']
+        yield (item['start'], item['end'], region)
 
 def html_line(text, tags, bof_offset):
     """Return a line of Markup, interleaved with the refs and regions that
@@ -427,7 +428,7 @@ def html_line(text, tags, bof_offset):
             else:  # It's a menu.
                 menu, hover = payload.payload
                 menu = cgi.escape(json.dumps(menu), True)
-                if hover is not None:
+                if hover:
                     title = ' title="' + cgi.escape(hover, True) + '"'
                 else:
                     title = ''

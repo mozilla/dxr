@@ -22,17 +22,6 @@ directories in case DXR is only parsing a fraction of the repository. Once this
 information is found, it attempts to extract upstream information about the
 repository. From this information, it builds the necessary information to
 reproduce the links.
-
-Currently supported VCSes and upstream views:
-- git (github)
-- mercurial (hgweb)
-
-Todos:
-- add gitweb support for git
-- add cvs, svn, bzr support
-- produce in-DXR blame information using VCSs
-- check if the mercurial paths are specific to Mozilla's customization or not.
-
 """
 
 class TreeToIndex(dxr.indexers.TreeToIndex):

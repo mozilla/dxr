@@ -29,7 +29,7 @@ from dxr.vcs import tree_to_repos
 from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_update, append_by_line)
+                       format_number, append_update, append_by_line, cumulative_sum)
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -217,7 +217,9 @@ def raw(tree, path):
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
-    """Show a directory listing or a single file from one of the trees."""
+    """Show a directory listing or a single file from one of the trees.
+    If path does not exist as either a folder or file, raise NotFound.
+    """
     config = current_app.dxr_config
     try:
         return _browse_folder(tree, path, config)
@@ -299,10 +301,11 @@ def _browse_folder(tree, path, config):
 
 
 def skim_file(skimmers, num_lines):
-    """
-    Skim contents with all the skimmers, returning the things we need to make a
-    template.
-    Compare to dxr.build.index_file
+    """Skim contents with all the skimmers, returning the things we need to
+    make a template. Compare to dxr.build.index_file
+
+    :arg skimmers: iterable of FileToSkim objects
+    :arg num_lines: the number of lines in the file being skimmed
     """
     links, refses, regionses = [], [], []
     annotations_by_line = [[] for _ in xrange(num_lines)]
@@ -316,8 +319,7 @@ def skim_file(skimmers, num_lines):
 
 
 def _build_common_file_template(tree, path, date, config):
-    """
-    Return a dictionary of the common required file template parameters.
+    """Return a dictionary of the common required file template parameters.
     """
     return {
         # Common template variables:
@@ -343,8 +345,15 @@ def _build_common_file_template(tree, path, date, config):
 def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents = None):
     """Return a rendered page displaying a source file.
 
-    If there is no such file, raise NotFound.
-
+    :arg string tree: name of tree on which file is found
+    :arg string path: relative path from tree root of file
+    :arg list line_docs: LINE documents as defined in the mapping of core.py,
+        where the `content` field is dereferenced
+    :arg file_doc: the FILE document as defined in core.py
+    :arg config: TreeConfig object of this tree
+    :arg date: a formatted string representing the generated date, default to now
+    :arg string contents: the contents of the source file, defaults to joining
+        the `content` field of all line_docs
     """
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
@@ -355,17 +364,6 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
         # Sort by order, resolving ties by section name:
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))
-
-    def cumulative_sum(nums):
-        """Generate a cumulative sum of nums iterable, at each point yielding
-            the sum up to but not including the current value.
-        """
-        cum_sum = 0
-        for n in nums:
-            # Note that these two operations are flipped from a traditional
-            # cumulative sum, which includes the current value
-            yield cum_sum
-            cum_sum += n
 
     if not date:
         # Then assume that the file is generated now. Remark: we can't use this
@@ -378,7 +376,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
     if is_image(path):
         return render_template(
             'image_file.html',
-            common)
+            **common)
     else:  # For now, we don't index binary files, so this is always a text one
         # We concretize the lines into a list because we iterate over it multiple times
         lines = [doc['content'] for doc in line_docs]
@@ -414,6 +412,9 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
 def permalink(tree, revision, path):
+    """Display a page showing the file at path at specified revision by
+    obtaining the contents from version control.
+    """
     contents = None
     config = current_app.dxr_config
     for vcs in current_app.vcs_repositories[tree].values():
@@ -425,7 +426,7 @@ def permalink(tree, revision, path):
     # We do some wrapping to mimic the JSON returned by an ES lines query.
     return _browse_file(tree,
                         path,
-                        [{'content': line} for line in contents.split('\n')],
+                        [{'content': line} for line in contents.splitlines(True)],
                         {},
                         config,
                         contents = contents)

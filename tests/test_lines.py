@@ -8,17 +8,18 @@ from warnings import catch_warnings
 from more_itertools import first
 from nose.tools import eq_
 
+from dxr.utils import cumulative_sum
 from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
                        html_line, nesting_order, balanced_tags_with_empties,
-                       es_lines)
+                       es_lines, tags_per_line)
 
 
 def test_line_boundaries():
     """Make sure we find the correct line boundaries with all sorts of line
     endings, even in files that don't end with a newline."""
     eq_(list((point, is_start) for point, is_start, _ in
-             line_boundaries('abc\ndef\r\nghi\rjkl')),
+             line_boundaries('abc\ndef\r\nghi\rjkl'.splitlines(True))),
         [(4, False),
          (9, False),
          (13, False),
@@ -199,14 +200,17 @@ class BalancedTagTests(TestCase):
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 """
-        eq_([html_line(text_line, e) for text_line, e in
-             zip(text.splitlines(),
-                 es_lines(balanced_tags(tags)))],
-            ['<span class="c">/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */</span>',
-             '<span class="c">/* This Source Code Form is subject to the terms of the Mozilla Public</span>',
-             '<span class="c"> * License, v. 2.0. If a copy of the MPL was not distributed with this</span>',
-             '<span class="c"> * file, You can obtain one at http://mozilla.org/MPL/2.0/. */</span>',
-             ''])
+        lines = text.splitlines(True)
+        offsets = cumulative_sum(map(len, lines))
+        actual_lines = [html_line(text_line.rstrip('\r\n'), e, offset) for
+                        text_line, e, offset in
+                        zip(lines, tags_per_line(balanced_tags(tags)), offsets)]
+        expected_lines = ['<span class="c">/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */</span>',
+                          '<span class="c">/* This Source Code Form is subject to the terms of the Mozilla Public</span>',
+                          '<span class="c"> * License, v. 2.0. If a copy of the MPL was not distributed with this</span>',
+                          '<span class="c"> * file, You can obtain one at http://mozilla.org/MPL/2.0/. */</span>',
+                          '']
+        eq_(actual_lines, expected_lines)
 
     def test_empty(self):
         """Some files are empty. Make sure they work."""
@@ -226,20 +230,22 @@ def test_simple_html_line():
     b = Region('b')
     line = LINE
     text = 'hello'
-    eq_(html_line(text, first(es_lines([(0, True, line),
-                                        (0, True, a), (3, False, a),
-                                        (3, True, b), (5, False, b),
-                                        (5, False, line)]))),
+    eq_(html_line(text, first(tags_per_line([(0, True, line),
+                                             (0, True, a), (3, False, a),
+                                             (3, True, b), (5, False, b),
+                                             (5, False, line)])), 0),
         '<span class="a">hel</span><span class="b">lo</span>')
 
 
 def text_to_html_lines(text, refs=(), regions=()):
     """Run the full pipeline, and return a list of htmlified lines of ``text``
     with markup interspersed for ``regions``."""
-    return [html_line(text_line.rstrip('\r\n'), e) for (text_line, e) in
-            zip(text.splitlines(), es_lines(finished_tags(text,
-                                                          refs,
-                                                          regions)))]
+    lines = text.splitlines(True)
+    offsets = cumulative_sum(map(len, lines))
+    return [html_line(text_line, e, o) for (text_line, e, o) in
+            zip(lines, tags_per_line(finished_tags(lines,
+                                                   refs,
+                                                   regions)), offsets)]
 
 
 class IntegrationTests(TestCase):

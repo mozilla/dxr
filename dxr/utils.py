@@ -206,6 +206,17 @@ def bucket(things, key):
         ret[key(thing)].append(thing)
     return ret
 
+def cumulative_sum(nums):
+    """Generate a cumulative sum of nums iterable, at each point yielding
+        the sum up to but not including the current value.
+    """
+    cum_sum = 0
+    for n in nums:
+        # Note that these two operations are flipped from a traditional
+        # cumulative sum, which includes the current value
+        yield cum_sum
+        cum_sum += n
+
 @contextmanager
 def cd(path):
     """Change the working dir on enter, and change it back on exit."""

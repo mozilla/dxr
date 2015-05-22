@@ -4,7 +4,18 @@ import marshal
 import os
 from os.path import relpath
 
-"""Let DXR understand the concept of version control systems."""
+"""Let DXR understand the concept of version control systems.
+
+Currently supported VCSes and upstream views:
+- git (github)
+- mercurial (hgweb)
+
+Todos:
+- add gitweb support for git
+- add cvs, svn, bzr support
+- produce in-DXR blame information using VCSs
+- check if the mercurial paths are specific to Mozilla's customization or not.
+"""
 
 class VCS(object):
     """A class representing an abstract notion of a version-control system.
