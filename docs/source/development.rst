@@ -122,7 +122,10 @@ and restart itself a few seconds after you save.
 Coding Conventions
 ------------------
 
-Follow `PEP 8`_ for Python code, but don't sweat the line length too much. Follow `PEP  257`_ for docstrings, and use Sphinx-style argument documentation.
+Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
+Follow `PEP  257`_ for docstrings, and use Sphinx-style argument documentation.
+Single quotes are preferred for strings; use double quotes for docstrings and
+multiline strings or if the string contains a single quote.
 
 .. _PEP 8: http://www.python.org/dev/peps/pep-0008/
 .. _PEP 257: http://www.python.org/dev/peps/pep-0257/

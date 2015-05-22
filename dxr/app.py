@@ -9,7 +9,7 @@ from sys import stderr
 from time import time
 from mimetypes import guess_type
 from urllib import quote_plus
-
+from datetime import datetime
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
@@ -25,6 +25,7 @@ from dxr.filters import FILE, LINE
 from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
                        triples_from_es_regions, finished_tags)
 from dxr.mime import icon, is_image
+from dxr.vcs import tree_to_repos
 from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
@@ -56,6 +57,10 @@ def make_app(config):
 
     # Make an ES connection pool shared among all threads:
     app.es = ElasticSearch(config.es_hosts)
+
+    # Track any version control systems under the trees.
+    app.vcs_repositories = dict((k, tree_to_repos(v)) for k,v in
+        config.trees.items())
 
     return app
 
@@ -406,6 +411,24 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
                 'is_text': True,
                 'sections': sidebar_links(links + skim_links)}))
+
+@dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
+def permalink(tree, revision, path):
+    contents = None
+    config = current_app.dxr_config
+    for vcs in current_app.vcs_repositories[tree].values():
+        if vcs.is_tracked(path):
+            contents = vcs.get_contents(path, revision)
+            break
+    if contents is None:
+        return render_template('error.html', error_html='No VCS found'), 400
+    # We do some wrapping to mimic the JSON returned by an ES lines query.
+    return _browse_file(tree,
+                        path,
+                        [{'content': line} for line in contents.split('\n')],
+                        {},
+                        config,
+                        contents = contents)
 
 
 def _linked_pathname(path, tree_name):
