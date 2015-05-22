@@ -3,18 +3,17 @@ import urlparse
 import marshal
 import os
 from os.path import relpath
+from ordereddict import OrderedDict
+
+# Note: Mercurial doesn't support this api, but we avoid problems by pinning
+# the version. Also using this API forces us to comply with GPLv2. Luckily, the
+# MIT license is compatible.
+from mercurial import hg, ui
 
 """Let DXR understand the concept of version control systems.
-
-Currently supported VCSes and upstream views:
-- git (github)
-- mercurial (hgweb)
-
-Todos:
-- add gitweb support for git
-- add cvs, svn, bzr support
-- produce in-DXR blame information using VCSs
-- check if the mercurial paths are specific to Mozilla's customization or not.
+The main entry point is `tree_to_repos`, which produces a mapping of roots to
+VCS objects for each version control root discovered under the provided tree.
+Currently supported VCS are Mercurial, Git, and Perforce.
 """
 
 class VCS(object):
@@ -23,9 +22,9 @@ class VCS(object):
     relative to the root directory of the VCS.
     """
 
-    def __init__(self, root):
+    def __init__(self, root, command):
         self.root = root
-        self.untracked_files = set()
+        self.command = command
 
     def get_root_dir(self):
         """Return the directory that is at the root of the VCS."""
@@ -36,20 +35,20 @@ class VCS(object):
         return type(self).__name__
 
     def invoke_vcs(self, args):
-        """Return the result of invoking said command on the repository, with
-        the current working directory set to the root directory.
+        """Return the result of invoking the VCS command on the repository,
+        with the current working directory set to the root directory.
         """
-        return subprocess.check_output(args, cwd=self.get_root_dir())
+        return subprocess.check_output([self.command] + args, cwd=self.get_root_dir())
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
-        return path not in self.untracked_files
+        return NotImplemented
 
     def get_contents(self, path, revision):
         """Return contents of file at specified path at given revision."""
         return None
 
-    def get_rev(self, path):
+    def display_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
         return NotImplemented
 
@@ -74,15 +73,17 @@ class VCS(object):
 
 class Mercurial(VCS):
     def __init__(self, root):
-        super(Mercurial, self).__init__(root)
-        # Find the revision
-        self.revision = self.invoke_vcs(['hg', 'id', '-i']).strip()
-        # Sometimes hg id returns + at the end.
-        if self.revision.endswith("+"):
-            self.revision = self.revision[:-1]
+        super(Mercurial, self).__init__(root, 'hg')
+        # We can't hold onto repo because it is not pickleable, so we only use
+        # it during construction.
+        repo = hg.repository(ui.ui(), root)
+        tipctx = repo['tip']
+        self.manifest = set(tipctx.manifest())
+        # Find the revision, sometimes ends with a +.
+        self.revision = str(tipctx).rstrip('+')
 
         # Make and normalize the upstream URL
-        upstream = urlparse.urlparse(self.invoke_vcs(['hg', 'paths', 'default']).strip())
+        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default']).strip())
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
             recomb[0] == 'http'
@@ -96,21 +97,15 @@ class Mercurial(VCS):
         recomb[3] = recomb[4] = recomb[5] = '' # Just those three
         self.upstream = urlparse.urlunparse(recomb)
 
-        # Find all untracked files
-        self.untracked_files = set(line.split()[1] for line in
-            self.invoke_vcs(['hg', 'status', '-u', '-i']).split('\n')[:-1])
-
         # Determine the revision on which each file has changed
-        self.previous_revisions = self.find_previous_revisions(root)
+        self.previous_revisions = self.find_previous_revisions(repo, root)
 
-    def find_previous_revisions(self, root):
+    def find_previous_revisions(self, repo, root):
         """Find the last revision in which each file changed, for diff links.
 
         Return a mapping {filename: [commits in which this file changed]}
 
         """
-        from mercurial import hg, ui  # Note: Mercurial doesn't support this api.
-        repo = hg.repository(ui.ui(), root)
         last_change = {}
         for rev in xrange(0, repo['tip'].rev() + 1):
             ctx = repo[rev]
@@ -129,11 +124,14 @@ class Mercurial(VCS):
             return cls(path)
         return None
 
-    def get_rev(self, path):
+    def display_rev(self, path):
         return self.revision
 
+    def is_tracked(self, path):
+        return path in self.manifest
+
     def get_contents(self, path, revision):
-        return self.invoke_vcs(['hg', 'cat', '-r', revision, path])
+        return self.invoke_vcs(['cat', '-r', revision, path])
 
     def generate_log(self, path):
         return self.upstream + 'filelog/' + self.revision + '/' + path
@@ -150,13 +148,14 @@ class Mercurial(VCS):
 
 class Git(VCS):
     def __init__(self, root):
-        super(Git, self).__init__(root)
-        self.untracked_files = set(line for line in
-            self.invoke_vcs(['git', 'ls-files', '-o']).split('\n')[:-1])
-        self.revision = self.invoke_vcs(['git', 'rev-parse', 'HEAD'])
-        source_urls = self.invoke_vcs(['git', 'remote', '-v']).split('\n')
+        super(Git, self).__init__(root, 'git')
+        self.tracked_files = set(line for line in
+                                 self.invoke_vcs(['ls-files']).splitlines()[:-1])
+        self.revision = self.invoke_vcs(['rev-parse', 'HEAD'])
+        source_urls = self.invoke_vcs(['remote', '-v']).split('\n')
         for src_url in source_urls:
             name, url, _ = src_url.split()
+            # TODO: Why do we assume origin is upstream?
             if name == 'origin':
                 self.upstream = self.synth_web_url(url)
                 break
@@ -168,7 +167,7 @@ class Git(VCS):
             return cls(path)
         return None
 
-    def get_rev(self, path):
+    def display_rev(self, path):
         return self.revision[:10]
 
     def generate_log(self, path):
@@ -184,6 +183,9 @@ class Git(VCS):
 
     def generate_raw(self, path):
         return self.upstream + "/raw/" + self.revision + "/" + path
+
+    def is_tracked(self, path):
+        return path in self.tracked_files
 
     def synth_web_url(self, repo):
         if repo.startswith("git@github.com:"):
@@ -202,7 +204,7 @@ class Git(VCS):
 
 class Perforce(VCS):
     def __init__(self, root, upstream):
-        super(Perforce, self).__init__(root)
+        super(Perforce, self).__init__(root, 'p4')
         have = self._p4run(['have'])
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
         self.upstream = upstream
@@ -235,7 +237,7 @@ class Perforce(VCS):
     def is_tracked(self, path):
         return path in self.have
 
-    def get_rev(self, path):
+    def display_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
 
@@ -260,11 +262,14 @@ class Perforce(VCS):
 
 every_vcs = [Mercurial, Git, Perforce]
 
+# I should consider memoizing this function
 def tree_to_repos(tree):
-    """
-    Given a TreeConfig, return a mapping {root: VCS object} where root is a
+    """Given a TreeConfig, return a mapping {root: VCS object} where root is a
     directory under tree.source_folder where root is a directory under
-    tree.source_folder.
+    tree.source_folder. Traversal of the returned mapping follows the order of
+    deepest directory first.
+
+    :arg tree: TreeConfig object representing a source code tree
     """
     sources = {}
     # Find all of the VCSs in the source directory:
@@ -287,5 +292,11 @@ def tree_to_repos(tree):
                                             tree.config)
             if attempt is not None:
                 sources[directory] = attempt
-    return sources
+    lookup_order = sorted(sources.keys(), key=len, reverse=True)
+    # We want to make sure that we look up source repositories by deepest
+    # directory first.
+    ordered_sources = OrderedDict()
+    for key in lookup_order:
+        ordered_sources[key] = sources[key]
+    return ordered_sources
 
