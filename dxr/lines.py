@@ -50,26 +50,20 @@ class Region(TagWriter):
     sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
                     # them.
 
-    def opener(self):
-        return {'class': self.payload}
-
-    def closer(self):
-        return {'closer': False}
+    def es(self):
+        return self.payload
 
 
 class Ref(TagWriter):
     """Thing to open and close <a> tags"""
     sort_order = 1
 
-    def opener(self):
+    def es(self):
         menuitems, hover = self.payload
         ret = {'menuitems': menuitems}
         if hover:
             ret['hover'] = hover
         return ret
-
-    def closer(self):
-        return {'closer': True}
 
 
 def balanced_tags(tags):
@@ -222,17 +216,18 @@ def tag_boundaries(refs, regions):
                 yield end, False, tag
 
 
-def line_boundaries(text):
+def line_boundaries(lines):
     """Return a tag for the end of each line in a string.
 
-    :arg text: Unicode
+    :arg lines: iterable of the contents of lines in a file, including any
+        trailing newline character
 
     Endpoints and start points are coincident: right after a (universal)
     newline.
 
     """
     up_to = 0
-    for line in text.splitlines(True):
+    for line in lines:
         up_to += len(line)
         yield up_to, False, LINE
 
@@ -321,12 +316,12 @@ def nesting_order((point, is_start, payload)):
                              -payload.sort_order)
 
 
-def finished_tags(text, refs, regions):
+def finished_tags(lines, refs, regions):
     """Return an ordered iterable of properly nested tags which fully describe
     the refs and regions and their places in a file's text.
 
-    :arg text: Unicode text of the file to htmlify. ``build_lines`` may not be
-        used on binary files.
+    :arg lines: iterable of lines of text of the file to htmlify.
+        ``build_lines`` may not be used on binary files.
 
     Benchmarking reveals that this function is O(number of tags) in practice,
     on inputs on the order of thousands of lines. On my laptop, it takes .02s
@@ -336,9 +331,10 @@ def finished_tags(text, refs, regions):
     # Plugins return unicode offsets, not byte ones.
 
     # Get start and endpoints of intervals:
+    from pprint import pprint
     tags = list(tag_boundaries(refs, regions))
 
-    tags.extend(line_boundaries(text))
+    tags.extend(line_boundaries(lines))
 
     # Sorting is actually not a significant use of time in an actual indexing
     # run.
@@ -347,64 +343,95 @@ def finished_tags(text, refs, regions):
     remove_overlapping_refs(tags)
     return balanced_tags(tags)
 
+def tags_per_line(flat_tags):
+    """
+    Split tags on LINE tags, yielding the tags of one line at a time.
+    """
+    tags = []
+    for tag in flat_tags:
+        point, is_start, payload = tag
+        if payload is LINE:
+            if not is_start:
+                yield tags
+                tags = []
+        else:
+            tags.append(tag)
 
 def es_lines(tags):
-    """Yield a list of dicts, one per source code line, that can be indexed
-    into the ``tags`` field of the ``line`` doctype in elasticsearch.
-
-    Convert from the per-file offsets of refs() and regions() to per-line ones.
-    We include explicit, separate closers in the hashes because, in order to
-    divide tags into line-based sets (including cutting some in half if they
-    spanned lines), we already had to do all the work of ordering and
-    balancing. There's no sense doing that again at request time.
+    """Yield lists of dicts, one per source code line, that can be indexed
+    into the ``refs`` or ``regions`` field of the ``line`` doctype in
+    elasticsearch, depending on the payload type.
 
     :arg tags: An iterable of ordered, non-overlapping, non-empty tag
         boundaries with Line endpoints at (and outermost at) the index of the
         end of each line.
 
     """
-    line_offset = 0  # file-wide offset of the beginning of the line
-    hashes = []
-    for point, is_start, payload in tags:
-        if payload is LINE:
-            if not is_start:
-                yield hashes
-                hashes = []
-                line_offset = point
-        else:
-            hash = payload.opener() if is_start else payload.closer()
-            hash['pos'] = point - line_offset
-            hashes.append(hash)
+    for line in tags_per_line(tags):
+        payloads = {}
+        for pos, is_start, payload in line:
+            if is_start:
+                payloads[payload] = {'start': pos}
+            else:
+                payloads[payload]['end'] = pos
+        # Index objects are refs or regions. Regions' payloads are just
+        # strings; refs' payloads are objects. See mappings in plugins/core.py
+        yield [{'payload': payload.es(),
+                'start': pos['start'],
+                'end': pos['end']}
+               for payload, pos in payloads.iteritems()]
     # tags always ends with a LINE closer, so we don't need any additional
     # yield here to catch remnants.
 
+def triples_from_es_refs(es_refs):
+    """
+    Undo list of lists of es refs per lines back to (start, end, payload) triples.
+    """
+    for line in es_refs:
+        for item in line:
+            ref = (item['payload']['menuitems'], item['payload'].get('hover'))
+            yield (item['start'], item['end'], ref)
 
-def html_line(text, es_tags):
+def triples_from_es_regions(es_regions):
+    """
+    Undo list of lists es regions back to (start, end, payload) triples.
+    """
+    # TODO: refactor with triples_from_es_regions
+    for line in es_regions:
+        for item in line:
+            region = item['payload']
+            yield (item['start'], item['end'], region)
+
+def html_line(text, tags, bof_offset):
     """Return a line of Markup, interleaved with the refs and regions that
     decorate it.
 
-    :arg es_tags: An ordered iterable of tags from an ES ``lines`` doc,
+    :arg tags: An ordered iterable of tags from output of finished_tags
         representing regions and refs
     :arg text: The unicode text to decorate
+    :arg bof_offset: The byte position of the start of the line from the
+        beginning of the file.
 
     """
-    def segments(text, es_tags):
+    def segments(text, tags, bof_offset):
         up_to = 0
-        for tag in es_tags:
-            pos = tag['pos']
+        for pos, is_start, payload in tags:
+            # Convert from file-based position to line-based position.
+            pos -= bof_offset
             yield cgi.escape(text[up_to:pos].strip(u'\r\n'))
             up_to = pos
-            if 'closer' in tag:  # It's a closer. Most common.
-                yield '</a>' if tag['closer'] else '</span>'
-            elif 'class' in tag:  # It's a span.
-                yield u'<span class="%s">' % cgi.escape(tag['class'], True)
+            if not is_start:  # It's a closer. Most common.
+                yield '</a>' if isinstance(payload, Ref) else '</span>'
+            elif isinstance(payload, Region):  # It's a span.
+                yield u'<span class="%s">' % cgi.escape(payload.payload, True)
             else:  # It's a menu.
-                menu = cgi.escape(json.dumps(tag['menuitems']), True)
-                if 'hover' in tag:
-                    title = ' title="' + cgi.escape(tag['hover'], True) + '"'
+                menu, hover = payload.payload
+                menu = cgi.escape(json.dumps(menu), True)
+                if hover is not None:
+                    title = ' title="' + cgi.escape(hover, True) + '"'
                 else:
                     title = ''
                 yield u'<a data-menu="%s"%s>' % (menu, title)
         yield cgi.escape(text[up_to:])
 
-    return Markup(u''.join(segments(text, es_tags)))
+    return Markup(u''.join(segments(text, tags, bof_offset)))

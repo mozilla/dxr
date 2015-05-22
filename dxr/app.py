@@ -1,6 +1,6 @@
 from cStringIO import StringIO
 from functools import partial
-from itertools import chain
+from itertools import chain, izip
 from logging import StreamHandler
 import os
 from os import chdir
@@ -22,7 +22,8 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
-from dxr.lines import html_line
+from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
+                       triples_from_es_regions, finished_tags)
 from dxr.mime import icon, is_image
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
@@ -216,7 +217,31 @@ def browse(tree, path=''):
     try:
         return _browse_folder(tree, path, config)
     except NotFound:
-        return _browse_file(tree, path, config)
+        frozen = frozen_config(tree)
+        # Grab the FILE doc, just for the sidebar nav links:
+        files = filtered_query(
+            frozen['es_alias'],
+            FILE,
+            filter={'path': path},
+            size=1,
+            include=['links'])
+        if not files:
+            raise NotFound
+        links = files[0].get('links', [])
+
+        lines = filtered_query(
+            frozen['es_alias'],
+            LINE,
+            filter={'path': path},
+            sort=['number'],
+            size=1000000,
+            include=['content', 'refs', 'regions', 'annotations'])
+        # Deref the content field in each document. We can do this because we
+        # do not store empty lines in ES.
+        for doc in lines:
+            doc['content'] = doc['content'][0]
+
+        return _browse_file(tree, path, lines, links, config, frozen['generated_date'])
 
 
 def _browse_folder(tree, path, config):
@@ -269,7 +294,32 @@ def _browse_folder(tree, path, config):
             for f in files_and_folders])
 
 
-def _browse_file(tree, path, config):
+def _build_common_file_template(tree, path, date, config):
+    """
+    Return a dictionary of the common required file template parameters.
+    """
+    return {
+        # Common template variables:
+        'www_root': config.www_root,
+        'tree': tree,
+        'tree_tuples':
+            [(t['name'],
+              url_for('.parallel', tree=t['name'], path=path),
+              t['description'])
+            for t in frozen_configs()],
+        'generated_date': date,
+        'google_analytics_key': config.google_analytics_key,
+        'filters': filter_menu_items(
+            plugins_named(frozen_config(tree)['enabled_plugins'])),
+        # File template variables
+        'paths_and_names': _linked_pathname(path, tree),
+        'icon': icon(path),
+        'path': path,
+        'name': basename(path)
+    }
+
+
+def _browse_file(tree, path, line_docs, links, config, date = None):
     """Return a rendered page displaying a source file.
 
     If there is no such file, raise NotFound.
@@ -285,63 +335,45 @@ def _browse_file(tree, path, config):
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))
 
-    frozen = frozen_config(tree)
+    def cumulative_sum(nums):
+        """Generate a cumulative sum of nums iterable, at each point yielding
+            the sum up to but not including the current value.
+        """
+        cum_sum = 0
+        for n in nums:
+            # Note that these two operations are flipped from a traditional
+            # cumulative sum, which includes the current value
+            yield cum_sum
+            cum_sum += n
 
-    # Grab the FILE doc, just for the sidebar nav links:
-    files = filtered_query(
-        frozen['es_alias'],
-        FILE,
-        filter={'path': path},
-        size=1,
-        include=['links'])
-    if not files:
-        raise NotFound
-    links = files[0].get('links', [])
+    if not date:
+        # Then assume that the file is generated now. Remark: we can't use this
+        # as the default param because that is only evaluated once, so the same
+        # time would always be used.
+        date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
-    lines = filtered_query(
-        frozen['es_alias'],
-        LINE,
-        filter={'path': path},
-        sort=['number'],
-        size=1000000,
-        include=['content', 'tags', 'annotations'])
-
-    # Common template variables:
-    common = {
-        'www_root': config.www_root,
-        'tree': tree,
-        'tree_tuples':
-            [(t['name'],
-              url_for('.parallel', tree=t['name'], path=path),
-              t['description'])
-            for t in frozen_configs()],
-        'generated_date': frozen['generated_date'],
-        'google_analytics_key': config.google_analytics_key,
-        'filters': filter_menu_items(
-            plugins_named(frozen_config(tree)['enabled_plugins'])),
-    }
-
-    # File template variables
-    file_vars = {
-        'paths_and_names': _linked_pathname(path, tree),
-        'icon': icon(path),
-        'path': path,
-        'name': basename(path),
-    }
-
+    common = _build_common_file_template(tree, path, date, config)
     if is_image(path):
         return render_template(
             'image_file.html',
-            **merge(common, file_vars))
+            common)
     else:  # For now, we don't index binary files, so this is always a text one
+        index_refs = list(triples_from_es_refs(doc.get('refs', []) for doc in line_docs))
+        index_regions = list(triples_from_es_regions(doc.get('regions', []) for doc in line_docs))
+        # We concretize this into a list because we iterate over it multiple times
+        lines = [doc['content'] for doc in line_docs]
+        offsets = cumulative_sum(map(len, lines))
+        tags = finished_tags(lines, index_refs, index_regions)
         return render_template(
             'text_file.html',
-            **merge(common, file_vars, {
+            **merge(common, {
                 # Someday, it would be great to stream this and not concretize
                 # the whole thing in RAM. The template will have to quit
                 # looping through the whole thing 3 times.
-                'lines': [(html_line(doc['content'][0], doc.get('tags', [])),
-                           doc.get('annotations', [])) for doc in lines],
+                'lines': [(html_line(doc['content'], tags_in_line, offset),
+                           doc.get('annotations', []))
+                          for doc, tags_in_line, offset
+                              in izip(line_docs, tags_per_line(tags), offsets)],
                 'is_text': True,
                 'sections': sidebar_links(links)}))
 
