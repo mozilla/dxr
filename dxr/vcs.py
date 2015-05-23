@@ -2,18 +2,21 @@ import subprocess
 import urlparse
 import marshal
 import os
-from os.path import relpath
+from os.path import relpath, join
 from ordereddict import OrderedDict
 
+from funcy import memoize
 # Note: Mercurial doesn't support this api, but we avoid problems by pinning
 # the version. Also using this API forces us to comply with GPLv2. Luckily, the
 # MIT license is compatible.
 from mercurial import hg, ui
 
-"""Let DXR understand the concept of version control systems.
-The main entry point is `tree_to_repos`, which produces a mapping of roots to
-VCS objects for each version control root discovered under the provided tree.
-Currently supported VCS are Mercurial, Git, and Perforce.
+"""Let DXR understand the concept of version control systems. The main entry
+points are `tree_to_repos`, which produces a mapping of roots to VCS objects
+for each version control root discovered under the provided tree, and
+`path_to_vcs`, which returns a VCS object for the version control system that
+tracks the given path. Currently supported VCS are Mercurial, Git, and
+Perforce.
 """
 
 class VCS(object):
@@ -262,7 +265,7 @@ class Perforce(VCS):
 
 every_vcs = [Mercurial, Git, Perforce]
 
-# I should consider memoizing this function
+@memoize
 def tree_to_repos(tree):
     """Given a TreeConfig, return a mapping {root: VCS object} where root is a
     directory under tree.source_folder where root is a directory under
@@ -273,7 +276,7 @@ def tree_to_repos(tree):
     """
     sources = {}
     # Find all of the VCSs in the source directory:
-    # We may see this if we use git submodules, for example.
+    # We may see multiple VCS if we use git submodules, for example.
     for cwd, dirs, files in os.walk(tree.source_folder):
         for vcs in every_vcs:
             attempt = vcs.claim_vcs_source(cwd, dirs, tree.config)
@@ -299,4 +302,18 @@ def tree_to_repos(tree):
     for key in lookup_order:
         ordered_sources[key] = sources[key]
     return ordered_sources
+
+def vcs_for_path(tree, path):
+        """Given a tree and a path in the tree, find a source repository we
+        know about that claims to track that file.
+        """
+        abs_path = join(tree.source_folder, path)
+        for directory, vcs in tree_to_repos(tree).iteritems():
+            # This seems to be the easiest way to find "is abs_path in the subtree
+            # rooted at directory?"
+            if relpath(abs_path, directory).startswith('..'):
+                continue
+            if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
+                return vcs
+        return None
 
