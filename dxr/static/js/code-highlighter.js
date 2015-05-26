@@ -7,11 +7,13 @@
  * 1) Multi-select highlight lines with shift key and update window.location.hash
  * 2) Multi-select highlight lines with command/control key and update window.location.hash
  * 3) Highlight lines when page loads, if window.location.hash exists
+ * In addition, we update the permalink link to keep it synchronized with window.location.
  */
 
 $(function () {
     'use strict';
     var container = $('#line-numbers'),
+        permalink = $('.permalink'), // whenever we update window.location, update this href too
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
         rangesArray = []; // track ranges of highlighted lines here 
@@ -36,7 +38,7 @@ $(function () {
             lines = [],
             rangesArray = [],
             singleLinesArray = [];
-        
+
         var multiSelected = $('.line-number.multihighlight');
         var singleSelected = $('.line-number.highlighted');
 
@@ -109,11 +111,23 @@ $(function () {
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
+            if (permalink.length > 0)
+                updatePermalink(windowHash);
             history.replaceState(null, '', windowHash);
         }
     }
 
-    //parse window.location.hash on new requsts into two arrays
+    //update the permalink href based on the windowHash.
+    function updatePermalink(windowHash) {
+        var permalink_href = permalink.attr('href'),
+            hash_loc = permalink_href.indexOf('#');
+        // If the link already has #, then cut that it off.
+        if (hash_loc >= 0)
+            permalink_href = permalink_href.substring(0, hash_loc);
+        permalink.attr('href', permalink_href + windowHash);
+    }
+
+    //parse window.location.hash on new requests into two arrays
     //one of single lines and one multilines
     //use with singleLinesArray and rangesArray for adding/changing new highlights
     function getSortedHashLines() {
@@ -215,7 +229,7 @@ $(function () {
             }
             selectedLineNums.addClass(classToAdd);
             selectedLineCode.addClass(classToAdd);
-            
+
             //set the last used modifier key
             lastModifierKey = 'shift';
             // since all highlighed items are stripped, add one back, mark new last-selected
