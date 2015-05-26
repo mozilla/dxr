@@ -39,7 +39,7 @@ pyelasticsearch==1.1
 # sha256: Ftr99EAuAJQ9S1PJiiUa36knAKmRQDbXsk6WPwt3V1Q
 https://bitbucket.org/erikrose/pygments-main/get/1081-pragmatic-fix.tar.gz#egg=Pygments
 
-# sha256: xawM0bwmOnGVooapeYI5Jf1CqxPW20rseVY6ULhFjTE
+# sha256: mEFMy7mQkCOXKZaP5CJaMXPj8OwbteW9dmq9drwZqNk
 https://github.com/erikrose/schema/archive/99dc4130f0f05fd3c2d4bc6663a2419851f3c90f.zip#egg=schema
 
 # sha256: KjGJ950ce4ohSaDng8C0IX-tmzCm59YEUPJVPcLA5X4
