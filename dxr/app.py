@@ -58,10 +58,6 @@ def make_app(config):
     # Make an ES connection pool shared among all threads:
     app.es = ElasticSearch(config.es_hosts)
 
-    # Track any version control systems under the trees.
-    app.vcs_repositories = dict((k, tree_to_repos(v)) for k,v in
-        config.trees.items())
-
     return app
 
 
@@ -417,7 +413,7 @@ def permalink(tree, revision, path):
     """
     contents = None
     config = current_app.dxr_config
-    for vcs in current_app.vcs_repositories[tree].values():
+    for vcs in tree_to_repos(config.trees[tree]).values():
         if vcs.is_tracked(path):
             contents = vcs.get_contents(path, revision)
             break

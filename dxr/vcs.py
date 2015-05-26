@@ -47,7 +47,7 @@ class VCS(object):
 
     def get_contents(self, path, revision):
         """Return contents of file at specified path at given revision."""
-        return None
+        return NotImplemented
 
     def display_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
@@ -62,7 +62,7 @@ class Mercurial(VCS):
         tipctx = repo['tip']
         self.manifest = set(tipctx.manifest())
         # Find the revision, sometimes ends with a +.
-        self.revision = str(tipctx).rstrip('+')
+        self.revision = str(tipctx).rstrip('+').strip()
         # Determine the revision on which each file has changed
         self.previous_revisions = self.find_previous_revisions(repo, root)
 
@@ -103,8 +103,8 @@ class Git(VCS):
     def __init__(self, root):
         super(Git, self).__init__(root, 'git')
         self.tracked_files = set(line for line in
-                                 self.invoke_vcs(['ls-files']).splitlines()[:-1])
-        self.revision = self.invoke_vcs(['rev-parse', 'HEAD'])
+                                 self.invoke_vcs(['ls-files']).splitlines())
+        self.revision = self.invoke_vcs(['rev-parse', 'HEAD']).strip()
 
     @classmethod
     def claim_vcs_source(cls, path, dirs):
@@ -118,6 +118,9 @@ class Git(VCS):
 
     def is_tracked(self, path):
         return path in self.tracked_files
+
+    def get_contents(self, path, revision):
+        return self.invoke_vcs(['show', revision + ':' + path])
 
 class Perforce(VCS):
     def __init__(self, root):

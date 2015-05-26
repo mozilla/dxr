@@ -91,3 +91,19 @@ class FileToIndex(dxr.indexers.FileToIndex):
                 cls = token_classes.get(token)
                 if cls:
                     yield index, index + len(text), cls
+
+
+class FileToSkim(dxr.indexers.FileToSkim):
+    """Emitter of CSS classes for syntax-highlit regions"""
+
+    def is_interesting(self):
+        return not bool(self.file_properties)
+
+    def regions(self):
+        lexer = _lexer_for_filename(basename(self.path))
+        if lexer:
+            for index, token, text in lexer.get_tokens_unprocessed(self.contents):
+                cls = token_classes.get(token)
+                if cls:
+                    yield index, index + len(text), cls
+

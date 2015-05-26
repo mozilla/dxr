@@ -9,7 +9,6 @@ from funcy import memoize
 
 import dxr.indexers
 from dxr.vcs import tree_to_repos, vcs_for_path
-from dxr.utils import DXR_BLUEPRINT
 from dxr.plugins import Plugin
 from flask import url_for
 
@@ -112,7 +111,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             yield 'blame', "Blame", self.generate_blame(vcs_relative_path)
             yield 'diff',  "Diff", self.generate_diff(vcs_relative_path)
             yield 'raw', "Raw", self.generate_raw(vcs_relative_path)
-            yield 'permalink', "Permalink", url_for(DXR_BLUEPRINT + '.permalink',
+            yield 'permalink', "Permalink", url_for('.permalink',
                                                     tree=self.tree.name,
                                                     revision=self.vcs.revision,
                                                     path=vcs_relative_path)
@@ -147,9 +146,9 @@ def construct_upstream_url(vcs, plugin_config):
         return urlparse.urlunparse(recomb)
 
     def upstream_git():
-        source_urls = self.invoke_vcs(['remote', '-v']).split('\n')
+        source_urls = vcs.invoke_vcs(['remote', '-v']).split('\n')
         for src_url in source_urls:
-            name, url, _ = src_url.split()
+            name, repo, _ = src_url.split()
             # TODO: Why do we assume origin is upstream?
             if name == 'origin':
                 if repo.startswith("git@github.com:"):
