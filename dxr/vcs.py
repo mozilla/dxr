@@ -2,12 +2,12 @@ import subprocess
 import urlparse
 import marshal
 import os
+from contextlib import contextmanager
 from os.path import relpath, join
 from ordereddict import OrderedDict
 
 from funcy import memoize
-# TODO next: use hglib rather than mercurial
-from mercurial import hg, ui
+import hglib
 
 """Let DXR understand the concept of version control systems. The main entry
 points are `tree_to_repos`, which produces a mapping of roots to VCS objects
@@ -16,6 +16,16 @@ for each version control root discovered under the provided tree, and
 tracks the given path. Currently supported VCS are Mercurial, Git, and
 Perforce.
 """
+
+@contextmanager
+def open_hglib(repo):
+    """Context manager for handling connection to hglib command server.
+
+    :arg string repo: path to a Mercurial repository
+    """
+    client = hglib.open(repo)
+    yield client
+    client.close()
 
 class VCS(object):
     """A class representing an abstract notion of a version-control system.
@@ -56,31 +66,28 @@ class VCS(object):
 class Mercurial(VCS):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
-        # We can't hold onto repo because it is not pickleable, so we only use
-        # it during construction.
-        repo = hg.repository(ui.ui(), root)
-        tipctx = repo['tip']
-        self.manifest = set(tipctx.manifest())
-        # Find the revision, sometimes ends with a +.
-        self.revision = str(tipctx).rstrip('+').strip()
-        # Determine the revision on which each file has changed
-        self.previous_revisions = self.find_previous_revisions(repo, root)
+        with open_hglib(root) as client:
+            tip = client.tip()
+            # Manifest entries are tuples (nodeid, permission, executable, symlink, path)
+            self.tracked_files = [m[4] for m in client.manifest()]
+            self.revision = tip.node
+            # Determine the revision on which each file has changed
+            self.previous_revisions = self.find_previous_revisions(client, tip)
 
-    def find_previous_revisions(self, repo, root):
+    def find_previous_revisions(self, client, tip):
         """Find the last revision in which each file changed, for diff links.
 
-        Return a mapping {filename: [commits in which this file changed]}
+        Return a mapping {path: [commit nodes in which file at path changed]}
 
         """
         last_change = {}
-        for rev in xrange(0, repo['tip'].rev() + 1):
-            ctx = repo[rev]
+        for rev in xrange(0, int(tip.rev) + 1):
+            ctx = client[rev]
             # Go through all filenames changed in this commit:
             for filename in ctx.files():
                 if filename not in last_change:
                     last_change[filename] = []
-                # str(ctx) gives us the 12-char hash for URLs.
-                last_change[filename].append(str(ctx))
+                last_change[filename].append(ctx.node())
         return last_change
 
     @classmethod
@@ -91,10 +98,10 @@ class Mercurial(VCS):
         return None
 
     def display_rev(self, path):
-        return self.revision
+        return self.revision[:12]
 
     def is_tracked(self, path):
-        return path in self.manifest
+        return path in self.tracked_files
 
     def get_contents(self, path, revision):
         return self.invoke_vcs(['cat', '-r', revision, path])
