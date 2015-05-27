@@ -26,6 +26,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
 
 import dxr
 from dxr.app import make_app
+from dxr.vcs import VCSTree
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, TREE
 from dxr.exceptions import BuildError
@@ -212,7 +213,7 @@ def index_tree(tree, es, verbose=False):
         ensure_folder(join(tree.temp_folder, 'plugins', plugin.name),
                       not skip_cleanup)
 
-    tree_indexers = [p.tree_to_index(p.name, tree) for p in
+    tree_indexers = [p.tree_to_index(p.name, tree, VCSTree(tree)) for p in
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:

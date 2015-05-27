@@ -43,6 +43,22 @@ class VCS(object):
         """Does the repository track this file?"""
         return NotImplemented
 
+    def generate_log(self, path):
+        """Construct URL to upstream view of log of file at path."""
+        return NotImplemented
+
+    def generate_diff(self, path):
+        """Construct URL to upstream view of diff of file at path."""
+        return NotImplemented
+
+    def generate_blame(self, path):
+        """Construct URL to upstream view of blame on file at path."""
+        return NotImplemented
+
+    def generate_raw(self, path):
+        """Construct URL to upstream view to raw file at path."""
+        return NotImplemented
+
     def get_contents(self, path, revision):
         """Return contents of file at specified path at given revision."""
         return NotImplemented
@@ -61,6 +77,22 @@ class Mercurial(VCS):
             self.revision = tip.node
             # Determine the revision on which each file has changed
             self.previous_revisions = self.find_previous_revisions(client, tip)
+        self.upstream = self._construct_upstream_url()
+
+    def _construct_upstream_url(self):
+        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default']).strip())
+        recomb = list(upstream)
+        if upstream.scheme == 'ssh':
+            recomb[0] == 'http'
+        recomb[1] = upstream.hostname # Eliminate any username stuff
+        # check if port is defined and add that to the url
+        if upstream.port:
+            recomb[1] += ":{}".format(upstream.port)
+        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
+        if not upstream.path.endswith('/'):
+            recomb[2] += '/' # Make sure we have a '/' on the end
+        recomb[3] = recomb[4] = recomb[5] = '' # Just those three
+        return urlparse.urlunparse(recomb)
 
     def find_previous_revisions(self, client, tip):
         """Find the last revision in which each file changed, for diff links.
@@ -79,7 +111,7 @@ class Mercurial(VCS):
         return last_change
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs):
+    def claim_vcs_source(cls, path, dirs, tree):
         if '.hg' in dirs:
             dirs.remove('.hg')
             return cls(path)
@@ -91,6 +123,19 @@ class Mercurial(VCS):
     def is_tracked(self, path):
         return path in self.tracked_files
 
+    def generate_raw(self, path):
+        return self.upstream + 'raw-file/' + self.revision + '/' + path
+
+    def generate_diff(self, path):
+        # We generate link to diff with the last revision in which the file changed.
+        return self.upstream + 'diff/' + self.previous_revisions[path][-1] + '/' + path
+
+    def generate_blame(self, path):
+        return self.upstream + 'annotate/' + self.revision + '/' + path
+
+    def generate_log(self, path):
+        return self.upstream + 'filelog/' + self.revision + '/' + path
+
     def get_contents(self, path, revision):
         return self.invoke_vcs(['cat', '-r', revision, path])
 
@@ -100,9 +145,29 @@ class Git(VCS):
         self.tracked_files = set(line for line in
                                  self.invoke_vcs(['ls-files']).splitlines())
         self.revision = self.invoke_vcs(['rev-parse', 'HEAD']).strip()
+        self.upstream = self._construct_upstream_url()
+
+    def _construct_upstream_url(self):
+        source_urls = self.invoke_vcs(['remote', '-v']).split('\n')
+        for src_url in source_urls:
+            name, repo, _ = src_url.split()
+            # TODO: Why do we assume origin is upstream?
+            if name == 'origin':
+                if repo.startswith("git@github.com:"):
+                    return "https://github.com/" + repo[len("git@github.com:"):]
+                elif repo.startswith(("git://github.com/", "https://github.com/")):
+                    if repo.endswith(".git"):
+                        repo = repo[:-len(".git")]
+                    if repo.startswith("git:"):
+                        repo = "https" + repo[len("git"):]
+                    return repo
+                # TODO: we should put this in some warning log instead
+                raise RuntimeError("Your git remote is not supported yet. Please use a "
+                                "GitHub remote for now, or disable the omniglot "
+                                "plugin.")
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs):
+    def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
             dirs.remove('.git')
             return cls(path)
@@ -114,21 +179,36 @@ class Git(VCS):
     def is_tracked(self, path):
         return path in self.tracked_files
 
+    def generate_raw(self, path):
+        return self.upstream + "/raw/" + self.revision + "/" + path
+
+    def generate_diff(self, path):
+        # I really want to make this anchor on the file in question, but github
+        # doesn't seem to do that nicely
+        return self.upstream + "/commit/" + self.revision
+
+    def generate_blame(self, path):
+        return self.upstream + "/blame/" + self.revision + "/" + path
+
+    def generate_log(self, path):
+        return self.upstream + "/commits/" + self.revision + "/" + path
+
     def get_contents(self, path, revision):
         return self.invoke_vcs(['show', revision + ':' + path])
 
 class Perforce(VCS):
-    def __init__(self, root):
+    def __init__(self, root, upstream):
         super(Perforce, self).__init__(root, 'p4')
         have = self._p4run(['have'])
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
+        self.upstream = upstream
 
     @classmethod
-    def claim_vcs_source(cls, path, dirs):
+    def claim_vcs_source(cls, path, dirs, tree):
         if 'P4CONFIG' not in os.environ:
             return None
         if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
-            return cls(path)
+            return cls(path, tree.p4web_url)
         return None
 
     def _p4run(self, args):
@@ -151,6 +231,25 @@ class Perforce(VCS):
     def is_tracked(self, path):
         return path in self.have
 
+    def generate_raw(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=98&rev1=' + info['haveRev']
+
+    def generate_diff(self, path):
+        info = self.have[path]
+        haveRev = info['haveRev']
+        prevRev = str(int(haveRev) - 1)
+        return (self.upstream + info['depotFile'] + '?ac=19&rev1=' + prevRev +
+                '&rev2=' + haveRev)
+
+    def generate_blame(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=193'
+
+    def generate_log(self, path):
+        info = self.have[path]
+        return self.upstream + info['depotFile'] + '?ac=22#' + info['haveRev']
+
     def display_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
@@ -164,13 +263,14 @@ def tree_to_repos(tree):
     deepest directory first.
 
     :arg tree: TreeConfig object representing a source code tree
+
     """
     sources = {}
     # Find all of the VCSs in the source directory:
     # We may see multiple VCS if we use git submodules, for example.
     for cwd, dirs, files in os.walk(tree.source_folder):
         for vcs in every_vcs:
-            attempt = vcs.claim_vcs_source(cwd, dirs)
+            attempt = vcs.claim_vcs_source(cwd, dirs, tree)
             if attempt is not None:
                 sources[attempt.root] = attempt
 
@@ -181,7 +281,7 @@ def tree_to_repos(tree):
     while directory != '/' and directory not in sources:
         directory = os.path.dirname(directory)
         for vcs in every_vcs:
-            attempt = vcs.claim_vcs_source(directory, os.listdir(directory))
+            attempt = vcs.claim_vcs_source(directory, os.listdir(directory), tree)
             if attempt is not None:
                 sources[directory] = attempt
     lookup_order = sorted(sources.keys(), key=len, reverse=True)
@@ -192,20 +292,32 @@ def tree_to_repos(tree):
         ordered_sources[key] = sources[key]
     return ordered_sources
 
-def vcs_for_path(tree, path):
+
+class VCSTree(object):
+    """This class offers a way to obtain VCS objects for any file within a
+    given tree."""
+    def __init__(self, tree):
+        self.tree = tree
+        self.repos = tree_to_repos(tree)
+        self._path_cache = {}
+
+    def vcs_for_path(self, path):
         """Given a tree and a path in the tree, find a source repository we
         know about that claims to track that file.
 
         :arg tree: TreeConfig object representing a source code tree
         :arg string path: a path to a file (not a folder)
         """
-        abs_path = join(tree.source_folder, path)
-        for directory, vcs in tree_to_repos(tree).iteritems():
+        if path in self._path_cache:
+            return self._path_cache
+        abs_path = join(self.tree.source_folder, path)
+        for directory, vcs in self.repos.iteritems():
             # This seems to be the easiest way to find "is abs_path in the subtree
             # rooted at directory?"
             if relpath(abs_path, directory).startswith('..'):
                 continue
             if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
-                return vcs
-        return None
+                self._path_cache[path] = vcs
+                break
+        return self._path_cache.get(path, None)
 

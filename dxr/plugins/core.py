@@ -2,9 +2,10 @@
 
 
 from base64 import b64encode
-from os.path import splitext
+from os.path import relpath, splitext
 import re
 
+from flask import url_for
 from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
@@ -369,10 +370,14 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         return vars
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.plugin_name, self.tree)
+        return FileToIndex(path, contents, self.plugin_name, self.tree, self.vcs_tree.vcs_for_path(path))
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
+    def __init__(self, path, contents, plugin_name, tree, vcs):
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
+        self.vcs = vcs
+
     def needles(self):
         """Fill out path (and path.trigrams)."""
         yield 'path', self.path
@@ -392,6 +397,18 @@ class FileToIndex(dxr.indexers.FileToIndex):
         for number, text in enumerate(self.contents.splitlines(True), 1):
             yield [('number', number),
                    ('content', text)]
+
+    def links(self):
+        if self.vcs:
+            vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
+            yield (5,
+                    '%s (%s)' % (self.vcs.get_vcs_name(), self.vcs.display_rev(vcs_relative_path)),
+                    [('permalink', 'Permalink', url_for('.rev',
+                                                        tree=self.tree.name,
+                                                        revision=self.vcs.revision,
+                                                        path=vcs_relative_path))])
+        else:
+            yield 5, 'Untracked file', []
 
     def is_interesting(self):
         """Core plugin puts all files in the search index."""
