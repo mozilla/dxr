@@ -1,4 +1,5 @@
 from cStringIO import StringIO
+from datetime import datetime
 from functools import partial
 from itertools import chain, izip
 from logging import StreamHandler
@@ -9,7 +10,7 @@ from sys import stderr
 from time import time
 from mimetypes import guess_type
 from urllib import quote_plus
-from datetime import datetime
+
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
@@ -214,7 +215,9 @@ def raw(tree, path):
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees.
-    If path does not exist as either a folder or file, raise NotFound.
+
+    Raise NotFound if path does not exist as either a folder or file
+
     """
     config = current_app.dxr_config
     try:
@@ -407,7 +410,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
                 'sections': sidebar_links(links + skim_links)}))
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
-def permalink(tree, revision, path):
+def rev(tree, revision, path):
     """Display a page showing the file at path at specified revision by
     obtaining the contents from version control.
     """

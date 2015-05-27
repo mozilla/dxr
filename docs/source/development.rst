@@ -123,7 +123,7 @@ Coding Conventions
 ------------------
 
 Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
-Follow `PEP  257`_ for docstrings, and use Sphinx-style argument documentation.
+Follow `PEP 257`_ for docstrings, and use Sphinx-style argument documentation.
 Single quotes are preferred for strings; use double quotes for docstrings and
 multiline strings or if the string contains a single quote.
 
@@ -334,7 +334,7 @@ DXR's core mapping, defined in the ``core`` plugin::
                     # display in search results, not for searching on:
                     'type': 'string',
                     'index': 'no',
-                
+
                     # Then, we index it in two different ways: broken into
                     # trigrams (3-letter chunks) and either folded to lowercase or
                     # not. This cleverness takes care of substring matching and

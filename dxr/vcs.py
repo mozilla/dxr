@@ -1,3 +1,9 @@
+"""Let DXR understand the concept of version control systems. The main entry points are `tree_to_repos`, which produces a mapping of roots to VCS objects
+for each version control root discovered under the provided tree, and
+`path_to_vcs`, which returns a VCS object for the version control system that
+tracks the given path. Currently supported VCS are Mercurial, Git, and
+Perforce.
+"""
 import subprocess
 import urlparse
 import marshal
@@ -6,26 +12,7 @@ from contextlib import contextmanager
 from os.path import relpath, join
 from ordereddict import OrderedDict
 
-from funcy import memoize
 import hglib
-
-"""Let DXR understand the concept of version control systems. The main entry
-points are `tree_to_repos`, which produces a mapping of roots to VCS objects
-for each version control root discovered under the provided tree, and
-`path_to_vcs`, which returns a VCS object for the version control system that
-tracks the given path. Currently supported VCS are Mercurial, Git, and
-Perforce.
-"""
-
-@contextmanager
-def open_hglib(repo):
-    """Context manager for handling connection to hglib command server.
-
-    :arg string repo: path to a Mercurial repository
-    """
-    client = hglib.open(repo)
-    yield client
-    client.close()
 
 class VCS(object):
     """A class representing an abstract notion of a version-control system.
@@ -35,6 +22,7 @@ class VCS(object):
 
     def __init__(self, root, command):
         self.root = root
+        # shell command for VCS: 'hg' in Mercurial, 'git' for Git, etc.
         self.command = command
 
     def get_root_dir(self):
@@ -66,7 +54,7 @@ class VCS(object):
 class Mercurial(VCS):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
-        with open_hglib(root) as client:
+        with hglib.open(root) as client:
             tip = client.tip()
             # Manifest entries are tuples (nodeid, permission, executable, symlink, path)
             self.tracked_files = [m[4] for m in client.manifest()]
@@ -169,7 +157,6 @@ class Perforce(VCS):
 
 every_vcs = [Mercurial, Git, Perforce]
 
-@memoize
 def tree_to_repos(tree):
     """Given a TreeConfig, return a mapping {root: VCS object} where root is a
     directory under tree.source_folder where root is a directory under
@@ -205,7 +192,6 @@ def tree_to_repos(tree):
         ordered_sources[key] = sources[key]
     return ordered_sources
 
-@memoize
 def vcs_for_path(tree, path):
         """Given a tree and a path in the tree, find a source repository we
         know about that claims to track that file.
