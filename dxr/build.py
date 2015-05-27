@@ -26,7 +26,6 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
 
 import dxr
 from dxr.app import make_app
-from dxr.vcs import VCSTree
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, TREE
 from dxr.exceptions import BuildError
@@ -36,6 +35,7 @@ from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
+from dxr.vcs import VCSTree
 
 
 def full_traceback(callable, *args, **kwargs):
@@ -532,7 +532,6 @@ def index_file(tree, tree_indexers, path, es, index):
                 refs_and_regions = bucket(tags, lambda index_obj: "regions" if
                                           isinstance(index_obj['payload'], basestring) else
                                           "refs")
-                # TODO: change app.py retrieves lines from the index as refs and regions
                 if 'refs' in refs_and_regions:
                     total['refs'] = refs_and_regions['refs']
                 if 'regions' in refs_and_regions:
