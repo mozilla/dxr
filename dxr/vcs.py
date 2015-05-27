@@ -4,15 +4,17 @@ for each version control root discovered under the provided tree, and
 tracks the given path. Currently supported VCS are Mercurial, Git, and
 Perforce.
 """
-import subprocess
-import urlparse
 import marshal
 import os
-from contextlib import contextmanager
-from os.path import relpath, join
-from ordereddict import OrderedDict
+from os.path import relpath, join, dirname
+import subprocess
+import urlparse
 
 import hglib
+from ordereddict import OrderedDict
+from warnings import warn
+
+import dxr
 
 class VCS(object):
     """A class representing an abstract notion of a version-control system.
@@ -70,13 +72,14 @@ class VCS(object):
 class Mercurial(VCS):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
-        with hglib.open(root) as client:
+        hgext = join(dirname(dxr.__file__), 'hgext', 'previous_revisions.py')
+        with hglib.open(root,
+                        configs = ['extensions.previous_revisions=%s' % hgext]) as client:
             tip = client.tip()
             # Manifest entries are tuples (nodeid, permission, executable, symlink, path)
             self.tracked_files = [m[4] for m in client.manifest()]
             self.revision = tip.node
-            # Determine the revision on which each file has changed
-            self.previous_revisions = self.find_previous_revisions(client, tip)
+            self.previous_revisions = self.find_previous_revisions(client)
         self.upstream = self._construct_upstream_url()
 
     def _construct_upstream_url(self):
@@ -94,20 +97,16 @@ class Mercurial(VCS):
         recomb[3] = recomb[4] = recomb[5] = '' # Just those three
         return urlparse.urlunparse(recomb)
 
-    def find_previous_revisions(self, client, tip):
+    def find_previous_revisions(self, client):
         """Find the last revision in which each file changed, for diff links.
 
-        Return a mapping {path: [commit nodes in which file at path changed]}
+        Return a mapping {path: last commit nodes in which file at path changed}
 
         """
         last_change = {}
-        for rev in xrange(0, int(tip.rev) + 1):
-            ctx = client[rev]
-            # Go through all filenames changed in this commit:
-            for filename in ctx.files():
-                if filename not in last_change:
-                    last_change[filename] = []
-                last_change[filename].append(ctx.node())
+        for line in client.rawcommand(['previous-revisions']).splitlines():
+            path, node = line.split(':')
+            last_change[path] = node
         return last_change
 
     @classmethod
@@ -128,7 +127,7 @@ class Mercurial(VCS):
 
     def generate_diff(self, path):
         # We generate link to diff with the last revision in which the file changed.
-        return self.upstream + 'diff/' + self.previous_revisions[path][-1] + '/' + path
+        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
 
     def generate_blame(self, path):
         return self.upstream + 'annotate/' + self.revision + '/' + path
@@ -161,10 +160,10 @@ class Git(VCS):
                     if repo.startswith("git:"):
                         repo = "https" + repo[len("git"):]
                     return repo
-                # TODO: we should put this in some warning log instead
-                raise RuntimeError("Your git remote is not supported yet. Please use a "
-                                "GitHub remote for now, or disable the omniglot "
-                                "plugin.")
+                warn("Your git remote is not supported yet. Please use a "
+                     "GitHub remote for now, or disable the omniglot "
+                     "plugin.")
+                break
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):

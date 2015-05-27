@@ -26,11 +26,11 @@ from dxr.filters import FILE, LINE
 from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
                        triples_from_es_regions, finished_tags)
 from dxr.mime import icon, is_image
-from dxr.vcs import tree_to_repos
 from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
+from dxr.vcs import VCSTree
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -58,6 +58,10 @@ def make_app(config):
 
     # Make an ES connection pool shared among all threads:
     app.es = ElasticSearch(config.es_hosts)
+
+    # Construct map of each tree to its VCS tree object.
+    app.vcs_trees = {tree: VCSTree(tree_config) for tree, tree_config in
+                     config.trees.iteritems()}
 
     return app
 
@@ -414,22 +418,19 @@ def rev(tree, revision, path):
     """Display a page showing the file at path at specified revision by
     obtaining the contents from version control.
     """
-    contents = None
     config = current_app.dxr_config
-    for vcs in tree_to_repos(config.trees[tree]).values():
-        if vcs.is_tracked(path):
-            contents = vcs.get_contents(path, revision)
-            break
-    if contents is None:
+    vcs = current_app.vcs_trees[tree].vcs_for_path(path)
+    if vcs:
+        contents = vcs.get_contents(path, revision)
+        # We do some wrapping to mimic the JSON returned by an ES lines query.
+        return _browse_file(tree,
+                            path,
+                            [{'content': line} for line in contents.splitlines(True)],
+                            {},
+                            config,
+                            contents = contents)
+    else:
         return render_template('error.html', error_html='No VCS found'), 400
-    # We do some wrapping to mimic the JSON returned by an ES lines query.
-    return _browse_file(tree,
-                        path,
-                        [{'content': line} for line in contents.splitlines(True)],
-                        {},
-                        config,
-                        contents = contents)
-
 
 def _linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be
