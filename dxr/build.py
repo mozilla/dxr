@@ -35,7 +35,7 @@ from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
-from dxr.vcs import VCSTree
+from dxr.vcs import VcsTree
 
 
 def full_traceback(callable, *args, **kwargs):
@@ -213,7 +213,7 @@ def index_tree(tree, es, verbose=False):
         ensure_folder(join(tree.temp_folder, 'plugins', plugin.name),
                       not skip_cleanup)
 
-    tree_indexers = [p.tree_to_index(p.name, tree, VCSTree(tree)) for p in
+    tree_indexers = [p.tree_to_index(p.name, tree, VcsTree(tree)) for p in
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:

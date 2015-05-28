@@ -75,7 +75,7 @@ class TreeToIndex(PluginConfig):
     def __init__(self, plugin_name, tree, vcs_tree):
         """
         :arg tree: The configuration of the tree to index: a TreeConfig
-        :arg vcs_tree: A dxr.vcs.VCSTree object. May be None if tree does not
+        :arg vcs_tree: A dxr.vcs.VcsTree object. May be None if tree does not
             contain any VCS repositories.
 
         """

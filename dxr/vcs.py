@@ -16,7 +16,7 @@ from warnings import warn
 
 import dxr
 
-class VCS(object):
+class Vcs(object):
     """A class representing an abstract notion of a version-control system.
     In general, all path arguments to query methods should be normalized to be
     relative to the root directory of the VCS.
@@ -69,7 +69,7 @@ class VCS(object):
         """Return a human-readable revision identifier for the repository."""
         return NotImplemented
 
-class Mercurial(VCS):
+class Mercurial(Vcs):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
         hgext = join(dirname(dxr.__file__), 'hgext', 'previous_revisions.py')
@@ -138,7 +138,7 @@ class Mercurial(VCS):
     def get_contents(self, path, revision):
         return self.invoke_vcs(['cat', '-r', revision, path])
 
-class Git(VCS):
+class Git(Vcs):
     def __init__(self, root):
         super(Git, self).__init__(root, 'git')
         self.tracked_files = set(line for line in
@@ -195,7 +195,7 @@ class Git(VCS):
     def get_contents(self, path, revision):
         return self.invoke_vcs(['show', revision + ':' + path])
 
-class Perforce(VCS):
+class Perforce(Vcs):
     def __init__(self, root, upstream):
         super(Perforce, self).__init__(root, 'p4')
         have = self._p4run(['have'])
@@ -256,7 +256,7 @@ class Perforce(VCS):
 every_vcs = [Mercurial, Git, Perforce]
 
 def tree_to_repos(tree):
-    """Given a TreeConfig, return a mapping {root: VCS object} where root is a
+    """Given a TreeConfig, return a mapping {root: Vcs object} where root is a
     directory under tree.source_folder where root is a directory under
     tree.source_folder. Traversal of the returned mapping follows the order of
     deepest directory first.
@@ -292,8 +292,8 @@ def tree_to_repos(tree):
     return ordered_sources
 
 
-class VCSTree(object):
-    """This class offers a way to obtain VCS objects for any file within a
+class VcsTree(object):
+    """This class offers a way to obtain Vcs objects for any file within a
     given tree."""
     def __init__(self, tree):
         self.tree = tree

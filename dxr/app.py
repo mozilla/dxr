@@ -30,7 +30,7 @@ from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
-from dxr.vcs import VCSTree
+from dxr.vcs import VcsTree
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -60,7 +60,7 @@ def make_app(config):
     app.es = ElasticSearch(config.es_hosts)
 
     # Construct map of each tree to its VCS tree object.
-    app.vcs_trees = {tree: VCSTree(tree_config) for tree, tree_config in
+    app.vcs_trees = {tree: VcsTree(tree_config) for tree, tree_config in
                      config.trees.iteritems()}
 
     return app
@@ -220,7 +220,7 @@ def raw(tree, path):
 def browse(tree, path=''):
     """Show a directory listing or a single file from one of the trees.
 
-    Raise NotFound if path does not exist as either a folder or file
+    Raise NotFound if path does not exist as either a folder or file.
 
     """
     config = current_app.dxr_config
