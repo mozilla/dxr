@@ -5,6 +5,6 @@
 <a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
 {%- endif -%}
     {{ display_path }}
-{%- if not is_binary -%}
+{%- if not is_binary and not is_dir -%}
 </a>
 {%- endif -%}
