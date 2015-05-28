@@ -213,7 +213,8 @@ def index_tree(tree, es, verbose=False):
         ensure_folder(join(tree.temp_folder, 'plugins', plugin.name),
                       not skip_cleanup)
 
-    tree_indexers = [p.tree_to_index(p.name, tree, VcsTree(tree)) for p in
+    vcs_tree = VcsTree(tree)
+    tree_indexers = [p.tree_to_index(p.name, tree, vcs_tree) for p in
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:
