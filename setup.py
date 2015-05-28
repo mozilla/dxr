@@ -23,7 +23,7 @@ setup(
                                   'buglink = dxr.plugins.buglink:plugin',
                                   'clang = dxr.plugins.clang:plugin',
                                   'python = dxr.plugins.python:plugin',
-                                  'omniglot = dxr.plugins.omniglot:plugin',
+                                  'omniglot = dxr.plugins.omniglot',
                                   'rust = dxr.plugins.rust:plugin',
                                   'pygmentize = dxr.plugins.pygmentize'],
                   'console_scripts': ['dxr = dxr.cli:main']},
