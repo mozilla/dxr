@@ -6,7 +6,6 @@ dxr-logs-*
 dxr-temp-*
 **/tests/*/code/code
 **/tests/*/code2/code
-/tests/test_diff_link/code/.hg/dirstate
 /vagrantconfig_local.yaml
 /.vagrant
 /.noseids

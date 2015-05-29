@@ -1,5 +1,5 @@
 from os.path import dirname, join
-from shutil import copyfile
+import subprocess
 
 from dxr.testing import DxrInstanceTestCase
 
@@ -9,6 +9,26 @@ from nose.tools import ok_
 
 class GitTests(DxrInstanceTestCase):
     """Test our Git integration, both core and omniglot."""
+
+    @classmethod
+    def setup_class(cls):
+        """git does not allow us to commit the .git folder under the build
+        directory, so we extract it before the tests.
+
+        """
+        build_dir = join(dirname(__file__), 'code')
+        subprocess.check_call(['make'], cwd=build_dir)
+        super(cls, GitTests).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        """Extract the .git directory so git does not consider the directory a
+        submodule and give us a hard time.
+
+        """
+        build_dir = join(dirname(__file__), 'code')
+        subprocess.check_call(['make', 'clean'], cwd=build_dir)
+        super(cls, GitTests).teardown_class()
 
     def test_diff(self):
         """Make sure the diff link exists and goes to the right place."""

@@ -1,5 +1,5 @@
 from os.path import dirname, join
-from shutil import copyfile
+import subprocess
 
 from dxr.testing import DxrInstanceTestCase
 
@@ -11,17 +11,23 @@ class MercurialTests(DxrInstanceTestCase):
     """Test our Mercurial integration, both core and omniglot."""
 
     @classmethod
-    def teardown_class(cls):
-        """hg changes its dirstate file during the tests. Restore it so git
-        doesn't flag it as a change.
-
-        We can't just gitignore it, as git declines to ignore committed files.
+    def setup_class(cls):
+        """hg changes its state files during the tests. We extract from an
+        archive so that git doesn't flag them as changes.
 
         """
+        build_dir = join(dirname(__file__), 'code')
+        subprocess.check_call(['make'], cwd=build_dir)
+        super(cls, MercurialTests).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        """We delete the .hg directory we extracted before.
+
+        """
+        build_dir = join(dirname(__file__), 'code')
+        subprocess.check_call(['make', 'clean'], cwd=build_dir)
         super(cls, MercurialTests).teardown_class()
-        this_dir = dirname(__file__)
-        copyfile(join(this_dir, 'hg_dirstate_backup'),
-                 join(this_dir, 'code', '.hg', 'dirstate'))
 
     def test_diff_file1(self):
         """Make sure the diff link goes to the first after-initial commit."""
