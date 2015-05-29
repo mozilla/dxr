@@ -24,7 +24,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
                            contents,
                            self.plugin_name,
                            self.tree,
-                           self.vcs_tree.vcs_for_path(path))
+                           self.vcs_cache.vcs_for_path(path))
 
 class FileToIndex(dxr.indexers.FileToIndex):
     """Adder of blame and external links to items under version control"""

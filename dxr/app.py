@@ -30,7 +30,7 @@ from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
-from dxr.vcs import VcsTree
+from dxr.vcs import VcsCache
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -60,7 +60,7 @@ def make_app(config):
     app.es = ElasticSearch(config.es_hosts)
 
     # Construct map of each tree to its VCS tree object.
-    app.vcs_trees = dict((tree, VcsTree(tree_config)) for tree, tree_config in
+    app.vcs_caches = dict((tree, VcsCache(tree_config)) for tree, tree_config in
                          config.trees.iteritems())
 
     return app
@@ -419,7 +419,7 @@ def rev(tree, revision, path):
     obtaining the contents from version control.
     """
     config = current_app.dxr_config
-    vcs = current_app.vcs_trees[tree].vcs_for_path(path)
+    vcs = current_app.vcs_caches[tree].vcs_for_path(path)
     if vcs:
         contents = vcs.get_contents(path, revision)
         # We do some wrapping to mimic the JSON returned by an ES lines query.

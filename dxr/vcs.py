@@ -292,10 +292,15 @@ def tree_to_repos(tree):
     return ordered_sources
 
 
-class VcsTree(object):
+class VcsCache(object):
     """This class offers a way to obtain Vcs objects for any file within a
     given tree."""
     def __init__(self, tree):
+        """Construct a VcsCache for the given tree.
+
+        :arg tree: TreeConfig object representing a source code tree
+
+        """
         self.tree = tree
         self.repos = tree_to_repos(tree)
         self._path_cache = {}
@@ -304,7 +309,6 @@ class VcsTree(object):
         """Given a tree and a path in the tree, find a source repository we
         know about that claims to track that file.
 
-        :arg tree: TreeConfig object representing a source code tree
         :arg string path: a path to a file (not a folder)
         """
         if path in self._path_cache:

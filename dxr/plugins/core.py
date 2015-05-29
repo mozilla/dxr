@@ -370,7 +370,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         return vars
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.plugin_name, self.tree, self.vcs_tree.vcs_for_path(path))
+        return FileToIndex(path, contents, self.plugin_name, self.tree, self.vcs_cache.vcs_for_path(path))
 
 
 class FileToIndex(dxr.indexers.FileToIndex):

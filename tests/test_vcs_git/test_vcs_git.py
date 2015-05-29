@@ -58,5 +58,9 @@ class GitTests(DxrInstanceTestCase):
 
     def test_pygmentize(self):
         """Check that the pygmentize FileToSkim correctly colors a file from permalink."""
-        response = self.client().get('/code/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c')
+        client = self.client()
+        response = client.get('/code/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c')
+        ok_('<span class="c">// Hello World Example</span>' in response.data)
+        # Query it again to test that the Vcs cache functions.
+        response = client.get('/code/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c')
         ok_('<span class="c">// Hello World Example</span>' in response.data)

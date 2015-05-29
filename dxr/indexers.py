@@ -72,10 +72,10 @@ class TreeToIndex(PluginConfig):
     and then have it index several files before sending it again.
 
     """
-    def __init__(self, plugin_name, tree, vcs_tree):
+    def __init__(self, plugin_name, tree, vcs_cache):
         """
         :arg tree: The configuration of the tree to index: a TreeConfig
-        :arg vcs_tree: A dxr.vcs.VcsTree object. May be None if tree does not
+        :arg vcs_cache: A dxr.vcs.VcsCache object. May be None if tree does not
             contain any VCS repositories.
 
         """
@@ -83,7 +83,7 @@ class TreeToIndex(PluginConfig):
         # ignore_filenames out of the tree.
         self.plugin_name = plugin_name
         self.tree = tree
-        self.vcs_tree = vcs_tree
+        self.vcs_cache = vcs_cache
 
     def environment(self, vars):
         """Return environment variables to add to the build environment.
