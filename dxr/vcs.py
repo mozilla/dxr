@@ -308,7 +308,7 @@ class VcsTree(object):
         :arg string path: a path to a file (not a folder)
         """
         if path in self._path_cache:
-            return self._path_cache
+            return self._path_cache[path]
         abs_path = join(self.tree.source_folder, path)
         for directory, vcs in self.repos.iteritems():
             # This seems to be the easiest way to find "is abs_path in the subtree

@@ -60,8 +60,8 @@ def make_app(config):
     app.es = ElasticSearch(config.es_hosts)
 
     # Construct map of each tree to its VCS tree object.
-    app.vcs_trees = {tree: VcsTree(tree_config) for tree, tree_config in
-                     config.trees.iteritems()}
+    app.vcs_trees = dict((tree, VcsTree(tree_config)) for tree, tree_config in
+                         config.trees.iteritems())
 
     return app
 

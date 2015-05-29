@@ -9,11 +9,11 @@ from which Firefox is built.
 Increase Your RAM
 =================
 
-Increase the RAM on your VM. 6GB seems to suffice.
+Increase the RAM on your VM. 7GB seems to suffice.
 
 1. Copy :file:`vagrantconfig_local.yaml-dist` to a new file, calling it
    :file:`vagrantconfig_local.yaml`.
-2. Put ``memory: 6000`` in it.
+2. Put ``memory: 7000`` in it.
 
 Embiggen Your Drive
 ===================
