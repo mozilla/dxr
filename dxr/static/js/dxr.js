@@ -102,7 +102,7 @@ $(function() {
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildResultHead(fullPath, tree, icon) {
+    function buildResultHead(fullPath, tree, icon, isBinary) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
@@ -122,7 +122,8 @@ $(function() {
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
-                'is_dir': !isLastOrOnly
+                'is_dir': !isLastOrOnly,
+                'is_binary': isBinary
             });
         }
 
@@ -345,7 +346,7 @@ $(function() {
 
             for (var result in results) {
                 var icon = results[result].icon;
-                var resultHead = buildResultHead(results[result].path, data.tree, icon);
+                var resultHead = buildResultHead(results[result].path, data.tree, icon, results[result].is_binary);
                 results[result].iconClass = resultHead[0];
                 results[result].pathLine = resultHead[1];
             }
