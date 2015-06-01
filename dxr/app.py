@@ -389,7 +389,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
         return render_template(
             'image_file.html',
             **common)
-    else:  # For now, we don't index binary files, so this is always a text one
+    else:  # We don't allow browsing binary files, so this must be a text file.
         # We concretize the lines into a list because we iterate over it multiple times
         lines = [doc['content'] for doc in line_docs]
         if not contents:

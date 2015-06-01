@@ -92,7 +92,8 @@ class Query(object):
             {'result_count': 12,
              'results': [(icon,
                           path within tree,
-                          [(line_number, highlighted_line_of_code), ...]),
+                          [(line_number, highlighted_line_of_code), ...],
+                          whether it is binary),
                          ...]}
 
         """
