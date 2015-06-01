@@ -14,7 +14,7 @@ from urllib import quote_plus
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
-from funcy import merge
+from funcy import merge, imap
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
@@ -312,12 +312,12 @@ def skim_file(skimmers, num_lines):
     """
     links, refses, regionses = [], [], []
     annotations_by_line = [[] for _ in xrange(num_lines)]
-    for file_to_skim in skimmers:
-        if file_to_skim.is_interesting():
-            links.extend(file_to_skim.links())
-            refses.append(file_to_skim.refs())
-            regionses.append(file_to_skim.regions())
-            append_by_line(annotations_by_line, file_to_skim.annotations_by_line())
+    for skimmer in skimmers:
+        if skimmer.is_interesting():
+            links.extend(skimmer.links())
+            refses.append(skimmer.refs())
+            regionses.append(skimmer.regions())
+            append_by_line(annotations_by_line, skimmer.annotations_by_line())
     return links, refses, regionses, annotations_by_line
 
 
@@ -345,7 +345,7 @@ def _build_common_file_template(tree, path, date, config):
     }
 
 
-def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents = None):
+def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=None):
     """Return a rendered page displaying a source file.
 
     :arg string tree: name of tree on which file is found
@@ -387,13 +387,18 @@ def _browse_file(tree, path, line_docs, file_doc, config, date = None, contents 
             # If contents are not provided, we can reconstruct them by
             # stitching the lines together.
             contents = ''.join(lines)
-        offsets = cumulative_sum(map(len, lines))
+        offsets = cumulative_sum(imap(len, lines))
         # Construct skimmer objects for all enabled plugins that define a
         # file_to_skim class.
-        skimmers = [plugin.file_to_skim(path, contents, name,
-                    config.trees[tree], file_doc, line_docs) for name, plugin in
-                    all_plugins().items() if plugin in
-                    config.trees[tree].enabled_plugins and plugin.file_to_skim]
+        skimmers = [plugin.file_to_skim(path,
+                                        contents,
+                                        name,
+                                        config.trees[tree],
+                                        file_doc,
+                                        line_docs)
+                    for name, plugin in all_plugins().iteritems()
+                    if plugin in config.trees[tree].enabled_plugins
+                    and plugin.file_to_skim]
         skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
         index_refs = triples_from_es_refs(doc.get('refs', []) for doc in line_docs)
         index_regions = triples_from_es_regions(doc.get('regions', []) for doc in line_docs)
@@ -428,7 +433,7 @@ def rev(tree, revision, path):
                             [{'content': line} for line in contents.splitlines(True)],
                             {},
                             config,
-                            contents = contents)
+                            contents=contents)
     else:
         return render_template('error.html', error_html='No VCS found'), 400
 

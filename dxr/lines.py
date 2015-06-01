@@ -388,16 +388,14 @@ def es_lines(tags):
     # yield here to catch remnants.
 
 def triples_from_es_refs(es_refs):
-    """
-    Convert list of lists of es refs per lines to (start, end, payload) triples.
+    """Convert list of lists of es refs per lines to (start, end, payload) triples.
     """
     for item in chain.from_iterable(es_refs):
         ref = (item['payload']['menuitems'], item['payload'].get('hover'))
         yield (item['start'], item['end'], ref)
 
 def triples_from_es_regions(es_regions):
-    """
-    Convert list of lists es regions to (start, end, payload) triples.
+    """Convert list of lists es regions to (start, end, payload) triples.
     """
     for item in chain.from_iterable(es_regions):
         region = item['payload']

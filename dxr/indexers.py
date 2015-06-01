@@ -75,8 +75,9 @@ class TreeToIndex(PluginConfig):
     def __init__(self, plugin_name, tree, vcs_cache):
         """
         :arg tree: The configuration of the tree to index: a TreeConfig
-        :arg vcs_cache: A dxr.vcs.VcsCache object. May be None if tree does not
-            contain any VCS repositories.
+        :arg vcs_cache: A :class:`~dxr.vcs.VcsCache` that describes any VCSes
+            used by this tree. May be None if tree does not contain any VCS
+            repositories.
 
         """
         # We need source_folder, object_folder, temp_folder, and maybe

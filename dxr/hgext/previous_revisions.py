@@ -1,5 +1,4 @@
-"""previous_revisions
-
+"""
 Mercurial extension that prints the last node in which each tracked file changed.
 """
 # Copyright (C) 2015,  Peter Elmers

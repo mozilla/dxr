@@ -9,12 +9,13 @@ import os
 from os.path import relpath, join, dirname
 import subprocess
 import urlparse
+from warnings import warn
 
 import hglib
 from ordereddict import OrderedDict
-from warnings import warn
 
 import dxr
+
 
 class Vcs(object):
     """A class representing an abstract notion of a version-control system.
