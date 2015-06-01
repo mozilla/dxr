@@ -469,11 +469,11 @@ def index_file(tree, tree_indexers, path, es, index):
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
             linkses.append(file_to_index.links())
-            refses.append(file_to_index.refs())
-            regionses.append(file_to_index.regions())
 
             # Per-line stuff:
             if is_text:
+                refses.append(file_to_index.refs())
+                regionses.append(file_to_index.regions())
                 append_update_by_line(needles_by_line,
                                       file_to_index.needles_by_line())
                 append_by_line(annotations_by_line,
