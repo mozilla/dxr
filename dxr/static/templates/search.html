@@ -1,59 +1,10 @@
 {% extends "layout.html" %}
-{% from "partial/results_header.html" import results_header -%}
 
 {% block title %}{{ query }} - DXR Search{% endblock %}
 
 {% block site_css %}
   {{ super() }}
   <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
-{% endblock %}
-
-{% block content %}
-  {{ results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) }}
-
-  {% if results|length > 0 %}
-    <table class="results">
-      <caption class="visually-hidden">Query matches</caption>
-      <thead class="visually-hidden">
-          <th scope="col">Line</th>
-          <th scope="col">Code Snippet</th>
-      </thead>
-      {%- for icon, path, lines, is_binary in results -%}
-      <tbody class="result" data-path="{{ path }}">
-        <tr class="result-head {%- if is_binary %} binary_row {% endif %}">
-          <td class="left-column">
-            <div class="{{ icon }} icon-container"></div>
-          </td>
-          <td>
-            {%- set paths = path.split('/') -%}
-            {%- for display_path in paths -%}
-              {%- set data_path = '%s/%s' % (data_path, display_path) if data_path else display_path -%}
-              {%- set is_first_or_only = loop.first or paths|length == 1 -%}
-              {%- set is_dir = not loop.last -%}
-              {%- set url = url_for('.browse', tree=tree, path=path) -%}
-
-              {%- include 'path_line.html' -%}
-            {%- endfor -%}
-          </td>
-        </tr>
-        {% for number, line in lines %}
-          <tr>
-            <td class="left-column">
-              <a href="{{ url_for('.browse', tree=tree, path=path, _anchor=number) }}">
-                {{ number }}
-              </a>
-            </td>
-            <td>
-              <a href="{{ url_for('.browse', tree=tree, path=path, _anchor=number) }}">
-                <code aria-labelledby="{{ number }}">{{ line|safe }}</code>
-              </a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      {% endfor %}
-    </table>
-  {% endif %}
 {% endblock %}
 
 {% block site_js %}
