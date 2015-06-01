@@ -456,12 +456,13 @@ def index_file(tree, tree_indexers, path, es, index):
 
     rel_path = relpath(path, tree.source_folder)
     is_text = isinstance(contents, unicode)
-
-    num_lines = len(contents.splitlines())  # TODO: Stop counting lines of binary files.
+    if is_text:
+        num_lines = len(contents.splitlines())
+        needles_by_line = [{} for _ in xrange(num_lines)]
+        annotations_by_line = [[] for _ in xrange(num_lines)]
+        refses, regionses = [], []
     needles = {}
-    linkses, refses, regionses = [], [], []
-    needles_by_line = [{} for _ in xrange(num_lines)]
-    annotations_by_line = [[] for _ in xrange(num_lines)]
+    linkses = []
 
     for tree_indexer in tree_indexers:
         file_to_index = tree_indexer.file_to_index(rel_path, contents)
