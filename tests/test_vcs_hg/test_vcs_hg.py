@@ -1,33 +1,14 @@
 from os.path import dirname, join
 import subprocess
 
-from dxr.testing import DxrInstanceTestCase
+from dxr.testing import DxrInstanceTestCaseMakeFirst
 
 from nose import SkipTest
 from nose.tools import ok_
 
 
-class MercurialTests(DxrInstanceTestCase):
+class MercurialTests(DxrInstanceTestCaseMakeFirst):
     """Test our Mercurial integration, both core and omniglot."""
-
-    @classmethod
-    def setup_class(cls):
-        """hg changes its state files during the tests. We extract from an
-        archive so that git doesn't flag them as changes.
-
-        """
-        build_dir = join(dirname(__file__), 'code')
-        subprocess.check_call(['make'], cwd=build_dir)
-        super(cls, MercurialTests).setup_class()
-
-    @classmethod
-    def teardown_class(cls):
-        """We delete the .hg directory we extracted before.
-
-        """
-        build_dir = join(dirname(__file__), 'code')
-        subprocess.check_call(['make', 'clean'], cwd=build_dir)
-        super(cls, MercurialTests).teardown_class()
 
     def test_diff_file1(self):
         """Make sure the diff link goes to the first after-initial commit."""

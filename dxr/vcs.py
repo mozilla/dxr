@@ -1,8 +1,19 @@
-"""Let DXR understand the concept of version control systems. The main entry points are `tree_to_repos`, which produces a mapping of roots to VCS objects
+"""Let DXR understand the concept of version control systems. The main entry
+points are `tree_to_repos`, which produces a mapping of roots to VCS objects
 for each version control root discovered under the provided tree, and
 `path_to_vcs`, which returns a VCS object for the version control system that
 tracks the given path. Currently supported VCS are Mercurial, Git, and
 Perforce.
+
+Currently supported upstream views:
+- git (github)
+- mercurial (hgweb)
+
+Todos:
+- add gitweb support for git
+- add cvs, svn, bzr support
+- produce in-DXR blame information using VCSs
+- check if the mercurial paths are specific to Mozilla's customization or not.
 """
 import marshal
 import os
@@ -11,11 +22,11 @@ import subprocess
 import urlparse
 from warnings import warn
 
+
 import hglib
 from ordereddict import OrderedDict
 
 import dxr
-
 
 class Vcs(object):
     """A class representing an abstract notion of a version-control system.
@@ -162,8 +173,8 @@ class Git(Vcs):
                         repo = "https" + repo[len("git"):]
                     return repo
                 warn("Your git remote is not supported yet. Please use a "
-                     "GitHub remote for now, or disable the omniglot "
-                     "plugin.")
+                     "GitHub remote if you would like version control "
+                     "naviagtion links to show.")
                 break
 
     @classmethod
@@ -323,5 +334,5 @@ class VcsCache(object):
             if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
                 self._path_cache[path] = vcs
                 break
-        return self._path_cache.get(path, None)
+        return self._path_cache.get(path)
 

@@ -1,34 +1,14 @@
 from os.path import dirname, join
 import subprocess
 
-from dxr.testing import DxrInstanceTestCase
+from dxr.testing import DxrInstanceTestCaseMakeFirst
 
 from nose import SkipTest
 from nose.tools import ok_
 
 
-class GitTests(DxrInstanceTestCase):
+class GitTests(DxrInstanceTestCaseMakeFirst):
     """Test our Git integration, both core and omniglot."""
-
-    @classmethod
-    def setup_class(cls):
-        """git does not allow us to commit the .git folder under the build
-        directory, so we extract it before the tests.
-
-        """
-        build_dir = join(dirname(__file__), 'code')
-        subprocess.check_call(['make'], cwd=build_dir)
-        super(cls, GitTests).setup_class()
-
-    @classmethod
-    def teardown_class(cls):
-        """Extract the .git directory so git does not consider the directory a
-        submodule and give us a hard time.
-
-        """
-        build_dir = join(dirname(__file__), 'code')
-        subprocess.check_call(['make', 'clean'], cwd=build_dir)
-        super(cls, GitTests).teardown_class()
 
     def test_diff(self):
         """Make sure the diff link exists and goes to the right place."""
@@ -52,7 +32,6 @@ class GitTests(DxrInstanceTestCase):
 
     def test_permalink(self):
         """Make sure the permalink link exists and goes to the right place."""
-        # Flask's url_for will escape the url, so spaces become %20
         response = self.client().get('/code/source/main.c')
         ok_('/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
 

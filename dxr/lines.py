@@ -322,7 +322,6 @@ def finished_tags(lines, refs, regions):
     the refs and regions and their places in a file's text.
 
     :arg lines: iterable of lines of text of the file to htmlify.
-        ``build_lines`` may not be used on binary files.
 
     Benchmarking reveals that this function is O(number of tags) in practice,
     on inputs on the order of thousands of lines. On my laptop, it takes .02s
@@ -345,11 +344,12 @@ def finished_tags(lines, refs, regions):
 
 def tags_per_line(flat_tags):
     """Split tags on LINE tags, yielding the tags of one line at a time
-        (no LINE tags are yielded)
+       (no LINE tags are yielded)
 
     :arg flat_tags: An iterable of ordered, non-overlapping, non-empty tag
         boundaries with Line endpoints at (and outermost at) the index of the
         end of each line.
+
     """
     tags = []
     for tag in flat_tags:
@@ -389,6 +389,7 @@ def es_lines(tags):
 
 def triples_from_es_refs(es_refs):
     """Convert list of lists of es refs per lines to (start, end, payload) triples.
+
     """
     for item in chain.from_iterable(es_refs):
         ref = (item['payload']['menuitems'], item['payload'].get('hover'))
@@ -396,6 +397,7 @@ def triples_from_es_refs(es_refs):
 
 def triples_from_es_regions(es_regions):
     """Convert list of lists es regions to (start, end, payload) triples.
+
     """
     for item in chain.from_iterable(es_regions):
         region = item['payload']

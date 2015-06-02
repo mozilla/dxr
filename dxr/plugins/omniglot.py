@@ -1,22 +1,11 @@
 """Omniglot - Speaking all commonly-used web views of version control systems.
 At present, this plugin is still under development, so not all features are
 fully implemented.
-
-Currently supported upstream views:
-- git (github)
-- mercurial (hgweb)
-
-Todos:
-- add gitweb support for git
-- add cvs, svn, bzr support
-- produce in-DXR blame information using VCSs
-- check if the mercurial paths are specific to Mozilla's customization or not.
 """
 
 from os.path import relpath
 
 import dxr.indexers
-from dxr.plugins import Plugin
 
 class TreeToIndex(dxr.indexers.TreeToIndex):
     def file_to_index(self, path, contents):

@@ -199,12 +199,14 @@ def file_text(file_path):
     with open(file_path) as file:
         return file.read()
 
+
 def bucket(things, key):
     """Return a map of key -> list of things."""
     ret = defaultdict(list)
     for thing in things:
         ret[key(thing)].append(thing)
     return ret
+
 
 def cumulative_sum(nums):
     """Generate a cumulative sum of nums iterable, at each point yielding
@@ -216,6 +218,7 @@ def cumulative_sum(nums):
         # cumulative sum, which includes the current value
         yield cum_sum
         cum_sum += n
+
 
 @contextmanager
 def cd(path):

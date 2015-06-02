@@ -81,16 +81,22 @@ def _lexer_for_filename(filename):
     return lexer
 
 
+def _regions_for_contents(lexer, contents):
+    """Yield regions for the tokens in text contents using given Pygments lexer."""
+    for index, token, text in lexer.get_tokens_unprocessed(contents):
+        cls = token_classes.get(token)
+        if cls:
+            yield index, index + len(text), cls
+
+
 class FileToIndex(dxr.indexers.FileToIndex):
     """Emitter of CSS classes for syntax-highlit regions"""
 
     def regions(self):
         lexer = _lexer_for_filename(basename(self.path))
         if lexer:
-            for index, token, text in lexer.get_tokens_unprocessed(self.contents):
-                cls = token_classes.get(token)
-                if cls:
-                    yield index, index + len(text), cls
+            return _regions_for_contents(lexer, self.contents)
+        return []
 
 
 class FileToSkim(dxr.indexers.FileToSkim):
@@ -102,8 +108,6 @@ class FileToSkim(dxr.indexers.FileToSkim):
     def regions(self):
         lexer = _lexer_for_filename(basename(self.path))
         if lexer:
-            for index, token, text in lexer.get_tokens_unprocessed(self.contents):
-                cls = token_classes.get(token)
-                if cls:
-                    yield index, index + len(text), cls
+            return _regions_for_contents(lexer, self.contents)
+        return []
 
