@@ -5,7 +5,7 @@ from itertools import chain, izip
 from logging import StreamHandler
 import os
 from os import chdir
-from os.path import join, basename, split, dirname
+from os.path import join, basename, split, dirname, relpath
 from sys import stderr
 from time import time
 from mimetypes import guess_type
@@ -424,9 +424,10 @@ def rev(tree, revision, path):
     obtaining the contents from version control.
     """
     config = current_app.dxr_config
+    abs_path = join(config.trees[tree].source_folder, path)
     vcs = current_app.vcs_caches[tree].vcs_for_path(path)
     if vcs:
-        contents = vcs.get_contents(path, revision)
+        contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision)
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,

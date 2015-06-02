@@ -402,11 +402,11 @@ class FileToIndex(dxr.indexers.FileToIndex):
         if self.vcs:
             vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
             yield (5,
-                   '%s (%s)' % (self.vcs.get_vcs_name(), self.vcs.display_rev(vcs_relative_path)),
-                   [('permalink', 'Permalink', url_for('.rev',
-                                                       tree=self.tree.name,
-                                                       revision=self.vcs.revision,
-                                                       path=vcs_relative_path))])
+                    '%s (%s)' % (self.vcs.get_vcs_name(), self.vcs.display_rev(vcs_relative_path)),
+                    [('permalink', 'Permalink', url_for('.rev',
+                                                        tree=self.tree.name,
+                                                        revision=self.vcs.revision,
+                                                        path=self.path))])
         else:
             yield 5, 'Untracked file', []
 
