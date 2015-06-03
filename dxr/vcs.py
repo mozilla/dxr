@@ -88,8 +88,6 @@ class Mercurial(Vcs):
         with hglib.open(root,
                         configs = ['extensions.previous_revisions=%s' % hgext]) as client:
             tip = client.tip()
-            # Manifest entries are tuples (nodeid, permission, executable, symlink, path)
-            self.tracked_files = [m[4] for m in client.manifest()]
             self.revision = tip.node
             self.previous_revisions = self.find_previous_revisions(client)
         self.upstream = self._construct_upstream_url()
@@ -132,7 +130,7 @@ class Mercurial(Vcs):
         return self.revision[:12]
 
     def is_tracked(self, path):
-        return path in self.tracked_files
+        return path in self.previous_revisions
 
     def generate_raw(self, path):
         return self.upstream + 'raw-file/' + self.revision + '/' + path
