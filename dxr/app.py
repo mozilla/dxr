@@ -310,14 +310,22 @@ def skim_file(skimmers, num_lines):
     :arg skimmers: iterable of FileToSkim objects
     :arg num_lines: the number of lines in the file being skimmed
     """
-    links, refses, regionses = [], [], []
+    linkses, refses, regionses = [], [], []
     annotations_by_line = [[] for _ in xrange(num_lines)]
     for skimmer in skimmers:
         if skimmer.is_interesting():
-            links.extend(skimmer.links())
+            linkses.append(skimmer.links())
             refses.append(skimmer.refs())
             regionses.append(skimmer.regions())
             append_by_line(annotations_by_line, skimmer.annotations_by_line())
+    links = [{'order': order,
+                'heading': heading,
+                'items': [{'icon': icon,
+                            'title': title,
+                            'href': href}
+                        for icon, title, href in items]}
+                for order, heading, items in
+                chain.from_iterable(linkses)]
     return links, refses, regionses, annotations_by_line
 
 
@@ -395,7 +403,8 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                                         name,
                                         config.trees[tree],
                                         file_doc,
-                                        line_docs)
+                                        line_docs,
+                                        current_app.vcs_caches[tree])
                     for name, plugin in all_plugins().iteritems()
                     if plugin in config.trees[tree].enabled_plugins
                     and plugin.file_to_skim]
