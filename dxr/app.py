@@ -319,13 +319,13 @@ def skim_file(skimmers, num_lines):
             regionses.append(skimmer.regions())
             append_by_line(annotations_by_line, skimmer.annotations_by_line())
     links = [{'order': order,
-                'heading': heading,
-                'items': [{'icon': icon,
-                            'title': title,
-                            'href': href}
+              'heading': heading,
+              'items': [{'icon': icon,
+                         'title': title,
+                         'href': href}
                         for icon, title, href in items]}
-                for order, heading, items in
-                chain.from_iterable(linkses)]
+             for order, heading, items in
+             chain.from_iterable(linkses)]
     return links, refses, regionses, annotations_by_line
 
 

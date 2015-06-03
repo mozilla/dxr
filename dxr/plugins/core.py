@@ -405,7 +405,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
 class FileToSkim(dxr.indexers.FileToSkim):
     def __init__(self, path, contents, plugin_name, tree, file_properties,
                  line_properties, vcs_cache):
-        super(FileToSkim, self).__init__(path, contents, plugin_name, tree, file_properties, line_properties, vcs_cache)
+        super(FileToSkim, self).__init__(path, contents, plugin_name, tree,
+                                         file_properties, line_properties, vcs_cache)
         self.vcs = self.vcs_cache.vcs_for_path(path)
 
     def links(self):

@@ -305,7 +305,12 @@ class FileToSkim(PluginConfig):
     # Convenience methods:
 
     def absolute_path(self):
-        """Return the absolute path of the file to index."""
+        """Return the absolute path of the file to skim.
+
+        Note: in skimmers, the returned path may not exist if the source folder
+        moved between index and serve time.
+
+        """
         return join(self.tree.source_folder, self.path)
 
     # Private methods:
