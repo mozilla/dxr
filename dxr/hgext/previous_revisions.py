@@ -1,7 +1,7 @@
 """
 Mercurial extension that prints the last node in which each tracked file changed.
 """
-# Copyright (C) 2015,  Peter Elmers
+# Copyright (C) 2015,  Mozilla Foundation
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
