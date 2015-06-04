@@ -22,6 +22,14 @@ class MarkupTests(DxrInstanceTestCase):
         ok_('&folder&' not in markup)
         ok_('&amp;folder&amp;' in markup)
 
+    def test_body_escaping(self):
+        """Make sure source code is HTML-escaped."""
+        markup = self.source_page('%26folder%26/README.mkd')
+        ok_('<stuff>' not in markup)
+        ok_('& things' not in markup)
+        ok_('&lt;stuff&gt;' in markup)
+        ok_('&amp; things' in markup)
+
     def test_folder_links(self):
         """Make sure folders link to the right places, not just to their first
         chars."""

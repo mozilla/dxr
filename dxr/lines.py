@@ -405,6 +405,6 @@ def html_line(text, es_tags):
                 else:
                     title = ''
                 yield u'<a data-menu="%s"%s>' % (menu, title)
-        yield text[up_to:]
+        yield cgi.escape(text[up_to:])
 
     return Markup(u''.join(segments(text, es_tags)))
