@@ -261,6 +261,7 @@ $(function () {
             } else {
                 line.toggleClass('multihighlight');
                 history.replaceState(null, '', '#');
+                updatePermalink('#');
             }
 
         } else {
@@ -277,6 +278,7 @@ $(function () {
                 line.toggleClass('last-selected highlighted');
             } else {
                 history.replaceState(null, '', '#');
+                updatePermalink('#');
             }
         }
         setWindowHash();
