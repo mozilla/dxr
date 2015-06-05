@@ -25,7 +25,7 @@ from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
                        triples_from_es_regions, finished_tags)
-from dxr.mime import icon, is_image
+from dxr.mime import icon, is_image, is_text
 from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
@@ -438,7 +438,10 @@ def rev(tree, revision, path):
     vcs = current_app.vcs_caches[tree].vcs_for_path(path)
     if vcs:
         contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision)
-        contents = contents.decode(tree_config.source_encoding)
+        if is_text(contents):
+            contents = contents.decode(tree_config.source_encoding)
+        else:
+            raise NotFound
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
