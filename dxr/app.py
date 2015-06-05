@@ -433,10 +433,12 @@ def rev(tree, revision, path):
     obtaining the contents from version control.
     """
     config = current_app.dxr_config
-    abs_path = join(config.trees[tree].source_folder, path)
+    tree_config = config.trees[tree]
+    abs_path = join(tree_config.source_folder, path)
     vcs = current_app.vcs_caches[tree].vcs_for_path(path)
     if vcs:
-        contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision).decode('utf-8')
+        contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision)
+        contents = contents.decode(tree_config.source_encoding)
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,

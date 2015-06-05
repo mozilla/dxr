@@ -16,7 +16,7 @@ $(function () {
         permalink = $('.permalink'), // whenever we update window.location, update this href too
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
-        rangesArray = []; // track ranges of highlighted lines here 
+        rangesArray = []; // track ranges of highlighted lines here
 
     //sort a one dimensional array in Ascending order
     function sortAsc(a, b) {
@@ -100,7 +100,7 @@ $(function () {
         }
         for (s = 0, r = 0; s < singleLinesArray.length || r < rangesArray.length;) {
             // if no ranges left or singleLine < range add singleLine to hash
-            // if no singleLines left or range < singleLine add range to hash 
+            // if no singleLines left or range < singleLine add range to hash
             if ((r == rangesArray.length) || (singleLinesArray[s] < rangesArray[r][0])) {
                 windowHash += singleLinesArray[s] + ',';
                 s++;
@@ -111,10 +111,15 @@ $(function () {
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
-            if (permalink.length > 0)
-                updatePermalink(windowHash);
-            history.replaceState(null, '', windowHash);
+            updateHash(windowHash);
         }
+    }
+
+    //update places where hash location is used: window, permalink
+    function updateHash(hash) {
+        if (permalink.length > 0)
+            updatePermalink(hash);
+        history.replaceState(null, '', hash);
     }
 
     //update the permalink href based on the windowHash.
@@ -260,8 +265,7 @@ $(function () {
                 line.toggleClass('clicked last-selected multihighlight');
             } else {
                 line.toggleClass('multihighlight');
-                history.replaceState(null, '', '#');
-                updatePermalink('#');
+                updateHash('#');
             }
 
         } else {
@@ -277,8 +281,7 @@ $(function () {
                 //With this we're one better than github, which doesn't allow toggling single lines
                 line.toggleClass('last-selected highlighted');
             } else {
-                history.replaceState(null, '', '#');
-                updatePermalink('#');
+                updateHash('#');
             }
         }
         setWindowHash();
