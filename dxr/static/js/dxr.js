@@ -382,7 +382,7 @@ $(function() {
         }
 
         if (!append) {
-            document.title = data.query + "- DXR Search";
+            document.title = data.query + " - DXR Search";
         }
     }
 
