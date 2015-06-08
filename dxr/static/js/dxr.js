@@ -261,6 +261,7 @@ $(function() {
 
                 //Resubmit query for the next set of results.
                 $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
+                    data.query = query;
                     if (data.results.length > 0) {
                         var state = {};
 
@@ -381,7 +382,7 @@ $(function() {
         }
 
         if (!append) {
-            document.title = data.query + "- DXR Search";
+            document.title = data.query + " - DXR Search";
         }
     }
 
@@ -423,6 +424,7 @@ $(function() {
         nextRequestNumber += 1;
         oneMoreRequest();
         $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0), function(data) {
+            data.query = query;
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
