@@ -3,7 +3,7 @@
 {% macro results_list(results, www_root, tree) -%}
   {% for result in results %}
     <tbody class="result" data-path="{{ result.path }}">
-      <tr class="result-head">
+      <tr class="result-head {% if result.is_binary %} binary_row {% endif %}">
         <td class="left-column">
           <div class="{{result.iconClass}} icon-container"></div>
         </td>

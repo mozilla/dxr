@@ -43,3 +43,10 @@ class BinaryFileTests(DxrInstanceTestCase):
         ok_('some_bytes' in response.data)
         response = self.client().get('/code/source/some_bytes')
         ok_(response.status_code, 404)
+
+    def test_some_bytes(self):
+        """We want some_bytes to show on search page, but not be clickable."""
+        response = self.client().get('/code/search?q=path%3Asome_bytes&redirect=true')
+        ok_('some_bytes' in response.data)
+        ok_('href="/code/source/some_bytes"' not in response.data)
+

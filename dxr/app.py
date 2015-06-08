@@ -106,8 +106,9 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
-                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
-                   for icon, path, lines in count_and_results['results']]
+                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
+                    'is_binary': is_binary}
+                   for icon, path, lines, is_binary in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
@@ -388,7 +389,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
         return render_template(
             'image_file.html',
             **common)
-    else:  # For now, we don't index binary files, so this is always a text one
+    else:  # We don't allow browsing binary files, so this must be a text file.
         # We concretize the lines into a list because we iterate over it multiple times
         lines = [doc['content'] for doc in line_docs]
         if not contents:
