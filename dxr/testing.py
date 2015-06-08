@@ -5,6 +5,7 @@ from os import chdir, mkdir
 from os.path import dirname, join
 import re
 from shutil import rmtree
+import subprocess
 import sys
 from tempfile import mkdtemp
 import unittest
@@ -190,6 +191,27 @@ class DxrInstanceTestCase(TestCase):
     @classmethod
     def config_input(cls, config_dir_path):
         return file_text(join(cls._config_dir_path, 'dxr.config'))
+
+
+class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
+    """Test case which runs `make` before dxr index and `make clean` before dxr
+    clean within a code directory, and otherwise delegates to DxrInstanceTestCase.
+
+    This test is suitable for cases where some setup must be performed before
+    `dxr index` can be run (for example extracting sources from archive).
+
+    """
+    @classmethod
+    def setup_class(cls):
+        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        subprocess.check_call(['make'], cwd=build_dir)
+        super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        subprocess.check_call(['make', 'clean'], cwd=build_dir)
+        super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
 
 
 class SingleFileTestCase(TestCase):

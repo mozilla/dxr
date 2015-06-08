@@ -2,9 +2,10 @@
 
 
 from base64 import b64encode
-from os.path import splitext
+from os.path import relpath, splitext
 import re
 
+from flask import url_for
 from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
@@ -154,34 +155,32 @@ mappings = {
                 }
             },
 
-            # An ordered array of refs, regions, and close tags on this line.
-            # We might need to change this when we implement any FileToSkims
-            # with regions or refs; we'll see.
-            'tags': {
+            'refs': {
                 'type': 'object',
-                'properties': {
-                    'pos': UNINDEXED_INT,
+                'start': UNINDEXED_INT,
+                'end': UNINDEXED_INT,
+                'payload': {
+                    'type': 'object',
+                    'properties': {
 
-                    # A tag has either a menu (in which case it's a ref)...
-                    'menuitems': {
-                        'type': 'object',
-                        'properties': {
-                            'html': UNINDEXED_STRING,
-                            'href': UNINDEXED_STRING,
-                            'icon': UNINDEXED_STRING
-                        }
-                    },
-                    'hover': UNINDEXED_STRING,
-
-                    # ...or a class, in which case it's a region...
-                    'class': UNINDEXED_STRING,
-
-                    # ...or it's a closer:
-                    'closer': {
-                        'type': 'boolean',  # true -> </a>, false -> </span>
-                        'index': 'no'
+                        'menuitems': {
+                            'type': 'object',
+                            'properties': {
+                                'html': UNINDEXED_STRING,
+                                'href': UNINDEXED_STRING,
+                                'icon': UNINDEXED_STRING
+                            }
+                        },
+                        'hover': UNINDEXED_STRING,
                     }
                 }
+            },
+
+            'regions': {
+                'type': 'object',
+                'start': UNINDEXED_INT,
+                'end': UNINDEXED_INT,
+                'payload': UNINDEXED_STRING,
             },
 
             'annotations': {
@@ -375,6 +374,9 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
+    def __init__(self, path, contents, plugin_name, tree):
+        super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
+
     def needles(self):
         """Fill out path (and path.trigrams)."""
         yield 'path', self.path
@@ -391,13 +393,33 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
-        for number, text in enumerate(self.contents.splitlines(), 1):
+        for number, text in enumerate(self.contents.splitlines(True), 1):
             yield [('number', number),
                    ('content', text)]
 
     def is_interesting(self):
         """Core plugin puts all files in the search index."""
         return True
+
+
+class FileToSkim(dxr.indexers.FileToSkim):
+    def __init__(self, path, contents, plugin_name, tree, file_properties,
+                 line_properties, vcs_cache):
+        super(FileToSkim, self).__init__(path, contents, plugin_name, tree,
+                                         file_properties, line_properties, vcs_cache)
+        self.vcs = self.vcs_cache.vcs_for_path(path)
+
+    def links(self):
+        if self.vcs:
+            vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
+            yield (5,
+                   '%s (%s)' % (self.vcs.get_vcs_name(), self.vcs.display_rev(vcs_relative_path)),
+                   [('permalink', 'Permalink', url_for('.rev',
+                                                       tree=self.tree.name,
+                                                       revision=self.vcs.revision,
+                                                       path=self.path))])
+        else:
+            yield 5, 'Untracked file', []
 
 
 # Match file name and line number: filename:n. Strip leading slashes because

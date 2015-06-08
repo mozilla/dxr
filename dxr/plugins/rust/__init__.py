@@ -303,8 +303,8 @@ class TreeData:
 
 
 class TreeToIndex(indexers.TreeToIndex):
-    def __init__(self, plugin_name, tree):
-        super(TreeToIndex, self).__init__(plugin_name, tree)
+    def __init__(self, plugin_name, tree, vcs_cache):
+        super(TreeToIndex, self).__init__(plugin_name, tree, vcs_cache)
         self.tree = tree
 
         src_folder = self.tree.source_folder

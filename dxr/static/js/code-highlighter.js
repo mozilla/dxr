@@ -7,14 +7,16 @@
  * 1) Multi-select highlight lines with shift key and update window.location.hash
  * 2) Multi-select highlight lines with command/control key and update window.location.hash
  * 3) Highlight lines when page loads, if window.location.hash exists
+ * In addition, we update the permalink link to keep it synchronized with window.location.
  */
 
 $(function () {
     'use strict';
     var container = $('#line-numbers'),
+        permalink = $('.permalink'), // whenever we update window.location, update this href too
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
-        rangesArray = []; // track ranges of highlighted lines here 
+        rangesArray = []; // track ranges of highlighted lines here
 
     //sort a one dimensional array in Ascending order
     function sortAsc(a, b) {
@@ -36,7 +38,7 @@ $(function () {
             lines = [],
             rangesArray = [],
             singleLinesArray = [];
-        
+
         var multiSelected = $('.line-number.multihighlight');
         var singleSelected = $('.line-number.highlighted');
 
@@ -98,7 +100,7 @@ $(function () {
         }
         for (s = 0, r = 0; s < singleLinesArray.length || r < rangesArray.length;) {
             // if no ranges left or singleLine < range add singleLine to hash
-            // if no singleLines left or range < singleLine add range to hash 
+            // if no singleLines left or range < singleLine add range to hash
             if ((r == rangesArray.length) || (singleLinesArray[s] < rangesArray[r][0])) {
                 windowHash += singleLinesArray[s] + ',';
                 s++;
@@ -109,11 +111,28 @@ $(function () {
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
-            history.replaceState(null, '', windowHash);
+            updateHash(windowHash);
         }
     }
 
-    //parse window.location.hash on new requsts into two arrays
+    //update places where hash location is used: window, permalink
+    function updateHash(hash) {
+        if (permalink.length > 0)
+            updatePermalink(hash);
+        history.replaceState(null, '', hash);
+    }
+
+    //update the permalink href based on the windowHash.
+    function updatePermalink(windowHash) {
+        var permalink_href = permalink.attr('href'),
+            hash_loc = permalink_href.indexOf('#');
+        // If the link already has #, then cut that it off.
+        if (hash_loc >= 0)
+            permalink_href = permalink_href.substring(0, hash_loc);
+        permalink.attr('href', permalink_href + windowHash);
+    }
+
+    //parse window.location.hash on new requests into two arrays
     //one of single lines and one multilines
     //use with singleLinesArray and rangesArray for adding/changing new highlights
     function getSortedHashLines() {
@@ -215,7 +234,7 @@ $(function () {
             }
             selectedLineNums.addClass(classToAdd);
             selectedLineCode.addClass(classToAdd);
-            
+
             //set the last used modifier key
             lastModifierKey = 'shift';
             // since all highlighed items are stripped, add one back, mark new last-selected
@@ -246,7 +265,7 @@ $(function () {
                 line.toggleClass('clicked last-selected multihighlight');
             } else {
                 line.toggleClass('multihighlight');
-                history.replaceState(null, '', '#');
+                updateHash('#');
             }
 
         } else {
@@ -262,7 +281,7 @@ $(function () {
                 //With this we're one better than github, which doesn't allow toggling single lines
                 line.toggleClass('last-selected highlighted');
             } else {
-                history.replaceState(null, '', '#');
+                updateHash('#');
             }
         }
         setWindowHash();

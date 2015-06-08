@@ -62,3 +62,6 @@ funcy==1.1
 # For deployment script only:
 # sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3
+
+# sha256: rUar6kB6nbKhCxgUh53YtF7Zxb5XqGPRnKv2Od6rIWE
+https://bitbucket.org/pelmers/python-hglib/get/issue3924-version-fix.tar.gz#egg=python-hglib

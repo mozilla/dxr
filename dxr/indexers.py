@@ -6,7 +6,6 @@ from os.path import join
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
-from os.path import join
 
 
 STRING_PROPERTY = {
@@ -73,15 +72,19 @@ class TreeToIndex(PluginConfig):
     and then have it index several files before sending it again.
 
     """
-    def __init__(self, plugin_name, tree):
+    def __init__(self, plugin_name, tree, vcs_cache):
         """
         :arg tree: The configuration of the tree to index: a TreeConfig
+        :arg vcs_cache: A :class:`~dxr.vcs.VcsCache` that describes any VCSes
+            used by this tree. May be None if tree does not contain any VCS
+            repositories.
 
         """
         # We need source_folder, object_folder, temp_folder, and maybe
         # ignore_filenames out of the tree.
         self.plugin_name = plugin_name
         self.tree = tree
+        self.vcs_cache = vcs_cache
 
     def environment(self, vars):
         """Return environment variables to add to the build environment.
@@ -162,7 +165,7 @@ class FileToSkim(PluginConfig):
 
     """
     def __init__(self, path, contents, plugin_name, tree, file_properties=None,
-                 line_properties=None):
+                 line_properties=None, vcs_cache=None):
         """
         :arg path: The conceptual path to the file, relative to the tree's
             source folder. Such a file might not exist on disk. This is useful
@@ -191,6 +194,7 @@ class FileToSkim(PluginConfig):
         self.tree = tree
         self.file_properties = file_properties or {}
         self.line_properties = line_properties  # TODO: not clear what the default here should be. repeat([])?
+        self.vcs_cache = vcs_cache
 
     def is_interesting(self):
         """Return whether it's worthwhile to examine this file.
@@ -298,6 +302,17 @@ class FileToSkim(PluginConfig):
         """
         return self._line_offsets()[row - 1] + col
 
+    # Convenience methods:
+
+    def absolute_path(self):
+        """Return the absolute path of the file to skim.
+
+        Note: in skimmers, the returned path may not exist if the source folder
+        moved between index and serve time.
+
+        """
+        return join(self.tree.source_folder, self.path)
+
     # Private methods:
 
     def _line_offsets(self):
@@ -387,12 +402,6 @@ class FileToIndex(FileToSkim):
 
         """
         return []
-
-    # Convenience methods:
-
-    def absolute_path(self):
-        """Return the absolute path of the file to index."""
-        return join(self.tree.source_folder, self.path)
 
 
 # Conveniences:

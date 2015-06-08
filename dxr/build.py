@@ -34,7 +34,8 @@ from dxr.lines import es_lines, finished_tags
 from dxr.mime import is_text, icon, is_image
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line)
+                       append_update_by_line, append_by_line, bucket)
+from dxr.vcs import VcsCache
 
 
 def full_traceback(callable, *args, **kwargs):
@@ -212,7 +213,8 @@ def index_tree(tree, es, verbose=False):
         ensure_folder(join(tree.temp_folder, 'plugins', plugin.name),
                       not skip_cleanup)
 
-    tree_indexers = [p.tree_to_index(p.name, tree) for p in
+    vcs_cache = VcsCache(tree)
+    tree_indexers = [p.tree_to_index(p.name, tree, vcs_cache) for p in
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:
@@ -457,7 +459,8 @@ def index_file(tree, tree_indexers, path, es, index):
     rel_path = relpath(path, tree.source_folder)
     is_text = isinstance(contents, unicode)
     if is_text:
-        num_lines = len(contents.splitlines())
+        lines = contents.splitlines(True)
+        num_lines = len(lines)
         needles_by_line = [{} for _ in xrange(num_lines)]
         annotations_by_line = [[] for _ in xrange(num_lines)]
         refses, regionses = [], []
@@ -518,14 +521,22 @@ def index_file(tree, tree_indexers, path, es, index):
             for total, annotations_for_this_line, tags in izip(
                     needles_by_line,
                     annotations_by_line,
-                    es_lines(finished_tags(contents,
+                    es_lines(finished_tags(lines,
                                            chain.from_iterable(refses),
                                            chain.from_iterable(regionses)))):
                 # Duplicate the file-wide needles into this line:
                 total.update(needles)
 
-                if tags:
-                    total['tags'] = tags
+                # We bucket tags into refs and regions for ES because later at
+                # request time we want to be able to merge them individually
+                # with those from skimmers.
+                refs_and_regions = bucket(tags, lambda index_obj: "regions" if
+                                          isinstance(index_obj['payload'], basestring) else
+                                          "refs")
+                if 'refs' in refs_and_regions:
+                    total['refs'] = refs_and_regions['refs']
+                if 'regions' in refs_and_regions:
+                    total['regions'] = refs_and_regions['regions']
                 if annotations_for_this_line:
                     total['annotations'] = annotations_for_this_line
                 yield es.index_op(total)

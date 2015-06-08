@@ -1,4 +1,4 @@
-from collections import Mapping
+from collections import Mapping, defaultdict
 from commands import getstatusoutput
 from contextlib import contextmanager
 from datetime import datetime
@@ -198,6 +198,26 @@ def run(command):
 def file_text(file_path):
     with open(file_path) as file:
         return file.read()
+
+
+def bucket(things, key):
+    """Return a map of key -> list of things."""
+    ret = defaultdict(list)
+    for thing in things:
+        ret[key(thing)].append(thing)
+    return ret
+
+
+def cumulative_sum(nums):
+    """Generate a cumulative sum of nums iterable, at each point yielding
+        the sum up to but not including the current value.
+    """
+    cum_sum = 0
+    for n in nums:
+        # Note that these two operations are flipped from a traditional
+        # cumulative sum, which includes the current value
+        yield cum_sum
+        cum_sum += n
 
 
 @contextmanager

@@ -213,6 +213,7 @@ class TreeConfig(DotSectionWrapper):
             'source_folder': AbsPath,
             Optional('source_encoding', default='utf-8'): basestring,
             Optional('temp_folder', default=None): AbsPath,
+            Optional('p4web_url', default='http://p4web/'): basestring,
             Optional(basestring): dict})
         tree = schema.validate(unvalidated_tree)
 

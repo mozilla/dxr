@@ -186,6 +186,8 @@ per-tree options take effect when the tree is next indexed.
     of each tree you index. Default: ``temp_folder`` setting from ``[DXR]``
     section. You generally don't need to set this.
 
+``p4web_url``
+    The URL to the root of a p4web installation. Default: ``http://p4web/``
 
 Plugin Configuration
 ====================
@@ -217,12 +219,6 @@ See :ref:`writing-plugins` for more details on plugin development.
 ``url``
     URL pattern for building links to tickets. ``%s`` will be replaced with the
     ticket number. The option should include the URL scheme.
-
-[[omniglot]]
-------------
-
-``p4web_url``
-    The URL to the root of a p4web installation. Default: ``http://p4web/``
 
 [[python]]
 ----------

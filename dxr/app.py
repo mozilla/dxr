@@ -1,10 +1,11 @@
 from cStringIO import StringIO
+from datetime import datetime
 from functools import partial
-from itertools import chain
+from itertools import chain, izip
 from logging import StreamHandler
 import os
 from os import chdir
-from os.path import join, basename, split, dirname
+from os.path import join, basename, split, dirname, relpath
 from sys import stderr
 from time import time
 from mimetypes import guess_type
@@ -13,7 +14,7 @@ from urllib import quote_plus
 from flask import (Blueprint, Flask, send_from_directory, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
-from funcy import merge
+from funcy import merge, imap
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
@@ -22,12 +23,14 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
-from dxr.lines import html_line
-from dxr.mime import icon, is_image
-from dxr.plugins import plugins_named
+from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
+                       triples_from_es_regions, finished_tags)
+from dxr.mime import icon, is_image, is_text
+from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number)
+                       format_number, append_update, append_by_line, cumulative_sum)
+from dxr.vcs import VcsCache
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -55,6 +58,10 @@ def make_app(config):
 
     # Make an ES connection pool shared among all threads:
     app.es = ElasticSearch(config.es_hosts)
+
+    # Construct map of each tree to its VCS tree object.
+    app.vcs_caches = dict((tree, VcsCache(tree_config)) for tree, tree_config in
+                         config.trees.iteritems())
 
     return app
 
@@ -211,12 +218,39 @@ def raw(tree, path):
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
-    """Show a directory listing or a single file from one of the trees."""
+    """Show a directory listing or a single file from one of the trees.
+
+    Raise NotFound if path does not exist as either a folder or file.
+
+    """
     config = current_app.dxr_config
     try:
         return _browse_folder(tree, path, config)
     except NotFound:
-        return _browse_file(tree, path, config)
+        frozen = frozen_config(tree)
+        # Grab the FILE doc, just for the sidebar nav links:
+        files = filtered_query(
+            frozen['es_alias'],
+            FILE,
+            filter={'path': path},
+            size=1,
+            include=['links'])
+        if not files:
+            raise NotFound
+
+        lines = filtered_query(
+            frozen['es_alias'],
+            LINE,
+            filter={'path': path},
+            sort=['number'],
+            size=1000000,
+            include=['content', 'refs', 'regions', 'annotations'])
+        # Deref the content field in each document. We can do this because we
+        # do not store empty lines in ES.
+        for doc in lines:
+            doc['content'] = doc['content'][0]
+
+        return _browse_file(tree, path, lines, files[0], config, frozen['generated_date'])
 
 
 def _browse_folder(tree, path, config):
@@ -269,11 +303,68 @@ def _browse_folder(tree, path, config):
             for f in files_and_folders])
 
 
-def _browse_file(tree, path, config):
+def skim_file(skimmers, num_lines):
+    """Skim contents with all the skimmers, returning the things we need to
+    make a template. Compare to dxr.build.index_file
+
+    :arg skimmers: iterable of FileToSkim objects
+    :arg num_lines: the number of lines in the file being skimmed
+    """
+    linkses, refses, regionses = [], [], []
+    annotations_by_line = [[] for _ in xrange(num_lines)]
+    for skimmer in skimmers:
+        if skimmer.is_interesting():
+            linkses.append(skimmer.links())
+            refses.append(skimmer.refs())
+            regionses.append(skimmer.regions())
+            append_by_line(annotations_by_line, skimmer.annotations_by_line())
+    links = [{'order': order,
+              'heading': heading,
+              'items': [{'icon': icon,
+                         'title': title,
+                         'href': href}
+                        for icon, title, href in items]}
+             for order, heading, items in
+             chain.from_iterable(linkses)]
+    return links, refses, regionses, annotations_by_line
+
+
+def _build_common_file_template(tree, path, date, config):
+    """Return a dictionary of the common required file template parameters.
+    """
+    return {
+        # Common template variables:
+        'www_root': config.www_root,
+        'tree': tree,
+        'tree_tuples':
+            [(t['name'],
+              url_for('.parallel', tree=t['name'], path=path),
+              t['description'])
+            for t in frozen_configs()],
+        'generated_date': date,
+        'google_analytics_key': config.google_analytics_key,
+        'filters': filter_menu_items(
+            plugins_named(frozen_config(tree)['enabled_plugins'])),
+        # File template variables
+        'paths_and_names': _linked_pathname(path, tree),
+        'icon': icon(path),
+        'path': path,
+        'name': basename(path)
+    }
+
+
+def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=None):
     """Return a rendered page displaying a source file.
 
-    If there is no such file, raise NotFound.
-
+    :arg string tree: name of tree on which file is found
+    :arg string path: relative path from tree root of file
+    :arg list line_docs: LINE documents as defined in the mapping of core.py,
+        where the `content` field is dereferenced
+    :arg file_doc: the FILE document as defined in core.py
+    :arg config: TreeConfig object of this tree
+    :arg date: a formatted string representing the generated date, default to now
+    :arg string contents: the contents of the source file, defaults to joining
+        the `content` field of all line_docs
     """
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
@@ -285,66 +376,81 @@ def _browse_file(tree, path, config):
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))
 
-    frozen = frozen_config(tree)
+    if not date:
+        # Then assume that the file is generated now. Remark: we can't use this
+        # as the default param because that is only evaluated once, so the same
+        # time would always be used.
+        date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
-    # Grab the FILE doc, just for the sidebar nav links:
-    files = filtered_query(
-        frozen['es_alias'],
-        FILE,
-        filter={'path': path},
-        size=1,
-        include=['links'])
-    if not files:
-        raise NotFound
-    links = files[0].get('links', [])
-
-    lines = filtered_query(
-        frozen['es_alias'],
-        LINE,
-        filter={'path': path},
-        sort=['number'],
-        size=1000000,
-        include=['content', 'tags', 'annotations'])
-
-    # Common template variables:
-    common = {
-        'www_root': config.www_root,
-        'tree': tree,
-        'tree_tuples':
-            [(t['name'],
-              url_for('.parallel', tree=t['name'], path=path),
-              t['description'])
-            for t in frozen_configs()],
-        'generated_date': frozen['generated_date'],
-        'google_analytics_key': config.google_analytics_key,
-        'filters': filter_menu_items(
-            plugins_named(frozen_config(tree)['enabled_plugins'])),
-    }
-
-    # File template variables
-    file_vars = {
-        'paths_and_names': _linked_pathname(path, tree),
-        'icon': icon(path),
-        'path': path,
-        'name': basename(path),
-    }
-
+    common = _build_common_file_template(tree, path, date, config)
+    links = file_doc.get('links', [])
     if is_image(path):
         return render_template(
             'image_file.html',
-            **merge(common, file_vars))
+            **common)
     else:  # For now, we don't index binary files, so this is always a text one
+        # We concretize the lines into a list because we iterate over it multiple times
+        lines = [doc['content'] for doc in line_docs]
+        if not contents:
+            # If contents are not provided, we can reconstruct them by
+            # stitching the lines together.
+            contents = ''.join(lines)
+        offsets = cumulative_sum(imap(len, lines))
+        # Construct skimmer objects for all enabled plugins that define a
+        # file_to_skim class.
+        skimmers = [plugin.file_to_skim(path,
+                                        contents,
+                                        name,
+                                        config.trees[tree],
+                                        file_doc,
+                                        line_docs,
+                                        current_app.vcs_caches[tree])
+                    for name, plugin in all_plugins().iteritems()
+                    if plugin in config.trees[tree].enabled_plugins
+                    and plugin.file_to_skim]
+        skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
+        index_refs = triples_from_es_refs(doc.get('refs', []) for doc in line_docs)
+        index_regions = triples_from_es_regions(doc.get('regions', []) for doc in line_docs)
+        tags = finished_tags(lines,
+                             chain(chain.from_iterable(refses), index_refs),
+                             chain(chain.from_iterable(regionses), index_regions))
         return render_template(
             'text_file.html',
-            **merge(common, file_vars, {
+            **merge(common, {
                 # Someday, it would be great to stream this and not concretize
                 # the whole thing in RAM. The template will have to quit
                 # looping through the whole thing 3 times.
-                'lines': [(html_line(doc['content'][0], doc.get('tags', [])),
-                           doc.get('annotations', [])) for doc in lines],
+                'lines': [(html_line(doc['content'], tags_in_line, offset),
+                           doc.get('annotations', []) + skim_annotations)
+                          for doc, tags_in_line, offset, skim_annotations
+                              in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
                 'is_text': True,
-                'sections': sidebar_links(links)}))
+                'sections': sidebar_links(links + skim_links)}))
 
+@dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
+def rev(tree, revision, path):
+    """Display a page showing the file at path at specified revision by
+    obtaining the contents from version control.
+    """
+    config = current_app.dxr_config
+    tree_config = config.trees[tree]
+    abs_path = join(tree_config.source_folder, path)
+    vcs = current_app.vcs_caches[tree].vcs_for_path(path)
+    if vcs:
+        contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision)
+        if is_text(contents):
+            contents = contents.decode(tree_config.source_encoding)
+        else:
+            raise NotFound
+        # We do some wrapping to mimic the JSON returned by an ES lines query.
+        return _browse_file(tree,
+                            path,
+                            [{'content': line} for line in contents.splitlines(True)],
+                            {},
+                            config,
+                            contents=contents)
+    else:
+        return render_template('error.html', error_html='No VCS found'), 400
 
 def _linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be

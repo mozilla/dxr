@@ -69,7 +69,7 @@ class Query(object):
             yield (icon_for_path,
                    highlit_path,
                    [(line['number'][0],
-                     highlight(line['content'][0],
+                     highlight(line['content'][0].rstrip('\n\r'),
                                chain.from_iterable(h(line) for h in
                                                    content_highlighters)))
                     for line in lines])
