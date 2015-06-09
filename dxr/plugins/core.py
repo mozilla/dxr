@@ -1,7 +1,7 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
-
 from base64 import b64encode
+from itertools import chain
 from os.path import relpath, splitext
 import re
 
@@ -15,15 +15,14 @@ from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
 from dxr.mime import is_image
+from dxr.query import some_filters
 from dxr.plugins import direct_search
-from dxr.trigrammer import (regex_grammar, SubstringTreeVisitor, NGRAM_LENGTH,
-                            And, JsRegexVisitor, es_regex_filter, NoTrigrams,
-                            PythonRegexVisitor)
+from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
+                            NoTrigrams, PythonRegexVisitor)
 from dxr.utils import glob_to_regex
 
-
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
-           'RegexpFilter']
+           'RegexpFilter', 'IdFilter', 'RefFilter']
 
 
 PATH_MAPPING = {  # path/to/a/folder/filename.cpp
@@ -330,7 +329,7 @@ class RegexpFilter(Filter):
                          r'<code>regexp:(?i)\bs?printf</code> '
                          r'<code>regexp:"(three|3) mice"</code>')
 
-    def __init__(self, term):
+    def __init__(self, term, enabled_plugins):
         """Compile the Python equivalent of the regex so we don't have to lean
         on the regex cache during highlighting.
 
@@ -338,7 +337,7 @@ class RegexpFilter(Filter):
         LRU.
 
         """
-        super(RegexpFilter, self).__init__(term)
+        super(RegexpFilter, self).__init__(term, enabled_plugins)
         try:
             self._parsed_regex = regex_grammar.parse(term['arg'])
         except ParseError:
@@ -361,6 +360,51 @@ class RegexpFilter(Filter):
     def highlight_content(self, result):
         return (m.span() for m in
                 self._compiled_regex.finditer(result['content'][0]))
+
+
+class FilterAggregator(Filter):
+    """Filter class that acts by constructing the union of some subset of the
+    filters of all currently enabled plugins.
+
+    """
+    def __init__(self, term, enabled_plugins, condition=None):
+        super(FilterAggregator, self).__init__(term, enabled_plugins)
+        self.filters = [f(term, enabled_plugins) for f in
+                        some_filters(enabled_plugins, condition)]
+
+    def filter(self):
+        # OR together all the underlying filters.
+        return {'or': filter(None, (f.filter() for f in self.filters))}
+
+    def highlight_content(self, result):
+        # Union all of our underlying filters.
+        return chain.from_iterable(f.highlight_content(result) for f in self.filters)
+
+
+class IdFilter(FilterAggregator):
+    """Filter aggregator for id: queries, groups together the results of all filters that find
+    declarations and definitions of names."""
+
+    name = 'id'
+    domain = LINE
+    description = Markup('Definition of an identifier: '
+                         '<code>id:someFunction</code> <code>id:SomeClass</code>')
+
+    def __init__(self, term, enabled_plugins):
+        super(IdFilter, self).__init__(term, enabled_plugins, lambda f: f.is_identifier)
+
+
+class RefFilter(FilterAggregator):
+    """Filter aggregator for ref: queries,groupingg together the results of all filters that find
+    references to names."""
+
+    name = 'ref'
+    domain = LINE
+    description = Markup('Reference to an identifier: '
+                         '<code>ref:someVar</code> <code>ref:someType</code>')
+
+    def __init__(self, term, enabled_plugins):
+        super(RefFilter, self).__init__(term, enabled_plugins, lambda f: f.is_reference)
 
 
 class TreeToIndex(dxr.indexers.TreeToIndex):

@@ -1,5 +1,5 @@
 import cgi
-from itertools import chain, count, groupby
+from itertools import chain, groupby
 from operator import itemgetter
 import re
 
@@ -102,7 +102,7 @@ class Query(object):
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
-        filters = [[f(term) for f in enabled_filters_by_name[term['name']]]
+        filters = [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
                    for term in self.terms]
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
@@ -324,6 +324,16 @@ class QueryVisitor(NodeVisitor):
 
         """
         return visited_children or node
+
+
+def some_filters(plugins, condition):
+    """Return a list of filters of the given plugins for which condition(filter) is True.
+
+    :arg plugins: An iterable of plugins
+    :arg condition: A function which takes a filter and returns True or False
+
+    """
+    return filter(condition, chain.from_iterable(p.filters for p in plugins))
 
 
 @cached

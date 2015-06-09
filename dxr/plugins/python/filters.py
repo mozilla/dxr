@@ -14,16 +14,19 @@ class _PyFilter(NameFilterBase):
 class ModuleFilter(_QualifiedPyFilter):
     name = 'module'
     domain = FILE
+    is_identifier = True
     description = Markup("Module definition: <code>module:module.name</code>")
 
 
 class TypeFilter(_PyFilter):
     name = 'type'
+    is_identifier = True
     description = Markup('Class definition: <code>type:Stack</code>')
 
 
 class FunctionFilter(_PyFilter):
     name = 'function'
+    is_identifier = True
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
@@ -39,6 +42,7 @@ class BasesFilter(_QualifiedPyFilter):
 
 class CallersFilter(_PyFilter):
     name = 'callers'
+    is_reference = True
     description = Markup('Calls to the given function: <code>callers:some_function</code>')
 
 
