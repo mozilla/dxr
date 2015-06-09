@@ -37,7 +37,7 @@ from pipes import quote
 from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
-from time import sleep
+from time import sleep, strftime
 
 from click import command, echo, option, Path
 from flask import current_app
@@ -76,7 +76,21 @@ from dxr.utils import cd, file_text, rmtree_if_exists
              'deploy jobs of the same kind will never run simultaneously. '
              'The deployment symlink contains the kind in its name.')
 def deploy(**kwargs):
-    """Deploy a new version of the web app."""
+    """Deploy a new version of the web app.
+
+    This should NOT be used to update the copy of DXR run by the indexers, as
+    this bails out if not all indexed trees have been built under the latest
+    format version.
+
+    This may choose not to deploy for in various cases: for example, if the
+    latest version is already deployed. In this cases, a reason is logged to
+    stdout. Unanticipated, more serious errors will go to stderr. Thus, you
+    can use shell redirects to run this as a cron job and not get too many
+    mails, while still having a log file to examine when something goes wrong:
+
+        dxr deploy 1>>some_log_file
+
+    """
     non_none_options = dict((k, v) for k, v in kwargs.iteritems() if v)
     Deployment(**non_none_options).deploy_if_appropriate()
 
@@ -288,17 +302,22 @@ class Deployment(object):
                         rev = self.rev_to_deploy()
                         new_build_path = self.build(rev)
                         old_build_path = self.install(new_build_path)
-                    except ShouldNotDeploy:
-                        pass
+                    except ShouldNotDeploy as exc:
+                        log(exc)
                     else:
                         # if not self.passes_smoke_test():
                         #     self.rollback()
                         # else:
                         self.delete_old(old_build_path)
+                        log('Deployed revision %s.' % (rev,))
 
     def _deployment_path(self):
         """Return the path of the symlink to the deployed build of DXR."""
         return join(self.base_path, 'dxr-%s' % self.kind)
+
+
+def log(message):
+    print strftime('%Y-%m-%d %H:%M:%S'), message
 
 
 def run(command, **kwargs):
@@ -352,3 +371,6 @@ def nonblocking_lock(lock_name):
 class ShouldNotDeploy(Exception):
     """We should not deploy this build at the moment, though there was no
     programming error."""
+
+    def __str__(self):
+        return 'Did not deploy. %s' % (self.args[0],)
