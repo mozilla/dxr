@@ -4,16 +4,16 @@ Getting Started
 
 .. note::
 
-    These instructions are suited to trying out DXR to see if you like it. If
-    you plan to contribute code to DXR itself, please see :doc:`development`
+    These instructions are for trying out DXR to see if you like it. If you
+    plan to contribute code to DXR itself, please see :doc:`development`
     instead.
 
 The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
-2. Tell DXR how to build it.
-3. Run :program:`dxr-index.py` to build and index your code.
-4. Run :program:`dxr-serve.py` to present a web-based search interface.
+2. If it's C or C++, tell DXR how to build it.
+3. Run :program:`dxr index` to index your code.
+4. Run :program:`dxr serve` to present a web-based search interface.
 
 But first, we have some installation to do.
 
@@ -24,13 +24,13 @@ But first, we have some installation to do.
 Configuration
 =============
 
-Before DXR can index your code, we need to tell it where it is and, if you want
-to be able to do structural queries like find-all-the-callers, how to kick off
-a build. (Currently, DXR supports structural queries only for C and C++.) If
-you have a simple build process powered by :command:`make`, a configuration
-like this might suffice. Place the following in a file called
-:file:`dxr.config`. The location of the file doesn't matter; the usual
-place is adjacent to your source directory.
+Before DXR can index your code, it needs to know where it is and, if you want
+to be able to do structural queries (like find-all-the-callers) for C or C++,
+how to kick off a build. (Analysis of more dynamic languages like Python does
+not require a build step.) If you have a simple build process powered by
+:command:`make`, a configuration like this might suffice. Place the following
+in a file called :file:`dxr.config`. The location of the file doesn't matter,
+but the usual place is adjacent to your source directory.
 
 .. include:: example-configuration.rst
 
@@ -39,12 +39,13 @@ place is adjacent to your source directory.
    Be sure to replace the placeholder paths in the above config.
 
 By building your project with clang and under the control of
-:program:`dxr-index.py`, DXR gets a chance to interpose a custom compiler
+:program:`dxr index`, DXR gets a chance to interpose a custom compiler
 plugin that emits analysis data. It then processes that into an index.
 
 If you have a non-C++ project and simply want to index it as text, the
-``build_command`` can be set to :file:`/bin/true` or some other do-nothing
-command.
+``build_command`` can be set to blank::
+
+    build_command =
 
 Though you shouldn't need any of them yet, further config directives are
 described in :doc:`configuration`.
@@ -54,9 +55,9 @@ Indexing
 ========
 
 Now that you've told DXR about your codebase, it's time to build an
-:term:`index` (sometimes also called an :term:`instance`)::
+:term:`index`::
 
-    dxr-build.py dxr.config
+    dxr index --config dxr.config
 
 .. note::
 
@@ -69,12 +70,9 @@ Now that you've told DXR about your codebase, it's time to build an
         cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
         vi vagrantconfig_local.yaml
 
-    Then restart the VM. Within the VM... ::
+    Then restart the VM::
 
-        sudo shutdown -h now
-
-    Then, from the host machine... ::
-
+        vagrant halt
         vagrant up
         vagrant ssh
 
@@ -84,7 +82,7 @@ Now that you've told DXR about your codebase, it's time to build an
     you can get one of the included test cases to work::
 
         cd ~/dxr/tests/test_basic
-        make
+        dxr index
 
     If that works, it's just a matter of getting your configuration right. Pop
     into #static on irc.mozilla.org if you need a hand.
@@ -96,18 +94,7 @@ Serving Your Index
 Congratulations; your index is built! Now, spin up DXR's development server,
 and see what you've wrought::
 
-    dxr-serve.py --all /path/to/the/output
+    dxr serve --all
 
 Surf to http://33.33.33.77:8000/ from the host machine, and poke around
 your fancy new searchable codebase.
-
-.. note::
-
-    Seeing this error? ::
-
-       Server Error
-       Database error: no such module: trilite
-
-    Run :command:`sudo ldconfig` inside the virtual machine to sort out the
-    shared library linking problem. Then, re-run :program:`dxr-serve.py`, and
-    all should work as expected.

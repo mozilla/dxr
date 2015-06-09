@@ -18,51 +18,36 @@ end
 CONF = _config
 MOUNT_POINT = '/home/vagrant/dxr'
 
-Vagrant::Config.run do |config|
+Vagrant.configure("2") do |config|
     config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
     config.vm.box = "ubuntu/trusty64"
 
-    Vagrant.configure("1") do |config|
-        config.vm.customize ["modifyvm", :id, "--memory", CONF['memory']]
-        # Make sure guest additions are up to date!
-        config.vbguest.auto_update = true
-    end
-
-    Vagrant.configure("2") do |config|
-        config.vm.provider "virtualbox" do |v|
-          v.name = "DXR_VM"
-          v.customize ["modifyvm", :id, "--memory", CONF['memory']]
-        end
-    end
-
     is_jenkins = ENV['USER'] == 'jenkins'
+
+    config.vm.provider "virtualbox" do |v|
+        # On Jenkins, choose a unique box name so test runs don't collide if
+        # they get assigned to the same worker:
+        v.name = is_jenkins ? ("DXR_VM_" + ENV['JOB_NAME'] + "_" + ENV['BUILD_NUMBER']) : "DXR_VM"
+
+        v.customize ["modifyvm", :id, "--memory", CONF['memory']]
+        v.customize ["setextradata", :id,
+            "VBoxInternal2/SharedFoldersEnableSymlinksCreate//home/vagrant/dxr", "1"]
+    end
 
     if not is_jenkins
         # Don't share these resources when on Jenkins. We want to be able to
         # parallelize jobs.
 
         # Add to /etc/hosts: 33.33.33.77 dxr
-        config.vm.network :hostonly, "33.33.33.77"
-
-        config.vm.forward_port 80, 8000
-    end
-
-    Vagrant.configure("1") do |config|
-        # Enable symlinks, which trilite uses during build:
-        config.vm.customize ["setextradata", :id,
-            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
-    end
-
-    Vagrant.configure("2") do |config|
-        v.customize ["setextradata", :id,
-            "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant-root", "1"]
+        config.vm.network "private_network", ip: "33.33.33.77"
+        config.vm.network "forwarded_port", guest: 80, host: 8000
     end
 
     if CONF['boot_mode'] == 'gui'
         config.vm.boot_mode = :gui
     end
 
-    config.vm.share_folder("vagrant-root", MOUNT_POINT, ".")
+    config.vm.synced_folder ".", MOUNT_POINT
 
     config.vm.provision "shell", path: "vagrant_provision.sh"
 end

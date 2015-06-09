@@ -1,14 +1,22 @@
 #!/bin/sh
 # Shell script to provision the vagrant box
+#
+# This is idempotent, even though I'm not sure the shell provisioner requires
+# it to be.
 
 set -e
 set -x
+
+# Elasticsearch isn't in Debian proper yet, so we get it from
+# elasticsearch.org's repo.
+wget -qO - https://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -
+echo 'deb http://packages.elasticsearch.org/elasticsearch/1.4/debian stable main' > /etc/apt/sources.list.d/elasticsearch.list
 
 apt-get update
 # clean out redundant packages from vagrant base image
 apt-get autoremove -y
 
-#configure locales:
+# Configure locales:
 apt-get install -y language-pack-en
 
 # node and npm:
@@ -16,15 +24,36 @@ apt-get install -y npm
 # Homogenize binary name with production RHEL:
 ln -sf /usr/bin/nodejs /usr/local/bin/node
 
-# Docs build system:
-apt-get install -y sphinx-common
+# For building docs:
+apt-get install -y graphviz
 
 # Python:
-apt-get install -y libapache2-mod-wsgi python-pip
-pip install virtualenv virtualenvwrapper python-hglib nose
+apt-get install -y libapache2-mod-wsgi python-pip python-virtualenv python2.7-dev
+# Build a virtualenv, and install requirements:
+VENV=/home/vagrant/venv
+sudo -H -u vagrant -s -- <<THEEND
+virtualenv $VENV
+source $VENV/bin/activate
 cd ~vagrant/dxr
 ./peep.py install -r requirements.txt
 python setup.py develop
+pip install pdbpp nose-progressive Sphinx==1.3.1
+THEEND
+# Activate the virtualenv all the time:
+grep /bin/activate .bashrc > /dev/null || echo ". $VENV/bin/activate" >> /home/vagrant/.bashrc
+
+if [ ! -e ~vagrant/.pdbrc.py ]; then
+    cat >~vagrant/.pdbrc.py <<THEEND
+from pdb import DefaultConfig
+
+
+class Config(DefaultConfig):
+   #highlight = False
+   current_line_color = 43
+   sticky_by_default = True
+   bg = 'light'
+THEEND
+fi
 
 # Apache:
 apt-get install -y apache2-dev apache2
@@ -60,15 +89,43 @@ THEEND
 fi
 a2enmod rewrite
 a2enmod proxy
+a2enmod wsgi
 a2dissite 000-default
 
+# mercurial
+apt-get install -y mercurial
+
 # DXR itself:
-# sqlite3 is so trilite's make test works.
-# pkg-config is so make clean works.
-apt-get install -y libsqlite3-dev sqlite3 git mercurial llvm-3.3 libclang-3.3-dev clang-3.3 pkg-config
-update-alternatives --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.3 0
-# Install libtrilite so Apache WSGI processes can see it:
-ln -sf ~vagrant/dxr/trilite/libtrilite.so /usr/local/lib/libtrilite.so
-# make sure local trilite is available
-rm /etc/ld.so.cache
-/sbin/ldconfig
+# pkg-config is so (trilite's?) make clean works.
+apt-get install -y git llvm-3.5 libclang-3.5-dev clang-3.5 pkg-config
+# --force overrides any older-version LLVM alternative lying around, letting
+# us upgrade by provisioning rather than destroying the whole box:
+update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
+# There is no clang++ until we do this:
+update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
+# And we might as well make a clang link so we can compile mozilla-central:
+update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
+
+# Elasticsearch:
+apt-get install -y openjdk-7-jdk elasticsearch
+# Make it keep to itself, rather than forming a cluster with everything on the
+# subnet:
+sed -i 's/#\(discovery\.zen\.ping\.multicast\.enabled: false\)/\1/' /etc/elasticsearch/elasticsearch.yml
+sed -i 's/#network\.bind_host: 192\.168\.0\.1/network.bind_host: 127.0.0.1/' /etc/elasticsearch/elasticsearch.yml
+# Cut RAM so it doesn't take up the whole VM. This should be MUCH bigger for
+# production.
+sed -i 's/#ES_HEAP_SIZE=2g/ES_HEAP_SIZE=128m/' /etc/init.d/elasticsearch
+# And don't swap:
+sed -i 's/#\(bootstrap\.mlockall: true\)/\1/' /etc/elasticsearch/elasticsearch.yml
+# And let us use JS in request payloads:
+grep 'script.disable_dynamic: false' /etc/elasticsearch/elasticsearch.yml > /dev/null || echo 'script.disable_dynamic: false' >> /etc/elasticsearch/elasticsearch.yml
+# Come up on startup:
+update-rc.d elasticsearch defaults 95 10
+[ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-lang-javascript/2.4.1
+/etc/init.d/elasticsearch start
+
+# Install Rust in /usr/local:
+curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --yes
+# Following the Nightly channel gives us early warning of changes that would
+# break DXR. But if this happens often enough that it's disruptive to the goal
+# of testing DXR itself, pin this to a known-working --revision.

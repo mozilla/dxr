@@ -11,4 +11,3 @@ class GoogleAnalyticsMarkupTests(DxrInstanceTestCase):
         response = self.client().get('/code/source/')
         ok_('RANDOM_KEY_$#$' in response.data)
         ok_( '.google-analytics.com' in response.data )
-

@@ -9,6 +9,18 @@ local PyPI mirror or use a vendor lib. Just update the version numbers and
 hashes in requirements.txt, and you're all set.
 
 """
+# This is here so embedded copies of peep.py are MIT-compliant:
+# Copyright (c) 2013 Erik Rose
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 from __future__ import print_function
 try:
     xrange = xrange
@@ -23,13 +35,14 @@ from itertools import chain
 from linecache import getline
 import mimetypes
 from optparse import OptionParser
-from os import listdir
 from os.path import join, basename, splitext, isdir
 from pickle import dumps, loads
 import re
+import sys
 from shutil import rmtree, copy
 from sys import argv, exit
 from tempfile import mkdtemp
+import traceback
 try:
     from urllib2 import build_opener, HTTPHandler, HTTPSHandler, HTTPError
 except ImportError:
@@ -47,6 +60,8 @@ from pkg_resources import require, VersionConflict, DistributionNotFound
 # say `pip install peep.tar.gz` and thus pull down an untrusted copy of pip
 # from PyPI. Instead, we make sure it's installed and new enough here and spit
 # out an error message if not:
+
+
 def activate(specifier):
     """Make a compatible version of pip importable. Raise a RuntimeError if we
     couldn't."""
@@ -57,9 +72,10 @@ def activate(specifier):
         raise RuntimeError('The installed version of pip is too old; peep '
                            'requires ' + specifier)
 
-activate('pip>=0.6.2')  # Before 0.6.2, the log module wasn't there, so some
-                        # of our monkeypatching fails. It probably wouldn't be
-                        # much work to support even earlier, though.
+# Before 0.6.2, the log module wasn't there, so some
+# of our monkeypatching fails. It probably wouldn't be
+# much work to support even earlier, though.
+activate('pip>=0.6.2')
 
 import pip
 from pip.commands.install import InstallCommand
@@ -71,11 +87,25 @@ except ImportError:
     except ImportError:
         from pip.util import url_to_filename as url_to_path  # 0.6.2
 from pip.index import PackageFinder, Link
-from pip.log import logger
+try:
+    from pip.log import logger
+except ImportError:
+    from pip import logger  # 6.0
 from pip.req import parse_requirements
+try:
+    from pip.utils.ui import DownloadProgressBar, DownloadProgressSpinner
+except ImportError:
+    class NullProgressBar(object):
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def iter(self, ret, *args, **kwargs):
+            return ret
+
+    DownloadProgressBar = DownloadProgressSpinner = NullProgressBar
 
 
-__version__ = 2, 0, 0
+__version__ = 2, 4, 1
 
 
 ITS_FINE_ITS_FINE = 0
@@ -197,7 +227,8 @@ HASH_COMMENT_RE = re.compile(
                                #   just trailing whitespace if there is no
                                #   comment. Also strip trailing newlines.
     (?:\#(?P<comment>.*))?     # Comments can be anything after a whitespace+#
-    $""", re.X)                #   and are optional.
+                               #   and are optional.
+    $""", re.X)
 
 
 def peep_hash(argv):
@@ -225,12 +256,13 @@ def peep_hash(argv):
 class EmptyOptions(object):
     """Fake optparse options for compatibility with pip<1.2
 
-    pip<1.2 had a bug in parse_requirments() in which the ``options`` kwarg
+    pip<1.2 had a bug in parse_requirements() in which the ``options`` kwarg
     was required. We work around that by passing it a mock object.
 
     """
     default_vcs = None
     skip_requirements_regex = None
+    isolated_mode = False
 
 
 def memoize(func):
@@ -311,7 +343,7 @@ class DownloadedReq(object):
     expensive things.
 
     """
-    def __init__(self, req, argv):
+    def __init__(self, req, argv, finder):
         """Download a requirement, compare its hashes, and return a subclass
         of DownloadedReq depending on its state.
 
@@ -321,6 +353,7 @@ class DownloadedReq(object):
         """
         self._req = req
         self._argv = argv
+        self._finder = finder
 
         # We use a separate temp dir for each requirement so requirements
         # (from different indices) that happen to have the same archive names
@@ -372,12 +405,14 @@ class DownloadedReq(object):
             return version
 
         def give_up(filename, package_name):
-            raise RuntimeError("The archive '%s' didn't start with the package name '%s', so I couldn't figure out the version number. My bad; improve me." %
+            raise RuntimeError("The archive '%s' didn't start with the package name "
+                               "'%s', so I couldn't figure out the version number. "
+                               "My bad; improve me." %
                                (filename, package_name))
 
-        get_version =  (version_of_wheel
-                        if self._downloaded_filename().endswith('.whl')
-                        else version_of_archive)
+        get_version = (version_of_wheel
+                       if self._downloaded_filename().endswith('.whl')
+                       else version_of_archive)
         return get_version(self._downloaded_filename(), self._project_name())
 
     def _is_always_unsatisfied(self):
@@ -390,7 +425,7 @@ class DownloadedReq(object):
         # If this is a github sha tarball, then it is always unsatisfied
         # because the url has a commit sha in it and not the version
         # number.
-        url = self._req.url
+        url = self._url()
         if url:
             filename = filename_from_url(url)
             if filename.endswith(ARCHIVE_EXTENSIONS):
@@ -405,7 +440,7 @@ class DownloadedReq(object):
 
         """
         path, line = (re.match(r'-r (.*) \(line (\d+)\)$',
-                      self._req.comes_from).groups())
+                               self._req.comes_from).groups())
         return path, int(line)
 
     @memoize  # Avoid hitting the file[cache] over and over.
@@ -481,14 +516,31 @@ class DownloadedReq(object):
             return filename
 
         # Descended from _download_url() in pip 1.4.1
-        def pipe_to_file(response, path):
-            """Pull the data off an HTTP response, and shove it in a new file."""
-            # TODO: Indicate progress.
-            with open(path, 'wb') as file:
+        def pipe_to_file(response, path, size=0):
+            """Pull the data off an HTTP response, shove it in a new file, and
+            show progress.
+
+            :arg response: A file-like object to read from
+            :arg path: The path of the new file
+            :arg size: The expected size, in bytes, of the download. 0 for
+                unknown or to suppress progress indication (as for cached
+                downloads)
+
+            """
+            def response_chunks(chunk_size):
                 while True:
-                    chunk = response.read(4096)
+                    chunk = response.read(chunk_size)
                     if not chunk:
                         break
+                    yield chunk
+
+            print('Downloading %s%s...' % (
+                self._req.req,
+                (' (%sK)' % (size / 1000)) if size > 1000 else ''))
+            progress_indicator = (DownloadProgressBar(max=size).iter if size
+                                  else DownloadProgressSpinner().iter)
+            with open(path, 'wb') as file:
+                for chunk in progress_indicator(response_chunks(4096), 4096):
                     file.write(chunk)
 
         url = link.url.split('#', 1)[0]
@@ -497,9 +549,12 @@ class DownloadedReq(object):
         except (HTTPError, IOError) as exc:
             raise DownloadError(link, exc)
         filename = best_filename(link, response)
-        pipe_to_file(response, join(self._temp_path, filename))
+        try:
+            size = int(response.headers['content-length'])
+        except (ValueError, KeyError, TypeError):
+            size = 0
+        pipe_to_file(response, join(self._temp_path, filename), size=size)
         return filename
-
 
     # Based on req_set.prepare_files() in pip bb2a8428d4aebc8d313d05d590f386fa3f0bbd0f
     @memoize  # Avoid re-downloading.
@@ -521,13 +576,9 @@ class DownloadedReq(object):
 
         # TODO: Stop on reqs that are editable or aren't ==.
 
-        finder = package_finder(self._argv)
-
         # If the requirement isn't already specified as a URL, get a URL
         # from an index:
-        link = (finder.find_requirement(self._req, upgrade=False)
-                if self._req.url is None
-                else Link(self._req.url))
+        link = self._link() or self._finder.find_requirement(self._req, upgrade=False)
 
         if link:
             lower_scheme = link.scheme.lower()  # pip lower()s it for some reason.
@@ -566,7 +617,10 @@ class DownloadedReq(object):
         """
         other_args = list(requirement_args(self._argv, want_other=True))
         archive_path = join(self._temp_path, self._downloaded_filename())
-        run_pip(['install'] + other_args + ['--no-deps', archive_path])
+        # -U so it installs whether pip deems the requirement "satisfied" or
+        # not. This is necessary for GitHub-sourced zips, which change without
+        # their version numbers changing.
+        run_pip(['install'] + other_args + ['--no-deps', '-U', archive_path])
 
     @memoize
     def _actual_hash(self):
@@ -587,8 +641,17 @@ class DownloadedReq(object):
     def _name(self):
         return self._req.name
 
+    def _link(self):
+        try:
+            return self._req.link
+        except AttributeError:
+            # The link attribute isn't available prior to pip 6.1.0, so fall
+            # back to the now deprecated 'url' attribute.
+            return Link(self._req.url) if self._req.url else None
+
     def _url(self):
-        return self._req.url
+        link = self._link()
+        return link.url if link else None
 
     @memoize  # Avoid re-running expensive check_if_exists().
     def _is_satisfied(self):
@@ -641,9 +704,9 @@ class MissingReq(DownloadedReq):
 
     def error(self):
         if self._url():
+            # _url() always contains an #egg= part, or this would be a
+            # MalformedRequest.
             line = self._url()
-            if self._name() not in filename_from_url(self._url()):
-                line = '%s#egg=%s' % (line, self._name())
         else:
             line = '%s==%s' % (self._name(), self._version())
         return '# sha256: %s\n%s\n' % (self._actual_hash(), line)
@@ -658,14 +721,14 @@ class MismatchedReq(DownloadedReq):
                 "freak out, because someone has tampered with the packages.\n\n")
 
     def error(self):
-        preamble = '    %s: expected%s' % (
-                self._project_name(),
-                ' one of' if len(self._expected_hashes()) > 1 else '')
-        return '%s %s\n%s got %s' % (
-            preamble,
-            ('\n' + ' ' * (len(preamble) + 1)).join(self._expected_hashes()),
-            ' ' * (len(preamble) - 4),
-            self._actual_hash())
+        preamble = '    %s: expected' % self._project_name()
+        if len(self._expected_hashes()) > 1:
+            preamble += ' one of'
+        padding = '\n' + ' ' * (len(preamble) + 1)
+        return '%s %s\n%s got %s' % (preamble,
+                                     padding.join(self._expected_hashes()),
+                                     ' ' * (len(preamble) - 4),
+                                     self._actual_hash())
 
     @classmethod
     def foot(cls):
@@ -713,6 +776,7 @@ def first_every_last(iterable, first, every, last):
     did_first = False
     for item in iterable:
         if not did_first:
+            did_first = True
             first(item)
         every(item)
     if did_first:
@@ -727,8 +791,23 @@ def downloaded_reqs_from_path(path, argv):
     :arg argv: The commandline args, starting after the subcommand
 
     """
-    return [DownloadedReq(req, argv) for req in
-            parse_requirements(path, options=EmptyOptions())]
+    finder = package_finder(argv)
+
+    def downloaded_reqs(parsed_reqs):
+        """Just avoid repeating this list comp."""
+        return [DownloadedReq(req, argv, finder) for req in parsed_reqs]
+
+    try:
+        return downloaded_reqs(parse_requirements(
+            path, options=EmptyOptions(), finder=finder))
+    except TypeError:
+        # session is a required kwarg as of pip 6.0 and will raise
+        # a TypeError if missing. It needs to be a PipSession instance,
+        # but in older versions we can't import it from pip.download
+        # (nor do we need it at all) so we only import it in this except block
+        from pip.download import PipSession
+        return downloaded_reqs(parse_requirements(
+            path, options=EmptyOptions(), session=PipSession(), finder=finder))
 
 
 def peep_install(argv):
@@ -739,8 +818,7 @@ def peep_install(argv):
 
     """
     output = []
-    #out = output.append
-    out = print
+    out = output.append
     reqs = []
     try:
         req_paths = list(requirement_args(argv, want_paths=True))
@@ -800,5 +878,27 @@ def main():
         return exc.error_code
 
 
+def exception_handler(exc_type, exc_value, exc_tb):
+    print('Oh no! Peep had a problem while trying to do stuff. Please write up a bug report')
+    print('with the specifics so we can fix it:')
+    print()
+    print('https://github.com/erikrose/peep/issues/new')
+    print()
+    print('Here are some particulars you can copy and paste into the bug report:')
+    print()
+    print('---')
+    print('peep:', repr(__version__))
+    print('python:', repr(sys.version))
+    print('pip:', repr(getattr(pip, '__version__', 'no __version__ attr')))
+    print('Command line: ', repr(sys.argv))
+    print(
+        ''.join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+    print('---')
+
+
 if __name__ == '__main__':
-    exit(main())
+    try:
+        exit(main())
+    except Exception:
+        exception_handler(*sys.exc_info())
+        exit(SOMETHING_WENT_WRONG)

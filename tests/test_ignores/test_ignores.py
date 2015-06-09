@@ -13,8 +13,7 @@ class IgnorePatternTests(DxrInstanceTestCase):
     def test_non_path(self):
         """Test that non-path-based ignore patterns are obeyed."""
         html = self._top_level_index()
-        assert_in('main.c', html)  # just to make sure we have the
-                                            # right page
+        assert_in('main.c', html)  # just to make sure we have the right page
         ok_('hello.h' not in html)
 
     def test_consecutive(self):

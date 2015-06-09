@@ -74,7 +74,7 @@ $(function() {
             path = $(this).data('path'),
             baseSearchParams = '?limit=100&redirect=false&q=',
             query = $.trim(queryField.val()),
-            browseUrl = dxr.wwwroot + '/' + encodeURIComponent(dxr.tree) + '/source/' + path,
+            browseUrl = dxr.wwwRoot + '/' + encodeURIComponent(dxr.tree) + '/source/' + path,
             limitSearchUrl = dxr.searchUrl + baseSearchParams + encodeURIComponent(query) + '%20path%3A' + path + '%2F',  // TODO: Escape path properly.
             excludeSearchUrl = dxr.searchUrl + baseSearchParams + encodeURIComponent(query) + '%20-path%3A' + path + '%2F';
 
@@ -145,7 +145,7 @@ $(function() {
             var contextMenu = {},
                 menuItems = [{
                     html: 'Search for the substring <strong>' + htmlEscape(word) + '</strong>',
-                    href: dxr.wwwroot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word) + "&case=true",
+                    href: dxr.wwwRoot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word) + "&case=true",
                     icon: 'search'
                 }];
 

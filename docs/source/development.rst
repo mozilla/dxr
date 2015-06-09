@@ -8,32 +8,69 @@ Architecture
 
 .. image:: block-diagram.png
 
-DXR divides into 2 halves:
+DXR divides into 2 halves, with stored indices in the middle:
 
-1. The indexer, :program:`dxr-build.py`, is a batch job which analyzes code and
-   builds on-disk indices.
-
-   The indexer hosts various plugins which handle everything from syntax
-   coloring to static analysis. The clang plugin, for example, which handles
-   structural analysis of C++ code, builds the project under clang while
-   interposing a custom compiler plugin. The plugin rides sidecar with the
-   compiler, dumping out structural data into CSV files, which the DXR plugin
-   later pulls in and uses to generate the SQLite tables that support
-   structural queries like ``callers:`` and ``function:``.
+1. The indexer, run via :program:`dxr index`, is a batch job which analyzes
+   code and builds indices in elasticsearch, one per tree, plus a
+   :term:`catalog index` that keeps track of them. The indexer hosts various
+   plugins which handle everything from syntax coloring to static analysis.
 
    Generally, the indexer is kicked off asynchronously—often even on a separate
    machine—by cron or a build system. It's up to deployers to come up with
    strategies that make sense for them.
 
-2. A Flask web application which lets users query those indices. The development
-   entrypoint for the web application is :program:`dxr-serve.py`, but a more
-   robust method should be used for :doc:`deployment`.
+2. The second half is a Flask web application which lets users run queries.
+   :program:`dxr serve` runs a toy instance of the application for development
+   purposes; a more robust method should be used for :doc:`deployment`.
+
+
+How Indexing Works
+==================
+
+We store every line of source code as an elasticsearch document of type
+``line`` (hereafter called a "LINE doc" after the name of the constant used in
+the code). This lends itself to the per-line search results DXR delivers. In
+addition to the text of the line, indexed into trigrams for fast substring and
+regex search, a LINE doc contains some structural data.
+
+* First are :term:`needles<needle>`, search targets that structural queries
+  can hunt for. For example, if we indexed the following Python source code,
+  the indicated (simplified) needles might be attached:
+
+  .. code-block:: python
+
+     def frob():     # py-function: frob
+         nic(ate())  # py-callers:  [nic, ate]
+
+  If the user runs the query ``function:frob``, we look for LINE docs with
+  "frob" in their "py-function" properties. If the user runs the query
+  ``callers:nic``, we look for docs with "py-callers" properties containing
+  "nic".
+
+  These needles are offered up by plugins via the
+  :meth:`~dxr.indexers.FileToIndex.needles_by_line()` API. For the sake of
+  sanity, we've settled on the convention of a language prefix for
+  language-specific needles. However, the names are technically arbitrary,
+  since the plugin emitting the needle is also its consumer, through the
+  implementation of a :class:`~dxr.filters.Filter`.
+* Also attached to a LINE doc are offsets/metadata pairs that attach CSS
+  classes and contextual menus to various spans of the line. These also come
+  out of plugins, via :meth:`~dxr.indexers.FileToSkim.refs()` and
+  :meth:`~dxr.indexers.FileToSkim.regions()`. Views of entire source-code files
+  are rendered by stitching multiple LINE docs together.
+
+The other major kind of entity is the FILE doc. These support directory
+listings and the storage of per-file rendering data like navigation-pane
+entries (given by :meth:`~dxr.indexers.FileToSkim.links()`) or image contents.
+FILE docs may also contain needles, supporting searches like ``ext:cpp`` which
+return entire files rather than lines. Plugins provide these needles via
+:meth:`~dxr.indexers.FileToIndex.needles()`.
 
 
 Setting Up
 ----------
 
-Here we show the fastest way to get hacking on DXR.
+Here is the fastest way to get hacking on DXR.
 
 .. include:: download-boot-and-build.rst
 
@@ -45,8 +82,8 @@ for manually trying out your changes. ``test_basic`` is a good one to start
 with. To get it running... ::
 
     cd ~/dxr/tests/test_basic
-    make
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../trilite dxr-serve.py -a target
+    dxr index
+    dxr serve -a
 
 You can then surf to http://33.33.33.77:8000/ from the host machine and play
 around. When you're done, stop the server with :kbd:`Control-C`.
@@ -63,7 +100,7 @@ host and still use the VM to run DXR.
 After making changes to DXR, a build step is sometimes needed to see the
 effects of your work:
 
-Changes to C-based compiler plugins or TriLite:
+Changes to C++ or other code with an explicit compilation phase:
     ``make`` (at the root of the project)
 
 Changes to HTML templates that are used on the client side:
@@ -71,13 +108,27 @@ Changes to HTML templates that are used on the client side:
     faster.) Alternatively, leave ``node_modules/.bin/grunt watch`` running,
     and it will take care of recompiling the templates as necessary.
 
-Changes to server-side HTML templates or the DB schema:
-    Run ``make`` inside :file:`tests/test_basic`.
+Changes to the format of the elasticsearch index:
+    Re-run ``dxr index`` inside your test folder (e.g.,
+    :file:`tests/test_basic`). Before committing, you should increment the
+    :term:`format version`.
 
-Stop :program:`dxr-serve.py`, run the build step, and then fire up the server
-again. If you're changing Python code that runs only at request time, you
-shouldn't need to do anything; :program:`dxr-serve.py` should notice and
-restart itself a few seconds after you save.
+Stop :program:`dxr serve`, run any applicable build steps, and then fire up
+the server again. If you're changing Python code that runs only at request
+time, you shouldn't need to do anything; :program:`dxr serve` will notice
+and restart itself a few seconds after you save.
+
+
+Coding Conventions
+------------------
+
+Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
+Follow `PEP 257`_ for docstrings, and use Sphinx-style argument documentation.
+Single quotes are preferred for strings; use 3 double quotes for docstrings and
+multiline strings or if the string contains a single quote.
+
+.. _PEP 8: http://www.python.org/dev/peps/pep-0008/
+.. _PEP 257: http://www.python.org/dev/peps/pep-0257/
 
 
 Testing
@@ -91,21 +142,22 @@ welcome as well, but we haven't got the harness set up yet.)
 Writing Tests for DXR
 =====================
 
-DXR supports two kinds of tests:
+DXR supports two kinds of integration tests:
 
-1. A lightweight sort with a single file worth of C++ code. This kind
-   stores the C++ source as a Python string within a subclass of
-   ``SingleFileTestCase``. At test time, it creates a DXR instance on
+1. A lightweight sort with a single file worth of analyzed code. This kind
+   stores the code as a Python string within a subclass of
+   ``SingleFileTestCase``. At test time, it instantiates the file on
    disk in a temp folder, builds it, and makes assertions about it. If
-   the ``should_delete_instance`` class variable is truthy, it then
-   deletes the instance. If you want to examine the instance manually
-   for troubleshooting, set this to ``False``.
+   the ``should_delete_instance`` class variable is truthy (the default), it
+   then deletes the instance. If you want to examine the instance manually for
+   troubleshooting, set this to ``False``.
 
-2. A heavier sort which consists of a full DXR instance on disk.
-   ``test_ignores`` is an example. Within these instances are one or
-   more Python files containing subclasses of ``DxrInstanceTestCase``
-   which express the actual tests. These instances can be built like any
-   other using ``dxr-build.py``, in case you want to do manual
+2. A heavier sort of test: a folder containing one or more source trees and a
+   DXR config file. These are useful for tests that require a multi-file tree
+   to analyze or more than one tree. ``test_ignores`` is an example. Within
+   these folders are also one or more Python files containing subclasses of
+   ``DxrInstanceTestCase`` which express the actual tests. These trees can be
+   built like any other using ``dxr index``, in case you want to do manual
    exploration.
 
 Running the Tests
@@ -128,34 +180,10 @@ To run a single test... ::
     nosetests tests/test_functions.py:ReferenceTests.test_functions
 
 If you have trouble, make sure you didn't mistranscribe any colons or
-periods. Also, if you did not install :file:`libtrilite.so` globally, you'll
-need to make sure :envvar:`LD_LIBRARY_PATH` in your environment points to the
-:file:`trilite` folder.
+periods.
 
-
-The Format Version
-------------------
-
-At the root level of the repo lurks a file called :file:`format`. Its role is
-to facilitate the automatic deployment of new versions of DXR using a script
-like the included :file:`deploy.py`. The format file contains an integer which
-represents the instance format expected by the DXR code. If a change in the
-code requires something new in the instance, generally (1) differently
-structured HTML or (2) a new DB schema, the format version must be incremented
-with the code change. In response, the deployment script will wait until a new
-instance, of the new format, has been built before deploying the change.
-
-If you aren't sure whether to bump the format version, you can always build an
-instance using the old code, then check out the new code and try to serve the
-old instance with it. If it works, you're probably safe not bumping the version.
-
-
-Coding Conventions
-------------------
-
-Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
-
-.. _PEP 8: http://www.python.org/dev/peps/pep-0008/
+To omit the often distracting elasticsearch logs that nose typically presents
+when a test fails, add the ``--nologcapture``, flag.
 
 
 .. _writing-plugins:
@@ -163,111 +191,261 @@ Follow `PEP 8`_ for Python code, but don't sweat the line length too much.
 Writing Plugins
 ---------------
 
+Plugins are the way to add new types of analysis, indexing, searching, or
+display to DXR. In fact, even DXR's basic capabilities, such as text search
+and syntax coloring, are implemented as plugins. Want to add support for a new
+language? A new kind of search to an existing language? A new kind of
+contextual menu cross-reference? You're in the right place.
+
+At the top level, a :class:`~dxr.plugins.Plugin` class binds together a
+collection of subcomponents which do the actual work:
+
+.. digraph:: plugin
+
+   "Plugin" -> "TreeToIndex" -> "FileToIndex";
+   "Plugin" -> "FileToSkim";
+   "Plugin" -> "filters";
+   "Plugin" -> "mappings";
+   "Plugin" -> "analyzers";
+
+Registration
+============
+
+A Plugin class is registered via a `setuptools entry point
+<https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-
+services-and-plugins>`__ called ``dxr.plugins``. For example, here are the
+registrations for the built-in plugins, from DXR's own :file:`setup.py`::
+
+    entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
+                                  'buglink = dxr.plugins.buglink',
+                                  'clang = dxr.plugins.clang',
+                                  'omniglot = dxr.plugins.omniglot',
+                                  'pygmentize = dxr.plugins.pygmentize']},
+
+The keys in the key/value pairs, like "urllink" and "buglink", are the strings
+the deployer can use in the ``enabled_plugins`` config directive to turn them
+on or off. The values, like "dxr.plugins.urllink", can point to either...
+
+1. A :class:`~dxr.plugins.Plugin` class which itself points to filters,
+   skimmers, indexers, and such. This is the explicit approach—more lines of
+   code, more opportunities to buck convention—and thus not recommended in
+   most cases. The :class:`~dxr.plugins.Plugin` class itself is just a dumb
+   bag of attributes whose only purpose is to bind together a collection of
+   subcomponents that should be used together.
+
+2. Alternatively, an entry point value can point to a module which contains
+   the subcomponents of the plugin, each conforming to a naming convention by
+   which it can be automatically found. This method saves boilerplate and
+   should be used unless there is a compelling need otherwise. Behind the
+   scenes, an actual Plugin object is constructed implicitly: see
+   :meth:`~dxr.plugins.Plugin.from_namespace` for details of the naming
+   convention.
+
+Here is the Plugin object's API, in case you do decide to construct one
+manually:
+
+    .. autoclass:: dxr.plugins.Plugin
+       :members:
+
+Actual plugin functionality is implemented within tree indexers, file
+indexers, filters, and skimmers.
+
+Tree Indexers
+=============
+
+.. autoclass:: dxr.indexers.TreeToIndex
+   :members:
+
+File Indexers
+=============
+
+.. autoclass:: dxr.indexers.FileToIndex
+   :members:
+
+FileToIndex also has all the methods of its superclass,
+:class:`~dxr.indexers.FileToSkim`.
+
+Looking Inside Elasticsearch
+````````````````````````````
+
+While debugging a file indexer, it can help to see what is actually getting
+into elasticsearch. For example, if you are debugging
+:meth:`~dxr.indexers.FileToIndex.needles_by_line`, you can see all the data
+attached to each line of code (up to 1000) with this curl command::
+
+    curl -s -XGET "http://localhost:9200/dxr_10_code/line/_search?pretty&size=1000"
+
+Be sure to replace "dxr_10_code" with the name of your DXR index. You
+can see which indexes exist by running... ::
+
+    curl -s -XGET "http://localhost:9200/_status?pretty"
+
+Similarly, when debugging :meth:`~dxr.indexers.FileToIndex.needles`, you can
+see all the data attached to files-as-a-whole with... ::
+
+    curl -s -XGET "http://localhost:9200/dxr_10_code/file/_search?pretty&size=1000"
+
+File Skimmers
+=============
+
 .. note::
 
-    DXR is in the middle of a plugin system redesign that will move much of
-    DXR's core functionality to plugins, eliminate singletons and custom
-    loading tricks, and increase the capabilities of the plugin API. This
-    section documents the old system.
+    The code that will call skimmers isn't in place yet.
 
-Structure and API
-=================
+.. autoclass:: dxr.indexers.FileToSkim
+   :members:
 
-A plugin is a folder located in the :file:`plugins/` folder. A plugin's name
-should not contain dashes or other characters not allowed in Python module
-names. Notice that the plugin folder will be added to the search path for
-modules, so plugin names shouldn't conflict with other modules. A plugin may
-import submodules from within its own plugin folder if it contains an
-:file:`__init__.py` file.
+Filters
+=======
 
-A plugin folder must contain these 3 files:
+.. autoclass:: dxr.filters.Filter
+   :members:
 
-:file:`makefile`
-    Build steps for this plugin. This is be a GNU makefile with targets
-    ``build``, ``check``, and ``clean``. These build dependencies, verify the
-    build, and clean up after it, respectively. Effects of this makefile
-    should, insofar as possible, remain within the plugin's subdirectory. If
-    your makefile does anything, be sure to add a reference to it in the
-    top-level makefile so it gets called.
+Mappings
+========
 
-:file:`indexer.py`
-    Routines that generate DB entries to support search
+When you're laying down data to search upon, it's generally not enough just to
+write :meth:`~dxr.indexers.FileToIndex.needles` or
+:meth:`~dxr.indexers.FileToIndex.needles_by_line` implementations. If you want
+to search case-insensitively, for example, you'll need elasticsearch to fold
+your data to lowercase. (Don't fall into the trap of doing this in Python; the
+Lucene machinery behind ES is better at the complexities of Unicode.) The way
+you express these instructions to ES is through mappings and analyzers.
 
-    This is a Python module with two functions—``pre_process(tree, environ)``
-    and ``post_process(tree, conn)``—where parameters ``tree`` and ``conn`` are
-    a config for the tree and a database connection, respectively. The
-    ``environ`` parameter is a dictionary of environment variables and may be
-    modified prior to build using by the ``pre_process`` function.
+ES :term:`mappings<mapping>` are schemas which specify type of data (string,
+int, datetime, etc.) and how to index it. For example, here is an excerpt of
+DXR's core mapping, defined in the ``core`` plugin::
 
-    Both functions will be called only once per tree and are allowed to use a
-    number of subprocess as specified by ``tree.config.nb_jobs``. If a plugin
-    wants to store information from pre- or post processing, it can do so in
-    its own temporary directory: each plugin is allowed to use the temporary
-    folder ``<tree.temp_folder>/plugins/<plugin-name>``. (The temporary folder
-    will remain until htmlification is finished.)
+    mappings = {
+        # Following the typical ES mapping format, `mappings` is a hash keyed
+        # by doctype. So far, the choices are ``LINE`` and ``FILE``. 
+        LINE: {
+            'properties': {
+                # Line number gets mapped as an integer. Default indexing is fine
+                # for numbers, so we don't say anything explicitly.
+                'number': {
+                    'type': 'integer'
+                },
 
-:file:`htmlifier.py`
-    Routines that emit metadata for building HTML
+                # The content of the line itself gets mapped 3 different ways.
+                'content': {
+                    # First, we store it as a string without actually putting it
+                    # into any ordered index structure. This is for retrieval and
+                    # display in search results, not for searching on:
+                    'type': 'string',
+                    'index': 'no',
 
-    This is a Python module with two functions: ``load(tree, conn)`` and
-    ``htmlify(path, text)``. This module will be used by multiple processes
-    concurrently, but ``load`` will be invoked in only one, allowing the module
-    to load resources into global scope for caching or other purposes.
+                    # Then, we index it in two different ways: broken into
+                    # trigrams (3-letter chunks) and either folded to lowercase or
+                    # not. This cleverness takes care of substring matching and
+                    # accelerates our regular expression search:
+                    'fields': {
+                        'trigrams_lower': {
+                            'type': 'string',
+                            'analyzer': 'trigramalyzer_lower'
+                        },
+                        'trigrams': {
+                            'type': 'string',
+                            'analyzer': 'trigramalyzer'
+                        }
+                    }
+                }
+            }
+        },
+        FILE: ...
+    }
 
-    Once ``load(tree, conn)`` has been invoked with the tree config object and
-    database connnection, the ``htmlify(conn, path, text)`` function may be
-    invoked multiple times. The ``path`` parameter is the path of the file in
-    the tree; the ``text`` parameter is the file content as a string.
+Mappings follow exactly the same structure as required by `ES's "put mapping"
+API
+<http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html>`__. The `choice of mapping types
+<http://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html>`__ is also outlined in the ES documentation.
 
-    The ``htmlify`` function return either ``None`` or an object with methods
-    ``refs()``, ``regions()``, ``annotations()`` and ``links()``, which behave
-    as follows:
+.. warning::
 
-    ``refs()``
-        Yields tuples of ``(start, end, menu)``
+    Since a FILE-domain query will be promoted to a LINE query if any other
+    query term triggers a line-based query, it's important to keep field names
+    and semantics the same between lines and files. In other words, a LINE
+    mapping should generally be a superset of a FILE mapping. Otherwise, ES
+    will guess mappings for the undeclared fields, and surprising search
+    results will likely ensue. Worse, the bad guesses will likely happen
+    intermittently.
 
-    ``regions()``
-        Yields tuples of ``(start, end, class)``
+The Format Version
+``````````````````
 
-    ``annotations()``
-        Yields tuples of ``(line, attributes)``, where ``attributes`` is a
-        dictionary defined by plugins. It must be sensible to assign the
-        key-value pairs as HTML attributes on a ``div`` tag, and ``class`` must
-        contain ``note note-<type>`` where ``type`` can be used templates to
-        differentiate annotations.
+In the top level of the :file:`dxr` package (not the top of the source
+checkout, mind you) lurks a file called
+:file:`format`. Its role is to facilitate the automatic deployment of new
+versions of DXR using :program:`dxr deploy`. The format file contains an
+integer which represents the index format expected by
+:program:`dxr serve`. If a change in the code requires a mapping or semantics
+change in the index, the format version must be incremented. In response, the
+deployment script will wait until new indices, of the new format, have been
+built before deploying the change.
 
-    ``links()``
-        Yields tuples of ``(importance, section, items)``, where ``items`` is a
-        generator of tuples of ``(icon, title, href)``. ``importance`` is an
-        integer used to sort sidebar sections.
+If you aren't sure whether to bump the format version, you can always build an
+index using the old code, then check out the new code and try to serve the
+old index with it. If it works, you're probably safe not bumping the version.
 
-    Note that the htmlifier module may not write to the database. It also
-    strongly recommended that the htmlifier module doesn't write to the plugins
-    temporary folder. It is a **strict requirement** that the htmlifier module
-    may be loaded and used by multiple processes at the same time. For this
-    reason, the htmlifier is not allowed to have worker processes of its own.
+Analyzers
+=========
+
+In Mappings, we alluded to custom indexing strategies, like breaking strings
+into lowercase trigrams. These strategies are called
+:term:`analyzers<analyzer>` and are the final component of a plugin. ES has
+`strong documentation on defining analyzers
+<http://www.elastic.co/guide/en/elasticsearch/reference/current/analysis.html>`__.
+Declare your analyzers (and building blocks of them, like tokenizers) in
+the same format the ES documentation prescribes. For example, the analyzers
+used above are defined in the core plugin as follows::
+
+    analyzers = {
+        'analyzer': {
+            # A lowercase trigram analyzer:
+            'trigramalyzer_lower': {
+                'filter': ['lowercase'],
+                'tokenizer': 'trigram_tokenizer'
+            },
+            # And one for case-sensitive things:
+            'trigramalyzer': {
+                'tokenizer': 'trigram_tokenizer'
+            }
+        },
+        'tokenizer': {
+            'trigram_tokenizer': {
+                'type': 'nGram',
+                'min_gram': 3,
+                'max_gram': 3
+                # Keeps all kinds of chars by default.
+            }
+        }
+    }
 
 Crash Early, Crash Often
 ========================
 
-Since DXR's indexer generally runs without manual supervision, it's better to
-err on the side of crashing than to risk incorrectness. Any error that could
-make a plugin emit inaccurate output should be fatal. This keeps DXR's
-structural queries trustworthy.
+Since :program:`dxr index` generally runs without manual supervision, it's
+better to err on the side of crashing than to risk incorrectness. Any error
+that could make a plugin emit inaccurate output should be fatal. This keeps
+DXR's structural queries trustworthy.
 
-Configuration
-=============
 
-Configuration keys prefixed with ``plugin_`` in either a tree section or the
-DXR section of the configuration will be read and stored on the ``tree`` and
-``config`` objects, respectively. Please note that these values will not have
-any default values, nor will they be present unless defined in the config file.
+Contributing Documentation
+--------------------------
 
-It's the plugins' responsibility to validate these values. Plugins should
-prefix all config keys as ``plugin_<plugin-name>_<key>``. It's also recommended
-that plugins document their keys in the plugin section of
-:doc:`configuration`.
+We use `Read the Docs`_ for building and hosting the documentation, which uses
+`sphinx`_ to generate HTML documentation from reStructuredText markup.
 
+To edit documentation:
+
+  * Edit :file:`*.rst` files in :file:`docs/source/` in your local checkout.
+    See `reStructuredText primer`_ for help with syntax.
+  * Use ``cd ~/dxr/docs && make html`` in the VM to preview the docs.
+  * When you're satisfied, submit the pull request as usual.
+
+.. _Read the Docs: https://docs.readthedocs.org/
+.. _sphinx: http://sphinx-doc.org/
+.. _reStructuredText primer: http://sphinx-doc.org/rest.html
 
 Troubleshooting
 ---------------
@@ -277,3 +455,11 @@ Why is my copy of DXR acting erratic, failing at searches, making requests for J
     do that in development; use ``python setup.py develop`` instead. Otherwise,
     you will end up with various files copied into your virtualenv, and your
     edits to the originals will have no effect.
+
+How can I use pdb to debug indexing?
+    In the DXR config file for the tree you're building, add ``workers = 0``
+    to the ``[DXR]`` section. That will keep DXR from spawning multiple worker
+    processes, something pdb doesn't tolerate well.
+
+I pulled a new version of the code that's supposed to have a new plugin (or I added one myself), but it's acting like it doesn't exist.
+    Re-run ``python setup.py develop`` to register the new setuptools entry point.

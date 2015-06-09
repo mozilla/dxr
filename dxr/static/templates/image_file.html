@@ -1,0 +1,11 @@
+{% extends "file.html" %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ url_for('.static', filename='css/image_file.css') }}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+  {{ super() }}
+  <img src="{{ url_for('.raw', tree=tree, path=path) }}" id="image_file">
+{% endblock %}

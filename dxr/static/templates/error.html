@@ -5,9 +5,7 @@
 {% set state_eof = True %}
 
 {% block content %}
-<h1>Server Error</h1>
-<i>Something went wrong, good luck fixing it :)</i>
-<p>
-  {{ error }}
-</p>
+  <p>
+    {{ error_html }}
+  </p>
 {% endblock %}

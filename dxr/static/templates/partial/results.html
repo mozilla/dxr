@@ -1,13 +1,9 @@
-{% if results|length > 0 %}
-  <table class="results">
-    <caption class="visually-hidden">Query matches</caption>
-    <thead class="visually-hidden">
-      <th scope="col">Line</th>
-      <th scope="col">Code Snippet</th>
-    </thead>
-    <tbody>
-    {% for result in results %}
-      <tr class="result-head">
+{% from "partial/result_lines.html" import result_lines -%}
+
+{% macro results_list(results, www_root, tree) -%}
+  {% for result in results %}
+    <tbody class="result" data-path="{{ result.path }}">
+      <tr class="result-head {% if result.is_binary %} binary_row {% endif %}">
         <td class="left-column">
           <div class="{{result.iconClass}} icon-container"></div>
         </td>
@@ -15,23 +11,10 @@
           {{ result.pathLine|safe }}
         </td>
       </tr>
-      {% for entry in result.lines %}
-      <tr>
-        <td class="left-column">
-          <a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-            {{ entry.line_number }}
-          </a>
-        </td>
-        <td>
-<a href="{{ wwwroot }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-<code aria-labelledby="{{ entry.line_number }}">{{ entry.line|safe }}</code>
-</a>
-        </td>
-      </tr>
-      {% endfor %}
-    {% endfor %}
+      {{ result_lines(result, www_root, tree) }}
     </tbody>
-  </table>
-{% else %}
-    <p class="no-results">{{ user_message }}</p>
-{% endif %}
+  {% endfor %}
+{%- endmacro %}
+
+{# When not being included as a macro, render the code above. #}
+{{ results_list(results, www_root, tree) }}

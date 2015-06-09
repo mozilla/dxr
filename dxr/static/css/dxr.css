@@ -152,6 +152,13 @@ td#line-numbers span {
     text-align: right;
     padding: 0 0.5rem;
 }
+tr.binary_row > td {
+    padding-top: .5em;
+    padding-bottom: .5em;
+}
+tr.binary_row {
+    opacity: 0.6;
+}
 .highlighted,
 .multihighlight {
     background: none repeat scroll 0 0 rgb(255, 255, 204);
@@ -345,7 +352,6 @@ mark {
 .breadcrumbs,
 .top-of-tree {
     display: inline-block;
-    float: left;
     margin: 0;
     padding: .5rem 0 1rem 0;
     text-align: left;
@@ -505,10 +511,6 @@ mark {
 .panel section a:focus {
     background-color: #e0e0e0;
     text-decoration: underline;
-}
-.no-results {
-    clear: both;
-    font-style: italic;
 }
 #fetch-results {
     display: none;

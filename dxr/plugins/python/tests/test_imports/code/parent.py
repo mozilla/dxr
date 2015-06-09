@@ -1,0 +1,2 @@
+class ParentClass(object):
+    pass

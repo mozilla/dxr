@@ -9,8 +9,8 @@ class MarkupTests(DxrInstanceTestCase):
     def test_autofocus_root(self):
         """Autofocus the query field at the root of each tree but not
         elsewhere."""
-        response = self.client().get('/code/source/')
-        ok_('<input type="text" name="q" autofocus' in response.data)
+        markup = self.source_page('')
+        ok_('<input type="text" name="q" autofocus' in markup)
 
         response = self.client().get('/code/source/%26folder%26')
         eq_(response.status_code, 200)
@@ -18,13 +18,33 @@ class MarkupTests(DxrInstanceTestCase):
 
     def test_folder_name_escaping(self):
         """Make sure folder names are HTML-escaped."""
-        response = self.client().get('/code/source/')
-        ok_('&folder&' not in response.data)
-        ok_('&amp;folder&amp;' in response.data)
+        markup = self.source_page('')
+        ok_('&folder&' not in markup)
+        ok_('&amp;folder&amp;' in markup)
 
-    def test_analytics_snippet_empty( self ):
+    def test_body_escaping(self):
+        """Make sure source code is HTML-escaped."""
+        markup = self.source_page('%26folder%26/README.mkd')
+        ok_('<stuff>' not in markup)
+        ok_('& things' not in markup)
+        ok_('&lt;stuff&gt;' in markup)
+        ok_('&amp; things' in markup)
+
+    def test_folder_links(self):
+        """Make sure folders link to the right places, not just to their first
+        chars."""
+        markup = self.source_page('')
+        ok_('<a href="/code/source/%26folder%26" class="icon folder">&amp;folder&amp;</a>'
+            in markup)
+
+    def test_file_links(self):
+        """Make sure files link to the right places."""
+        markup = self.source_page('%26folder%26')
+        ok_('<a href="/code/source/%26folder%26/README.mkd" class="icon unknown">README.mkd</a>'
+            in markup)
+
+    def test_analytics_snippet_empty(self):
         """Make sure google analytics snippet doesn't show up
         in when the key isn't configured"""
-        response = self.client().get( '/code/source' )
-        ok_( '.google-analytics.com' not in response.data )
-
+        markup = self.source_page('')
+        ok_('.google-analytics.com' not in markup)

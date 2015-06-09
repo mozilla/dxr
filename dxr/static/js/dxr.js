@@ -11,10 +11,10 @@ $(function() {
     var dxr = {},
         docElem = document.documentElement;
 
-    dxr.wwwroot = constants.data('root');
+    dxr.wwwRoot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
-    dxr.icons = dxr.wwwroot + '/static/icons/';
-    dxr.views = dxr.wwwroot + '/static/templates';
+    dxr.icons = dxr.wwwRoot + '/static/icons/';
+    dxr.views = dxr.wwwRoot + '/static/templates';
     dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
@@ -102,7 +102,7 @@ $(function() {
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildResultHead(fullPath, tree, icon) {
+    function buildResultHead(fullPath, tree, icon, isBinary) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
             paths = fullPath.split('/'),
@@ -122,7 +122,8 @@ $(function() {
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
-                'is_dir': !isLastOrOnly
+                'is_dir': !isLastOrOnly,
+                'is_binary': isBinary
             });
         }
 
@@ -140,7 +141,7 @@ $(function() {
         requestsInFlight = 0,  // Number of search requests in flight, so we know whether to hide the activity indicator
         displayedRequestNumber = 0,
         didScroll = false,
-        resultCount = 0,
+        resultsLineCount = 0,
         dataOffset = 0,
         previousDataLimit = 0,
         defaultDataLimit = 100;
@@ -181,7 +182,6 @@ $(function() {
         var params = {};
         params.q = query;
         params.redirect = false;
-        params.format = 'json';
         params['case'] = isCaseSensitive;
         params.limit = limit;
         params.offset = offset;
@@ -236,11 +236,11 @@ $(function() {
             didScroll = false;
 
             // If the previousDataLimit is 0 we are on the search.html page and doQuery
-            // has not yet been called, get the previousDataLimit and resultCount from
-            // the page constants.
+            // has not yet been called, get the previousDataLimit and resultsLineCount
+            // from the page constants.
             if (previousDataLimit === 0) {
                 previousDataLimit = stateConstants.data('limit');
-                resultCount = stateConstants.data('result-count');
+                resultsLineCount = stateConstants.data('results-line-count');
             }
 
             var maxScrollY = getMaxScrollY(),
@@ -248,7 +248,7 @@ $(function() {
                 threshold = window.innerHeight + 500;
 
             // Has the user reached the scrolling threshold and are there more results?
-            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultCount) {
+            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultsLineCount) {
                 clearInterval(scrollPoll);
 
                 // If a user hits enter on the landing page and there was no direct result,
@@ -261,13 +261,14 @@ $(function() {
 
                 //Resubmit query for the next set of results.
                 $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
+                    data.query = query;
                     if (data.results.length > 0) {
                         var state = {};
 
                         // Update result count
-                        resultCount = data.results.length;
+                        resultsLineCount = countLines(data.results);
                         // Use the results.html partial so we do not inject the entire container again.
-                        populateResults('partial/results.html', data, true);
+                        populateResults(data, true);
                         // update URL with new offset
                         setHistoryState(dataOffset);
                         // start the scrolling poller
@@ -280,6 +281,18 @@ $(function() {
                 });
             }
         }
+    }
+
+    /**
+     * Given a list of results from the search API, return the total number of
+     * lines across all results.
+     */
+    function countLines(results) {
+        var total = 0;
+        for (var k = 0; k < results.length; k++) {
+            total += results[k].lines.length;
+        }
+        return total;
     }
 
     /**
@@ -309,15 +322,13 @@ $(function() {
 
     /**
      * Populates the results template.
-     * @param {object} tmpl - The template to use to render results.
      * @param {object} data - The data returned from the query
      * @param {bool} append - Should the content be appended or overwrite
      */
-    function populateResults(tmpl, data, append) {
-        data.wwwroot = dxr.wwwroot;
+    function populateResults(data, append) {
+        data.www_root = dxr.wwwRoot;
         data.tree = dxr.tree;
-        data.top_of_tree = dxr.wwwroot + '/' + data.tree + '/source/';
-        data.trees = data.trees;
+        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
 
         var params = {
             q: data.query,
@@ -327,26 +338,51 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
-            data.user_message = contentContainer.data('no-results');
-            contentContainer.empty().append(nunjucks.render(tmpl, data));
+            contentContainer
+                .empty()
+                .append(nunjucks.render('partial/results_container.html', data));
         } else {
-
             var results = data.results;
-            resultCount = results.length;
+            resultsLineCount = countLines(results);
 
             for (var result in results) {
                 var icon = results[result].icon;
-                var resultHead = buildResultHead(results[result].path, data.tree, icon);
+                var resultHead = buildResultHead(results[result].path, data.tree, icon, results[result].is_binary);
                 results[result].iconClass = resultHead[0];
                 results[result].pathLine = resultHead[1];
             }
 
-            var container = append ? contentContainer : contentContainer.empty();
-            container.append(nunjucks.render(tmpl, data));
+            if (!append) {
+                contentContainer
+                    .empty()
+                    .append(nunjucks.render('partial/results_container.html', data));
+            } else {
+                var resultsList = contentContainer.find('.results');
+
+                // If the first result is already on the page (meaning we showed
+                // some of its lines but just fetched more), add new lines to
+                // it instead of adding a new result section.
+                var firstResult = data.results[0];
+                var domFirstResult = resultsList.find(
+                    '.result[data-path="' + firstResult.path + '"]');
+                if (domFirstResult.length) {
+                    data.results = data.results.splice(1);
+                    domFirstResult.append(nunjucks.render('partial/result_lines.html', {
+                        www_root: dxr.wwwRoot,
+                        tree: dxr.tree,
+                        result: firstResult,
+                    }));
+                }
+
+                // Don't render if there was only the first result and it was rendered.
+                if (data.results.length) {
+                    resultsList.append(nunjucks.render('partial/results.html', data));
+                }
+            }
         }
 
         if (!append) {
-            document.title = data.query + "- DXR Search";
+            document.title = data.query + " - DXR Search";
         }
     }
 
@@ -374,7 +410,7 @@ $(function() {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
-            limit = previousDataLimit = parseInt((window.innerHeight / lineHeight) + 25);
+            limit = Math.floor((window.innerHeight / lineHeight) + 25);
 
         if (query.length === 0) {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
@@ -387,27 +423,31 @@ $(function() {
         hideBubble();
         nextRequestNumber += 1;
         oneMoreRequest();
-        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit), function(data) {
+        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0), function(data) {
+            data.query = query;
             // New results, overwrite
             if (myRequestNumber > displayedRequestNumber) {
                 displayedRequestNumber = myRequestNumber;
-                populateResults('results_container.html', data, false);
+                populateResults(data, false);
                 historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
             }
+
+            previousDataLimit = limit;
+            dataOffset = 0;
+
             oneFewerRequest();
         })
-        .fail(function(jqxhr, textStatus, error) {
-            var errorMessage = 'An error occurred. Please try again.';
-
+        .fail(function(jqxhr) {
             oneFewerRequest();
 
-            // A newer response already arrived and is displayed. Don't both complaining about this old one.
+            // A newer response already arrived and is displayed. Don't bother complaining about this old one.
             if (myRequestNumber < displayedRequestNumber)
                 return;
 
-            if (error)
-                errorMessage += '(' + error + ')';
-            showBubble('error', errorMessage);
+            if (jqxhr.responseJSON)
+                showBubble(jqxhr.responseJSON.error_level, jqxhr.responseJSON.error_html);
+            else
+                showBubble('error', 'An error occurred. Please try again.');
         });
     }
 
@@ -484,7 +524,7 @@ $(function() {
     // Thanks to bug 63040 in Chrome, onpopstate is fired when the page reloads.
     // That means that if we naively set onpopstate, we would get into an
     // infinite loop of reloading whenever onpopstate is triggered. Therefore,
-    // we have to only add out onpopstate handler once the page has loaded.
+    // we have to only add our onpopstate handler once the page has loaded.
     window.onload = function() {
         setTimeout(function() {
             window.onpopstate = popStateHandler;
@@ -499,4 +539,21 @@ $(function() {
             window.location.reload();
          }
     }
+
+    /**
+     * Replace 'source' with 'raw' in href, and set that to the background-image
+     */
+    function setBackgroundImageFromLink(anchorElement) {
+        var href = anchorElement.getAttribute('href');
+        // note: breaks if the tree's name is "source"
+        var bg_src = href.replace('source', 'raw');
+        anchorElement.style.backgroundImage = 'url(' + bg_src + ')';
+    }
+
+    window.addEventListener('load', function() {
+        $(".image").not('.too_fat').each(function() {
+            setBackgroundImageFromLink(this);
+        });
+    });
+
 });

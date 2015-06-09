@@ -3,8 +3,8 @@ Welcome To The DXR Community
 ============================
 
 Though DXR got its start at Mozilla, it's seen contributions from a variety of
-companies, individuals, and places around the world. We welcome contributions
-of code, bug reports, and helpful feedback.
+companies and individuals around the world. We welcome contributions of code,
+bug reports, and helpful feedback.
 
 
 Bug Reports
@@ -26,7 +26,7 @@ Bundt cake isn't bad, either.
 IRC
 ===
 
-We hang out in the #static channel of irc.mozilla.org. Poke your head in, and
+We hang out in the #static channel of irc.mozilla.org. Poke your head in and
 say hello.
 
 If you have questions, please address them to the public channel; don't /msg

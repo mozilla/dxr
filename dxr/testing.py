@@ -1,65 +1,47 @@
-import commands
+import cgi
+from commands import getoutput, getstatusoutput
 import json
 from os import chdir, mkdir
-import os.path
-from os.path import dirname
+from os.path import dirname, join
 import re
 from shutil import rmtree
+import subprocess
 import sys
 from tempfile import mkdtemp
 import unittest
 from urllib2 import quote
 
-from nose.tools import eq_
+from nose.tools import eq_, ok_
+from pyelasticsearch import ElasticSearch
 
 try:
     from nose.tools import assert_in
 except ImportError:
-    from nose.tools import ok_
     def assert_in(item, container, msg=None):
         ok_(item in container, msg=msg or '%r not in %r' % (item, container))
 
 from dxr.app import make_app
-
-
-# ---- This crap is very temporary: ----
-
-
-class CommandFailure(Exception):
-    """A command exited with a non-zero status code."""
-
-    def __init__(self, command, status, output):
-        self.command, self.status, self.output = command, status, output
-
-    def __str__(self):
-        return "'%s' exited with status %s. Output:\n%s" % (self.command,
-                                                            self.status,
-                                                            self.output)
-
-
-def run(command):
-    """Run a shell command, and return its stdout. On failure, raise
-    `CommandFailure`.
-
-    """
-    status, output = commands.getstatusoutput(command)
-    if status:
-        raise CommandFailure(command, status, output)
-    return output
-
-
-# ---- More permanent stuff: ----
+from dxr.build import index_and_deploy_tree
+from dxr.config import Config
+from dxr.utils import file_text, run
 
 
 class TestCase(unittest.TestCase):
     """Abstract container for general convenience functions for DXR tests"""
 
     def client(self):
-        # TODO: DRY between here and the config file with 'target'.
-        app = make_app(os.path.join(self._config_dir_path, 'target'))
-
+        app = make_app(self.config())
         app.config['TESTING'] = True  # Disable error trapping during requests.
         return app.test_client()
+
+    @classmethod
+    def config(cls):
+        return Config(cls.config_input(cls._config_dir_path),
+                      relative_to=cls._config_dir_path)
+
+    def source_page(self, path):
+        """Return the text of a source page."""
+        return self.client().get('/code/source/%s' % path).data
 
     def found_files(self, query, is_case_sensitive=True):
         """Return the set of paths of files found by a search query."""
@@ -74,7 +56,7 @@ class TestCase(unittest.TestCase):
                              is_case_sensitive=is_case_sensitive),
             set(filenames))
 
-    def found_line_eq(self, query, content, line):
+    def found_line_eq(self, query, content, line, is_case_sensitive=True):
         """Assert that a query returns a single file and single matching line
         and that its line number and content are as expected, modulo leading
         and trailing whitespace.
@@ -84,24 +66,52 @@ class TestCase(unittest.TestCase):
         zillion dereferences in your test.
 
         """
-        self.found_lines_eq(query, [(content, line)])
+        self.found_lines_eq(query,
+                            [(content, line)],
+                            is_case_sensitive=is_case_sensitive)
 
-    def found_lines_eq(self, query, success_lines):
+    def found_lines_eq(self, query, expected_lines, is_case_sensitive=True):
         """Assert that a query returns a single file and that the highlighted
         lines are as expected, modulo leading and trailing whitespace."""
-        results = self.search_results(query)
+        results = self.search_results(query,
+                                      is_case_sensitive=is_case_sensitive)
         num_results = len(results)
         eq_(num_results, 1, msg='Query passed to found_lines_eq() returned '
                                  '%s files, not one.' % num_results)
         lines = results[0]['lines']
         eq_([(line['line'].strip(), line['line_number']) for line in lines],
-            success_lines)
+            expected_lines)
 
     def found_nothing(self, query, is_case_sensitive=True):
         """Assert that a query returns no hits."""
         results = self.search_results(query,
                                       is_case_sensitive=is_case_sensitive)
         eq_(results, [])
+
+    def search_response(self, query, is_case_sensitive=True):
+        """Return the raw response of a JSON search query."""
+        return self.client().get(
+            '/code/search?q=%s&redirect=false&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'),
+            headers={'Accept': 'application/json'})
+
+    def direct_result_eq(self, query, path, line_number, is_case_sensitive=True):
+        """Assert that a direct result exists and takes the user to the given
+        path at the given line number."""
+        response = self.client().get(
+            '/code/search?q=%s&redirect=true&case=%s' %
+                    (quote(query), 'true' if is_case_sensitive else 'false'))
+        if line_number:
+            eq_(response.status_code, 302)
+            location = response.headers['Location']
+            # Location is something like
+            # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
+            eq_(location[:location.index('?')],
+                'http://localhost/code/source/' + path)
+            eq_(int(location[location.index('#') + 1:]), line_number)
+        else:
+            # When line_number is None, just expect a normal search.
+            eq_(response.status_code, 200)
 
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.
@@ -122,19 +132,36 @@ class TestCase(unittest.TestCase):
           ]
 
         """
-        response = self.client().get(
-            '/code/search?format=json&q=%s&redirect=false&case=%s' %
-            (quote(query), 'true' if is_case_sensitive else 'false'))
+        response = self.search_response(query,
+                                        is_case_sensitive=is_case_sensitive)
         return json.loads(response.data)['results']
 
     def clang_at_least(self, version):
-        output = commands.getoutput("clang --version")
+        output = getoutput("clang --version")
         if not output:
             return False
-        match = re.match("clang version ([0-9]+\.[0-9]+)", output)
+        # search() rather than match() because Ubuntu changes the version
+        # string to be "Ubuntu clang version 3.5", for instance:
+        match = re.search('clang version ([0-9]+\.[0-9]+)', output)
         if not match:
             return False
         return float(match.group(1)) >= version
+
+    @classmethod
+    def _es(cls):
+        return ElasticSearch('http://127.0.0.1:9200/')
+
+    @classmethod
+    def _delete_es_indices(cls):
+        """Delete anything that is named like a DXR test index.
+
+        Yes, this is scary as hell but very expedient. Won't work if
+        ES's action.destructive_requires_name is set to true.
+
+        """
+        # When you delete an index, any alias to it goes with it.
+        # This takes care of dxr_test_catalog as well.
+        cls._es().delete_index('dxr_test_*')
 
 
 class DxrInstanceTestCase(TestCase):
@@ -152,12 +179,39 @@ class DxrInstanceTestCase(TestCase):
         # multiple test modules with the same name:
         cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
         chdir(cls._config_dir_path)
-        run('make')
+        run('dxr index')
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
         chdir(cls._config_dir_path)
-        run('make clean')
+        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
+        run('dxr clean')
+
+    @classmethod
+    def config_input(cls, config_dir_path):
+        return file_text(join(cls._config_dir_path, 'dxr.config'))
+
+
+class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
+    """Test case which runs `make` before dxr index and `make clean` before dxr
+    clean within a code directory, and otherwise delegates to DxrInstanceTestCase.
+
+    This test is suitable for cases where some setup must be performed before
+    `dxr index` can be run (for example extracting sources from archive).
+
+    """
+    @classmethod
+    def setup_class(cls):
+        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        subprocess.check_call(['make'], cwd=build_dir)
+        super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        subprocess.check_call(['make', 'clean'], cwd=build_dir)
+        super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
 
 
 class SingleFileTestCase(TestCase):
@@ -170,35 +224,51 @@ class SingleFileTestCase(TestCase):
     """
     # Set this to False in a subclass to keep the generated instance around and
     # print its path so you can examine it:
+    # Note: this is currently broken because no on-disk artifiact is actually
+    # created; everything goes into Elasticsearch directly.
     should_delete_instance = True
+
+    # Override this in a subclass to change the filename used for the
+    # source file.
+    source_filename = 'main.cpp'
 
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
         cls._config_dir_path = mkdtemp()
-        code_path = os.path.join(cls._config_dir_path, 'code')
+        code_path = join(cls._config_dir_path, 'code')
         mkdir(code_path)
-        _make_file(code_path, 'main.cpp', cls.source)
-        # $CXX gets injected by the clang DXR plugin:
-        _make_file(cls._config_dir_path, 'dxr.config', """
-[DXR]
-enabled_plugins = pygmentize clang
-temp_folder = {config_dir_path}/temp
-target_folder = {config_dir_path}/target
-nb_jobs = 4
+        _make_file(code_path, cls.source_filename, cls.source)
 
-[code]
-source_folder = {config_dir_path}/code
-object_folder = {config_dir_path}/code
-build_command = $CXX -o main main.cpp
-""".format(config_dir_path=cls._config_dir_path))
+        for tree in cls.config().trees.itervalues():
+            index_and_deploy_tree(tree)
+        cls._es().refresh()
 
-        chdir(cls._config_dir_path)
-        run('dxr-build.py')
+    @classmethod
+    def config_input(cls, config_dir_path):
+        """Return a dictionary of config options for building the tree.
+
+        Override this in subclasses to customize the config.
+        """
+        return {
+            'DXR': {
+                'enabled_plugins': 'pygmentize clang',
+                'temp_folder': '{0}/temp'.format(config_dir_path),
+                'es_index': 'dxr_test_{format}_{tree}_{unique}',
+                'es_alias': 'dxr_test_{format}_{tree}',
+                'es_catalog_index': 'dxr_test_catalog'
+            },
+            'code': {
+                'source_folder': '{0}/code'.format(config_dir_path),
+                'object_folder': '{0}/code'.format(config_dir_path),
+                'build_command': '$CXX -o main main.cpp'
+            }
+        }
 
     @classmethod
     def teardown_class(cls):
         if cls.should_delete_instance:
+            cls._delete_es_indices()
             rmtree(cls._config_dir_path)
         else:
             print 'Not deleting instance in %s.' % cls._config_dir_path
@@ -211,7 +281,17 @@ build_command = $CXX -o main main.cpp
                  .replace('&quot;', '"')
                  .replace('&amp;', '&'))
 
-    def found_line_eq(self, query, content, line=None):
+    def _guess_line(self, content):
+        """Take a guess at which line number of our source code some (possibly
+        highlighted) content is from.
+
+        """
+        return self.source.count(
+                '\n',
+                0,
+                self.source.index(self._source_for_query(content))) + 1
+
+    def found_line_eq(self, query, content, line=None, is_case_sensitive=True):
         """A specialization of ``found_line_eq`` that computes the line number
         if not given
 
@@ -221,14 +301,40 @@ build_command = $CXX -o main main.cpp
 
         """
         if not line:
-            line = self.source.count( '\n', 0, self.source.index(
-                self._source_for_query(content))) + 1
-        super(SingleFileTestCase, self).found_line_eq(query, content, line)
+            line = self._guess_line(content)
+        super(SingleFileTestCase, self).found_line_eq(
+                query, content, line, is_case_sensitive=is_case_sensitive)
+
+    def found_lines_eq(self, query, expected_lines, is_case_sensitive=True):
+        """A specialization of ``found_lines_eq`` that computes the line
+        numbers if not given
+
+        :arg expected_lines: A list of pairs (line content, line number) or
+            strings (just line content) specifying expected results
+
+        """
+        def to_pair(line):
+            """Take either a string (a line of source, optionally highlit) or
+            a pair of (line of source, line number), and return (line of
+            source, line number).
+
+            """
+            if isinstance(line, basestring):
+                return line, self._guess_line(line)
+            return line
+
+        expected_pairs = map(to_pair, expected_lines)
+        super(SingleFileTestCase, self).found_lines_eq(
+                query, expected_pairs, is_case_sensitive=is_case_sensitive)
+
+    def direct_result_eq(self, query, line_number, is_case_sensitive=True):
+        """Assume the filename "main.cpp"."""
+        return super(SingleFileTestCase, self).direct_result_eq(query, 'main.cpp', line_number, is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
-    with open(os.path.join(path, filename), 'w') as file:
+    with open(join(path, filename), 'w') as file:
         file.write(contents.encode('utf-8'))
 
 
@@ -239,3 +345,85 @@ MINIMAL_MAIN = """
         return 0;
     }
     """
+
+
+def _decoded_menu_on(haystack, text):
+    """Return the JSON-decoded menu found around the source code ``text`` in
+    the HTML ``haystack``.
+
+    Raise an AssertionError if there is no menu there.
+
+    """
+    # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
+    # compiling the entirety of lxml to run pyquery.
+    match = re.search(
+            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+            haystack)
+    if match:
+        return json.loads(match.group(1).replace('&quot;', '"')
+                                        .replace('&lt;', '<')
+                                        .replace('&gt;', '>')
+                                        .replace('&amp;', '&'))
+    else:
+        ok_(False, "No menu around '%s' was found." % text)
+
+
+def menu_on(haystack, text, *menu_items):
+    """Assert that there is a context menu on certain text that contains
+    certain menu items.
+
+    :arg haystack: The HTML source of a page to search
+    :arg text: The text contained by the menu's anchor tag. The first
+        menu-having anchor tag containing the text is the one compared against.
+    :arg menu_items: Dicts whose pairs must be contained in some item of the
+        menu. If an item is found to match, it is discarded can cannot be
+        reused to match another element of ``menu_items``.
+
+    """
+    def removed_match(expected, found_items):
+        """Remove the first menu item from ``found_items`` where the keys in
+        ``expected`` match it. If none is found, return False; else, True.
+
+        :arg expected: Dict whose pairs are expected to be found in an item of
+            ``found_items``
+        :arg found_items: A list of dicts representing menu items actually on
+            the page
+
+        """
+        def matches(expected, found):
+            """Return whether all the pairs in ``expected`` are found in
+            ``found``.
+
+            """
+            for k, v in expected.iteritems():
+                if found.get(k) != v:
+                    return False
+            return True
+
+        for i, found in enumerate(found_items):
+            if matches(expected, found):
+                del found_items[i]
+                return True
+        return False
+
+    found_items = _decoded_menu_on(haystack, text)
+    for expected in menu_items:
+        removed = removed_match(expected, found_items)
+        if not removed:
+            ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
+
+
+def menu_item_not_on(haystack, text, menu_item_html):
+    """Assert that there is a context menu on certain text that doesn't
+    contain a given menu item.
+
+    :arg haystack: The HTML source of a page to search
+    :arg text: The text contained by the menu's anchor tag. The first
+        menu-having anchor tag containing the text is the one compared against.
+    :arg menu_item_html: The title of a menu item that should be missing from
+        the menu, given in HTML
+
+    """
+    found_items = _decoded_menu_on(haystack, text)
+    ok_(all(menu_item_html != item['html'] for item in found_items),
+        '"%s" was found in the menu around "%s".' % (menu_item_html, text))
