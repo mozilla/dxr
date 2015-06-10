@@ -4,3 +4,4 @@ recursive-include docs *
 include dxr/format
 recursive-include dxr/plugins *.py *.so
 recursive-include dxr/static *
+recursive-include dxr/hgext *
