@@ -1,10 +1,10 @@
 {%- if not is_first_or_only -%}
 <span class="path-separator">/</span>
 {%- endif -%}
-{%- if not is_binary and not is_dir -%}
+{%- if not is_binary or is_dir -%}
 <a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
 {%- endif -%}
     {{ display_path }}
-{%- if not is_binary and not is_dir -%}
+{%- if not is_binary or is_dir -%}
 </a>
 {%- endif -%}
