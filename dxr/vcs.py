@@ -18,15 +18,13 @@ Todos:
 import marshal
 import os
 from os.path import relpath, join, dirname
+from pkg_resources import resource_filename
 import subprocess
 import urlparse
 from warnings import warn
 
-
 import hglib
 from ordereddict import OrderedDict
-
-import dxr
 
 class Vcs(object):
     """A class representing an abstract notion of a version-control system.
@@ -84,9 +82,9 @@ class Vcs(object):
 class Mercurial(Vcs):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
-        hgext = join(dirname(dxr.__file__), 'hgext', 'previous_revisions.py')
+        hgext = resource_filename('dxr', 'hgext/previous_revisions.py')
         with hglib.open(root,
-                        configs = ['extensions.previous_revisions=%s' % hgext]) as client:
+                        configs=['extensions.previous_revisions=%s' % hgext]) as client:
             tip = client.tip()
             self.revision = tip.node
             self.previous_revisions = self.find_previous_revisions(client)
