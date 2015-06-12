@@ -26,7 +26,7 @@ def previous_revisions(ui, repo, **opts):
         for filename in ctx.files():
             last_change[filename] = ctx.hex()
     for filename, node in last_change.iteritems():
-        ui.write('%s:%s\n' % (filename, node))
+        ui.write('%s:%s\n' % (node, filename))
 
 cmdtable = {
     'previous-revisions': (previous_revisions, [], '')
