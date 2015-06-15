@@ -193,7 +193,7 @@ def caller_needles(condensed, overriddens):
 
     """
     for needle in qualified_needles(condensed, 'call'):
-         yield needle
+        yield needle
     for call in condensed['call']:
         if call['calltype'] == 'virtual':
             for needle_from_base_method in needles_from_graph(
