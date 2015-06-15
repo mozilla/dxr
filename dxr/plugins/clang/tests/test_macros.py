@@ -116,7 +116,6 @@ class MacroArgumentFieldReferenceTests(SingleFileTestCase):
 
 
 class MacroArgumentDeclareTests(SingleFileTestCase):
-    should_delete_instance = False
 
     source = """
         #define ID2(x) x

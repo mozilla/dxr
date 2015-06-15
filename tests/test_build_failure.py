@@ -6,7 +6,6 @@ from dxr.testing import SingleFileTestCase
 
 class BuildFailureTests(SingleFileTestCase):
     source = r"""A bunch of garbage"""
-    should_delete_instance = False
 
     @classmethod
     def setup_class(cls):

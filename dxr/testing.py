@@ -222,11 +222,9 @@ class SingleFileTestCase(TestCase):
     then kick off the usual build process, deleting the instance afterward.
 
     """
-    # Set this to False in a subclass to keep the generated instance around and
-    # print its path so you can examine it:
-    # Note: this is currently broken because no on-disk artifiact is actually
-    # created; everything goes into Elasticsearch directly.
-    should_delete_instance = True
+    # Set this to True in a subclass to keep the generated instance around and
+    # host it on port 8000 so you can examine it:
+    stop_for_interaction = False
 
     # Override this in a subclass to change the filename used for the
     # source file.
@@ -267,11 +265,12 @@ class SingleFileTestCase(TestCase):
 
     @classmethod
     def teardown_class(cls):
-        if cls.should_delete_instance:
-            cls._delete_es_indices()
-            rmtree(cls._config_dir_path)
-        else:
-            print 'Not deleting instance in %s.' % cls._config_dir_path
+        if cls.stop_for_interaction:
+            print "Pausing for interaction at 0.0.0.0:8000..."
+            make_app(cls.config()).run(host='0.0.0.0', port=8000)
+            print "Cleaning up indices..."
+        cls._delete_es_indices()
+        rmtree(cls._config_dir_path)
 
     def _source_for_query(self, s):
         return (s.replace('<b>', '')

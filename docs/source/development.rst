@@ -148,9 +148,9 @@ DXR supports two kinds of integration tests:
    stores the code as a Python string within a subclass of
    ``SingleFileTestCase``. At test time, it instantiates the file on
    disk in a temp folder, builds it, and makes assertions about it. If
-   the ``should_delete_instance`` class variable is truthy (the default), it
-   then deletes the instance. If you want to examine the instance manually for
-   troubleshooting, set this to ``False``.
+   the ``stop_for_interaction`` class variable is falsy (the default), it
+   then deletes the index. If you want to browse the instance manually for
+   troubleshooting, set this to ``True``.
 
 2. A heavier sort of test: a folder containing one or more source trees and a
    DXR config file. These are useful for tests that require a multi-file tree
