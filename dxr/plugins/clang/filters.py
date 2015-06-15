@@ -98,7 +98,7 @@ class WarningOptFilter(_CNameFilter):
 
 class CallerFilter(_CQualifiedNameFilter):
     name = 'callers'
-    description = Markup('Functions which call the given function or method: <code>callers:GetStringFromName</code>')
+    description = Markup('Calls to the given function or method: <code>callers:GetStringFromName</code>')
 
     def __init__(self, term):
         """Massage the needle name so we don't have to call our needle "callers"."""

@@ -39,7 +39,7 @@ class BasesFilter(_QualifiedPyFilter):
 
 class CallersFilter(_PyFilter):
     name = 'callers'
-    description = Markup('Functions which call the given function: <code>callers:some_function</code>')
+    description = Markup('Calls to the given function: <code>callers:some_function</code>')
 
 
 class OverridesFilter(_QualifiedPyFilter):
