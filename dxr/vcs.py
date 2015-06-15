@@ -79,6 +79,7 @@ class Vcs(object):
         """Return a human-readable revision identifier for the repository."""
         return NotImplemented
 
+
 class Mercurial(Vcs):
     def __init__(self, root):
         super(Mercurial, self).__init__(root, 'hg')
@@ -94,15 +95,15 @@ class Mercurial(Vcs):
         upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default']).strip())
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
-            recomb[0] == 'http'
-        recomb[1] = upstream.hostname # Eliminate any username stuff
+            recomb[0] = 'http'
+        recomb[1] = upstream.hostname  # Eliminate any username stuff
         # check if port is defined and add that to the url
         if upstream.port:
             recomb[1] += ":{}".format(upstream.port)
-        recomb[2] = '/' + recomb[2].lstrip('/') # strip all leading '/', add one back
+        recomb[2] = '/' + recomb[2].lstrip('/')  # strip all leading '/', add one back
         if not upstream.path.endswith('/'):
-            recomb[2] += '/' # Make sure we have a '/' on the end
-        recomb[3] = recomb[4] = recomb[5] = '' # Just those three
+            recomb[2] += '/'  # Make sure we have a '/' on the end
+        recomb[3] = recomb[4] = recomb[5] = ''  # Just those three
         return urlparse.urlunparse(recomb)
 
     def find_previous_revisions(self, client):
@@ -113,7 +114,7 @@ class Mercurial(Vcs):
         """
         last_change = {}
         for line in client.rawcommand(['previous-revisions']).splitlines():
-            path, node = line.split(':')
+            node, path = line.split(':', 1)
             last_change[path] = node
         return last_change
 
@@ -145,6 +146,7 @@ class Mercurial(Vcs):
 
     def get_contents(self, path, revision):
         return self.invoke_vcs(['cat', '-r', revision, path])
+
 
 class Git(Vcs):
     def __init__(self, root):
@@ -203,6 +205,7 @@ class Git(Vcs):
     def get_contents(self, path, revision):
         return self.invoke_vcs(['show', revision + ':' + path])
 
+
 class Perforce(Vcs):
     def __init__(self, root, upstream):
         super(Perforce, self).__init__(root, 'p4')
@@ -223,10 +226,10 @@ class Perforce(Vcs):
         env = os.environ
         env["PWD"] = self.root
         proc = subprocess.Popen(['p4', '-G'] + args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            cwd=self.root,
-            env=env)
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                cwd=self.root,
+                                env=env)
         while True:
             try:
                 x = marshal.load(proc.stdout)

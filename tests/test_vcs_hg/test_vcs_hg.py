@@ -28,22 +28,22 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
     def test_blame(self):
         """Make sure the blame link goes to the right place."""
         response = self.client().get('/code/source/ChangedInCommit1')
-        ok_('/annotate/1be3fc90ef0104cf186fac7bc0bbfea17ba6ebdc/ChangedInCommit1" title="Blame" class="blame icon">Blame</a>' in response.data)
+        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1" title="Blame" class="blame icon">Blame</a>' in response.data)
 
     def test_raw(self):
         """Make sure the raw link goes to the right place."""
         response = self.client().get('/code/source/ChangedInCommit2')
-        ok_('/raw-file/1be3fc90ef0104cf186fac7bc0bbfea17ba6ebdc/ChangedInCommit2" title="Raw" class="raw icon">Raw</a>' in response.data)
+        ok_('/raw-file/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit2" title="Raw" class="raw icon">Raw</a>' in response.data)
 
     def test_log(self):
         """Make sure the log link goes to the right place."""
         response = self.client().get('/code/source/Filename With Space')
-        ok_('/filelog/1be3fc90ef0104cf186fac7bc0bbfea17ba6ebdc/Filename With Space" title="Log" class="log icon">Log</a>' in response.data)
+        ok_('/filelog/84798105c9ab5897f8c7d630d133d9003b44a62f/Filename With Space" title="Log" class="log icon">Log</a>' in response.data)
 
     def test_permalink(self):
         """Make sure the permalink exists, and that the response is ok."""
         # Flask's url_for will escape the url, so spaces become %20
-        response = self.client().get('/code/source/Filename With Space')
-        ok_('/rev/1be3fc90ef0104cf186fac7bc0bbfea17ba6ebdc/Filename%20With%20Space" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
-        response = self.client().get('/code/rev/1be3fc90ef0104cf186fac7bc0bbfea17ba6ebdc/Filename With Space')
+        response = self.client().get('/code/source/Colon: name')
+        ok_('/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon:%20name" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
+        response = self.client().get('/code/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon: name')
         ok_(response.status_code, 200)
