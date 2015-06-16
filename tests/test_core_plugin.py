@@ -32,7 +32,7 @@ class PathFilterTests(TestCase):
                         'arg': u'*hi*hork*.cp?',
                         'qualified': False,
                         'not': False,
-                        'case_sensitive': False}).filter(),
+                        'case_sensitive': False}, []).filter(),
             {
                 'and': [
                     {
@@ -79,7 +79,7 @@ class PathFilterTests(TestCase):
                         'arg': u'fooba[rz]',
                         'qualified': False,
                         'not': False,
-                        'case_sensitive': True}).filter(),
+                        'case_sensitive': True}, []).filter(),
             {
                 'and': [
                     {

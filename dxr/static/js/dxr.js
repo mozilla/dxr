@@ -158,7 +158,7 @@ $(function() {
             searchUrl += '&case=' + isCaseSensitive;
         }
 
-        $('#query').val(decodeURIComponent(fromQuery[1]));
+        queryField.val(decodeURIComponent(fromQuery[1]));
         showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
     }
 

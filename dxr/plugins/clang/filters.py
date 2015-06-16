@@ -13,11 +13,13 @@ class _CNameFilter(NameFilterBase):
 
 class FunctionFilter(_CQualifiedNameFilter):
     name = 'function'
+    is_identifier = True
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
 class FunctionRefFilter(_CQualifiedNameFilter):
     name = 'function-ref'
+    is_reference = True
     description = 'Function or method references'
 
 
@@ -28,6 +30,7 @@ class FunctionDeclFilter(_CQualifiedNameFilter):
 
 class TypeRefFilter(_CQualifiedNameFilter):
     name = 'type-ref'
+    is_reference = True
     description = 'Type or class references, uses, or instantiations'
 
 
@@ -38,16 +41,19 @@ class TypeDeclFilter(_CQualifiedNameFilter):
 
 class TypeFilter(_CQualifiedNameFilter):
     name = 'type'
+    is_identifier = True
     description = Markup('Type or class definition: <code>type:Stack</code>')
 
 
 class VariableFilter(_CQualifiedNameFilter):
     name = 'var'
+    is_identifier = True
     description = 'Variable definition'
 
 
 class VariableRefFilter(_CQualifiedNameFilter):
     name = 'var-ref'
+    is_reference = True
     description = 'Variable uses (lvalue, rvalue, dereference, etc.)'
 
 
@@ -58,31 +64,37 @@ class VarDeclFilter(_CQualifiedNameFilter):
 
 class MacroFilter(_CNameFilter):
     name = 'macro'
+    is_identifier = True
     description = 'Macro definition'
 
 
 class MacroRefFilter(_CNameFilter):
     name = 'macro-ref'
+    is_reference = True
     description = 'Macro uses'
 
 
 class NamespaceFilter(_CQualifiedNameFilter):
     name = 'namespace'
+    is_identifier = True
     description = 'Namespace definition'
 
 
 class NamespaceRefFilter(_CQualifiedNameFilter):
     name = 'namespace-ref'
+    is_reference = True
     description = 'Namespace references'
 
 
 class NamespaceAliasFilter(_CQualifiedNameFilter):
     name = 'namespace-alias'
+    is_identifier = True
     description = 'Namespace alias'
 
 
 class NamespaceAliasRefFilter(_CQualifiedNameFilter):
     name = 'namespace-alias-ref'
+    is_reference = True
     description = 'Namespace alias references'
 
 
@@ -98,11 +110,12 @@ class WarningOptFilter(_CNameFilter):
 
 class CallerFilter(_CQualifiedNameFilter):
     name = 'callers'
+    is_reference = True
     description = Markup('Calls to the given function or method: <code>callers:GetStringFromName</code>')
 
-    def __init__(self, term):
+    def __init__(self, term, enabled_plugins):
         """Massage the needle name so we don't have to call our needle "callers"."""
-        super(CallerFilter, self).__init__(term)
+        super(CallerFilter, self).__init__(term, enabled_plugins)
         self._needle = '{0}_call'.format(self.lang)
 
 

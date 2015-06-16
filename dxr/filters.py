@@ -43,16 +43,23 @@ class Filter(object):
     """
     domain = LINE
     description = u''
+    is_reference = False
+    is_identifier = False
 
-    def __init__(self, term):
+    def __init__(self, term, enabled_plugins):
         """This is a good place to parse the term's arg (if it requires further
         parsing) and stash it away on the instance.
+
+        :arg term: a query term as constructed by a :class:`~dxr.query.QueryVisitor`
+        :arg enabled_plugins: an iterable of the enabled :class:`~dxr.plugins.Plugin` instances,
+            for use by filters that build upon the filters provided by plugins
 
         Raise :class:`~dxr.exceptions.BadTerm` to complain to the user: for
         instance, about an unparseable term.
 
         """
         self._term = term
+        self._enabled_plugins = enabled_plugins
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
@@ -129,8 +136,8 @@ class NameFilterBase(Filter):
         familiar.
 
     """
-    def __init__(self, term):
-        super(NameFilterBase, self).__init__(term)
+    def __init__(self, term, enabled_plugins):
+        super(NameFilterBase, self).__init__(term, enabled_plugins)
         self._needle = '{0}_{1}'.format(self.lang, self.name.replace('-', '_'))
 
     def _term_filter(self, field):
@@ -182,12 +189,7 @@ class NameFilterBase(Filter):
         return maybe_lower(entity['name']) == maybe_lower(self._term['arg'])
 
     def highlight_content(self, result):
-        """Highlight any structural entity whose name matches the term.
-
-        Compare short names and qualnames if this isn't a fully-qualified
-        search. Otherwise, compare just qualnames.
-
-        """
+        """Highlight any structural entity whose name matches the term."""
         if self._term['not']:
             return []
         return ((entity['start'], entity['end'])
