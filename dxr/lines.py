@@ -342,6 +342,7 @@ def finished_tags(lines, refs, regions):
     remove_overlapping_refs(tags)
     return balanced_tags(tags)
 
+
 def tags_per_line(flat_tags):
     """Split tags on LINE tags, yielding the tags of one line at a time
        (no LINE tags are yielded)
@@ -360,6 +361,7 @@ def tags_per_line(flat_tags):
                 tags = []
         else:
             tags.append(tag)
+
 
 def es_lines(tags):
     """Yield lists of dicts, one per source code line, that can be indexed
@@ -387,6 +389,7 @@ def es_lines(tags):
     # tags always ends with a LINE closer, so we don't need any additional
     # yield here to catch remnants.
 
+
 def triples_from_es_refs(es_refs):
     """Convert list of lists of es refs per lines to (start, end, payload) triples.
 
@@ -395,6 +398,7 @@ def triples_from_es_refs(es_refs):
         ref = (item['payload']['menuitems'], item['payload'].get('hover'))
         yield (item['start'], item['end'], ref)
 
+
 def triples_from_es_regions(es_regions):
     """Convert list of lists es regions to (start, end, payload) triples.
 
@@ -402,6 +406,7 @@ def triples_from_es_regions(es_regions):
     for item in chain.from_iterable(es_regions):
         region = item['payload']
         yield (item['start'], item['end'], region)
+
 
 def html_line(text, tags, bof_offset):
     """Return a line of Markup, interleaved with the refs and regions that
