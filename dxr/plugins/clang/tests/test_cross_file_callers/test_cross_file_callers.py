@@ -11,6 +11,6 @@ class CrossFileCallerTests(DxrInstanceTestCase):
     def test_callers(self):
         """Make sure a "caller" needle is laid down at the callsite, pointing
         to the called function."""
-        self.found_line_eq('callers:another_file',
-                           u'int a = <b>another_file</b>();',
-                           4)
+        self.found_line_eq('callers:another_file(int)',
+                           u'int a = <b>another_file(blah)</b>;',
+                           5)

@@ -152,9 +152,8 @@ def process_impl(parents, children, props):
 def process_call(props):
     _, call_start = _process_loc(props['callloc'])
     _, (call_end_row, call_end_col) = _process_loc(props['calllocend'])
-    if call_end_col > call_start.col + 1:
-        # The span coming out of the compiler includes the left paren. Stop that.
-        call_end_col -= 1
+    # The span coming out of the compiler excludes the right paren.
+    call_end_col += 1
     props['span'] = Extent(call_start,
                            Position(row=call_end_row, col=call_end_col))
     props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
