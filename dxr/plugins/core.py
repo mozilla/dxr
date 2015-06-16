@@ -414,12 +414,14 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
         return vars
 
     def file_to_index(self, path, contents):
-        return FileToIndex(path, contents, self.plugin_name, self.tree)
+        return FileToIndex(path, contents, self.plugin_name, self.tree,
+                           self.vcs_cache.vcs_for_path(path))
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
-    def __init__(self, path, contents, plugin_name, tree):
+    def __init__(self, path, contents, plugin_name, tree, vcs):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
+        self.vcs = vcs
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
@@ -441,18 +443,6 @@ class FileToIndex(dxr.indexers.FileToIndex):
             yield [('number', number),
                    ('content', text)]
 
-    def is_interesting(self):
-        """Core plugin puts all files in the search index."""
-        return True
-
-
-class FileToSkim(dxr.indexers.FileToSkim):
-    def __init__(self, path, contents, plugin_name, tree, file_properties,
-                 line_properties, vcs_cache):
-        super(FileToSkim, self).__init__(path, contents, plugin_name, tree,
-                                         file_properties, line_properties, vcs_cache)
-        self.vcs = self.vcs_cache.vcs_for_path(path)
-
     def links(self):
         if self.vcs:
             vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
@@ -464,6 +454,10 @@ class FileToSkim(dxr.indexers.FileToSkim):
                                                        path=self.path))])
         else:
             yield 5, 'Untracked file', []
+
+    def is_interesting(self):
+        """Core plugin puts all files in the search index."""
+        return True
 
 
 # Match file name and line number: filename:n. Strip leading slashes because

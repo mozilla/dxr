@@ -30,7 +30,7 @@ from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
-from dxr.vcs import VcsCache
+from dxr.vcs import file_contents_at_rev
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -58,10 +58,6 @@ def make_app(config):
 
     # Make an ES connection pool shared among all threads:
     app.es = ElasticSearch(config.es_hosts)
-
-    # Construct map of each tree to its VCS tree object.
-    app.vcs_caches = dict((tree, VcsCache(tree_config)) for tree, tree_config in
-                         config.trees.iteritems())
 
     return app
 
@@ -404,8 +400,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                                         name,
                                         config.trees[tree],
                                         file_doc,
-                                        line_docs,
-                                        current_app.vcs_caches[tree])
+                                        line_docs)
                     for name, plugin in all_plugins().iteritems()
                     if plugin in config.trees[tree].enabled_plugins
                     and plugin.file_to_skim]
@@ -436,13 +431,9 @@ def rev(tree, revision, path):
     config = current_app.dxr_config
     tree_config = config.trees[tree]
     abs_path = join(tree_config.source_folder, path)
-    vcs = current_app.vcs_caches[tree].vcs_for_path(path)
-    if vcs:
-        contents = vcs.get_contents(relpath(abs_path, vcs.get_root_dir()), revision)
-        if is_text(contents):
-            contents = contents.decode(tree_config.source_encoding)
-        else:
-            raise NotFound
+    contents = file_contents_at_rev(abs_path, revision)
+    if contents is not None and is_text(contents):
+        contents = contents.decode(tree_config.source_encoding)
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
@@ -451,7 +442,7 @@ def rev(tree, revision, path):
                             config,
                             contents=contents)
     else:
-        return render_template('error.html', error_html='No VCS found'), 400
+        raise NotFound
 
 def _linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be

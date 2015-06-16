@@ -165,7 +165,7 @@ class FileToSkim(PluginConfig):
 
     """
     def __init__(self, path, contents, plugin_name, tree, file_properties=None,
-                 line_properties=None, vcs_cache=None):
+                 line_properties=None):
         """
         :arg path: The conceptual path to the file, relative to the tree's
             source folder. Such a file might not exist on disk. This is useful
@@ -194,7 +194,6 @@ class FileToSkim(PluginConfig):
         self.tree = tree
         self.file_properties = file_properties or {}
         self.line_properties = line_properties  # TODO: not clear what the default here should be. repeat([])?
-        self.vcs_cache = vcs_cache
 
     def is_interesting(self):
         """Return whether it's worthwhile to examine this file.

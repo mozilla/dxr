@@ -17,7 +17,7 @@ Todos:
 """
 import marshal
 import os
-from os.path import relpath, join, dirname
+from os.path import relpath, join, split
 from pkg_resources import resource_filename
 import subprocess
 import urlparse
@@ -26,16 +26,15 @@ from warnings import warn
 import hglib
 from ordereddict import OrderedDict
 
+
 class Vcs(object):
     """A class representing an abstract notion of a version-control system.
     In general, all path arguments to query methods should be normalized to be
     relative to the root directory of the VCS.
     """
 
-    def __init__(self, root, command):
+    def __init__(self, root):
         self.root = root
-        # shell command for VCS: 'hg' in Mercurial, 'git' for Git, etc.
-        self.command = command
 
     def get_root_dir(self):
         """Return the directory that is at the root of the VCS."""
@@ -45,11 +44,12 @@ class Vcs(object):
         """Return a recognizable name for the VCS."""
         return type(self).__name__
 
-    def invoke_vcs(self, args):
+    @classmethod
+    def invoke_vcs(cls, args, cwd):
         """Return the result of invoking the VCS command on the repository,
         with the current working directory set to the root directory.
         """
-        return subprocess.check_output([self.command] + args, cwd=self.get_root_dir())
+        return subprocess.check_output([cls.command] + args, cwd=cwd)
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
@@ -71,8 +71,10 @@ class Vcs(object):
         """Construct URL to upstream view to raw file at path."""
         return NotImplemented
 
-    def get_contents(self, path, revision):
-        """Return contents of file at specified path at given revision."""
+    @classmethod
+    def get_contents(cls, path, revision):
+        """Return contents of file at specified path at given revision, where path is an
+        absolute path."""
         return NotImplemented
 
     def display_rev(self, path):
@@ -81,8 +83,10 @@ class Vcs(object):
 
 
 class Mercurial(Vcs):
+    command = 'hg'
+
     def __init__(self, root):
-        super(Mercurial, self).__init__(root, 'hg')
+        super(Mercurial, self).__init__(root)
         hgext = resource_filename('dxr', 'hgext/previous_revisions.py')
         with hglib.open(root,
                         configs=['extensions.previous_revisions=%s' % hgext]) as client:
@@ -92,7 +96,7 @@ class Mercurial(Vcs):
         self.upstream = self._construct_upstream_url()
 
     def _construct_upstream_url(self):
-        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default']).strip())
+        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'], self.root).strip())
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
             recomb[0] = 'http'
@@ -144,20 +148,24 @@ class Mercurial(Vcs):
     def generate_log(self, path):
         return self.upstream + 'filelog/' + self.revision + '/' + path
 
-    def get_contents(self, path, revision):
-        return self.invoke_vcs(['cat', '-r', revision, path])
+    @classmethod
+    def get_contents(cls, path, revision):
+        head, tail = split(path)
+        return cls.invoke_vcs(['cat', '-r', revision, tail], head)
 
 
 class Git(Vcs):
+    command = 'git'
+
     def __init__(self, root):
-        super(Git, self).__init__(root, 'git')
+        super(Git, self).__init__(root)
         self.tracked_files = set(line for line in
-                                 self.invoke_vcs(['ls-files']).splitlines())
-        self.revision = self.invoke_vcs(['rev-parse', 'HEAD']).strip()
+                                 self.invoke_vcs(['ls-files'], self.root).splitlines())
+        self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], self.root).strip()
         self.upstream = self._construct_upstream_url()
 
     def _construct_upstream_url(self):
-        source_urls = self.invoke_vcs(['remote', '-v']).split('\n')
+        source_urls = self.invoke_vcs(['remote', '-v'], self.root).split('\n')
         for src_url in source_urls:
             name, repo, _ = src_url.split()
             # TODO: Why do we assume origin is upstream?
@@ -202,13 +210,17 @@ class Git(Vcs):
     def generate_log(self, path):
         return self.upstream + "/commits/" + self.revision + "/" + path
 
-    def get_contents(self, path, revision):
-        return self.invoke_vcs(['show', revision + ':' + path])
+    @classmethod
+    def get_contents(cls, path, revision):
+        head, tail = split(path)
+        return cls.invoke_vcs(['show', revision + ':' + tail], head)
 
 
 class Perforce(Vcs):
+    command = 'p4'
+
     def __init__(self, root, upstream):
-        super(Perforce, self).__init__(root, 'p4')
+        super(Perforce, self).__init__(root)
         have = self._p4run(['have'])
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
         self.upstream = upstream
@@ -301,6 +313,17 @@ def tree_to_repos(tree):
     for key in lookup_order:
         ordered_sources[key] = sources[key]
     return ordered_sources
+
+
+def file_contents_at_rev(abspath, revision):
+    """Attempt to return the contents of a file at a specific revision."""
+
+    for cls in [Mercurial, Git]:
+        try:
+            return cls.get_contents(abspath, revision)
+        except subprocess.CalledProcessError:
+            continue
+    return None
 
 
 class VcsCache(object):
