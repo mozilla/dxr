@@ -175,12 +175,13 @@ $(function() {
      * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
      * @param {int} limit - The number of results to return.
      * @param {int} offset - The cursor position
+     * @param {bool} redirect - Whether to redirect.
      */
-    function buildAjaxURL(query, isCaseSensitive, limit, offset) {
+    function buildAjaxURL(query, isCaseSensitive, limit, offset, redirect) {
         var search = dxr.searchUrl;
         var params = {};
         params.q = query;
-        params.redirect = false;
+        params.redirect = redirect;
         params['case'] = isCaseSensitive;
         params.limit = limit;
         params.offset = offset;
@@ -242,8 +243,8 @@ $(function() {
                 dataOffset += previousDataLimit;
                 previousDataLimit = defaultDataLimit;
 
-                //Resubmit query for the next set of results.
-                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
+                //Resubmit query for the next set of results, making sure redirect is turned off.
+                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset, false), function(data) {
                     data.query = query;
                     if (data.results.length > 0) {
                         // Use the results.html partial so we do not inject the entire container again.
@@ -294,9 +295,9 @@ $(function() {
     /**
      * Clears any existing query timer and queries immediately.
      */
-    function queryNow() {
+    function queryNow(redirect) {
         clearTimeout(waiter);
-        doQuery();
+        doQuery(redirect);
     }
 
     /**
@@ -368,17 +369,18 @@ $(function() {
     /**
      * Queries and populates the results templates with the returned data.
      *
-     * @param {string} [queryString] - The url to which to send the request. By
-     * default, queryString will be constructed from the contents of the query
-     * field.
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.
+     * @param {string} [queryString] - The url to which to send the request. If left out,
+     * queryString will be constructed from the contents of the query field.
      */
-    function doQuery(queryString) {
+    function doQuery(redirect, queryString) {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
             limit = Math.floor((window.innerHeight / lineHeight) + 25);
 
-        queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0);
+        redirect = redirect || false;
+        queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
                 $('#search-box').addClass('in-progress');
@@ -413,13 +415,24 @@ $(function() {
             // tab feature on search pages (Chrome and Firefox).
             cache: false,
             success: function (data) {
+                // Check whether to redirect to a direct hit.
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
                 data.query = query;
                 // New results, overwrite
                 if (myRequestNumber > displayedRequestNumber) {
                     displayedRequestNumber = myRequestNumber;
                     populateResults(data, false);
-                    historyWaiter = setTimeout(history.pushState.bind(history, {}, '', queryString),
-                        timeouts.history);
+                    var pushHistory = function() {
+                        history.pushState({}, '', queryString);
+                    };
+                    if (redirect)
+                        // Then the enter key was pressed and we want to update history state now.
+                        pushHistory();
+                    else
+                        historyWaiter = setTimeout(pushHistory, timeouts.history);
                 }
 
                 previousDataLimit = limit;
@@ -444,6 +457,12 @@ $(function() {
 
     // Do a search every time you pause typing for 300ms:
     queryField.on('input', querySoon);
+
+    // Intercept the form submission and perform an AJAX query instead.
+    searchForm.on('submit', function(event) {
+        event.preventDefault();
+        queryNow(true);
+    });
 
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
     caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
@@ -551,7 +570,7 @@ $(function() {
     // load the results of the query.
     window.addEventListener('load', function() {
         if (/search$/.test(window.location.pathname) && window.location.search) {
-            doQuery(window.location.href);
+            doQuery(false, window.location.href);
         }
     });
 });

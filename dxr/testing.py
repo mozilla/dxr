@@ -100,14 +100,14 @@ class TestCase(unittest.TestCase):
         path at the given line number."""
         response = self.client().get(
             '/code/search?q=%s&redirect=true&case=%s' %
-                    (quote(query), 'true' if is_case_sensitive else 'false'))
+            (quote(query), 'true' if is_case_sensitive else 'false'),
+            headers={'Accept': 'application/json'})
         if line_number:
-            eq_(response.status_code, 302)
-            location = response.headers['Location']
+            eq_(response.status_code, 200)
+            location = json.loads(response.data)['redirect']
             # Location is something like
-            # http://localhost/code/source/main.cpp?from=main.cpp:6&case=true#6.
-            eq_(location[:location.index('?')],
-                'http://localhost/code/source/' + path)
+            # /code/source/main.cpp?from=main.cpp:6&case=true#6.
+            eq_(location[:location.index('?')], '/code/source/' + path)
             eq_(int(location[location.index('#') + 1:]), line_number)
         else:
             # When line_number is None, just expect a normal search.
