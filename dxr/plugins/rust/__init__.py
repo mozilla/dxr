@@ -436,8 +436,13 @@ class TreeToIndex(indexers.TreeToIndex):
                         print " - 'process_" + line[0] + "' not implemented!"
                         continue
 
-                    if 'file_name' in args and args['file_name'].startswith(self.tree.source_folder):
-                        args['file_name'] = args['file_name'][len(self.tree.source_folder)+1:]
+                    if 'file_name' in args:
+                        file_name_value = os.path.normpath(args['file_name'])
+
+                        if file_name_value.startswith(self.tree.source_folder):
+                            file_name_value = file_name_value[len(self.tree.source_folder)+1:]
+
+                        args['file_name'] = file_name_value
 
                     stop = func(args, self)
                     if stop and header_only:
