@@ -60,6 +60,13 @@ Now that you've told DXR about your codebase, it's time to build an
 
 .. note::
 
+    If you have troubles with running command above, related to
+    ``trilite`` (for example, ``OSError: libtrilite.so: cannot openshared
+    object file: No such file or directory``), try adding
+    ``LD_LIBRARY_PATH=trilite`` before command.
+
+.. note::
+
     If you have a large codebase, the VM might run out of RAM. If that happens,
     make a copy of the
     :file:`vagrantconfig_local.yaml-dist` file in the top-level :file:`dxr`
