@@ -96,7 +96,24 @@ def search(tree):
 
 
 def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
-    """Do a normal search, and return the results as JSON."""
+    """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
+    then return {redirect: hit location}.If that doesn't work, fall back to a normal search
+    and return the results as JSON."""
+
+    # If we're asked to redirect and have a direct hit, then return the url to that.
+    if request.values.get('redirect') == 'true':
+        result = query.direct_result()
+        if result:
+            path, line = result
+            # TODO: Does this escape query_text properly?
+            params = {
+                'tree': tree,
+                'path': path,
+                'from': query_text
+            }
+            if is_case_sensitive:
+                params['case'] = 'true'
+            return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
     try:
         count_and_results = query.results(offset, limit)
         # Convert to dicts for ease of manipulation in JS:
@@ -118,29 +135,9 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
 
 def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, config):
-    """Search a few different ways, and return the results as HTML.
-
-    Try a "direct search" (for exact identifier matches, etc.). If that
-    doesn't work, fall back to a normal search.
+    """Return the rendered template for search.html.
 
     """
-    should_redirect = request.values.get('redirect') == 'true'
-
-    # Try for a direct result:
-    if should_redirect:  # always true in practice?
-        result = query.direct_result()
-        if result:
-            path, line = result
-            # TODO: Does this escape query_text properly?
-            return redirect(
-                '%s/%s/source/%s?from=%s%s#%i' %
-                (config.www_root,
-                 tree,
-                 path,
-                 query_text,
-                 '&case=true' if is_case_sensitive else '',
-                 line))
-
     frozen = frozen_config(tree)
 
     # Try a normal search:
@@ -160,21 +157,7 @@ def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, conf
             'tree_tuples': _tree_tuples(query_text, is_case_sensitive),
             'www_root': config.www_root}
 
-    try:
-        count_and_results = query.results(offset, limit)
-        results = list(count_and_results['results'])
-        results_line_count = sum(len(r[2]) for r in results)
-    except BadTerm as exc:
-        return render_template('error.html',
-                               error_html=exc.reason,
-                               **template_vars), 400
-
-    return render_template('search.html',
-                           results=results,
-                           result_count=count_and_results['result_count'],
-                           result_count_formatted=format_number(count_and_results['result_count']),
-                           results_line_count=results_line_count,
-                           **template_vars)
+    return render_template('search.html', **template_vars)
 
 
 def _tree_tuples(query_text, is_case_sensitive):

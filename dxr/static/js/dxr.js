@@ -7,7 +7,6 @@ $(function() {
     'use strict';
 
     var constants = $('#data');
-    var stateConstants = $('#state');
     var dxr = {},
         docElem = document.documentElement;
 
@@ -175,13 +174,14 @@ $(function() {
      * @param {string} query - The query string
      * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
      * @param {int} limit - The number of results to return.
-     * @param [int] offset - The cursor position
+     * @param {int} offset - The cursor position
+     * @param {bool} redirect - Whether to redirect.
      */
-    function buildAjaxURL(query, isCaseSensitive, limit, offset) {
+    function buildAjaxURL(query, isCaseSensitive, limit, offset, redirect) {
         var search = dxr.searchUrl;
         var params = {};
         params.q = query;
-        params.redirect = false;
+        params.redirect = redirect;
         params['case'] = isCaseSensitive;
         params.limit = limit;
         params.offset = offset;
@@ -222,33 +222,17 @@ $(function() {
         history.replaceState(state, '', url);
     }
 
-    /**
-     * Add an entry into the history stack whenever we do a new search.
-     */
-    function pushHistoryState(data) {
-        var searchUrl = constants.data('search') + '?' + data.query_string;
-        history.pushState({}, '', searchUrl);
-    }
-
     function infiniteScroll() {
         if (didScroll) {
 
             didScroll = false;
-
-            // If the previousDataLimit is 0 we are on the search.html page and doQuery
-            // has not yet been called, get the previousDataLimit and resultsLineCount
-            // from the page constants.
-            if (previousDataLimit === 0) {
-                previousDataLimit = stateConstants.data('limit');
-                resultsLineCount = stateConstants.data('results-line-count');
-            }
 
             var maxScrollY = getMaxScrollY(),
                 currentScrollPos = window.scrollY,
                 threshold = window.innerHeight + 500;
 
             // Has the user reached the scrolling threshold and are there more results?
-            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit === resultsLineCount) {
+            if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit <= resultsLineCount) {
                 clearInterval(scrollPoll);
 
                 // If a user hits enter on the landing page and there was no direct result,
@@ -259,14 +243,10 @@ $(function() {
                 dataOffset += previousDataLimit;
                 previousDataLimit = defaultDataLimit;
 
-                //Resubmit query for the next set of results.
-                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset), function(data) {
+                //Resubmit query for the next set of results, making sure redirect is turned off.
+                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset, false), function(data) {
                     data.query = query;
                     if (data.results.length > 0) {
-                        var state = {};
-
-                        // Update result count
-                        resultsLineCount = countLines(data.results);
                         // Use the results.html partial so we do not inject the entire container again.
                         populateResults(data, true);
                         // update URL with new offset
@@ -315,9 +295,9 @@ $(function() {
     /**
      * Clears any existing query timer and queries immediately.
      */
-    function queryNow() {
+    function queryNow(redirect) {
         clearTimeout(waiter);
-        doQuery();
+        doQuery(redirect);
     }
 
     /**
@@ -370,7 +350,7 @@ $(function() {
                     domFirstResult.append(nunjucks.render('partial/result_lines.html', {
                         www_root: dxr.wwwRoot,
                         tree: dxr.tree,
-                        result: firstResult,
+                        result: firstResult
                     }));
                 }
 
@@ -388,9 +368,19 @@ $(function() {
 
     /**
      * Queries and populates the results templates with the returned data.
+     *
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.
+     * @param {string} [queryString] - The url to which to send the request. If left out,
+     * queryString will be constructed from the contents of the query field.
      */
-    function doQuery() {
+    function doQuery(redirect, queryString) {
+        query = $.trim(queryField.val());
+        var myRequestNumber = nextRequestNumber,
+            lineHeight = parseInt(contentContainer.css('line-height'), 10),
+            limit = Math.floor((window.innerHeight / lineHeight) + 25);
 
+        redirect = redirect || false;
+        queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
                 $('#search-box').addClass('in-progress');
@@ -407,11 +397,6 @@ $(function() {
 
         clearTimeout(historyWaiter);
 
-        query = $.trim(queryField.val());
-        var myRequestNumber = nextRequestNumber,
-            lineHeight = parseInt(contentContainer.css('line-height'), 10),
-            limit = Math.floor((window.innerHeight / lineHeight) + 25);
-
         if (query.length === 0) {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
             return;
@@ -423,19 +408,38 @@ $(function() {
         hideBubble();
         nextRequestNumber += 1;
         oneMoreRequest();
-        $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0), function(data) {
-            data.query = query;
-            // New results, overwrite
-            if (myRequestNumber > displayedRequestNumber) {
-                displayedRequestNumber = myRequestNumber;
-                populateResults(data, false);
-                historyWaiter = setTimeout(pushHistoryState, timeouts.history, data);
+        $.ajax({
+            dataType: "json",
+            url: queryString,
+            // We need to disable caching of this result because otherwise we break the undo close
+            // tab feature on search pages (Chrome and Firefox).
+            cache: false,
+            success: function (data) {
+                // Check whether to redirect to a direct hit.
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
+                data.query = query;
+                // New results, overwrite
+                if (myRequestNumber > displayedRequestNumber) {
+                    displayedRequestNumber = myRequestNumber;
+                    populateResults(data, false);
+                    var pushHistory = function() {
+                        history.pushState({}, '', queryString);
+                    };
+                    if (redirect)
+                        // Then the enter key was pressed and we want to update history state now.
+                        pushHistory();
+                    else
+                        historyWaiter = setTimeout(pushHistory, timeouts.history);
+                }
+
+                previousDataLimit = limit;
+                dataOffset = 0;
+
+                oneFewerRequest();
             }
-
-            previousDataLimit = limit;
-            dataOffset = 0;
-
-            oneFewerRequest();
         })
         .fail(function(jqxhr) {
             oneFewerRequest();
@@ -453,6 +457,12 @@ $(function() {
 
     // Do a search every time you pause typing for 300ms:
     queryField.on('input', querySoon);
+
+    // Intercept the form submission and perform an AJAX query instead.
+    searchForm.on('submit', function(event) {
+        event.preventDefault();
+        queryNow(true);
+    });
 
     // Update the search when the case-sensitive box is toggled, canceling any pending query:
     caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
@@ -489,9 +499,9 @@ $(function() {
 
 
     /**
-     * Adds aleading 0 to numbers less than 10 and greater that 0
+     * Adds a leading 0 to numbers less than 10 and greater than 0
      *
-     * @param int number The number to test against
+     * @param {int} number The number to test against
      *
      * return Either the original number or the number prefixed with 0
      */
@@ -502,7 +512,7 @@ $(function() {
     /**
      * Converts string to new Date and returns a formatted date in the
      * format YYYY-MM-DD h:m
-     * @param String dateString A date in string form.
+     * @param {string} dateString A date in string form.
      *
      */
     function formatDate(dateString) {
@@ -556,4 +566,11 @@ $(function() {
         });
     });
 
+    // If on load of the search endpoint we have a query string then we need to
+    // load the results of the query.
+    window.addEventListener('load', function() {
+        if (/search$/.test(window.location.pathname) && window.location.search) {
+            doQuery(false, window.location.href);
+        }
+    });
 });
