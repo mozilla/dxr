@@ -232,6 +232,8 @@ $(function() {
                 threshold = window.innerHeight + 500;
 
             // Has the user reached the scrolling threshold and are there more results?
+            // If the returned number of results is greater or equal to the previous limit
+            // requested, then we ask the server for more.
             if ((maxScrollY - currentScrollPos) < threshold && previousDataLimit <= resultsLineCount) {
                 clearInterval(scrollPoll);
 
@@ -264,13 +266,16 @@ $(function() {
     }
 
     /**
-     * Given a list of results from the search API, return the total number of
-     * lines across all results.
+     * Given a list of results from the search endpoint, return the total number of results.
+     * If the results are line-based, then count the number of lines returned.
+     * Otherwise, count the number of results.
      */
     function countLines(results) {
         var total = 0;
         for (var k = 0; k < results.length; k++) {
-            total += results[k].lines.length;
+            // If this is a FILE result, then it does not have lines attached,
+            // but we still want to count it as a result.
+            total += Math.max(results[k].lines.length, 1);
         }
         return total;
     }
