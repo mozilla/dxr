@@ -47,7 +47,7 @@ class TypeAndMethodTests(SingleFileTestCase):
     def test_qualified_function_name_multiple_matches(self):
         """Multiple matches on fully qualified function name should return
         None."""
-        self.direct_result_eq('MemberFunction::member_FUNCTION(int)', None)
+        self.is_not_direct_result('MemberFunction::member_FUNCTION(int)')
 
     def test_qualified_type_name_insensitive(self):
         """A unique, case-insensitive match on fully qualified type name
@@ -66,7 +66,7 @@ class TypeAndMethodTests(SingleFileTestCase):
     def test_qualified_type_name_multiple_matches(self):
         """Multiple case-insensitive prefix matches on fully qualified type
         name should not yield a direct result."""
-        self.direct_result_eq('MemberFunction::InnerCLASS', None)
+        self.is_not_direct_result('MemberFunction::InnerCLASS')
 
     def test_type_sensitive(self):
         """If the query is an exact match for a class, we should jump there."""
@@ -108,7 +108,7 @@ class MacroTypedefTests(SingleFileTestCase):
 
     def test_macro_name_multiple_matches(self):
         """Multiple matches on a macro name should return None."""
-        self.direct_result_eq('macro_NAME', None)
+        self.is_not_direct_result('macro_NAME')
 
     def test_typedef_name_insensitive(self):
         """A unique, case-insensitive match on a typedef name should take you
@@ -126,4 +126,4 @@ class MacroTypedefTests(SingleFileTestCase):
 
     def test_typedef_name_multiple_matches(self):
         """Multiple matches on a typedef name should return None."""
-        self.direct_result_eq('myTypeDef', None)
+        self.is_not_direct_result('myTypeDef')

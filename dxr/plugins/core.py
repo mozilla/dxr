@@ -445,9 +445,11 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def links(self):
         if self.vcs:
-            vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
+            vcs_relative_path = relpath(self.absolute_path(),
+                                        self.vcs.get_root_dir())
             yield (5,
-                   '%s (%s)' % (self.vcs.get_vcs_name(), self.vcs.display_rev(vcs_relative_path)),
+                   '%s (%s)' % (self.vcs.get_vcs_name(),
+                                self.vcs.display_rev(vcs_relative_path)),
                    [('permalink', 'Permalink', url_for('.rev',
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
@@ -476,12 +478,33 @@ def _file_and_line(term):
         return match.group(1), int(match.group(2))
 
 
+def _path_trigram_filter(path, is_case_sensitive):
+    """Return an ES filter clause that returns docs whose paths match the
+    given path all the way to their ends.
+
+    If a given path starts with a /, the user is explicitly requesting a match
+    starting at the root level.
+
+    """
+    if path.startswith('/'):
+        path = path[1:]  # Leading slashes aren't stored in the index.
+        regex = '^{0}$'  # Insist it start at the beginning.
+    else:
+        regex = '(/|^){0}$'  # Start at any path segment.
+
+    return es_regex_filter(
+            regex_grammar.parse(regex.format(re.escape(path))),
+            'path',
+            is_case_sensitive)
+
+
 @direct_search(priority=100)
 def direct_path_and_line(term):
-    """If the user types path:line_num, jump him right to that line.
+    """If the user types path:line_num, jump right to that line.
 
-    "path" can be any contiguous sequence of complete path segments; to match
-    fee/fi/fo/fum.cpp, any of the following would work:
+    "path" can be any contiguous sequence of complete path segments extending
+    to the end of a path; to match fee/fi/fo/fum.cpp, any of the following
+    would work:
 
     * /fee/fi/fo/fum.cpp
     * fo/fum.cpp
@@ -491,21 +514,10 @@ def direct_path_and_line(term):
     try:
         path, line = _file_and_line(term)
     except TypeError:
-        return None
-
-    if path.startswith('/'):
-        # If path start with a /, the user is explicitly requesting a match
-        # starting at the root level.
-        path = path[1:]  # Leading slashes aren't stored in the index.
-        regex = '^{0}$'  # Insist it start at the beginning.
-    else:
-        regex = '(/|^){0}$'  # Start at any path segment.
+        return None  # no line number
 
     try:
-        trigram_clause = es_regex_filter(
-                regex_grammar.parse(regex.format(re.escape(path))),
-                'path',
-                term['case_sensitive'])
+        trigram_clause = _path_trigram_filter(path, term['case_sensitive'])
     except NoTrigrams:
         return None
 
@@ -515,3 +527,17 @@ def direct_path_and_line(term):
             {'term': {'number': line}}
         ]
     }
+
+
+@direct_search(priority=150, domain=FILE)
+def direct_path(term):
+    """If there is a (file or) contiguous trailing sequence of path segments
+    matching the query, jump straight to that file.
+
+    See :func:`direct_path_and_line` for examples.
+
+    """
+    try:
+        return _path_trigram_filter(term['arg'], term['case_sensitive'])
+    except NoTrigrams:
+        return None
