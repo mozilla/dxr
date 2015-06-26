@@ -1,10 +1,6 @@
-from os.path import dirname, join
-import subprocess
-
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
-from nose import SkipTest
-from nose.tools import ok_
+from nose.tools import ok_, eq_
 
 
 class GitTests(DxrInstanceTestCaseMakeFirst):
@@ -13,27 +9,40 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
     def test_diff(self):
         """Make sure the diff link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/commit/cb339834998124cb8165aa35ed4635c51b6ac5c2" title="Diff" class="diff icon">Diff</a>' in response.data)
+        ok_('/commit/5e2b2b554eb86f90e189217fa9dc2eba66259910" title="Diff" class="diff icon">Diff</a>' in response.data)
 
     def test_blame(self):
         """Make sure the blame link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/blame/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c" title="Blame" class="blame icon">Blame</a>' in response.data)
+        ok_('/blame/5e2b2b554eb86f90e189217fa9dc2eba66259910/main.c" title="Blame" class="blame icon">Blame</a>' in response.data)
 
     def test_raw(self):
         """Make sure the raw link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/raw/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c" title="Raw" class="raw icon">Raw</a>' in response.data)
+        ok_('/raw/5e2b2b554eb86f90e189217fa9dc2eba66259910/main.c" title="Raw" class="raw icon">Raw</a>' in response.data)
 
     def test_log(self):
         """Make sure the log link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/commits/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c" title="Log" class="log icon">Log</a>' in response.data)
+        ok_('/commits/5e2b2b554eb86f90e189217fa9dc2eba66259910/main.c" title="Log" class="log icon">Log</a>' in response.data)
 
     def test_permalink(self):
         """Make sure the permalink link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
+        ok_('/rev/5e2b2b554eb86f90e189217fa9dc2eba66259910/main.c" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
+        # Test that it works for this revision and the last one.
+        response = self.client().get('/code/rev/5e2b2b554eb86f90e189217fa9dc2eba66259910/main.c')
+        eq_(response.status_code, 200)
+        response = self.client().get('/code/rev/cb339834998124cb8165aa35ed4635c51b6ac5c2/main.c')
+        eq_(response.status_code, 200)
+
+    def test_deep_permalink(self):
+        """Make sure the permalink link exists and goes to the right place."""
+        response = self.client().get('/code/source/deeper/deeper_file')
+        ok_('/rev/5e2b2b554eb86f90e189217fa9dc2eba66259910/deeper/deeper_file" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
+        response = self.client().get('/code/rev/5e2b2b554eb86f90e189217fa9dc2eba66259910/deeper/deeper_file')
+        eq_(response.status_code, 200)
+        ok_("This file tests" in response.data)
 
     def test_pygmentize(self):
         """Check that the pygmentize FileToSkim correctly colors a file from permalink."""

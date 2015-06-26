@@ -213,7 +213,7 @@ class Git(Vcs):
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
         head, tail = split(path)
-        return cls.invoke_vcs(['show', revision + ':' + tail], head, stderr=stderr)
+        return cls.invoke_vcs(['show', revision + ':./' + tail], head, stderr=stderr)
 
 
 class Perforce(Vcs):
