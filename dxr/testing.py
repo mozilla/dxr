@@ -9,8 +9,8 @@ import subprocess
 import sys
 from tempfile import mkdtemp
 import unittest
-from urllib2 import quote
 
+from flask import url_for
 from nose.tools import eq_, ok_
 from pyelasticsearch import ElasticSearch
 
@@ -30,9 +30,14 @@ class TestCase(unittest.TestCase):
     """Abstract container for general convenience functions for DXR tests"""
 
     def client(self):
-        app = make_app(self.config())
-        app.config['TESTING'] = True  # Disable error trapping during requests.
-        return app.test_client()
+        self._app = make_app(self.config())
+        self._app.config['TESTING'] = True  # Disable error trapping during requests.
+        return self._app.test_client()
+
+    def url_for(self, *args, **kwargs):
+        """Do the magic needed to make url_for() work under tests."""
+        with self._app.test_request_context():
+            return url_for(*args, **kwargs)
 
     @classmethod
     def config(cls):
@@ -91,27 +96,54 @@ class TestCase(unittest.TestCase):
     def search_response(self, query, is_case_sensitive=True):
         """Return the raw response of a JSON search query."""
         return self.client().get(
-            '/code/search?q=%s&redirect=false&case=%s' %
-                    (quote(query), 'true' if is_case_sensitive else 'false'),
+            self.url_for('.search',
+                         tree='code',
+                         q=query,
+                         redirect='false',
+                         case='true' if is_case_sensitive else 'false'),
             headers={'Accept': 'application/json'})
 
     def direct_result_eq(self, query, path, line_number, is_case_sensitive=True):
         """Assert that a direct result exists and takes the user to the given
-        path at the given line number."""
+        path at the given line number.
+
+        If line_number is None, assert we point to no particular line number.
+
+        """
         response = self.client().get(
-            '/code/search?q=%s&redirect=true&case=%s' %
-            (quote(query), 'true' if is_case_sensitive else 'false'),
+            self.url_for('.search',
+                         tree='code',
+                         q=query,
+                         redirect='true',
+                         case='true' if is_case_sensitive else 'false'),
             headers={'Accept': 'application/json'})
-        if line_number:
-            eq_(response.status_code, 200)
+        eq_(response.status_code, 200)
+        try:
             location = json.loads(response.data)['redirect']
+        except KeyError:
+            self.fail("The query didn't return a direct result.")
+        eq_(location[:location.index('?')], '/code/source/' + path)
+        if line_number is None:
+            # When line_number is None, assert we point to a file in general,
+            # not to a particular line number:
+            ok_('#' not in location)
+        else:
             # Location is something like
             # /code/source/main.cpp?from=main.cpp:6&case=true#6.
-            eq_(location[:location.index('?')], '/code/source/' + path)
             eq_(int(location[location.index('#') + 1:]), line_number)
-        else:
-            # When line_number is None, just expect a normal search.
-            eq_(response.status_code, 200)
+
+    def is_not_direct_result(self, query):
+        """Assert that running a query results in a normal set of results,
+        possibly empty, as opposed to a direct result that redirects."""
+        response = self.client().get(
+            self.url_for('.search',
+                         tree='code',
+                         q=query,
+                         redirect='true',
+                         case='true'),
+            headers={'Accept': 'application/json'})
+        eq_(response.status_code, 200)
+        ok_('redirect' not in json.loads(response.data))
 
     def search_results(self, query, is_case_sensitive=True):
         """Return the raw results of a JSON search query.

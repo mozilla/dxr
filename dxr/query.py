@@ -157,7 +157,8 @@ class Query(object):
         """Return a single search result that is an exact match for the query.
 
         If there is such a result, return a tuple of (path from root of tree,
-        line number). Otherwise, return None.
+        line number). Line number may be None to indicate the entire file
+        rather than any specific line. If no result is found, return just None.
 
         """
         term = self.single_term()
@@ -179,11 +180,12 @@ class Query(object):
                         },
                         'size': 2
                     },
-                    doc_type=LINE)['hits']['hits']
+                    doc_type=searcher.domain)['hits']['hits']
                 if len(results) == 1:
                     result = results[0]['_source']
                     # Everything is stored as arrays in ES. Pull it all out:
-                    return result['path'][0], result['number'][0]
+                    return (result['path'][0],
+                            result['number'][0] if searcher.domain == LINE else None)
                 elif len(results) > 1:
                     return None
 

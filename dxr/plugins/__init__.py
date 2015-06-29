@@ -7,7 +7,7 @@ from os.path import join
 from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
 
-from dxr.filters import Filter
+from dxr.filters import Filter, LINE
 from dxr.indexers import TreeToIndex
 
 
@@ -177,15 +177,18 @@ def direct_searchers_from_namespace(namespace):
             if hasattr(v, 'direct_search_priority') and isfunction(v)]
 
 
-def direct_search(priority):
+def direct_search(priority, domain=LINE):
     """Mark a function as being a direct search provider.
 
     :arg priority: A priority to attach to the function. Direct searchers are
         called in order of increasing priority.
+    :arg domain: LINE if this searcher searches for individual lines, FILE if
+        it searches for entire files
 
     """
     def decorator(searcher):
         searcher.direct_search_priority = priority
+        searcher.domain = domain
         return searcher
     return decorator
 
