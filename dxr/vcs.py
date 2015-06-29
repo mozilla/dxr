@@ -45,11 +45,11 @@ class Vcs(object):
         return type(self).__name__
 
     @classmethod
-    def invoke_vcs(cls, args, **kwargs):
-        """Return the result of invoking the VCS command on the repository,
-        with extra kwargs passed along to the Popen constructor.
+    def invoke_vcs(cls, args, cwd, **kwargs):
+        """Return the result of invoking the VCS command on the repository from
+        given working directory, with extra kwargs passed along to the Popen constructor.
         """
-        return subprocess.check_output([cls.command] + args, **kwargs)
+        return subprocess.check_output([cls.command] + args, cwd=cwd, **kwargs)
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
@@ -96,7 +96,7 @@ class Mercurial(Vcs):
         self.upstream = self._construct_upstream_url()
 
     def _construct_upstream_url(self):
-        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'], cwd=self.root).strip())
+        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'], self.root).strip())
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
             recomb[0] = 'http'
@@ -151,7 +151,7 @@ class Mercurial(Vcs):
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
         head, tail = split(path)
-        return cls.invoke_vcs(['cat', '-r', revision, tail], cwd=head, stderr=stderr)
+        return cls.invoke_vcs(['cat', '-r', revision, tail], head, stderr=stderr)
 
 
 class Git(Vcs):
@@ -160,12 +160,12 @@ class Git(Vcs):
     def __init__(self, root):
         super(Git, self).__init__(root)
         self.tracked_files = set(line for line in
-                                 self.invoke_vcs(['ls-files'], cwd=self.root).splitlines())
-        self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], cwd=self.root).strip()
+                                 self.invoke_vcs(['ls-files'], self.root).splitlines())
+        self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], self.root).strip()
         self.upstream = self._construct_upstream_url()
 
     def _construct_upstream_url(self):
-        source_urls = self.invoke_vcs(['remote', '-v'], cwd=self.root).split('\n')
+        source_urls = self.invoke_vcs(['remote', '-v'], self.root).split('\n')
         for src_url in source_urls:
             name, repo, _ = src_url.split()
             # TODO: Why do we assume origin is upstream?
@@ -213,7 +213,7 @@ class Git(Vcs):
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
         head, tail = split(path)
-        return cls.invoke_vcs(['show', revision + ':' + tail], cwd=head, stderr=stderr)
+        return cls.invoke_vcs(['show', revision + ':' + tail], head, stderr=stderr)
 
 
 class Perforce(Vcs):
