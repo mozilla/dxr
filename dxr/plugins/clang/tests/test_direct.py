@@ -45,8 +45,8 @@ class TypeAndMethodTests(SingleFileTestCase):
         self.direct_result_eq('MemberFunction::member_function(int)', 16)
 
     def test_qualified_function_name_multiple_matches(self):
-        """Multiple matches on fully qualified function name should return
-        None."""
+        """Multiple matches on fully qualified function name should not yield
+        a direct result."""
         self.is_not_direct_result('MemberFunction::member_FUNCTION(int)')
 
     def test_qualified_type_name_insensitive(self):
@@ -107,7 +107,8 @@ class MacroTypedefTests(SingleFileTestCase):
         self.direct_result_eq('MACRO_NAME', 3)
 
     def test_macro_name_multiple_matches(self):
-        """Multiple matches on a macro name should return None."""
+        """Multiple matches on a macro name should not yield a direct
+        result."""
         self.is_not_direct_result('macro_NAME')
 
     def test_typedef_name_insensitive(self):
@@ -125,5 +126,6 @@ class MacroTypedefTests(SingleFileTestCase):
         self.direct_result_eq('MyTypeDef', 14)
 
     def test_typedef_name_multiple_matches(self):
-        """Multiple matches on a typedef name should return None."""
+        """Multiple matches on a typedef name should not yield a direct
+        result."""
         self.is_not_direct_result('myTypeDef')
