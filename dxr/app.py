@@ -205,7 +205,8 @@ def browse(tree, path=''):
     """
     config = current_app.dxr_config
     try:
-        return _browse_folder(tree, path, config)
+        # Strip any trailing slash because we do not store it in ES.
+        return _browse_folder(tree, path.rstrip('/'), config)
     except NotFound:
         frozen = frozen_config(tree)
         # Grab the FILE doc, just for the sidebar nav links:
