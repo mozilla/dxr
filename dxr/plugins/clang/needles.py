@@ -8,18 +8,13 @@ from dxr.indexers import (iterable_per_line, with_start_and_end,
                           split_into_lines, Extent, Position)
 
 
+# TODO: Use.
 def sig_needles(condensed):
     """Return needles ((c-sig, type), span)."""
     return ((('c-sig', str(o['type'])), o['span']) for o in
             condensed['function'])
 
 
-# def needles(condensed, inherit, graph):
-#     """Return all C plugin needles."""
-#
-#     return chain(
-#         sig_needles(condensed),
-#     )
 
 
 def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', 'qualname')):
@@ -45,11 +40,6 @@ def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', '
              dict((k, entity[k]) for k in keys),
              entity['span'])
             for entity in condensed[kind] if matches_subkind(entity))
-
-
-def qualified_needles(condensed, name, kind=None):
-    """Return needles for a top-level kind of thing that has a name and qualname."""
-    return needles(condensed, name, kind=kind)
 
 
 def ref_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
@@ -192,7 +182,7 @@ def caller_needles(condensed, overriddens):
     base ones.
 
     """
-    for needle in qualified_needles(condensed, 'call'):
+    for needle in needles(condensed, 'call'):
         yield needle
     for call in condensed['call']:
         if call['calltype'] == 'virtual':
@@ -219,24 +209,24 @@ def inheritance_needles(condensed, parents, children):
 
 def all_needles(condensed, overrides, overriddens, parents, children):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
-            qualified_needles(condensed, 'function'),
+            needles(condensed, 'function'),
             ref_needles(condensed, 'function'),
 
             # Classes:
-            qualified_needles(condensed, 'type'),
+            needles(condensed, 'type'),
             ref_needles(condensed, 'type'),
 
             # Typedefs:
-            qualified_needles(condensed, 'type', kind='typedef'),
+            needles(condensed, 'type', kind='typedef'),
             ref_needles(condensed, 'type', subkind='typedef'),
 
-            qualified_needles(condensed, 'var', kind='variable'),
+            needles(condensed, 'var', kind='variable'),
             ref_needles(condensed, 'var', subkind='variable'),
 
-            qualified_needles(condensed, 'namespace'),
+            needles(condensed, 'namespace'),
             ref_needles(condensed, 'namespace'),
 
-            qualified_needles(condensed, 'namespace_alias'),
+            needles(condensed, 'namespace_alias'),
             ref_needles(condensed, 'namespace_alias'),
 
             macro_needles(condensed),
