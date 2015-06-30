@@ -1,28 +1,23 @@
-from operator import itemgetter
-from itertools import chain, izip
-from functools import partial
-
-from funcy import imap, is_mapping, repeat, icat
+from itertools import chain
 
 from dxr.indexers import (iterable_per_line, with_start_and_end,
-                          split_into_lines, Extent, Position)
+                          split_into_lines)
 
 
+# TODO: Use.
 def sig_needles(condensed):
     """Return needles ((c-sig, type), span)."""
     return ((('c-sig', str(o['type'])), o['span']) for o in
             condensed['function'])
 
 
-# def needles(condensed, inherit, graph):
-#     """Return all C plugin needles."""
-#
-#     return chain(
-#         sig_needles(condensed),
-#     )
-
-
-def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', 'qualname')):
+def needles(condensed,
+            name,
+            suffix='',
+            kind=None,
+            subkind=None,
+            include_qualname=True,
+            include_typeless_qualname=False):
     """Return an iterable of needles computed from the condensed representation.
 
     Each needle is a (needle name, needle value dict, Extent) triple.
@@ -35,25 +30,52 @@ def needles(condensed, name, suffix='', kind=None, subkind=None, keys=('name', '
          ``condensed``. Defaults to the value of ``name``.
     :arg subkind: The value of the 'kind' key to insist on in things found
         within ``condensed[kind]``. None for no insistence.
-    :arg keys: The keys that should be in the final needle value
+    :arg include_qualname: Whether we should include the qualified name in the
+        returned needle value dict
+    :arg include_typeless_qualname: Whether we should include the qualname but
+        with arg types stripped off, e.g. turning functions from Foo::bar(int)
+        to Foo::bar, so people don't need to know the types to search for
+        them. ``include_qualname`` must also be true to enable this.
 
     """
     kind = kind or name
     matches_subkind = (lambda entity: entity.get('kind') == subkind if subkind
                        else lambda entity: True)
+
+    def names(entity):
+        """Return the name, qualname, and type-free qualname of an entity.
+
+        This way, Moo::foo(int) can be found as "foo", "Moo::foo" or
+        "Moo:foo(int)".
+
+        """
+        value = {'name': entity['name']}
+        if include_qualname:
+            qualname = value['qualname'] = entity['qualname']
+            if include_typeless_qualname:
+                try:
+                    # This is good enough for functions but probably not for
+                    # templates yet:
+                    offset = qualname.index('(')
+                except ValueError:
+                    pass
+                else:
+                    value['qualname'] = [qualname, qualname[:offset]]
+        return value
+
     return (('c_{0}{1}'.format(name, suffix),
-             dict((k, entity[k]) for k in keys),
+             names(entity),
              entity['span'])
             for entity in condensed[kind] if matches_subkind(entity))
 
 
-def qualified_needles(condensed, name, kind=None):
-    """Return needles for a top-level kind of thing that has a name and qualname."""
-    return needles(condensed, name, kind=kind)
-
-
-def ref_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
-    """Return needles for references to a certain kind of thing.
+def ref_needles(condensed,
+                name,
+                subkind=None,
+                include_qualname=True,
+                include_typeless_qualname=False):
+    """Return needles for references to a certain kind of language construct,
+    e.g. functions, variables, or namespaces.
 
     References are assumed to have names and qualnames.
 
@@ -62,16 +84,27 @@ def ref_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
 
     """
     subkind = subkind or name
-    return needles(condensed, name, suffix='_ref', kind='ref', subkind=subkind, keys=keys)
+    return needles(condensed,
+                   name,
+                   suffix='_ref',
+                   kind='ref',
+                   subkind=subkind,
+                   include_qualname=include_qualname,
+                   include_typeless_qualname=include_typeless_qualname)
 
 
-def decl_needles(condensed, name, subkind=None, keys=('name', 'qualname')):
+def decl_needles(condensed, name, subkind=None, include_typeless_qualname=False):
     """Return needles for declarations of things.
 
     Things are assumed to have names and qualnames.
 
     """
-    return needles(condensed, name, suffix='_decl', kind='decldef', subkind=subkind, keys=keys)
+    return needles(condensed,
+                   name,
+                   suffix='_decl',
+                   kind='decldef',
+                   subkind=subkind,
+                   include_typeless_qualname=include_typeless_qualname)
 
 
 def warning_needles(condensed):
@@ -192,7 +225,7 @@ def caller_needles(condensed, overriddens):
     base ones.
 
     """
-    for needle in qualified_needles(condensed, 'call'):
+    for needle in needles(condensed, 'call'):
         yield needle
     for call in condensed['call']:
         if call['calltype'] == 'virtual':
@@ -219,31 +252,31 @@ def inheritance_needles(condensed, parents, children):
 
 def all_needles(condensed, overrides, overriddens, parents, children):
     return iterable_per_line(with_start_and_end(split_into_lines(chain(
-            qualified_needles(condensed, 'function'),
-            ref_needles(condensed, 'function'),
+            needles(condensed, 'function', include_typeless_qualname=True),
+            ref_needles(condensed, 'function', include_typeless_qualname=True),
 
             # Classes:
-            qualified_needles(condensed, 'type'),
+            needles(condensed, 'type'),
             ref_needles(condensed, 'type'),
 
             # Typedefs:
-            qualified_needles(condensed, 'type', kind='typedef'),
+            needles(condensed, 'type', kind='typedef'),
             ref_needles(condensed, 'type', subkind='typedef'),
 
-            qualified_needles(condensed, 'var', kind='variable'),
+            needles(condensed, 'var', kind='variable'),
             ref_needles(condensed, 'var', subkind='variable'),
 
-            qualified_needles(condensed, 'namespace'),
+            needles(condensed, 'namespace'),
             ref_needles(condensed, 'namespace'),
 
-            qualified_needles(condensed, 'namespace_alias'),
+            needles(condensed, 'namespace_alias'),
             ref_needles(condensed, 'namespace_alias'),
 
             macro_needles(condensed),
-            ref_needles(condensed, 'macro', keys=('name',)),
+            ref_needles(condensed, 'macro', include_qualname=False),
 
             decl_needles(condensed, 'var', subkind='variable'),
-            decl_needles(condensed, 'function'),
+            decl_needles(condensed, 'function', include_typeless_qualname=True),
             decl_needles(condensed, 'type'),
 
             warning_needles(condensed),

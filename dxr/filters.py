@@ -3,6 +3,8 @@
 from functools import wraps
 from funcy import identity
 
+from dxr.utils import is_in
+
 
 # Domain constants:
 FILE = 'file'
@@ -233,4 +235,4 @@ class QualifiedNameFilterBase(NameFilterBase):
         """
         return ((not self._term['qualified'] and
                  super(QualifiedNameFilterBase, self)._should_be_highlit(entity))
-                or entity['qualname'] == self._term['arg'])
+                or is_in(self._term['arg'], entity['qualname']))
