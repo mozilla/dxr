@@ -74,7 +74,8 @@ def ref_needles(condensed,
                 subkind=None,
                 include_qualname=True,
                 include_typeless_qualname=False):
-    """Return needles for references to a certain kind of thing.
+    """Return needles for references to a certain kind of language construct,
+    e.g. functions, variables, or namespaces.
 
     References are assumed to have names and qualnames.
 
@@ -84,7 +85,8 @@ def ref_needles(condensed,
     """
     subkind = subkind or name
     return needles(condensed,
-                   name, suffix='_ref',
+                   name,
+                   suffix='_ref',
                    kind='ref',
                    subkind=subkind,
                    include_qualname=include_qualname,
