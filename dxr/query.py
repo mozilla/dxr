@@ -1,6 +1,7 @@
 import cgi
 from itertools import chain, groupby
 from operator import itemgetter
+from os.path import sep
 import re
 
 from parsimonious import Grammar, NodeVisitor
@@ -27,6 +28,34 @@ def direct_searchers(plugins):
             sortables.append((s, (s.direct_search_priority, plugin.name, s.__name__)))
     sortables.sort(key=itemgetter(1))
     return [searcher for searcher, _ in sortables]
+
+
+def _construct_query(filters):
+    """Construct an ES query from nested list of filters by applying OR to each inner list of
+    filters and AND between lists of filter.
+
+    """
+    # An ORed-together ball for each term's filters, omitting filters that
+    # punt by returning {} and ors that contain nothing but punts:
+    ors = filter(None, [filter(None, (f.filter() for f in term))
+                        for term in filters])
+    ors = [{'or': x} for x in ors]
+
+    if ors:
+        return {
+            'filtered': {
+                'query': {
+                    'match_all': {}
+                },
+                'filter': {
+                    'and': ors
+                }
+            }
+        }
+    else:
+        return {
+            'match_all': {}
+        }
 
 
 class Query(object):
@@ -61,7 +90,7 @@ class Query(object):
         # Group lines into files:
         for path, lines in groupby(results, lambda r: r['path'][0]):
             lines = list(lines)
-            highlit_path = highlight(
+            highlit_path = highlight_path(
                 path,
                 chain.from_iterable((h(lines[0]) for h in
                                      path_highlighters)))
@@ -78,23 +107,22 @@ class Query(object):
     def _file_query_results(self, results, path_highlighters):
         """Return an iterable of results of a FILE-domain query."""
         for file in results:
-            yield (icon(file['path'][0]),
-                   highlight(file['path'][0],
+            yield ('folder' if file['is_folder'] else icon(file['path'][0]),
+                   highlight_path(file['path'][0],
                              chain.from_iterable(
                                  h(file) for h in path_highlighters)),
                    [],
                    file.get('is_binary', False))
 
     def results(self, offset=0, limit=100):
-        """Return a count of search results and, as an iterable, the results
-        themselves::
+        """Return a tuple of (total number of results, search results),
+        where results have the form:
 
-            {'result_count': 12,
-             'results': [(icon,
-                          path within tree,
-                          [(line_number, highlighted_line_of_code), ...],
-                          whether it is binary),
-                         ...]}
+             [(icon,
+              path within tree,
+              [(line_number, highlighted_line_of_code), ...],
+              whether it is binary),
+             ...]
 
         """
         # Instantiate applicable filters, yielding a list of lists, each inner
@@ -108,50 +136,30 @@ class Query(object):
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
 
-        # An ORed-together ball for each term's filters, omitting filters that
-        # punt by returning {} and ors that contain nothing but punts:
-        ors = filter(None, [filter(None, (f.filter() for f in term))
-                            for term in filters])
-        ors = [{'or': x} for x in ors]
+        return self._perform_search(filters, is_line_query, offset, limit)
 
-        if not is_line_query:
-            # Don't show folders yet in search results. I don't think the JS
-            # is able to handle them.
-            ors.append({'term': {'is_folder': False}})
+    # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 
-        if ors:
-            query = {
-                'filtered': {
-                    'query': {
-                        'match_all': {}
-                    },
-                    'filter': {
-                        'and': ors
-                    }
-                }
+    def promoted_paths(self, term, promote_limit=5):
+        """Return a tuple (total number of path results, promoted paths),
+        where the number of promoted paths is no more than promote_limit."""
+
+        # We cannot import PathFilter at top of file because of circular dependency.
+        from dxr.plugins.core import PathFilter
+
+        filters = [[PathFilter(term, self.enabled_plugins)]]
+        path_query = {
+            'constant_score': {'query': _construct_query(filters), 'boost': 0.5}}
+        # We add a second query that boosts exact path part matches.
+        exact_query = {
+            'constant_score': {'query': {'match': {'path.parts': term['arg']}}, 'boost': 2.0}}
+        query = {
+            'dis_max': {
+                'queries': [path_query, exact_query]
             }
-        else:
-            query = {
-                'match_all': {}
-            }
-
-        results = self.es_search(
-            {'query': query,
-             'sort': ['path', 'number'] if is_line_query else ['path'],
-             'from': offset,
-             'size': limit},
-            doc_type=LINE if is_line_query else FILE)['hits']
-        result_count = results['total']
-        results = [r['_source'] for r in results['hits']]
-
-        path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
-                             if hasattr(f, 'highlight_path')]
-        return {'result_count': result_count,
-                'results': self._line_query_results(filters, results, path_highlighters)
-                           if is_line_query
-                           else self._file_query_results(results, path_highlighters)}
-
-        # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
+        }
+        # We ask not to sort by path and line, falling back to score ranking instead.
+        return self._perform_search(filters, False, 0, promote_limit, query, False)
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -189,6 +197,39 @@ class Query(object):
                 elif len(results) > 1:
                     return None
 
+    def _perform_search(self, filters, is_line_query, offset, limit, query=None, sort=True):
+        """Perform a query using self.es_search, returning a tuple (total count of results,
+        list of results)
+
+        :arg filters: nested list of filters
+        :arg is_line_query: whether to query lines (otherwise query files)
+        :arg offset: return results starting from this number
+        :arg limit: maximum number of results to return
+        :arg query: valid ES query; if omitted then construct one from filters
+        :arg sort: whether to sort the results alphabetically by path and numerically by line
+
+        """
+        if not query:
+            # Construct query here.
+            query = _construct_query(filters)
+        results = self.es_search(
+            {'query': query,
+             'sort': (['path', 'number'] if is_line_query else ['path']) if sort else ['_score'],
+             'from': offset,
+             'size': limit},
+            doc_type=LINE if is_line_query else FILE)['hits']
+        result_count = results['total']
+        results = [r['_source'] for r in results['hits']]
+
+        path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
+                             if hasattr(f, 'highlight_path')]
+
+        if is_line_query:
+            results = self._line_query_results(filters, results, path_highlighters)
+        else:
+            results = self._file_query_results(results, path_highlighters)
+
+        return result_count, results
 
 @cached
 def query_grammar(plugins):
@@ -370,6 +411,25 @@ def filter_menu_items(plugins):
     return (dict(name=name, description=filter.description)
             for name, filter in sorted_filters_by_name
             if filter.description)
+
+
+def highlight_path(path, extents):
+    """Return list of path fragments containing <b> tags to describe highlighting based on given
+    extents.
+
+    :arg path: the path to highlight as a single string
+    :arg extents: iterable of unsorted, possibly overlapping (start, end) offset tuples
+
+    """
+    highlighted_content = highlight(path, extents)
+    # Split on slash, except the slash in </b>.
+    highlighted_fragments = []
+    for possibly_fragment in highlighted_content.split(sep):
+        if possibly_fragment.startswith('b>'):
+            highlighted_fragments[-1] += sep + possibly_fragment
+        else:
+            highlighted_fragments.append(possibly_fragment)
+    return highlighted_fragments
 
 
 def highlight(content, extents):

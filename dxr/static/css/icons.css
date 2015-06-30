@@ -85,6 +85,9 @@ a.type {
 }
 /* End of Panel icons that are always shown */
 
+.icon-container.folder, .promoted-icon.folder {
+    background: transparent url(/static/icons/mimetypes/folder.png) no-repeat;
+}
 .enum {
     background-image: url(/static/icons/enum.png);
 }

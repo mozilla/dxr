@@ -97,24 +97,25 @@ $(function() {
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
      *
-     * @param {string} fullPath - The full path of the currently displayed file.
+     * @param {Array} paths - Array of highlighted fragments of the currently displayed file path.
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
+     * @param {boolean} isBinary - Whether the result is for a binary file.
      */
-    function buildResultHead(fullPath, tree, icon, isBinary) {
+    function buildResultHead(paths, tree, icon, isBinary) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
-            paths = fullPath.split('/'),
             splitPathLength = paths.length,
             dataPath = [],
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
-        for (var pathIndex in paths) {
+        for (var pathIndex = 0; pathIndex < paths.length; pathIndex++) {
             var index = parseInt(pathIndex),
                 isFirstOrOnly = index === 0 || splitPathLength === 1,
                 isLastOrOnly = (splitPathLength - 1) === index || splitPathLength === 1;
 
-            dataPath.push(paths[pathIndex]);
+            // Strip the highlighting when building the data path.
+            dataPath.push(paths[pathIndex].replace(/<\/?b>/g, ""));
 
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
@@ -322,20 +323,20 @@ $(function() {
         data.query_string = $.param(params);
 
         // If no data is returned, inform the user.
-        if (!data.results.length) {
+        if (!data.results.length && !data.promoted.length) {
             contentContainer
                 .empty()
                 .append(nunjucks.render('partial/results_container.html', data));
         } else {
-            var results = data.results;
-            resultsLineCount = countLines(results);
-
-            for (var result in results) {
-                var icon = results[result].icon;
-                var resultHead = buildResultHead(results[result].path, data.tree, icon, results[result].is_binary);
-                results[result].iconClass = resultHead[0];
-                results[result].pathLine = resultHead[1];
-            }
+            [data.results, data.promoted].forEach(function(results) {
+                resultsLineCount += countLines(results);
+                for (var i = 0; i < results.length; i++) {
+                    var icon = results[i].icon;
+                    var resultHead = buildResultHead(results[i].path, data.tree, icon, results[i].is_binary);
+                    results[i].iconClass = resultHead[0];
+                    results[i].pathLine = resultHead[1];
+                }
+            });
 
             if (!append) {
                 contentContainer

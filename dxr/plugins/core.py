@@ -36,6 +36,10 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
         'trigrams': {
             'type': 'string',
             'analyzer': 'trigramalyzer'
+        },
+        'parts': {
+            'type': 'string',
+            'analyzer': 'path_analyzer'
         }
     }
 }
@@ -214,6 +218,10 @@ analyzers = {
             'type': 'custom',
             'filter': ['lowercase'],
             'tokenizer': 'keyword'
+        },
+        'path_analyzer': {
+            'type': 'custom',
+            'tokenizer': 'path_tokenizer'
         }
     },
     'tokenizer': {
@@ -222,6 +230,10 @@ analyzers = {
             'min_gram': NGRAM_LENGTH,
             'max_gram': NGRAM_LENGTH
             # Keeps all kinds of chars by default.
+        },
+        'path_tokenizer': {
+            'type': 'pattern',
+            'pattern': '/'
         }
     }
 }
@@ -302,6 +314,20 @@ class PathFilter(Filter):
         except NoTrigrams:
             raise BadTerm('Path globs need at least 3 literal characters in a row '
                           'for speed.')
+
+    def highlight_path(self, result):
+        path = result['path'][0]
+        term = self._term['arg']
+        if not self._term['case_sensitive']:
+            path = path.lower()
+            term = term.lower()
+        start = 0
+        while True:
+            start = path.find(term, start)
+            if start == -1:
+                break
+            yield start, start + len(term)
+            start += len(term)
 
 
 class ExtFilter(Filter):

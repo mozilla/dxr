@@ -1,9 +1,6 @@
-{% from "partial/switch_tree.html" import tree_menu -%}
-
-{%- macro results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) -%}
+{%- macro results_header(result_count, result_count_formatted, top_of_tree, tree) -%}
   <p class="top-of-tree">
     {{ result_count_formatted }} {{ 'result' if result_count == 1 else 'results' }} from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree{% if result_count > 0 %}:{% endif %}
   </p>
 
-  {{ tree_menu(tree_tuples, tree) }}
 {%- endmacro -%}

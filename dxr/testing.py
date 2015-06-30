@@ -1,8 +1,8 @@
 import cgi
-from commands import getoutput, getstatusoutput
+from commands import getoutput
 import json
 from os import chdir, mkdir
-from os.path import dirname, join
+from os.path import dirname, join, sep
 import re
 from shutil import rmtree
 import subprocess
@@ -50,7 +50,7 @@ class TestCase(unittest.TestCase):
 
     def found_files(self, query, is_case_sensitive=True):
         """Return the set of paths of files found by a search query."""
-        return set(result['path'] for result in
+        return set(sep.join(result['path']).replace('<b>', '').replace('</b>', '') for result in
                    self.search_results(query,
                                        is_case_sensitive=is_case_sensitive))
 
@@ -166,7 +166,8 @@ class TestCase(unittest.TestCase):
         """
         response = self.search_response(query,
                                         is_case_sensitive=is_case_sensitive)
-        return json.loads(response.data)['results']
+        data = json.loads(response.data)
+        return data['promoted'] + data['results']
 
     def clang_at_least(self, version):
         output = getoutput("clang --version")

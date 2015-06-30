@@ -174,11 +174,8 @@ td pre code {
     position: relative;
     float: left;
     clear: none;
-    padding: 0 0 0 1em;
-    float: left;
     margin: 0;
     padding: 0;
-    position: relative;
 }
 code a {
     cursor: pointer;
@@ -196,6 +193,31 @@ mark {
 }
 .logo a:focus {
     background-color: transparent;
+}
+
+/* promoted stuff */
+.promoted-container {
+    margin-left: 3em;
+    padding-right: 2em;
+    padding-left: 2em;
+    padding-bottom: 1em;
+}
+.promoted-icon {
+    float: left;
+    width: 16px;
+    height: 16px;
+}
+.promoted-result {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 24px;
+}
+.promoted-line.left-column {
+    display: inline;
+    width: 6ex;
+}
+.promoted-text {
+    padding: .1rem .5rem;
 }
 
 /* results */
@@ -415,6 +437,10 @@ mark {
 .breadcrumbs a:visited,
 .bubble a:link,
 .bubble a:visited,
+.promoted-path a:link,
+.promoted-path a:visited,
+.promoted-see-more a:link,
+.promoted-see-more a:visited,
 .result-head a:link,
 .result-head a:visited {
     color: #0095dd;

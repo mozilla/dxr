@@ -27,8 +27,6 @@ class BasicTests(DxrInstanceTestCase):
     def test_case_sensitive(self):
         """Make sure case-sensitive searching is case-sensitive.
 
-        This tests trilite's substr-extents query type.
-
         """
         self.found_files_eq('really',
                             ['README.mkd'],
@@ -41,13 +39,11 @@ class BasicTests(DxrInstanceTestCase):
 
         Also test negation of text queries.
 
-        This tests trilite's isubstr query type.
-
         """
         results = self.search_results(
             'path:makefile -CODE', is_case_sensitive=False)
         eq_(results,
-            [{"path": "makefile",
+            [{"path": ["<b>makefile</b>"],
               "lines": [
                 {"line_number": 3,
                   "line": "$(CXX) -o $@ $^"},
@@ -58,8 +54,6 @@ class BasicTests(DxrInstanceTestCase):
 
     def test_case_insensitive_extents(self):
         """Test case-insensitive free-text searching with extents.
-
-        This tests trilite's isubstr-extents query type.
 
         """
         self.found_files_eq('MAIN',
@@ -79,7 +73,7 @@ class BasicTests(DxrInstanceTestCase):
 
         """
         eq_(self.search_results('path:makefile'),
-            [{"path": "makefile",
+            [{"path": ["<b>makefile</b>"],
               "lines": [],
               "icon": "unknown",
               "is_binary": False}])

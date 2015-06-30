@@ -1,7 +1,18 @@
+{% from "partial/promoted.html" import promoted_list, promoted_header -%}
 {% from "partial/results.html" import results_list -%}
 {% from "partial/results_header.html" import results_header -%}
+{% from "partial/switch_tree.html" import tree_menu -%}
 
-{{ results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) }}
+{{ tree_menu(tree_tuples, tree) }}
+
+{% if promoted|length > 0 %}
+  {{ promoted_header(query, promoted_count, promoted_count, top_of_tree, tree) }}
+  <div class="promoted-container">
+    {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
+  </div>
+{% endif %}
+
+{{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
 
 {% if results|length > 0 %}
   <table class="results">

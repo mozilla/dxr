@@ -4,7 +4,7 @@
 {%- if not is_binary or is_dir -%}
 <a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
 {%- endif -%}
-    {{ display_path }}
+    {{ display_path|safe }}
 {%- if not is_binary or is_dir -%}
 </a>
 {%- endif -%}
