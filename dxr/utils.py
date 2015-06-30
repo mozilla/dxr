@@ -236,3 +236,13 @@ def rmtree_if_exists(folder):
     except OSError as exc:
         if exc.errno != ENOENT:
             raise
+
+
+def is_in(needle, haystack):
+    """Compare needle against haystack or a list of haystacks.
+
+    If haystack is a list, return whether needle is in haystack. Otherwise,
+    return whether needle == haystack.
+
+    """
+    return (needle in haystack) if isinstance(haystack, list) else needle == haystack

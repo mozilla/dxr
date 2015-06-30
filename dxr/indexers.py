@@ -20,7 +20,7 @@ STRING_PROPERTY = {
 }
 
 
-# An unanlyzed string property that points to a value that can be exact- or
+# An unanalyzed string property that points to a value that can be exact- or
 # prefix-matched against and carries start/end bounds for highlighting. Has
 # both a name and a qualname.
 QUALIFIED_FILE_NEEDLE = {
@@ -35,6 +35,9 @@ QUALIFIED_LINE_NEEDLE = {
     'type': 'object',
     'properties': {
         'name': STRING_PROPERTY,
+        # The clang plugin stores both type-distinguished and merely scoped
+        # names here: both "Thing::foo(int num)" and "Thing::foo". Thus, the
+        # value may be either a string or a list:
         'qualname': STRING_PROPERTY,
         'start': {
             'type': 'integer',

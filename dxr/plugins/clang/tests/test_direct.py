@@ -44,6 +44,24 @@ class TypeAndMethodTests(SingleFileTestCase):
         """
         self.direct_result_eq('MemberFunction::member_function(int)', 16)
 
+    def test_scoped_function_name_insensitive(self):
+        """A unique, case-insensitive match on a scoped function name should
+        take you directly to the result.
+
+        A "scoped" function name is a fully qualified one without types.
+
+        """
+        self.direct_result_eq('MemberFunction::unique_member_FUNCTION', 20)
+
+    def test_scoped_function_name_sensitive(self):
+        """A unique, case-sensitive match on scoped function name should take
+        you directly to the result.
+
+        This should have precedence over any case-insensitive match.
+
+        """
+        self.direct_result_eq('MemberFunction::member_function', 16)
+
     def test_qualified_function_name_multiple_matches(self):
         """Multiple matches on fully qualified function name should not yield
         a direct result."""
