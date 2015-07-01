@@ -380,20 +380,7 @@ def es_lines(tags):
     # yield here to catch remnants.
 
 
-def triples_from_es_refs(es_refs):
-    """Convert list of lists of es refs per lines to (start, end, payload) triples.
-
-    """
-    for item in chain.from_iterable(es_refs):
-        payload = item['payload']
-        yield (item['start'],
-               item['end'],
-               Ref(payload['menuitems'],
-                   hover=payload.get('hover'),
-                   qualname_hash=payload.get('qualname_hash')))
-
-
-def triples_from_es_regions(es_regions):
+def triples_from_es_regionses(es_regions):
     """Convert list of lists es regions to (start, end, payload) triples.
 
     """

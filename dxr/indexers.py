@@ -413,10 +413,11 @@ class Ref(object):
                   'href': 'URL',
                   'icon': 'extensionless name of a PNG from the icons folder'},
                  ...]
-        :arg qualname: The unique name of the symbol surrounded by this ref,
-            for highlighting
+        :arg qualname: A unique identifier for the symbol surrounded by this
+            ref, for highlighting
         :arg qualname_hash: The hashed version of ``qualname``, which you can
-            pass instead of ``qualname`` if you like
+            pass instead of ``qualname`` if you have access to the
+            already-hashed version
 
         """
         self.menu = menu
@@ -427,9 +428,20 @@ class Ref(object):
         ret = {'menuitems': self.menu}
         if self.hover:
             ret['hover'] = self.hover
-        if self.qualname_hash:
+        if self.qualname_hash is not None:  # could be 0
             ret['qualname_hash'] = self.qualname_hash
         return ret
+
+    @classmethod
+    def es_to_triple(cls, es_ref):
+        """Convert ES-dwelling refs representation to a (start, end, Ref)
+        triple."""
+        payload = es_ref['payload']
+        return (es_ref['start'],
+                es_ref['end'],
+                cls(payload['menuitems'],
+                    hover=payload.get('hover'),
+                    qualname_hash=payload.get('qualname_hash')))
 
 
 # Conveniences:
