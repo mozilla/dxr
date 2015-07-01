@@ -45,11 +45,11 @@ class Vcs(object):
         return type(self).__name__
 
     @classmethod
-    def invoke_vcs(cls, args, cwd):
-        """Return the result of invoking the VCS command on the repository,
-        with the current working directory set to the root directory.
+    def invoke_vcs(cls, args, cwd, **kwargs):
+        """Return the result of invoking the VCS command on the repository from
+        given working directory, with extra kwargs passed along to the Popen constructor.
         """
-        return subprocess.check_output([cls.command] + args, cwd=cwd)
+        return subprocess.check_output([cls.command] + args, cwd=cwd, **kwargs)
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
@@ -72,7 +72,7 @@ class Vcs(object):
         return NotImplemented
 
     @classmethod
-    def get_contents(cls, path, revision):
+    def get_contents(cls, path, revision, stderr=None):
         """Return contents of file at specified path at given revision, where path is an
         absolute path."""
         return NotImplemented
@@ -149,9 +149,9 @@ class Mercurial(Vcs):
         return self.upstream + 'filelog/' + self.revision + '/' + path
 
     @classmethod
-    def get_contents(cls, path, revision):
+    def get_contents(cls, path, revision, stderr=None):
         head, tail = split(path)
-        return cls.invoke_vcs(['cat', '-r', revision, tail], head)
+        return cls.invoke_vcs(['cat', '-r', revision, tail], head, stderr=stderr)
 
 
 class Git(Vcs):
@@ -211,9 +211,9 @@ class Git(Vcs):
         return self.upstream + "/commits/" + self.revision + "/" + path
 
     @classmethod
-    def get_contents(cls, path, revision):
+    def get_contents(cls, path, revision, stderr=None):
         head, tail = split(path)
-        return cls.invoke_vcs(['show', revision + ':' + tail], head)
+        return cls.invoke_vcs(['show', revision + ':' + tail], head, stderr=stderr)
 
 
 class Perforce(Vcs):
@@ -318,11 +318,12 @@ def tree_to_repos(tree):
 def file_contents_at_rev(abspath, revision):
     """Attempt to return the contents of a file at a specific revision."""
 
-    for cls in [Mercurial, Git]:
-        try:
-            return cls.get_contents(abspath, revision)
-        except subprocess.CalledProcessError:
-            continue
+    with open(os.devnull, 'w') as devnull:
+        for cls in [Mercurial, Git]:
+            try:
+                return cls.get_contents(abspath, revision, stderr=devnull)
+            except subprocess.CalledProcessError:
+                continue
     return None
 
 
