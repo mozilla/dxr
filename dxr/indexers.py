@@ -225,23 +225,11 @@ class FileToSkim(PluginConfig):
 
         Yield an ordered list of extents and menu items::
 
-            (start, end, (menu, hover, qualname))
+            (start, end, Ref)
 
         ``start`` and ``end`` are the bounds of a slice of a Unicode string
         holding the contents of the file. (``refs()`` will not be called for
         binary files.)
-
-        ``hover`` is the contents of the <a> tag's title attribute. (The first
-        one wins.)
-
-        ``menu`` is a list of mappings, each representing an item of the
-        context menu::
-
-            [{'html': 'description',
-              'title': 'longer description',
-              'href': 'URL',
-              'icon': 'extensionless name of a PNG from the icons folder'},
-             ...]
 
         """
         return []
@@ -404,6 +392,44 @@ class FileToIndex(FileToSkim):
 
         """
         return []
+
+
+class Ref(object):
+    """A context menu and other metadata attached to a run of text"""
+
+    sort_order = 1
+    __slots__ = ['menu', 'hover', 'qualname_hash']
+
+    def __init__(self, menu, hover=None, qualname=None, qualname_hash=None):
+        """Construct.
+
+        :arg hover: the contents of the <a> tag's title attribute. (The first
+            one wins.)
+        :arg menu: a list of mappings, each representing an item of the
+            context menu::
+
+                [{'html': 'description',
+                  'title': 'longer description',
+                  'href': 'URL',
+                  'icon': 'extensionless name of a PNG from the icons folder'},
+                 ...]
+        :arg qualname: The unique name of the symbol surrounded by this ref,
+            for highlighting
+        :arg qualname_hash: The hashed version of ``qualname``, which you can
+            pass instead of ``qualname`` if you like
+
+        """
+        self.menu = menu
+        self.hover = hover
+        self.qualname_hash = hash(qualname) if qualname else qualname_hash
+
+    def es(self):
+        ret = {'menuitems': self.menu}
+        if self.hover:
+            ret['hover'] = self.hover
+        if self.qualname_hash:
+            ret['qualname_hash'] = self.qualname_hash
+        return ret
 
 
 # Conveniences:

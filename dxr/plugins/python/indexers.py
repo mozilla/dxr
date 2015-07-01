@@ -9,7 +9,7 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
-                          with_start_and_end)
+                          with_start_and_end, Ref)
 from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import class_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
@@ -169,7 +169,7 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         self.refs.append((
             self.file_to_index.char_offset(*start),
             self.file_to_index.char_offset(*end),
-            (menu, None, None),
+            Ref(menu),
         ))
 
 

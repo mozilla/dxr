@@ -18,6 +18,8 @@ from itertools import chain
 
 from jinja2 import Markup
 
+from dxr.indexers import Ref
+
 
 class Line(object):
     """Representation of a line's beginning and ending as the contents of a tag
@@ -36,7 +38,7 @@ LINE = Line()
 
 class TagWriter(object):
     """A thing that hangs onto a tag's payload (like the class of a span) and
-    knows how to write its opening and closing tags"""
+    knows how to write its elasticsearch representation"""
 
     def __init__(self, payload):
         self.payload = payload
@@ -53,20 +55,6 @@ class Region(TagWriter):
 
     def es(self):
         return self.payload
-
-
-class Ref(TagWriter):
-    """Thing to open and close <a> tags"""
-    sort_order = 1
-
-    def es(self):
-        menuitems, hover, qualname = self.payload
-        ret = {'menuitems': menuitems}
-        if hover:
-            ret['hover'] = hover
-        if qualname:
-            ret['qualname_hash'] = hash(qualname)
-        return ret
 
 
 def balanced_tags(tags):
@@ -203,7 +191,7 @@ def tag_boundaries(refs, regions):
     """
     for intervals, cls in [(regions, Region), (refs, Ref)]:
         for start, end, data in intervals:
-            tag = cls(data)
+            tag = data if cls is Ref else cls(data)
             # Filter out zero-length spans which don't do any good and
             # which can cause starts to sort after ends, crashing the tag
             # balancer. Incidentally filter out spans where start tags come
@@ -398,10 +386,11 @@ def triples_from_es_refs(es_refs):
     """
     for item in chain.from_iterable(es_refs):
         payload = item['payload']
-        ref = (payload['menuitems'],
-               payload.get('hover'),
-               payload.get('qualname_hash'))
-        yield item['start'], item['end'], ref
+        yield (item['start'],
+               item['end'],
+               Ref(payload['menuitems'],
+                   hover=payload.get('hover'),
+                   qualname_hash=payload.get('qualname_hash')))
 
 
 def triples_from_es_regions(es_regions):
@@ -436,14 +425,13 @@ def html_line(text, tags, bof_offset):
             elif isinstance(payload, Region):  # It's a span.
                 yield u'<span class="%s">' % cgi.escape(payload.payload, True)
             else:  # It's a menu.
-                menu, hover, qualname_hash = payload.payload
-                menu = cgi.escape(json.dumps(menu), True)
-                if hover:
-                    title = ' title="' + cgi.escape(hover, True) + '"'
+                menu = cgi.escape(json.dumps(payload.menu), True)
+                if payload.hover:
+                    title = ' title="' + cgi.escape(payload.hover, True) + '"'
                 else:
                     title = ''
-                if qualname_hash:
-                    cls = ' class="tok%i"' % qualname_hash
+                if payload.qualname_hash:
+                    cls = ' class="tok%i"' % payload.qualname_hash
                 else:
                     cls = ''
                 yield u'<a data-menu="%s"%s%s>' % (menu, title, cls)
