@@ -6,6 +6,7 @@ from pygments.token import Token, Comment
 from pygments.util import ClassNotFound
 
 import dxr.indexers
+from dxr.indexers import Region
 
 
 token_classes = {Token.Comment.Preproc: 'p'}
@@ -86,7 +87,7 @@ def _regions_for_contents(lexer, contents):
     for index, token, text in lexer.get_tokens_unprocessed(contents):
         cls = token_classes.get(token)
         if cls:
-            yield index, index + len(text), cls
+            yield index, index + len(text), Region(cls)
 
 
 class FileToIndex(dxr.indexers.FileToIndex):

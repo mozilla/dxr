@@ -6,19 +6,18 @@ Within this file, "tag" means a tuple of (file-wide offset, is_start, payload).
 
 """
 import cgi
+from itertools import chain
 try:
     from itertools import compress
 except ImportError:
     from itertools import izip
     def compress(data, selectors):
         return (d for d, s in izip(data, selectors) if s)
-import json
 from warnings import warn
-from itertools import chain
 
 from jinja2 import Markup
 
-from dxr.indexers import Ref
+from dxr.indexers import Ref, Region
 
 
 class Line(object):
@@ -34,27 +33,6 @@ class Line(object):
         return 'Line()'
 
 LINE = Line()
-
-
-class TagWriter(object):
-    """A thing that hangs onto a tag's payload (like the class of a span) and
-    knows how to write its elasticsearch representation"""
-
-    def __init__(self, payload):
-        self.payload = payload
-
-    # __repr__ comes in handy for debugging.
-    def __repr__(self):
-        return '%s("%s")' % (self.__class__.__name__, self.payload)
-
-
-class Region(TagWriter):
-    """Thing to open and close <span> tags"""
-    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
-                    # them.
-
-    def es(self):
-        return self.payload
 
 
 def balanced_tags(tags):
@@ -175,7 +153,7 @@ def balanced_tags_with_empties(tags):
     yield point, False, LINE
 
 
-def tag_boundaries(refs, regions):
+def tag_boundaries(tags):
     """Return a sequence of (offset, is_start, Region/Ref/Line) tuples.
 
     Basically, split the atomic tags that come out of plugins into separate
@@ -185,26 +163,23 @@ def tag_boundaries(refs, regions):
     Like in Python slice notation, the offset of a tag refers to the index of
     the source code char it comes before.
 
-    :arg refs: An iterable (doesn't have to be a list)
-    :arg regions: An iterable (doesn't have to be a list)
+    :arg tags: An iterable of (start, end, Ref) and (start, end, Region) tuples
 
     """
-    for intervals, cls in [(regions, Region), (refs, Ref)]:
-        for start, end, data in intervals:
-            tag = data if cls is Ref else cls(data)
-            # Filter out zero-length spans which don't do any good and
-            # which can cause starts to sort after ends, crashing the tag
-            # balancer. Incidentally filter out spans where start tags come
-            # after end tags, though that should never happen.
-            #
-            # Also filter out None starts and ends. I don't know where they
-            # come from. That shouldn't happen and should be fixed in the
-            # plugins.
-            if (start is not None and start != -1 and
-                    end is not None and end != -1 and
-                    start < end):
-                yield start, True, tag
-                yield end, False, tag
+    for start, end, data in tags:
+        # Filter out zero-length spans which don't do any good and
+        # which can cause starts to sort after ends, crashing the tag
+        # balancer. Incidentally filter out spans where start tags come
+        # after end tags, though that should never happen.
+        #
+        # Also filter out None starts and ends. I don't know where they
+        # come from. That shouldn't happen and should be fixed in the
+        # plugins.
+        if (start is not None and start != -1 and
+                end is not None and end != -1 and
+                start < end):
+            yield start, True, data
+            yield end, False, data
 
 
 def line_boundaries(lines):
@@ -321,7 +296,7 @@ def finished_tags(lines, refs, regions):
     # Plugins return unicode offsets, not byte ones.
 
     # Get start and endpoints of intervals:
-    tags = list(tag_boundaries(refs, regions))
+    tags = list(tag_boundaries(chain(refs, regions)))
 
     tags.extend(line_boundaries(lines))
 
@@ -380,15 +355,6 @@ def es_lines(tags):
     # yield here to catch remnants.
 
 
-def triples_from_es_regionses(es_regions):
-    """Convert list of lists es regions to (start, end, payload) triples.
-
-    """
-    for item in chain.from_iterable(es_regions):
-        region = item['payload']
-        yield (item['start'], item['end'], region)
-
-
 def html_line(text, tags, bof_offset):
     """Return a line of Markup, interleaved with the refs and regions that
     decorate it.
@@ -408,20 +374,9 @@ def html_line(text, tags, bof_offset):
             yield cgi.escape(text[up_to:pos].strip(u'\r\n'))
             up_to = pos
             if not is_start:  # It's a closer. Most common.
-                yield '</a>' if isinstance(payload, Ref) else '</span>'
-            elif isinstance(payload, Region):  # It's a span.
-                yield u'<span class="%s">' % cgi.escape(payload.payload, True)
-            else:  # It's a menu.
-                menu = cgi.escape(json.dumps(payload.menu), True)
-                if payload.hover:
-                    title = ' title="' + cgi.escape(payload.hover, True) + '"'
-                else:
-                    title = ''
-                if payload.qualname_hash:
-                    cls = ' class="tok%i"' % payload.qualname_hash
-                else:
-                    cls = ''
-                yield u'<a data-menu="%s"%s%s>' % (menu, title, cls)
+                yield payload.closer()
+            else:
+                yield payload.opener()
         yield cgi.escape(text[up_to:])
 
     return Markup(u''.join(segments(text, tags, bof_offset)))
