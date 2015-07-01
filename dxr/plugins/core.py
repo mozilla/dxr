@@ -311,6 +311,8 @@ class ExtFilter(Filter):
     domain = FILE
     description = Markup('Filename extension: <code>ext:cpp</code>. Always '
                          'case-sensitive.')
+    # The intersection of two different Ext filters would always be nothing.
+    union_only = True
 
     @negatable
     def filter(self):
@@ -395,7 +397,7 @@ class IdFilter(FilterAggregator):
 
 
 class RefFilter(FilterAggregator):
-    """Filter aggregator for ref: queries,groupingg together the results of all filters that find
+    """Filter aggregator for ref: queries, grouping together the results of all filters that find
     references to names."""
 
     name = 'ref'

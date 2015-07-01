@@ -102,8 +102,27 @@ class Query(object):
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
-        filters = [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
-                   for term in self.terms]
+
+        def group_filters_by_term(predicate):
+            # Return a nested list of ES filters for each term, filtered on predicate(Filter).
+            return [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]
+                    if predicate(f)] for term in self.terms]
+
+        def group_filters_by_name(predicate):
+            # Return a nested list of ES filters for each unique filter name, filtered on
+            # predicate(Filter).
+            d = {}
+            for term in self.terms:
+                for f in enabled_filters_by_name[term['name']]:
+                    if predicate(f):
+                        d.setdefault(term['name'], []).append(f(term, self.enabled_plugins))
+            return d.values()
+
+        # Some filters, such as ExtFilter, do not make sense to be AND'ed together, so we move
+        # them all to their own lists at the end of the regular filters list, such that they
+        # will be joined by OR instead.
+        filters = (group_filters_by_term(lambda f: not f.union_only) +
+                   group_filters_by_name(lambda f: f.union_only))
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
