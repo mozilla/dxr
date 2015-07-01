@@ -15,4 +15,4 @@ class FileToIndex(dxr.indexers.FileToIndex):
                 'html': 'Follow link',
                 'title': 'Visit %s' % url,
                 'href': url,
-                'icon': 'external_link'}], None)
+                'icon': 'external_link'}], None, None)

@@ -169,7 +169,7 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         self.refs.append((
             self.file_to_index.char_offset(*start),
             self.file_to_index.char_offset(*end),
-            (menu, None),
+            (menu, None, None),
         ))
 
 

@@ -127,7 +127,7 @@ def function_menu(tree, datum, tree_config):
                 'icon':   'method'
             })
 
-    return (menu, None)
+    return menu, None, None
 
 
 def function_ref_menu(tree, datum, tree_config):
@@ -155,7 +155,7 @@ def function_ref_menu(tree, datum, tree_config):
         name = fn_decl['qualname']
 
     # FIXME(#12) should have type, not name for title
-    return (menu, name)
+    return menu, name, None
 
 
 def variable_menu_generic(tree, datum, tree_config):
@@ -171,7 +171,7 @@ def variable_menu(tree, datum, tree_config):
         typ = datum['type']
     else:
         print "no type for variable", datum['qualname']
-    return (menu, truncate_value("", typ))
+    return menu, truncate_value("", typ), None
 
 
 def variable_ref_menu(tree, datum, tree_config):
@@ -184,7 +184,7 @@ def variable_ref_menu(tree, datum, tree_config):
             typ = var['type']
         else:
             print "no type for variable ref", var['qualname']
-        return (menu, truncate_value(typ, var['value']))
+        return menu, truncate_value(typ, var['value']), None
 
     # TODO what is the culprit here?
     #print "variable ref missing def"
@@ -219,7 +219,7 @@ def type_menu_generic(tree, datum, tree_config):
     return menu
 
 def type_menu(tree, datum, tree_config):
-    return (type_menu_generic(tree, datum, tree_config), None)
+    return type_menu_generic(tree, datum, tree_config), None, None
 
 def type_ref_menu(tree, datum, tree_config):
     if datum['refid'] and datum['refid'] in tree.data.types:
@@ -231,7 +231,7 @@ def type_ref_menu(tree, datum, tree_config):
             title = typ['value']
         else:
             print "no value for", typ['kind'], typ['qualname']
-        return (menu, truncate_value("", title))
+        return menu, truncate_value("", title), None
 
     return None
 
@@ -251,7 +251,7 @@ def module_menu(tree, datum, tree_config):
     menu = module_menu_generic(tree, datum, tree_config)
     if datum['def_file'] != datum['file_name']:
         add_jump_definition_to_line(tree, tree_config, menu, datum['def_file'], 1, "Jump to module defintion")
-    return (menu, None)
+    return menu, None, None
 
 
 def module_ref_menu(tree, datum, tree_config):
@@ -293,7 +293,7 @@ def module_ref_menu(tree, datum, tree_config):
                 else:
                     add_jump_definition_to_line(tree, tree_config, menu, mod['def_file'], 1, "Jump to module defintion")
                     add_jump_definition(tree, tree_config, menu, mod, "Jump to module declaration")
-            return (menu, None)
+            return menu, None, None
 
         # types masquerading as modules
         if datum['refid'] in tree.data.types:
@@ -305,7 +305,7 @@ def module_ref_menu(tree, datum, tree_config):
                 title = typ['value']
             else:
                 print "no value for", typ['kind'], typ['qualname']
-            return (menu, truncate_value("", title))
+            return menu, truncate_value("", title), None
 
     return None
 
@@ -324,7 +324,7 @@ def module_alias_menu(tree, datum, tree_config):
             menu = []
             add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
             add_jump_definition_to_line(tree, tree_config, menu, mod['def_file'], 1, "Jump to module defintion")
-            return (menu, None)
+            return menu, None, None
 
     # 'module' aliases to types
     if datum['refid'] and datum['refid'] in tree.data.types:
@@ -333,7 +333,7 @@ def module_alias_menu(tree, datum, tree_config):
             menu = []
             add_find_references(tree_config, menu, datum['qualname'], "type-ref", "alias")
             add_jump_definition(tree, tree_config, menu, typ, "Jump to type declaration")
-            return (menu, None)
+            return menu, None, None
 
     # 'module' aliases to variables
     if datum['refid'] and datum['refid'] in tree.data.variables:
@@ -342,7 +342,7 @@ def module_alias_menu(tree, datum, tree_config):
             menu = []
             add_find_references(tree_config, menu, datum['qualname'], "var-ref", "alias")
             add_jump_definition(tree, tree_config, menu, var, "Jump to variable declaration")
-            return (menu, None)
+            return menu, None, None
 
     # 'module' aliases to functions
     if datum['refid'] and datum['refid'] in tree.data.functions:
@@ -351,7 +351,7 @@ def module_alias_menu(tree, datum, tree_config):
             menu = []
             add_find_references(tree_config, menu, datum['qualname'], "function-ref", "alias")
             add_jump_definition(tree, tree_config, menu, fn, "Jump to function declaration")
-            return (menu, None)
+            return menu, None, None
 
     # extern crates to known local crates
     if 'location' in datum and datum['location'] and datum['location'] in tree.crates_by_name:
@@ -359,7 +359,7 @@ def module_alias_menu(tree, datum, tree_config):
         menu = []
         add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
         add_jump_definition_to_line(tree, tree_config, menu, crate['file_name'], 1, "Jump to crate")
-        return (menu, None)
+        return menu, None, None
 
     # extern crates to standard library crates
     if 'location' in datum and datum['location'] and datum['location'] in tree.locations:
@@ -367,7 +367,7 @@ def module_alias_menu(tree, datum, tree_config):
         menu = []
         add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
         std_lib_links(tree_config, menu, urls)
-        return (menu, None)
+        return menu, None, None
 
     # other references to standard library items
     if datum['refid'] in tree.data.unknowns:
@@ -376,14 +376,12 @@ def module_alias_menu(tree, datum, tree_config):
         menu = []
         add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
         std_lib_links(tree_config, menu, urls)
-        return (menu, None)
+        return menu, None, None
 
     # extern mods to unknown local crates
     menu = []
     add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
-    return (menu, None)
-
-    return None
+    return menu, None, None
 
 
 def unknown_ref_menu(tree, datum, tree_config):
@@ -394,7 +392,7 @@ def unknown_ref_menu(tree, datum, tree_config):
         if unknown['crate'] in tree.locations:
             urls = tree.locations[unknown['crate']]
             std_lib_links(tree_config, menu, urls)
-        return (menu, None)
+        return menu, None, None
 
     print "unknown unknown!"
 

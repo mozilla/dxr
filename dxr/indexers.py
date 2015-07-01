@@ -225,7 +225,7 @@ class FileToSkim(PluginConfig):
 
         Yield an ordered list of extents and menu items::
 
-            (start, end, (menu, hover))
+            (start, end, (menu, hover, qualname))
 
         ``start`` and ``end`` are the bounds of a slice of a Unicode string
         holding the contents of the file. (``refs()`` will not be called for

@@ -171,6 +171,12 @@ mappings = {
                             }
                         },
                         'hover': UNINDEXED_STRING,
+                        # Hash of qualname of the symbol we're hanging the
+                        # menu off of, if it is a symbol and we can come up
+                        # with a qualname. This powers the highlighting of
+                        # other occurrences of the symbol when you pull up the
+                        # context menu.
+                        'qualname_hash': UNINDEXED_INT
                     }
                 }
             },

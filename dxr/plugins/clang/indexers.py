@@ -149,7 +149,7 @@ class FileToIndex(FileToIndexBase):
 
                 yield (self.char_offset(start.row, start.col),
                        self.char_offset(end.row, end.col),
-                       (menu, tooltip(prop)))
+                       (menu, tooltip(prop), prop.get('qualname')))
 
     def links(self):
         """Yield a section for each class, type, enum, etc., as well as one

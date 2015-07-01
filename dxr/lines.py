@@ -60,10 +60,12 @@ class Ref(TagWriter):
     sort_order = 1
 
     def es(self):
-        menuitems, hover = self.payload
+        menuitems, hover, qualname = self.payload
         ret = {'menuitems': menuitems}
         if hover:
             ret['hover'] = hover
+        if qualname:
+            ret['qualname_hash'] = hash(qualname)
         return ret
 
 
@@ -395,8 +397,11 @@ def triples_from_es_refs(es_refs):
 
     """
     for item in chain.from_iterable(es_refs):
-        ref = (item['payload']['menuitems'], item['payload'].get('hover'))
-        yield (item['start'], item['end'], ref)
+        payload = item['payload']
+        ref = (payload['menuitems'],
+               payload.get('hover'),
+               payload.get('qualname_hash'))
+        yield item['start'], item['end'], ref
 
 
 def triples_from_es_regions(es_regions):
@@ -431,13 +436,17 @@ def html_line(text, tags, bof_offset):
             elif isinstance(payload, Region):  # It's a span.
                 yield u'<span class="%s">' % cgi.escape(payload.payload, True)
             else:  # It's a menu.
-                menu, hover = payload.payload
+                menu, hover, qualname_hash = payload.payload
                 menu = cgi.escape(json.dumps(menu), True)
                 if hover:
                     title = ' title="' + cgi.escape(hover, True) + '"'
                 else:
                     title = ''
-                yield u'<a data-menu="%s"%s>' % (menu, title)
+                if qualname_hash:
+                    cls = ' class="tok%i"' % qualname_hash
+                else:
+                    cls = ''
+                yield u'<a data-menu="%s"%s%s>' % (menu, title, cls)
         yield cgi.escape(text[up_to:])
 
     return Markup(u''.join(segments(text, tags, bof_offset)))

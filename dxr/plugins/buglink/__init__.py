@@ -16,7 +16,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
                 'html': cgi.escape("Bug %s" % bug),
                 'title': "Find this bug in %s" % self.plugin_config.name,
                 'href': self.plugin_config.url % bug,
-                'icon': 'buglink'}], None)
+                'icon': 'buglink'}], None, None)
 
 
 plugin = Plugin(
