@@ -6,12 +6,13 @@ from logging import StreamHandler
 import os
 from os import chdir
 from os.path import join, basename, split, dirname, relpath
+from mimetypes import guess_type
 from sys import stderr
 from time import time
 from mimetypes import guess_type
 from urllib import quote_plus
 
-from flask import (Blueprint, Flask, send_from_directory, current_app,
+from flask import (Blueprint, Flask, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
 from funcy import merge, imap
@@ -303,8 +304,9 @@ def skim_file(skimmers, num_lines):
               'heading': heading,
               'items': [{'icon': icon,
                          'title': title,
-                         'href': href}
-                        for icon, title, href in items]}
+                         'href': href,
+                         'sync': sync}
+                        for icon, title, href, sync in items]}
              for order, heading, items in
              chain.from_iterable(linkses)]
     return links, refses, regionses, annotations_by_line

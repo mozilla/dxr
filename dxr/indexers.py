@@ -217,7 +217,7 @@ class FileToSkim(PluginConfig):
     def links(self):
         """Return an iterable of links for the navigation pane::
 
-            (sort order, heading, [(icon, title, href), ...])
+            (sort order, heading, [(icon, title, href, whether to sync to selected line), ...])
 
         """
         return []

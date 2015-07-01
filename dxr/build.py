@@ -504,13 +504,14 @@ def index_file(tree, tree_indexers, path, es, index):
                     # And these, which all get mashed into arrays:
                     **needles)
         links = [{'order': order,
-                    'heading': heading,
-                    'items': [{'icon': icon,
-                                'title': title,
-                                'href': href}
-                            for icon, title, href in items]}
-                    for order, heading, items in
-                    chain.from_iterable(linkses)]
+                  'heading': heading,
+                  'items': [{'icon': icon,
+                             'title': title,
+                             'href': href,
+                             'sync': sync}
+                            for icon, title, href, sync in items]}
+                 for order, heading, items in
+                 chain.from_iterable(linkses)]
         if links:
             doc['links'] = links
         yield es.index_op(doc, doc_type=FILE)

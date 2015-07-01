@@ -459,7 +459,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    [('permalink', 'Permalink', url_for('.rev',
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
-                                                       path=self.path))])
+                                                       path=self.path), True)])
         else:
             yield 5, 'Untracked file', []
 

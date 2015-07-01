@@ -178,7 +178,7 @@ class FileToIndex(FileToIndexBase):
                 # First, link to the type definition itself:
                 links = [(type['kind'],
                           type['name'],
-                          '#%s' % type['span'].start.row)]
+                          '#%s' % type['span'].start.row, False)]
                 # Look up the stuff with that scope in the hash, and spit out
                 # names and line numbers, sorting by line number.
                 members = list(scopes_to_members[type['qualname']])
@@ -186,12 +186,12 @@ class FileToIndex(FileToIndexBase):
                 links.extend(('method' if isinstance(m['type'], FuncSig)
                                        else 'field',  # icon
                               m['name'],
-                              '#%s' % m['span'].start.row)
+                              '#%s' % m['span'].start.row, False)
                              for m in members if m['name'])
                 yield 30, type['name'], links
 
         # Add all macros to the macro section:
-        links = [('macro', t['name'], '#%s' % t['span'].start.row)
+        links = [('macro', t['name'], '#%s' % t['span'].start.row, False)
                  for t in self.condensed['macro']]
         if links:
             yield 100, 'Macros', links

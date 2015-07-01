@@ -7,13 +7,13 @@
  * 1) Multi-select highlight lines with shift key and update window.location.hash
  * 2) Multi-select highlight lines with command/control key and update window.location.hash
  * 3) Highlight lines when page loads, if window.location.hash exists
- * In addition, we update the permalink link to keep it synchronized with window.location.
+ * In addition, we update links to keep them synchronized with window.location.
  */
 
 $(function () {
     'use strict';
     var container = $('#line-numbers'),
-        permalink = $('.permalink'), // whenever we update window.location, update this href too
+        syncLinks = $('.sync-link'), // whenever we update window.location, update these too
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
         rangesArray = []; // track ranges of highlighted lines here
@@ -115,21 +115,25 @@ $(function () {
         }
     }
 
-    //update places where hash location is used: window, permalink
+    //update places where hash location is used: window, sync-links
     function updateHash(hash) {
-        if (permalink.length > 0)
-            updatePermalink(hash);
+        syncLinks.each(function() {
+            updateLink($(this), hash);
+        });
         history.replaceState(null, '', hash);
     }
 
-    //update the permalink href based on the windowHash.
-    function updatePermalink(windowHash) {
-        var permalink_href = permalink.attr('href'),
-            hash_loc = permalink_href.indexOf('#');
-        // If the link already has #, then cut that it off.
+    //update the link href based on the windowHash.
+    function updateLink(anchor, windowHash) {
+        var href = anchor.attr('href'),
+            hash_loc = href.indexOf('#');
+        // If the link already has #, then cut it off.
         if (hash_loc >= 0)
-            permalink_href = permalink_href.substring(0, hash_loc);
-        permalink.attr('href', permalink_href + windowHash);
+            href = href.substring(0, hash_loc);
+        // hg web uses #l and GitHub uses #L but supports #l, so we use #l here.
+        if (windowHash.length > 1)
+            windowHash = '#l' + windowHash.substring(1);
+        anchor.attr('href', href + windowHash);
     }
 
     //parse window.location.hash on new requests into two arrays
@@ -143,6 +147,7 @@ $(function () {
             ranges = null,
             firstRange = null;
         highlights = highlights.replace(/ /g,''); // clean whitespace
+        highlights = highlights.replace(/^[lL]/, ''); // clean leading 'l' or 'L'
         ranges = highlights.match(reRanges);
         if (ranges !== null) {
             ranges = ranges.map(stringToRange).sort(sortRangeAsc);
