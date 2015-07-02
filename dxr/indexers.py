@@ -206,7 +206,8 @@ class FileToSkim(PluginConfig):
         For example, if this class knows about how to analyze JS files, return
         True only if ``self.path.endswith('.js')``. If something falsy is
         returned, the framework won't call data-producing methods like
-        ``links()``, ``refs()``, etc.
+        :meth:`~dxr.indexers.FileToSkim.links()`,
+        :meth:`~dxr.indexers.FileToSkim.refs()`, etc.
 
         The default implementation selects only text files.
 
@@ -227,11 +228,13 @@ class FileToSkim(PluginConfig):
 
         Yield an ordered list of extents and menu items::
 
-            (start, end, Ref)
+            (start, end, ref)
 
         ``start`` and ``end`` are the bounds of a slice of a Unicode string
         holding the contents of the file. (``refs()`` will not be called for
         binary files.)
+
+        ``ref`` is a :class:`~dxr.indexers.Ref`.
 
         """
         return []
@@ -241,7 +244,7 @@ class FileToSkim(PluginConfig):
         of code.
 
         Yield an ordered list of extents and CSS classes (encapsulated in
-        Regions)::
+        :class:`~dxr.indexers.Region` instances)::
 
             (start, end, Region)
 
@@ -401,8 +404,7 @@ class Ref(object):
     __slots__ = ['menu', 'hover', 'qualname_hash']
 
     def __init__(self, menu, hover=None, qualname=None, qualname_hash=None):
-        """Construct.
-
+        """
         :arg hover: the contents of the <a> tag's title attribute. (The first
             one wins.)
         :arg menu: a list of mappings, each representing an item of the
@@ -434,8 +436,8 @@ class Ref(object):
 
     @classmethod
     def es_to_triple(cls, es_ref):
-        """Convert ES-dwelling ref representation to a (start, end, Ref)
-        triple."""
+        """Convert ES-dwelling ref representation to a (start, end,
+        :class:`~dxr.indexers.Ref`) triple."""
         payload = es_ref['payload']
         return (es_ref['start'],
                 es_ref['end'],
@@ -474,8 +476,8 @@ class Region(object):
 
     @classmethod
     def es_to_triple(cls, es_region):
-        """Convert ES-dwelling region representation to a (start, end, Region)
-        triple."""
+        """Convert ES-dwelling region representation to a (start, end,
+        :class:`~dxr.indexers.Region`) triple."""
         return es_region['start'], es_region['end'], cls(es_region['payload'])
 
     def opener(self):
