@@ -72,3 +72,6 @@ requests==1.2.3
 
 # sha256: rUar6kB6nbKhCxgUh53YtF7Zxb5XqGPRnKv2Od6rIWE
 https://bitbucket.org/pelmers/python-hglib/get/issue3924-version-fix.tar.gz#egg=python-hglib
+
+# sha256: AfqadqMtGy4h4hC2Fkjy6Homc3DqmspxuEg5gZhp-Bo
+https://github.com/pelmers/xpidl/archive/a1e513126c4b2f1019032e791764dd98bce47c87.zip#egg=xpidl

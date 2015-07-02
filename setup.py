@@ -25,6 +25,7 @@ setup(
                                   'python = dxr.plugins.python:plugin',
                                   'omniglot = dxr.plugins.omniglot',
                                   'rust = dxr.plugins.rust:plugin',
+                                  'xpidl = dxr.plugins.xpidl:plugin',
                                   'pygmentize = dxr.plugins.pygmentize'],
                   'console_scripts': ['dxr = dxr.cli:main']},
     install_requires=['click>=3.3,<5.0',
