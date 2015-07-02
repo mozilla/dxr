@@ -1,7 +1,7 @@
 from cStringIO import StringIO
 from datetime import datetime
 from functools import partial
-from itertools import chain, izip
+from itertools import chain, imap, izip
 from logging import StreamHandler
 import os
 from os import chdir
@@ -23,8 +23,8 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
-from dxr.lines import (html_line, tags_per_line, triples_from_es_refs,
-                       triples_from_es_regions, finished_tags)
+from dxr.indexers import Ref, Region
+from dxr.lines import html_line, tags_per_line, finished_tags
 from dxr.mime import icon, is_image, is_text
 from dxr.plugins import plugins_named, all_plugins
 from dxr.query import Query, filter_menu_items
@@ -389,8 +389,12 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                     if plugin in config.trees[tree].enabled_plugins
                     and plugin.file_to_skim]
         skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
-        index_refs = triples_from_es_refs(doc.get('refs', []) for doc in line_docs)
-        index_regions = triples_from_es_regions(doc.get('regions', []) for doc in line_docs)
+        index_refs = imap(Ref.es_to_triple,
+                          chain.from_iterable(doc.get('refs', [])
+                                              for doc in line_docs))
+        index_regions = imap(Region.es_to_triple,
+                             chain.from_iterable(doc.get('regions', [])
+                                                 for doc in line_docs))
         tags = finished_tags(lines,
                              chain(chain.from_iterable(refses), index_refs),
                              chain(chain.from_iterable(regionses), index_regions))

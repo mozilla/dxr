@@ -5,6 +5,7 @@ import re
 from schema import Optional, Use
 
 import dxr.indexers
+from dxr.indexers import Ref
 from dxr.plugins import Plugin, AdHocTreeToIndex
 
 
@@ -12,11 +13,11 @@ class FileToIndex(dxr.indexers.FileToIndex):
     def refs(self):
         for m in self.plugin_config.regex.finditer(self.contents):
             bug = m.group(1)
-            yield m.start(0), m.end(0), ([{
+            yield m.start(0), m.end(0), Ref([{
                 'html': cgi.escape("Bug %s" % bug),
                 'title': "Find this bug in %s" % self.plugin_config.name,
                 'href': self.plugin_config.url % bug,
-                'icon': 'buglink'}], None)
+                'icon': 'buglink'}])
 
 
 plugin = Plugin(
