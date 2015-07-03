@@ -29,7 +29,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             yield 'diff',  "Diff", self.vcs.generate_diff(vcs_relative_path)
             yield 'raw', "Raw", self.vcs.generate_raw(vcs_relative_path)
 
-        if self.vcs:
+        if self.vcs and self.vcs.can_make_links():
             vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
             yield (5, 'VCS Links', items())
 
