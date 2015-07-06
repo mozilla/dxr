@@ -269,7 +269,7 @@ class IntegrationTests(TestCase):
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
         eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref({}))]),
-            [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
+            [u'<a data-menu="{}">this\n</a>', u'<a data-menu="{}">that</a>'])
 
     def test_horrors(self):
         """Untangle a circus of interleaved tags, tags that start where others
