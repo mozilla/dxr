@@ -19,6 +19,12 @@ UNINDEXED_INT = {
 }
 
 
+UNINDEXED_LONG = {
+    'type': 'long',
+    'index': 'no',
+}
+
+
 TREE = 'tree'  # 'tree' doctype
 
 

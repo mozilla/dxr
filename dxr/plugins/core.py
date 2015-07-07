@@ -10,7 +10,7 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT
+from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -176,7 +176,7 @@ mappings = {
                         # with a qualname. This powers the highlighting of
                         # other occurrences of the symbol when you pull up the
                         # context menu.
-                        'qualname_hash': UNINDEXED_INT
+                        'qualname_hash': UNINDEXED_LONG
                     }
                 }
             },
