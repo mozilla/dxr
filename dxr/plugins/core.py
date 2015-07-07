@@ -162,12 +162,12 @@ mappings = {
                     'type': 'object',
                     'properties': {
 
-                        'menuitems': {
+                        'menu': {
                             'type': 'object',
                             'properties': {
-                                'html': UNINDEXED_STRING,
-                                'href': UNINDEXED_STRING,
-                                'icon': UNINDEXED_STRING
+                                'plugin': UNINDEXED_STRING,
+                                'id': UNINDEXED_STRING,  # MenuMaker ID
+                                'data': UNINDEXED_STRING
                             }
                         },
                         'hover': UNINDEXED_STRING,

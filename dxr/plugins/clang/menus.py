@@ -5,7 +5,8 @@ from os.path import basename
 from flask import url_for
 
 from dxr.app import DXR_BLUEPRINT
-from dxr.utils import search_url
+from dxr.menus import MenuMaker, SingleDatumMenuMaker
+from dxr.utils import search_url, without_ending
 
 
 BROWSE = DXR_BLUEPRINT + '.browse'
@@ -37,6 +38,18 @@ def macro_menu(tree, macro):
              'title': "Find references to macros with this name",
              'href': search_url(tree, "+macro-ref:%s" % name),
              'icon': 'reference'}]
+
+
+class ClangPluginAttr(object):
+    plugin = 'clang'
+
+
+class MacroMenuMaker(SingleDatumMenuMaker, ClangPluginAttr):
+    def menus(self):
+        yield {'html': 'Find references',
+               'href': search_url(self.tree, '+macro-ref:%s' % self.data),
+               'title': 'Find references to macros with this name',
+               'icon': 'reference'}
 
 
 def type_menu(tree, type):
@@ -143,9 +156,20 @@ def function_menu(tree, func):
     return menu
 
 
-def definition_menu(tree, path, row):
-    """Return a one-item menu for jumping directly to something's definition."""
-    return [{'html': "Jump to definition",
-             'title': "Jump to the definition in '%s'" % basename(path),
-             'href': url_for(BROWSE, tree=tree.name, path=path, _anchor=row),
-             'icon': 'jump'}]
+class DefinitionMenuMaker(MenuMaker, ClangPluginAttr):
+    """A one-item menu for jumping directly to something's definition"""
+
+    def __init__(self, tree, path, row):
+        super(DefinitionMenuMaker, self).__init__(tree)
+        self.data = [path, row]
+
+    @classmethod
+    def from_es(cls, tree, data):
+        return cls(tree, *data)
+
+    def menus(self):
+        path, row = self.data
+        yield {'html': "Jump to definition",
+               'title': "Jump to the definition in '%s'" % basename(path),
+               'href': url_for(BROWSE, tree=self.tree.name, path=path, _anchor=row),
+               'icon': 'jump'}

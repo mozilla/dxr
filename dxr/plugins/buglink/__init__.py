@@ -5,7 +5,7 @@ import re
 from schema import Optional, Use
 
 import dxr.indexers
-from dxr.indexers import Ref
+from dxr.lines import Ref
 from dxr.plugins import Plugin, AdHocTreeToIndex
 
 

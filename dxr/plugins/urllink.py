@@ -1,7 +1,7 @@
 import re
 
 import dxr.indexers
-from dxr.indexers import Ref
+from dxr.lines import Ref
 
 
 # From http://stackoverflow.com/a/1547940

@@ -246,3 +246,8 @@ def is_in(needle, haystack):
 
     """
     return (needle in haystack) if isinstance(haystack, list) else needle == haystack
+
+
+def without_ending(ending, string):
+    """If ``string`` ends with ``ending``, strip it off."""
+    return string[:-len(ending)] if string.endswith(ending) else string

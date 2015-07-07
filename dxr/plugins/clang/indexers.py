@@ -11,12 +11,13 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig, Ref)
+                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
+from dxr.lines import Ref
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
-                                     macro_menu, include_menu, typedef_menu,
-                                     definition_menu)
+                                     MacroMenuMaker, include_menu, typedef_menu,
+                                     DefinitionMenuMaker)
 from dxr.plugins.clang.needles import all_needles
 
 
@@ -96,9 +97,9 @@ class FileToIndex(FileToIndexBase):
                                   kind_getter('ref', 'namespace')]),
                 (namespace_alias_menu, [silent_itemgetter('namespace_alias'),
                                         kind_getter('ref', 'namespace_alias')]),
-                (macro_menu,
+                (MacroMenuMaker,
                  [silent_itemgetter('macro'), kind_getter('ref', 'macro')],
-                 silent_itemgetter('text')),
+                  silent_itemgetter('text')),
                 (include_menu, [silent_itemgetter('include')])]
         return chain.from_iterable(self._refs_from_view(*mv) for mv in
                                    menus_and_views)
@@ -138,18 +139,20 @@ class FileToIndex(FileToIndexBase):
                 # outside the source tree (which results in an absolute path
                 # starting with "/")...
                 if definition and not definition[0].startswith('/'):
-                    menu = definition_menu(self.tree,
-                                           path=definition[0],
-                                           row=definition[1].row)
+                    menu = [DefinitionMenuMaker(self.tree,
+                                                path=definition[0],
+                                                row=definition[1].row)]
                 else:
                     menu = []
 
-                menu.extend(menu_maker(self.tree, prop))
+                menu.append(menu_maker(self.tree, prop))
                 start, end = prop['span']
 
                 yield (self.char_offset(start.row, start.col),
                        self.char_offset(end.row, end.col),
-                       Ref(menu, hover=tooltip(prop), qualname=prop.get('qualname')))
+                       Ref(menu,
+                           hover=tooltip(prop),
+                           qualname=prop.get('qualname')))
 
     def links(self):
         """Yield a section for each class, type, enum, etc., as well as one

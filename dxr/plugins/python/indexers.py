@@ -9,9 +9,10 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           iterable_per_line, Position, split_into_lines,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
-                          with_start_and_end, Ref)
+                          with_start_and_end)
+from dxr.lines import Ref
 from dxr.plugins.python.analysis import TreeAnalysis
-from dxr.plugins.python.menus import class_menu
+from dxr.plugins.python.menus import ClassMenuMaker
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
                                       path_to_module)
@@ -132,8 +133,10 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                               start=start, end=end)
 
         # Show a menu when hovering over this class.
+        import pdb;pdb.set_trace()
+
         self.yield_ref(start, end,
-                       class_menu(self.file_to_index.tree, class_name))
+                       [ClassMenuMaker(self.file_to_index.tree, class_name)])
 
         super(IndexingNodeVisitor, self).visit_ClassDef(node)
 
