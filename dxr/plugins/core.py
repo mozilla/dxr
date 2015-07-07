@@ -161,7 +161,7 @@ mappings = {
                 'payload': {
                     'type': 'object',
                     'properties': {
-
+                        # Array of menu makers and their data:
                         'menu': {
                             'type': 'object',
                             'properties': {

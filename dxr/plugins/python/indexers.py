@@ -133,8 +133,6 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
                               start=start, end=end)
 
         # Show a menu when hovering over this class.
-        import pdb;pdb.set_trace()
-
         self.yield_ref(start, end,
                        [ClassMenuMaker(self.file_to_index.tree, class_name)])
 

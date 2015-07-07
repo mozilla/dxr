@@ -9,7 +9,7 @@ class PythonPluginAttr(object):
 class ClassMenuMaker(SingleDatumMenuMaker, PythonPluginAttr):
     """Menu generator for class definitions"""
 
-    def menus(self):
+    def menu_items(self):
         qualname = self.data
         return [
             {'html': 'Find subclasses',

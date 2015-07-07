@@ -21,7 +21,6 @@ from jinja2 import Markup
 from dxr.plugins import all_plugins
 
 
-
 class Line(object):
     """Representation of a line's beginning and ending as the contents of a tag
 
@@ -66,7 +65,10 @@ class Ref(object):
         """Return a serialization of myself to store in elasticsearch."""
         ret = {'menu': [{'plugin': maker.plugin,
                          'id': maker.id,
-                         'data': maker.es()} for maker in self.menu]}
+                         # Smash the data into a string, because it will have
+                         # a different schema from menu maker to menu maker,
+                         # and ES will freak out:
+                         'data': json.dumps(maker.es())} for maker in self.menu]}
         if self.hover:
             ret['hover'] = self.hover
         if self.qualname_hash is not None:  # could be 0
@@ -96,7 +98,7 @@ class Ref(object):
                          'in the index but not found in the current '
                          'implementation. Ignored.' % (d['plugin'], d['id']))
                 else:
-                    yield maker.from_es(tree, d['data'])
+                    yield maker.from_es(tree, json.loads(d['data']))
 
         payload = es_ref['payload']
         return (es_ref['start'],
@@ -115,7 +117,7 @@ class Ref(object):
         else:
             cls = ''
 
-        menus = list(chain.from_iterable(maker.menus() for maker in self.menu))
+        menus = list(chain.from_iterable(maker.menu_items() for maker in self.menu))
         return u'<a data-menu="%s"%s%s>' % (cgi.escape(json.dumps(menus), True),
                                             title,
                                             cls)

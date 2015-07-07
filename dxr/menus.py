@@ -2,8 +2,8 @@ from dxr.utils import without_ending
 
 
 class MenuMakerIdTagger(type):
-    """Metaclass which sticks an ``id`` attr on the class as a serializable
-    class identifier.
+    """Metaclass which automatically generates an ``id`` attr on the class as
+    a serializable class identifier.
 
     Having a dedicated identifier allows MenuMakers to move or change name
     without breaking index compatibility.
@@ -34,12 +34,20 @@ class MenuMaker(object):
         """
         :arg tree: A TreeConfig representing the tree I make menus for
 
+        Subclasses should add whatever additional constructor args they need.
+
         """
         self.tree = tree
 
     def es(self):
-        """Return serialized data to insert into elasticsearch."""
-        return self.data
+        """Return serialized data to insert into elasticsearch.
+
+        This will be JSONified into a string before ES sees it, so you can do
+        whatever you want: don't worry about mixing types in arrays, for
+        instance.
+
+        """
+        raise NotImplementedError
 
     @classmethod
     def from_es(cls, tree, data):
@@ -50,8 +58,8 @@ class MenuMaker(object):
         """
         raise NotImplementedError
 
-    def menus(self):
-        """Return an iterable of menus to be attached to a ref.
+    def menu_items(self):
+        """Return an iterable of menu items to be attached to a ref.
 
         Return an iterable of dicts of this form::
 
@@ -73,6 +81,9 @@ class SingleDatumMenuMaker(MenuMaker):
 
     :ivar data: The data to be persisted in ES
 
+    Even if you have multiple (but not sparse) pieces of data, it's often
+    easiest to pack them into a tuple and use this.
+
     """
     def __init__(self, tree, data):
         """
@@ -81,6 +92,16 @@ class SingleDatumMenuMaker(MenuMaker):
         """
         super(SingleDatumMenuMaker, self).__init__(tree)
         self.data = data
+
+    def es(self):
+        """Return serialized data to insert into elasticsearch.
+
+        This will be JSONified into a string before ES sees it, so you can do
+        whatever you want: don't worry about mixing types in arrays, for
+        instance.
+
+        """
+        return self.data
 
     @classmethod
     def from_es(cls, tree, data):
