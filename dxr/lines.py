@@ -371,7 +371,7 @@ def html_line(text, tags, bof_offset):
         for pos, is_start, payload in tags:
             # Convert from file-based position to line-based position.
             pos -= bof_offset
-            yield cgi.escape(text[up_to:pos].strip(u'\r\n'))
+            yield cgi.escape(text[up_to:pos])
             up_to = pos
             if not is_start:  # It's a closer. Most common.
                 yield payload.closer()
