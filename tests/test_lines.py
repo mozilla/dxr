@@ -268,6 +268,7 @@ class IntegrationTests(TestCase):
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
+        # We must preserve the \n in the output so that text within refs/regions keeps line breaks.
         eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref({}))]),
             [u'<a data-menu="{}">this\n</a>', u'<a data-menu="{}">that</a>'])
 
