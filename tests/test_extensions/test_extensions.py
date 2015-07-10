@@ -9,8 +9,6 @@ class FileExtensionsTests(DxrInstanceTestCase):
         self.found_files_eq('ext:c', ['main.c', 'dot_c.c'])
         self.found_files_eq('ext:cpp', ['hello-world.cpp'])
         self.found_files_eq('ext:inc', ['hello-world.inc'])
-        # Make sure that multiple ext filters are joined with 'or' instead of 'and.'
-        self.found_files_eq('ext:c ext:cpp', ['main.c', 'dot_c.c', 'hello-world.cpp'])
 
     def test_extensions_formatting(self):
         """Extensions can be preceeded by a dot"""

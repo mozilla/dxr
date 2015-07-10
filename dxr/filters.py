@@ -42,7 +42,7 @@ class Filter(object):
         from the menu. This should probably be used only internally, by the
         TextFilter.
     :ivar union_only: Whether this filter will always be ORed with others of the same name,
-        useful for filters where the intersection would always be empty, such as extensions.
+        useful for filters where the intersection would always be empty, such as extensions
 
     """
     domain = LINE
