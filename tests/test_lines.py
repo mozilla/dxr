@@ -8,7 +8,7 @@ from warnings import catch_warnings
 from more_itertools import first
 from nose.tools import eq_
 
-from dxr.indexers import Ref
+from dxr.lines import Ref
 from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
                        html_line, nesting_order, balanced_tags_with_empties,
@@ -263,13 +263,13 @@ class IntegrationTests(TestCase):
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
-        eq_(text_to_html_lines('this that', [(0, 9, Ref({}))], [(0, 4, Region('k'))]),
-            [u'<a data-menu="{}"><span class="k">this</span> that</a>'])
+        eq_(text_to_html_lines('this that', [(0, 9, Ref([]))], [(0, 4, Region('k'))]),
+            [u'<a data-menu="[]"><span class="k">this</span> that</a>'])
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
-        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref({}))]),
-            [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
+        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref([]))]),
+            [u'<a data-menu="[]">this</a>', u'<a data-menu="[]">that</a>'])
 
     def test_horrors(self):
         """Untangle a circus of interleaved tags, tags that start where others

@@ -13,11 +13,12 @@ except ImportError:
     from itertools import izip
     def compress(data, selectors):
         return (d for d, s in izip(data, selectors) if s)
+import json
 from warnings import warn
 
 from jinja2 import Markup
 
-from dxr.indexers import Ref, Region
+from dxr.plugins import all_plugins
 
 
 class Line(object):
@@ -33,6 +34,126 @@ class Line(object):
         return 'Line()'
 
 LINE = Line()
+
+
+class Ref(object):
+    """A cross-reference attached to a run of text
+
+    Carries with it a context menu and other metadata.
+
+    """
+    sort_order = 1
+    __slots__ = ['menu', 'hover', 'qualname_hash']
+
+    def __init__(self, menu, hover=None, qualname=None, qualname_hash=None):
+        """
+        :arg menu: a list of MenuMakers that generate the context menu
+        :arg hover: the contents of the <a> tag's title attribute. (The first
+            one wins.)
+        :arg qualname: A unique identifier for the symbol surrounded by this
+            ref, for highlighting
+        :arg qualname_hash: The hashed version of ``qualname``, which you can
+            pass instead of ``qualname`` if you have access to the
+            already-hashed version
+
+        """
+        self.menu = menu
+        self.hover = hover
+        self.qualname_hash = hash(qualname) if qualname else qualname_hash
+
+    def es(self):
+        """Return a serialization of myself to store in elasticsearch."""
+        ret = {'menu': [{'plugin': maker.plugin,
+                         'id': maker.id,
+                         # Smash the data into a string, because it will have
+                         # a different schema from menu maker to menu maker,
+                         # and ES will freak out:
+                         'data': json.dumps(maker.es())} for maker in self.menu]}
+        if self.hover:
+            ret['hover'] = self.hover
+        if self.qualname_hash is not None:  # could be 0
+            ret['qualname_hash'] = self.qualname_hash
+        return ret
+
+    @classmethod
+    def es_to_triple(cls, es_ref, tree):
+        """Convert ES-dwelling ref representation to a (start, end,
+        :class:`~dxr.lines.Ref`) triple.
+
+        :arg es_ref: An item from the array under the 'refs' key of an ES LINE
+            document
+        :arg tree: The :class:`~dxr.config.TreeConfig` representing the tree
+            from which the ``es_ref`` was pulled
+
+        """
+        def rehydrate_menu_makers(dried):
+            """Given the contents of the 'menu' key from ES, return a list of
+            MenuMakers."""
+            plugins = all_plugins()
+            for d in dried:
+                try:
+                    maker = plugins[d['plugin']].menus[d['id']]
+                except KeyError:
+                    warn('Menu maker from plugin %s with ID %s was referenced '
+                         'in the index but not found in the current '
+                         'implementation. Ignored.' % (d['plugin'], d['id']))
+                else:
+                    yield maker.from_es(tree, json.loads(d['data']))
+
+        payload = es_ref['payload']
+        return (es_ref['start'],
+                es_ref['end'],
+                cls(list(rehydrate_menu_makers(payload['menu'])),
+                    hover=payload.get('hover'),
+                    qualname_hash=payload.get('qualname_hash')))
+
+    def opener(self):
+        if self.hover:
+            title = ' title="' + cgi.escape(self.hover, True) + '"'
+        else:
+            title = ''
+        if self.qualname_hash is not None:
+            cls = ' class="tok%i"' % self.qualname_hash
+        else:
+            cls = ''
+
+        menus = list(chain.from_iterable(maker.menu_items() for maker in self.menu))
+        return u'<a data-menu="%s"%s%s>' % (cgi.escape(json.dumps(menus), True),
+                                            title,
+                                            cls)
+
+    def closer(self):
+        return u'</a>'
+
+
+class Region(object):
+    """A <span> tag with a CSS class, wrapped around a run of text"""
+
+    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
+                    # them.
+    __slots__ = ['css_class']
+
+    def __init__(self, css_class):
+        self.css_class = css_class
+
+    def es(self):
+        return self.css_class
+
+    @classmethod
+    def es_to_triple(cls, es_region):
+        """Convert ES-dwelling region representation to a (start, end,
+        :class:`~dxr.lines.Region`) triple."""
+        return es_region['start'], es_region['end'], cls(es_region['payload'])
+
+    def opener(self):
+        return u'<span class="%s">' % cgi.escape(self.css_class, True)
+
+    def closer(self):
+        return u'</span>'
+
+    def __repr__(self):
+        """Return a nice representation for debugging."""
+        return 'Region("%s")' % self.css_class
 
 
 def balanced_tags(tags):

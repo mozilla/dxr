@@ -1,6 +1,6 @@
 import os
 
-from dxr.indexers import Ref
+from dxr.lines import Ref
 from dxr.utils import search_url
 
 

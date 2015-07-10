@@ -26,6 +26,8 @@ from warnings import warn
 import hglib
 from ordereddict import OrderedDict
 
+from dxr.utils import without_ending
+
 
 class Vcs(object):
     """A class representing an abstract notion of a version-control system.
@@ -173,8 +175,7 @@ class Git(Vcs):
                 if repo.startswith("git@github.com:"):
                     return "https://github.com/" + repo[len("git@github.com:"):]
                 elif repo.startswith(("git://github.com/", "https://github.com/")):
-                    if repo.endswith(".git"):
-                        repo = repo[:-len(".git")]
+                    repo = without_ending('.git', repo)
                     if repo.startswith("git:"):
                         repo = "https" + repo[len("git"):]
                     return repo
