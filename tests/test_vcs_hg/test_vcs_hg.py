@@ -1,11 +1,10 @@
-from os.path import dirname, join
-import subprocess
-
-from dxr.testing import DxrInstanceTestCaseMakeFirst
-
-from nose import SkipTest
 from nose.tools import ok_
 
+from dxr.testing import DxrInstanceTestCaseMakeFirst
+from dxr.vcs import Mercurial
+
+hg_region_template = 'data-template="%s"' % Mercurial.region_template
+dxr_region_template = 'data-template="#{{start}}-{{end}}"'
 
 class MercurialTests(DxrInstanceTestCaseMakeFirst):
     """Test our Mercurial integration, both core and omniglot."""
@@ -28,7 +27,7 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
     def test_blame(self):
         """Make sure the blame link goes to the right place."""
         response = self.client().get('/code/source/ChangedInCommit1')
-        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1" title="Blame" class="blame icon">Blame</a>' in response.data)
+        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1" title="Blame" class="blame icon" %s>Blame</a>' % hg_region_template in response.data)
 
     def test_raw(self):
         """Make sure the raw link goes to the right place."""
@@ -44,6 +43,6 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
         """Make sure the permalink exists, and that the response is ok."""
         # Flask's url_for will escape the url, so spaces become %20
         response = self.client().get('/code/source/Colon: name')
-        ok_('/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon:%20name" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
+        ok_('/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon:%%20name" title="Permalink" class="permalink icon" %s>Permalink</a>' % dxr_region_template in response.data)
         response = self.client().get('/code/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon: name')
         ok_(response.status_code, 200)

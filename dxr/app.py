@@ -6,7 +6,6 @@ from logging import StreamHandler
 import os
 from os import chdir
 from os.path import join, basename, split, dirname, relpath
-from mimetypes import guess_type
 from sys import stderr
 from time import time
 from mimetypes import guess_type

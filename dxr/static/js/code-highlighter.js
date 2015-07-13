@@ -13,7 +13,7 @@
 $(function () {
     'use strict';
     var container = $('#line-numbers'),
-        syncLinks = $('.sync-link'), // whenever we update window.location, update these too
+        syncLinks = $('a[data-template]'), // whenever we update window.location, update these too
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
         rangesArray = []; // track ranges of highlighted lines here
@@ -111,28 +111,32 @@ $(function () {
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
-            updateHash(windowHash);
+            updateHash(windowHash, singleLinesArray.length + rangesArray.length === 1);
         }
     }
 
-    //update places where hash location is used: window, sync-links
-    function updateHash(hash) {
-        syncLinks.each(function() {
-            updateLink($(this), hash);
-        });
+    //update places where hash location is used: window, data-template
+    //singleRange describes whether there is only one range, i.e. either #{start} or #{start}-{end}
+    function updateHash(hash, singleRange) {
+        if (singleRange) {
+            var captures = /#([0-9]+)-?([0-9]*)/.exec(hash);
+            syncLinks.each(function () {
+                updateLink($(this), captures[1], captures[2]);
+            });
+        }
         history.replaceState(null, '', hash);
     }
 
     //update the link href based on the windowHash.
-    function updateLink(anchor, windowHash) {
+    function updateLink(anchor, start, end) {
+        // If the end is "", then let start = end to avoid anchors like #L2- with a dangling hyphen.
+        end = end || start;
         var href = anchor.attr('href'),
             hash_loc = href.indexOf('#');
         // If the link already has #, then cut it off.
         if (hash_loc >= 0)
             href = href.substring(0, hash_loc);
-        // hg web uses #l and GitHub uses #L but supports #l, so we use #l here.
-        if (windowHash.length > 1)
-            windowHash = '#l' + windowHash.substring(1);
+        var windowHash = anchor.data('template').replace(/{{start}}/g, start).replace(/{{end}}/g, end);
         anchor.attr('href', href + windowHash);
     }
 

@@ -17,7 +17,8 @@
           <ul>
             {% for item in section['items'] %}
               <li>
-                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon {% if item.sync %} sync-link {% endif %}">{{ item.title }}</a>
+                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon"
+                   {%- if item.sync %} data-template="{{ item.sync }}"{% endif %}>{{ item.title }}</a>
               </li>
             {%- endfor %}
           </ul>

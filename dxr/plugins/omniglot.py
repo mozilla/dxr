@@ -24,10 +24,14 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def links(self):
         def items():
-            yield 'log', "Log", self.vcs.generate_log(vcs_relative_path), False
-            yield 'blame', "Blame", self.vcs.generate_blame(vcs_relative_path), True
-            yield 'diff',  "Diff", self.vcs.generate_diff(vcs_relative_path), False
-            yield 'raw', "Raw", self.vcs.generate_raw(vcs_relative_path), False
+            url, template = self.vcs.generate_log(vcs_relative_path)
+            yield 'log', "Log", url, template
+            url, template = self.vcs.generate_blame(vcs_relative_path)
+            yield 'blame', "Blame", url, template
+            url, template = self.vcs.generate_diff(vcs_relative_path)
+            yield 'diff',  "Diff", url, template
+            url, template = self.vcs.generate_raw(vcs_relative_path)
+            yield 'raw', "Raw", url, template
 
         if self.vcs:
             vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())

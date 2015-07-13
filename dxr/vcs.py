@@ -84,6 +84,7 @@ class Vcs(object):
 
 class Mercurial(Vcs):
     command = 'hg'
+    region_template = '#l{{start}}-l{{end}}'
 
     def __init__(self, root):
         super(Mercurial, self).__init__(root)
@@ -136,17 +137,17 @@ class Mercurial(Vcs):
         return path in self.previous_revisions
 
     def generate_raw(self, path):
-        return self.upstream + 'raw-file/' + self.revision + '/' + path
+        return self.upstream + 'raw-file/' + self.revision + '/' + path, None
 
     def generate_diff(self, path):
         # We generate link to diff with the last revision in which the file changed.
-        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
+        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path, None
 
     def generate_blame(self, path):
-        return self.upstream + 'annotate/' + self.revision + '/' + path
+        return self.upstream + 'annotate/' + self.revision + '/' + path, self.region_template
 
     def generate_log(self, path):
-        return self.upstream + 'filelog/' + self.revision + '/' + path
+        return self.upstream + 'filelog/' + self.revision + '/' + path, None
 
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
@@ -156,6 +157,7 @@ class Mercurial(Vcs):
 
 class Git(Vcs):
     command = 'git'
+    region_template = '#L{{start}}-L{{end}}'
 
     def __init__(self, root):
         super(Git, self).__init__(root)
@@ -197,18 +199,18 @@ class Git(Vcs):
         return path in self.tracked_files
 
     def generate_raw(self, path):
-        return self.upstream + "/raw/" + self.revision + "/" + path
+        return self.upstream + "/raw/" + self.revision + "/" + path, None
 
     def generate_diff(self, path):
         # I really want to make this anchor on the file in question, but github
         # doesn't seem to do that nicely
-        return self.upstream + "/commit/" + self.revision
+        return self.upstream + "/commit/" + self.revision, self.region_template
 
     def generate_blame(self, path):
-        return self.upstream + "/blame/" + self.revision + "/" + path
+        return self.upstream + "/blame/" + self.revision + "/" + path, self.region_template
 
     def generate_log(self, path):
-        return self.upstream + "/commits/" + self.revision + "/" + path
+        return self.upstream + "/commits/" + self.revision + "/" + path, self.region_template
 
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
@@ -255,22 +257,22 @@ class Perforce(Vcs):
 
     def generate_raw(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=98&rev1=' + info['haveRev']
+        return self.upstream + info['depotFile'] + '?ac=98&rev1=' + info['haveRev'], None
 
     def generate_diff(self, path):
         info = self.have[path]
         haveRev = info['haveRev']
         prevRev = str(int(haveRev) - 1)
         return (self.upstream + info['depotFile'] + '?ac=19&rev1=' + prevRev +
-                '&rev2=' + haveRev)
+                '&rev2=' + haveRev), None
 
     def generate_blame(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=193'
+        return self.upstream + info['depotFile'] + '?ac=193', None
 
     def generate_log(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=22#' + info['haveRev']
+        return self.upstream + info['depotFile'] + '?ac=22#' + info['haveRev'], None
 
     def display_rev(self, path):
         info = self.have[path]

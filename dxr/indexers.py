@@ -217,8 +217,10 @@ class FileToSkim(PluginConfig):
     def links(self):
         """Return an iterable of links for the navigation pane::
 
-            (sort order, heading, [(icon, title, href, whether to sync to selected line), ...])
+            (sort order, heading, [(icon, title, href, template for line syncing), ...])
 
+            where {{start}} and {{end}} strings in the line syncing template will be replaced by
+            the selected line on the page.
         """
         return []
 

@@ -1,9 +1,12 @@
+from dxr.vcs import Git
 from nose.tools import ok_, eq_
 
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
 LATEST_REVISION = "5e2b2b554eb86f90e189217fa9dc2eba66259910"
 PREVIOUS_REVISION = "cb339834998124cb8165aa35ed4635c51b6ac5c2"
+git_region_template = 'data-template="%s"' % Git.region_template
+dxr_region_template = 'data-template="#{{start}}-{{end}}"'
 
 class GitTests(DxrInstanceTestCaseMakeFirst):
     """Test our Git integration, both core and omniglot."""
@@ -11,12 +14,12 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
     def test_diff(self):
         """Make sure the diff link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/commit/%s" title="Diff" class="diff icon">Diff</a>' % LATEST_REVISION in response.data)
+        ok_('/commit/%s" title="Diff" class="diff icon" %s>Diff</a>' % (LATEST_REVISION, git_region_template) in response.data)
 
     def test_blame(self):
         """Make sure the blame link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/blame/%s/main.c" title="Blame" class="blame icon">Blame</a>' % LATEST_REVISION in response.data)
+        ok_('/blame/%s/main.c" title="Blame" class="blame icon" %s>Blame</a>' % (LATEST_REVISION, git_region_template) in response.data)
 
     def test_raw(self):
         """Make sure the raw link exists and goes to the right place."""
@@ -26,12 +29,12 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
     def test_log(self):
         """Make sure the log link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/commits/%s/main.c" title="Log" class="log icon">Log</a>' % LATEST_REVISION in response.data)
+        ok_('/commits/%s/main.c" title="Log" class="log icon" %s>Log</a>' % (LATEST_REVISION, git_region_template) in response.data)
 
     def test_permalink(self):
         """Make sure the permalink link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/rev/%s/main.c" title="Permalink" class="permalink icon">Permalink</a>' % LATEST_REVISION in response.data)
+        ok_('/rev/%s/main.c" title="Permalink" class="permalink icon" %s>Permalink</a>' % (LATEST_REVISION, dxr_region_template) in response.data)
         # Test that it works for this revision and the last one.
         response = self.client().get('/code/rev/%s/main.c' % LATEST_REVISION)
         eq_(response.status_code, 200)
@@ -45,7 +48,7 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         root rather than the current working directory unless we specify ./ before the path."""
 
         response = self.client().get('/code/source/deeper/deeper_file')
-        ok_('/rev/%s/deeper/deeper_file" title="Permalink" class="permalink icon">Permalink</a>' % LATEST_REVISION in response.data)
+        ok_('/rev/%s/deeper/deeper_file" title="Permalink" class="permalink icon" %s>Permalink</a>' % (LATEST_REVISION, dxr_region_template) in response.data)
         response = self.client().get('/code/rev/%s/deeper/deeper_file' % LATEST_REVISION)
         eq_(response.status_code, 200)
         ok_("This file tests" in response.data)
