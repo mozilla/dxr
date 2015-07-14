@@ -6,7 +6,7 @@ from os.path import relpath, splitext
 import re
 
 from flask import url_for
-from funcy import identity
+from funcy import identity, merge
 from jinja2 import Markup
 from parsimonious import ParseError
 
@@ -35,17 +35,18 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
         'trigrams': {
             'type': 'string',
             'analyzer': 'trigramalyzer'
-        },
-        'segments': {
-            'type': 'string',
-            'analyzer': 'path_analyzer'
-        },
-        'segments_lower': {
-            'type': 'string',
-            'analyzer': 'path_analyzer_lower'
         }
     }
 }
+
+
+# Add segments field to path map for FILE docs so we can find exact matches on path segments,
+# which we use in path promotion.
+FILE_PATH_MAPPING = PATH_MAPPING.copy()
+FILE_PATH_MAPPING['fields'] = merge(PATH_MAPPING['fields'],
+                                    {'segments': {'type': 'string', 'analyzer': 'path_analyzer'},
+                                     'segments_lower': {'type': 'string',
+                                                        'analyzer': 'path_analyzer_lower'}})
 
 
 EXT_MAPPING = {
@@ -63,7 +64,7 @@ mappings = {
         },
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
-            'path': PATH_MAPPING,
+            'path': FILE_PATH_MAPPING,
 
             'ext': EXT_MAPPING,
 

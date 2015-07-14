@@ -2,7 +2,6 @@ import cgi
 from itertools import chain, groupby
 from operator import itemgetter
 
-from os.path import sep
 import re
 
 from parsimonious import Grammar, NodeVisitor
@@ -428,9 +427,9 @@ def highlight_path(path, extents):
     highlighted_content = highlight(path, extents)
     # Split on slash, except the slash in </b>.
     highlighted_fragments = []
-    for possibly_fragment in highlighted_content.split(sep):
+    for possibly_fragment in highlighted_content.split('/'):
         if possibly_fragment.startswith('b>'):
-            highlighted_fragments[-1] += sep + possibly_fragment
+            highlighted_fragments[-1] += '/' + possibly_fragment
         else:
             highlighted_fragments.append(possibly_fragment)
     return highlighted_fragments
