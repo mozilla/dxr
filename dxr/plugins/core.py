@@ -12,10 +12,9 @@ from parsimonious import ParseError
 
 from dxr.es import UNINDEXED_STRING, UNINDEXED_INT
 from dxr.exceptions import BadTerm
-from dxr.filters import Filter, negatable, FILE, LINE
+from dxr.filters import Filter, negatable, FILE, LINE, some_filters
 import dxr.indexers
 from dxr.mime import is_image
-from dxr.query import some_filters
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
@@ -37,7 +36,7 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
             'type': 'string',
             'analyzer': 'trigramalyzer'
         },
-        'parts': {
+        'segments': {
             'type': 'string',
             'analyzer': 'path_analyzer'
         }

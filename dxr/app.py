@@ -124,13 +124,15 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
 
     try:
-        count, results = query.results(offset, limit)
-        term = query.single_term()
+        filters = query.instantiate_filters()
+        # Pull up all the non-negated text terms.
+        text_terms = [term for term in query.terms if term['name'] == 'text' and not term['not']]
+        count, results = query.results(filters, offset, limit)
         promoted_count, promoted = 0, []
-        # Only offer promoted results when at the top of the page and we have only a single term.
-        if offset == 0 and term:
+        if offset == 0 and len(text_terms) == 1:
+            # Now we pull out the single line term and pass into promoted paths.
             try:
-                promoted_count, promoted = query.promoted_paths(term)
+                promoted_count, promoted = query.promoted_paths(filters, text_terms[0])
             except BadTerm:
                 # If we get BadTerm here, just return no promoted results rather than bailing
                 # out of the whole query.

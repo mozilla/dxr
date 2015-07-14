@@ -23,9 +23,9 @@
   {% endfor %}
 {%- endmacro %}
 
-{%- macro promoted_header(query, promoted_count, promoted_count_formatted, top_of_tree, tree) -%}
+{%- macro promoted_header(formatted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) -%}
     <p class="promoted-see-more">
-        <a href="{{ www_root }}/{{ tree }}/search?q=path:{{ query }}">{{ promoted_count_formatted }}
+        <a href="{{ www_root }}/{{ tree }}/search?q=path:{{ formatted_query }}">{{ promoted_count_formatted }}
             path {{ 'result' if promoted_count == 1 else 'results' }}</a> from the <a
             href="{{ top_of_tree }}">{{ tree }}</a> tree{% if promoted_count > 0 %}:{% endif %}
     </p>

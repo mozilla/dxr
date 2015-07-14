@@ -50,7 +50,7 @@ class TestCase(unittest.TestCase):
 
     def found_files(self, query, is_case_sensitive=True):
         """Return the set of paths of files found by a search query."""
-        return set(sep.join(result['path']).replace('<b>', '').replace('</b>', '') for result in
+        return set('/'.join(result['path']).replace('<b>', '').replace('</b>', '') for result in
                    self.search_results(query,
                                        is_case_sensitive=is_case_sensitive))
 

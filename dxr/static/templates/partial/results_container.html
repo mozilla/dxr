@@ -6,8 +6,8 @@
 {{ tree_menu(tree_tuples, tree) }}
 
 {% if promoted|length > 0 %}
-  {{ promoted_header(query, promoted_count, promoted_count, top_of_tree, tree) }}
   <div class="promoted-container">
+    {{ promoted_header(formatted_query, promoted_count, promoted_count, top_of_tree, tree) }}
     {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
   </div>
 {% endif %}

@@ -1,11 +1,13 @@
 import cgi
 from itertools import chain, groupby
 from operator import itemgetter
+
 from os.path import sep
 import re
 
 from parsimonious import Grammar, NodeVisitor
 
+from dxr.plugins.core import PathFilter
 from dxr.filters import LINE, FILE
 from dxr.mime import icon
 from dxr.utils import append_update, cached
@@ -30,7 +32,7 @@ def direct_searchers(plugins):
     return [searcher for searcher, _ in sortables]
 
 
-def _construct_query(filters):
+def _make_es_query(filters):
     """Construct an ES query from nested list of filters by applying OR to each inner list of
     filters and AND between lists of filter.
 
@@ -114,7 +116,16 @@ class Query(object):
                    [],
                    file.get('is_binary', False))
 
-    def results(self, offset=0, limit=100):
+    def instantiate_filters(self):
+        """Instantiate applicable filters, yielding a list of lists, each inner list
+        representing the filters of the name of the parallel term. We will OR the elements of
+        the inner lists and then AND those OR balls together."""
+
+        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
+        return [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
+                for term in self.terms]
+
+    def results(self, filters, offset=0, limit=100):
         """Return a tuple of (total number of results, search results),
         where results have the form:
 
@@ -125,41 +136,40 @@ class Query(object):
              ...]
 
         """
-        # Instantiate applicable filters, yielding a list of lists, each inner
-        # list representing the filters of the name of the parallel term. We
-        # will OR the elements of the inner lists and then AND those OR balls
-        # together.
-        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
-        filters = [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
-                   for term in self.terms]
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
 
-        return self._perform_search(filters, is_line_query, offset, limit)
+        return self._do_search_and_highlight(_make_es_query(filters), filters, is_line_query,
+                                             offset, limit)
 
     # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 
-    def promoted_paths(self, term, promote_limit=5):
+    def promoted_paths(self, filters, term, promote_limit=5):
         """Return a tuple (total number of path results, promoted paths),
         where the number of promoted paths is no more than promote_limit."""
 
-        # We cannot import PathFilter at top of file because of circular dependency.
-        from dxr.plugins.core import PathFilter
-
-        filters = [[PathFilter(term, self.enabled_plugins)]]
-        path_query = {
-            'constant_score': {'query': _construct_query(filters), 'boost': 0.5}}
-        # We add a second query that boosts exact path part matches.
+        # Filter out the FILE domain filters, and add our own path filter at the end.
+        file_filters = [[f for f in named_filters if f.domain == FILE] for named_filters in
+                        filters] + [[PathFilter(term, self.enabled_plugins)]]
+        filtered_query = _make_es_query(file_filters)
+        path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
+        # We add a second query that boosts exact path segment matches.
         exact_query = {
-            'constant_score': {'query': {'match': {'path.parts': term['arg']}}, 'boost': 2.0}}
+            'filtered': {
+                'query': {'constant_score': {'query': {'match': {'path.segments': term['arg']}},
+                                             'boost': 2.0}},
+                # Borrow the same filters the path query uses.
+                'filter': filtered_query['filtered']['filter']
+            }
+        }
         query = {
             'dis_max': {
                 'queries': [path_query, exact_query]
             }
         }
         # We ask not to sort by path and line, falling back to score ranking instead.
-        return self._perform_search(filters, False, 0, promote_limit, query, False)
+        return self._do_search_and_highlight(query, file_filters, False, 0, promote_limit, False)
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -197,24 +207,28 @@ class Query(object):
                 elif len(results) > 1:
                     return None
 
-    def _perform_search(self, filters, is_line_query, offset, limit, query=None, sort=True):
-        """Perform a query using self.es_search, returning a tuple (total count of results,
-        list of results)
+    def _do_search_and_highlight(self, query, filters, is_line_query, offset, limit,
+                                 alphabetize=True):
+        """Perform a query using self.es_search and highlight the results,
+        returning a tuple (total count of results, list of results)
 
+        :arg query: valid ES query
         :arg filters: nested list of filters
         :arg is_line_query: whether to query lines (otherwise query files)
         :arg offset: return results starting from this number
         :arg limit: maximum number of results to return
-        :arg query: valid ES query; if omitted then construct one from filters
-        :arg sort: whether to sort the results alphabetically by path and numerically by line
+        :arg alphabetize: whether to alphabetize the results alphabetically by path and
+        numerically by line
 
         """
-        if not query:
-            # Construct query here.
-            query = _construct_query(filters)
+        # Decide on the sort mode: either alphabeticanumerically or by score.
+        if alphabetize:
+            sort_mode = ['path', 'number'] if is_line_query else ['path']
+        else:
+            sort_mode = ['_score']
         results = self.es_search(
             {'query': query,
-             'sort': (['path', 'number'] if is_line_query else ['path']) if sort else ['_score'],
+             'sort': sort_mode,
              'from': offset,
              'size': limit},
             doc_type=LINE if is_line_query else FILE)['hits']
@@ -369,16 +383,6 @@ class QueryVisitor(NodeVisitor):
         return visited_children or node
 
 
-def some_filters(plugins, condition):
-    """Return a list of filters of the given plugins for which condition(filter) is True.
-
-    :arg plugins: An iterable of plugins
-    :arg condition: A function which takes a filter and returns True or False
-
-    """
-    return filter(condition, chain.from_iterable(p.filters for p in plugins))
-
-
 @cached
 def filters_by_name(plugins):
     """Return a mapping of filter names to all filters with that name,
@@ -414,8 +418,7 @@ def filter_menu_items(plugins):
 
 
 def highlight_path(path, extents):
-    """Return list of path fragments containing <b> tags to describe highlighting based on given
-    extents.
+    """Return list of path fragments with <b> tags around highlighted extents.
 
     :arg path: the path to highlight as a single string
     :arg extents: iterable of unsorted, possibly overlapping (start, end) offset tuples

@@ -195,11 +195,13 @@ mark {
     background-color: transparent;
 }
 
-/* promoted stuff */
+/* promoted stuff, on the right */
 .promoted-container {
-    margin-left: 3em;
+    position: absolute;
+    right: 0;
+    max-width: 30vw;
+    background: white;
     padding-right: 2em;
-    padding-left: 2em;
     padding-bottom: 1em;
 }
 .promoted-icon {

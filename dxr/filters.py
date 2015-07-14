@@ -1,6 +1,7 @@
 """Base classes and convenience functions for writing filters"""
 
 from functools import wraps
+from itertools import chain
 from funcy import identity
 
 
@@ -234,3 +235,13 @@ class QualifiedNameFilterBase(NameFilterBase):
         return ((not self._term['qualified'] and
                  super(QualifiedNameFilterBase, self)._should_be_highlit(entity))
                 or entity['qualname'] == self._term['arg'])
+
+
+def some_filters(plugins, condition):
+    """Return a list of filters of the given plugins for which condition(filter) is True.
+
+    :arg plugins: An iterable of plugins
+    :arg condition: A function which takes a filter and returns True or False
+
+    """
+    return filter(condition, chain.from_iterable(p.filters for p in plugins))
