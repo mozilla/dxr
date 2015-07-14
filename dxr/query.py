@@ -100,7 +100,7 @@ class Query(object):
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
 
         def group_filters_by_term(predicate):
-            """Return an iterable of a list of ES filters for each term, filtered on
+            """Return an iterable of lists of ES filters for each term, filtered on
             predicate(Filter)."""
 
             return ([f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]
