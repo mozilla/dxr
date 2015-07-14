@@ -155,9 +155,10 @@ class Query(object):
         filtered_query = _make_es_query(file_filters)
         path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
         # We add a second query that boosts exact path segment matches.
+        match_field = 'path.segments' if self.is_case_sensitive else 'path.segments_lower'
         exact_query = {
             'filtered': {
-                'query': {'constant_score': {'query': {'match': {'path.segments': term['arg']}},
+                'query': {'constant_score': {'query': {'match': {match_field: term['arg']}},
                                              'boost': 2.0}},
                 # Borrow the same filters the path query uses.
                 'filter': filtered_query['filtered']['filter']

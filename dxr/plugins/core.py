@@ -39,6 +39,10 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
         'segments': {
             'type': 'string',
             'analyzer': 'path_analyzer'
+        },
+        'segments_lower': {
+            'type': 'string',
+            'analyzer': 'path_analyzer_lower'
         }
     }
 }
@@ -217,6 +221,11 @@ analyzers = {
             'type': 'custom',
             'filter': ['lowercase'],
             'tokenizer': 'keyword'
+        },
+        'path_analyzer_lower': {
+            'type': 'custom',
+            'filter': ['lowercase'],
+            'tokenizer': 'path_tokenizer'
         },
         'path_analyzer': {
             'type': 'custom',

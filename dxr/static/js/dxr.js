@@ -340,7 +340,7 @@ $(function() {
 
             if (!append) {
                 // If we have promoted results then pass in a formatted query which bubbles the
-                // non-filtered term to the front, so we can but path: in front of the query
+                // non-filtered term to the front, so we can put path: in front of the query
                 // and remain valid.
                 if (data.promoted.length > 0) {
                     var splitTerms = data.query.split(' ');

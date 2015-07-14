@@ -27,3 +27,12 @@ class PathPromotionTests(DxrInstanceTestCase):
             {u'path': [u'subfolder', u'subfile'],
                  u'lines': [{u'line_number': 1, u'line': u'<b>Sub</b>file'}], u'is_binary': False,
                  u'icon': u'unknown'}])
+
+    def test_case_sensitivity(self):
+        """Test that a 'c.C' search will match c.c rather than ac.c if case insensitive."""
+        results = self.search_results(
+            'c.C', is_case_sensitive=False)
+        eq_(results, [
+            # Make sure that the file `c.c` is the first promoted match
+            {u'path': [u'<b>c.c</b>'], u'lines': [], u'is_binary': False, u'icon': u'c'},
+            {u'path': [u'a<b>c.c</b>'], u'lines': [], u'is_binary': False, u'icon': u'c'}])
