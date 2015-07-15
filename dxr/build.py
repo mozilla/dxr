@@ -277,7 +277,7 @@ def index_tree(tree, es, verbose=False):
 
             # refresh() times out in prod. Wait until it doesn't. That
             # probably means things are ready to rock again.
-            with aligned_progressbar(repeat(None), label='Refeshing index') as bar:
+            with aligned_progressbar(repeat(None), label='Refreshing index') as bar:
                 for _ in bar:
                     try:
                         es.refresh(index=index)

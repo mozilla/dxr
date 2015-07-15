@@ -57,6 +57,13 @@ class Ref(object):
             already-hashed version
 
         """
+        # TODO: Would it be simpler to just kill the idea of MenuMakers and
+        # subclass Ref instead? For instance, you'd have a FunctionRef that
+        # knew not only which menus to spit out and how to serialize what they
+        # need but also what to emit as the hover state and qualname. Then you
+        # wouldn't need serializers within serializers, and every plugin
+        # wouldn't have to reinvent factorings around computing hovers and
+        # qualnames.
         self.menu = menu
         self.hover = hover
         self.qualname_hash = hash(qualname) if qualname else qualname_hash

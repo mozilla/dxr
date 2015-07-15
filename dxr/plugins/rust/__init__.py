@@ -65,36 +65,34 @@ class FileToIndex(indexers.FileToIndex):
         return self.all_needles()
 
     def refs(self):
-        def make_menu_and_title(table_name, function_name):
+        def make_menu(table_name, menu_maker):
             data = self.tree_index.by_file(table_name, self.path)
             for datum in data:
-                menu_func = getattr(menu, function_name)
-                menu_and_title = menu_func(self.tree_index, datum, self.tree)
-                if menu_and_title:
-                    if 'extent_start' in datum:
-                        yield (int(datum['extent_start']),
-                               int(datum['extent_end']),
-                               menu_and_title)
+                menu = menu_maker.from_intermediate(self.tree, self.tree_index, datum)
+                if menu and 'extent_start' in datum:
+                    yield (int(datum['extent_start']),
+                           int(datum['extent_end']),
+                           menu)
 
-        for m in make_menu_and_title('functions', 'function_menu'):
+        for m in make_menu('functions', menu.function_menu):
             yield m
-        for m in make_menu_and_title('function_refs', 'function_ref_menu'):
+        for m in make_menu('function_refs', menu.function_ref_menu):
             yield m
-        for m in make_menu_and_title('variables', 'variable_menu'):
+        for m in make_menu('variables', menu.variable_menu):
             yield m
-        for m in make_menu_and_title('variable_refs', 'variable_ref_menu'):
+        for m in make_menu('variable_refs', menu.variable_ref_menu):
             yield m
-        for m in make_menu_and_title('types', 'type_menu'):
+        for m in make_menu('types', menu.type_menu):
             yield m
-        for m in make_menu_and_title('type_refs', 'type_ref_menu'):
+        for m in make_menu('type_refs', menu.type_ref_menu):
             yield m
-        for m in make_menu_and_title('modules', 'module_menu'):
+        for m in make_menu('modules', menu.module_menu):
             yield m
-        for m in make_menu_and_title('module_refs', 'module_ref_menu'):
+        for m in make_menu('module_refs', menu.module_ref_menu):
             yield m
-        for m in make_menu_and_title('module_aliases', 'module_alias_menu'):
+        for m in make_menu('module_aliases', menu.module_alias_menu):
             yield m
-        for m in make_menu_and_title('unknown_refs', 'unknown_ref_menu'):
+        for m in make_menu('unknown_refs', menu.unknown_ref_menu):
             yield m
 
         # Note there is no ref for impls since both the trait and struct parts

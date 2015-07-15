@@ -6,10 +6,7 @@ from flask import url_for
 
 from dxr.app import DXR_BLUEPRINT
 from dxr.menus import MenuMaker, SingleDatumMenuMaker
-from dxr.utils import search_url, without_ending
-
-
-BROWSE = DXR_BLUEPRINT + '.browse'
+from dxr.utils import search_url, without_ending, BROWSE
 
 
 def quote(qualname):

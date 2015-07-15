@@ -137,7 +137,7 @@ mappings = {
                 # length). The limit here (in Unicode points, in an
                 # unfortunate violation of consistency) keeps us under that,
                 # even if every point encodes to a 4-byte sequence. In
-                # real-world terms, this get past all the Chinese in zh.txt in
+                # real-world terms, this gets past all the Chinese in zh.txt in
                 # mozilla-central.
                 'ignore_above': 32766 / 4,
 

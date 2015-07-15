@@ -17,6 +17,7 @@ from dxr.exceptions import CommandFailure
 
 
 DXR_BLUEPRINT = 'dxr_blueprint'
+BROWSE = DXR_BLUEPRINT + '.browse'
 
 
 def search_url(tree, query):
