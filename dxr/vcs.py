@@ -84,7 +84,7 @@ class Vcs(object):
 
 class Mercurial(Vcs):
     command = 'hg'
-    region_template = '#l{{start}}-l{{end}}'
+    region_template = '#l{{start}}'
 
     def __init__(self, root):
         super(Mercurial, self).__init__(root)
