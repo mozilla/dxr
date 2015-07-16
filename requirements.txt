@@ -66,12 +66,15 @@ Werkzeug==0.10.4
 # sha256: uyTo_df6vGRca0giqfa20IF1End-YHo_-ko4rSI_kgY
 funcy==1.1
 
-# For deployment script only:
-# sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
-requests==1.2.3
-
 # sha256: rUar6kB6nbKhCxgUh53YtF7Zxb5XqGPRnKv2Od6rIWE
 https://bitbucket.org/pelmers/python-hglib/get/issue3924-version-fix.tar.gz#egg=python-hglib
 
+# sha256: YTZ7nrL0uBn2nqEWdQMFJw8d-IWZksnjVtaoUfJaS0c
+ply==3.6
+
 # sha256: AfqadqMtGy4h4hC2Fkjy6Homc3DqmspxuEg5gZhp-Bo
 https://github.com/pelmers/xpidl/archive/a1e513126c4b2f1019032e791764dd98bce47c87.zip#egg=xpidl
+
+# For deployment script only:
+# sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
+requests==1.2.3
