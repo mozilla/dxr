@@ -295,6 +295,12 @@ File Skimmers
 .. autoclass:: dxr.indexers.FileToSkim
    :members:
 
+.. autoclass:: dxr.indexers.Ref
+   :members:
+
+.. autoclass:: dxr.indexers.Region
+   :members:
+
 Filters
 =======
 

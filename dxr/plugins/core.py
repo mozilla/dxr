@@ -10,7 +10,7 @@ from funcy import identity, merge
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT
+from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE, some_filters
 import dxr.indexers
@@ -179,6 +179,12 @@ mappings = {
                             }
                         },
                         'hover': UNINDEXED_STRING,
+                        # Hash of qualname of the symbol we're hanging the
+                        # menu off of, if it is a symbol and we can come up
+                        # with a qualname. This powers the highlighting of
+                        # other occurrences of the symbol when you pull up the
+                        # context menu.
+                        'qualname_hash': UNINDEXED_LONG
                     }
                 }
             },
@@ -346,6 +352,8 @@ class ExtFilter(Filter):
     domain = FILE
     description = Markup('Filename extension: <code>ext:cpp</code>. Always '
                          'case-sensitive.')
+    # The intersection of two different Ext filters would always be nothing.
+    union_only = True
 
     @negatable
     def filter(self):
@@ -430,7 +438,7 @@ class IdFilter(FilterAggregator):
 
 
 class RefFilter(FilterAggregator):
-    """Filter aggregator for ref: queries,groupingg together the results of all filters that find
+    """Filter aggregator for ref: queries, grouping together the results of all filters that find
     references to names."""
 
     name = 'ref'

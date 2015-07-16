@@ -21,7 +21,7 @@ class DefinitionTests(SingleFileTestCase):
         }
 
         namespace Space {
-          void foo() {}
+          void foo(int a) {}
         }
         """
 
@@ -44,7 +44,13 @@ class DefinitionTests(SingleFileTestCase):
     def test_qualnames_unqualified(self):
         """Qualnames should be found when searching unqualified as well."""
         self.found_line_eq(
-            'function:Space::foo()', 'void <b>foo</b>() {}')
+            'function:Space::foo(int)', 'void <b>foo</b>(int a) {}')
+
+    def test_scoped(self):
+        """Functions with explicit scopes should be found even when types are
+        left off."""
+        self.found_line_eq(
+            'function:Space::foo', 'void <b>foo</b>(int a) {}')
 
     def test_qualnames_caseless(self):
         """Case-insensitive qualified searches should remain case-sensitive.
@@ -53,7 +59,7 @@ class DefinitionTests(SingleFileTestCase):
         this behavior and didn't expressly condemn it.
 
         """
-        self.found_nothing('+function:SPACE::FOO()', is_case_sensitive=False)
+        self.found_nothing('+function:SPACE::FOO(int)', is_case_sensitive=False)
 
 
 class TemplateClassMemberReferenceTests(SingleFileTestCase):

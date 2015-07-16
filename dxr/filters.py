@@ -4,6 +4,8 @@ from functools import wraps
 from itertools import chain
 from funcy import identity
 
+from dxr.utils import is_in
+
 
 # Domain constants:
 FILE = 'file'
@@ -40,12 +42,15 @@ class Filter(object):
         one encountered will be used. An empty description will hide a filter
         from the menu. This should probably be used only internally, by the
         TextFilter.
+    :ivar union_only: Whether this filter will always be ORed with others of the same name,
+        useful for filters where the intersection would always be empty, such as extensions
 
     """
     domain = LINE
     description = u''
     is_reference = False
     is_identifier = False
+    union_only = False
 
     def __init__(self, term, enabled_plugins):
         """This is a good place to parse the term's arg (if it requires further
@@ -234,7 +239,7 @@ class QualifiedNameFilterBase(NameFilterBase):
         """
         return ((not self._term['qualified'] and
                  super(QualifiedNameFilterBase, self)._should_be_highlit(entity))
-                or entity['qualname'] == self._term['arg'])
+                or is_in(self._term['arg'], entity['qualname']))
 
 
 def some_filters(plugins, condition):

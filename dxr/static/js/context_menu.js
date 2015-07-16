@@ -18,8 +18,8 @@ $(function() {
         // First remove all highlighting
         fileContainer.find('mark a').unwrap();
 
-        // Only add highlights if the currentNode is not undefined or null and,
-        // is an anchor link as synbols will always be links.
+        // Only add highlights if the currentNode is not undefined or null and
+        // is an anchor link, as symbols will always be links.
         if (currentNode && currentNode[0].tagName === 'A') {
             fileContainer.find('.' + currentNode.attr('class')).wrap('<mark />');
         }

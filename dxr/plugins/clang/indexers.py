@@ -11,7 +11,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
+                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig, Ref)
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
                                      namespace_menu, namespace_alias_menu,
@@ -149,7 +149,7 @@ class FileToIndex(FileToIndexBase):
 
                 yield (self.char_offset(start.row, start.col),
                        self.char_offset(end.row, end.col),
-                       (menu, tooltip(prop)))
+                       Ref(menu, hover=tooltip(prop), qualname=prop.get('qualname')))
 
     def links(self):
         """Yield a section for each class, type, enum, etc., as well as one

@@ -8,11 +8,12 @@ from warnings import catch_warnings
 from more_itertools import first
 from nose.tools import eq_
 
-from dxr.utils import cumulative_sum
+from dxr.indexers import Ref
 from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
                        html_line, nesting_order, balanced_tags_with_empties,
                        es_lines, tags_per_line)
+from dxr.utils import cumulative_sum
 
 
 def test_line_boundaries():
@@ -67,9 +68,11 @@ def spaced_tags(tags):
     representations."""
     segments = []
     for point, is_start, payload in tags:
-        segments.append(' ' * point + ('<%s%s>' % ('' if is_start else '/',
-                                                   'L' if payload is LINE else
-                                                        payload.payload)))
+        segments.append(' ' * point + ('<%s%s>' %
+            ('' if is_start else '/',
+            'L' if payload is LINE else
+                 (payload.css_class if isinstance(payload, Region)
+                  else payload.menu))))
     return '\n'.join(segments)
 
 
@@ -219,7 +222,7 @@ class BalancedTagTests(TestCase):
 
 def test_tag_boundaries():
     """Sanity-check ``tag_boundaries()``."""
-    eq_(str(list(tag_boundaries([], [(0, 3, 'a'), (3, 5, 'b')]))),
+    eq_(str(list(tag_boundaries([(0, 3, Region('a')), (3, 5, Region('b'))]))),
         '[(0, True, Region("a")), (3, False, Region("a")), '
         '(3, True, Region("b")), (5, False, Region("b"))]')
 
@@ -254,18 +257,20 @@ class IntegrationTests(TestCase):
     def test_simple(self):
         """Sanity-check the combination of finished_tags, es_lines and
         html_line, which constitutes an end-to-end run of the pipeline."""
-        eq_(text_to_html_lines('hello', regions=[(0, 3, 'a'), (3, 5, 'b')]),
+        eq_(text_to_html_lines('hello', regions=[(0, 3, Region('a')),
+                                                 (3, 5, Region('b'))]),
             [u'<span class="a">hel</span><span class="b">lo</span>'])
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
-        eq_(text_to_html_lines('this that', [(0, 9, ({}, ''))], [(0, 4, 'k')]),
+        eq_(text_to_html_lines('this that', [(0, 9, Ref({}))], [(0, 4, Region('k'))]),
             [u'<a data-menu="{}"><span class="k">this</span> that</a>'])
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
-        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, ({}, ''))]),
-            [u'<a data-menu="{}">this</a>', u'<a data-menu="{}">that</a>'])
+        # We must preserve the \n in the output so that text within refs/regions keeps line breaks.
+        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref({}))]),
+            [u'<a data-menu="{}">this\n</a>', u'<a data-menu="{}">that</a>'])
 
     def test_horrors(self):
         """Untangle a circus of interleaved tags, tags that start where others
@@ -274,10 +279,10 @@ class IntegrationTests(TestCase):
         # span of text is within the right spans. We don't care what order the
         # span tags are in.
         eq_(text_to_html_lines('this&that',
-                               regions=[(0, 9, 'a'), (1, 8, 'b'),
-                                        (4, 7, 'c'), (3, 4, 'd'),
-                                        (3, 5, 'e'), (0, 4, 'm'),
-                                        (5, 9, 'n')]),
+                               regions=[(0, 9, Region('a')), (1, 8, Region('b')),
+                                        (4, 7, Region('c')), (3, 4, Region('d')),
+                                        (3, 5, Region('e')), (0, 4, Region('m')),
+                                        (5, 9, Region('n'))]),
             [u'<span class="a"><span class="m">t<span class="b">hi<span class="d"><span class="e">s</span></span></span></span><span class="b"><span class="e"><span class="c">&amp;</span></span><span class="c"><span class="n">th</span></span><span class="n">a</span></span><span class="n">t</span></span>'])
 
     def test_empty_tag_boundaries(self):
@@ -288,4 +293,4 @@ class IntegrationTests(TestCase):
 
         """
         text_to_html_lines('hello!',
-                           regions=[(3, 3, 'a'), (3, 5, 'b')])
+                           regions=[(3, 3, Region('a')), (3, 5, Region('b'))])
