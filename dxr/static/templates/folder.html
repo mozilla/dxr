@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% from "partial/switch_tree.html" import tree_menu %}
+{% from "partial/breadcrumbs.html" import breadcrumbs %}
 
 {% block title %}{{ name }} - DXR{% endblock %}
 
@@ -11,17 +12,10 @@
 {% set state_eof = True %}
 
 {% block content %}
-  <div class="breadcrumbs">
-    {%- for path, name in paths_and_names -%}
-      {%- if not loop.first or loop.last and loop.length != 1 -%}
-        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- else -%}
-        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- endif -%}
-    {%- endfor -%}
+  <div class="breadcrumbs-container">
+    {{ breadcrumbs(www_root, paths_and_names) }}
+    {{ tree_menu(tree_tuples, tree) }}
   </div>
-
-  {{ tree_menu(tree_tuples, tree) }}
 
   <table class="folder-content">
     <thead>

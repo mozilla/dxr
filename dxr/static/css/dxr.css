@@ -197,22 +197,20 @@ mark {
 
 /* promoted stuff, on the right */
 .promoted-container {
-    position: absolute;
-    right: 0;
-    max-width: 30vw;
-    background: white;
-    padding-right: 2em;
-    padding-bottom: 1em;
+    /* cannot grow, can shrink, prefers 30% size */
+    flex: 0 1 30%;
 }
 .promoted-icon {
-    float: left;
     width: 16px;
     height: 16px;
+    display: inline-block;
 }
 .promoted-result {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-left: 24px;
+    margin-left: 5px;
+    display: inline;
+}
+.promoted-row {
+    margin-bottom: 5px;
 }
 .promoted-line.left-column {
     display: inline;
@@ -223,6 +221,13 @@ mark {
 }
 
 /* results */
+.results-row {
+    display: flex;
+}
+.results-container {
+    /* can grow, can shrink, default to fill the page */
+    flex: 1 1;
+}
 
 .results tr:hover,
 .file tr:hover {
@@ -238,6 +243,11 @@ mark {
     text-align: right;
     color: #aaa;
     width: 6ex;
+    vertical-align: top;
+}
+.results .right-column {
+    /* break long lines up */
+    word-break: break-all;
 }
 .results td {
     padding: .1rem .5rem;
@@ -252,7 +262,7 @@ mark {
     padding: 0 .5rem;
 }
 .results code {
-    white-space: pre;
+    white-space: pre-wrap;
 }
 .result-head td
 {
@@ -369,9 +379,14 @@ mark {
 .content {
     margin-top: 55px;
     padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
 }
 .path-separator {
     margin: 0 .2rem;
+}
+.breadcrumbs-container {
+    display: flex;
 }
 .breadcrumbs,
 .top-of-tree {
@@ -379,6 +394,7 @@ mark {
     margin: 0;
     padding: .5rem 0 1rem 0;
     text-align: left;
+    flex-grow: 1;
 }
 
 /* Header help icon */

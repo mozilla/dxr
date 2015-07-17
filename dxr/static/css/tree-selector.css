@@ -10,8 +10,8 @@
 .tree-selector {
     display: inline-block;
     position: relative;
-    float: right;
     width: auto;
+    text-align: right;
 }
 .select-options {
     display: none;
@@ -55,7 +55,6 @@
 .ts-modal {
     border: 1px solid #d4d4d4;
     border-radius: 6px;
-    min-width: 120%;
     z-index: 10;
 }
 header {

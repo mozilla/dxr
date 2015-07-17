@@ -1,0 +1,11 @@
+{% macro breadcrumbs(www_root, paths_and_names) %}
+  <div class="breadcrumbs">
+    {%- for path, name in paths_and_names -%}
+      {%- if not loop.first or loop.last and loop.length != 1 -%}
+        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- else -%}
+        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+{% endmacro %}

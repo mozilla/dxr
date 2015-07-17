@@ -6,6 +6,7 @@ var templateFiles = [
     'dxr/static/templates/partial/result_lines.html',
     'dxr/static/templates/partial/switch_tree.html',
     'dxr/static/templates/partial/results_header.html',
+    'dxr/static/templates/partial/breadcrumbs.html',
     'dxr/static/templates/context_menu.html',
     'dxr/static/templates/path_line.html',
 ];

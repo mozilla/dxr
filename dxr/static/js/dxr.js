@@ -333,6 +333,8 @@ $(function() {
                 for (var i = 0; i < results.length; i++) {
                     var icon = results[i].icon;
                     var resultHead = buildResultHead(results[i].path, data.tree, icon, results[i].is_binary);
+                    // After we build the result head, join up the path so we can set it as an href.
+                    results[i].path = results[i].path.join('/');
                     results[i].iconClass = resultHead[0];
                     results[i].pathLine = resultHead[1];
                 }
