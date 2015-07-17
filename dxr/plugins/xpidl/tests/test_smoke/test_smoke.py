@@ -1,4 +1,4 @@
-# Index a big idl file.
+"""Index a big idl file."""
 
 from dxr.testing import DxrInstanceTestCase
 

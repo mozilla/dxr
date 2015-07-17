@@ -1,6 +1,12 @@
-all:
-	mkdir -p obj
-	header.py -o obj/nsrootidl.h --cachedir=obj nsrootidl.idl
-	header.py -o obj/nsIDownloadHistory.h --cachedir=obj nsIDownloadHistory.idl
+all: obj/nsrootidl.h obj/nsIDownloadHistory.h
+
+obj/%.h: %.idl | obj
+	header.py -o $@ --cachedir=obj $^
+
+obj:
+	mkdir $@
+
 clean:
-	rm -rf obj
+	$(RM) -r obj
+
+.PHONY: all clean

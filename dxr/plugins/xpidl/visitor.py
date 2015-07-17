@@ -3,8 +3,9 @@ from itertools import ifilter
 from os.path import relpath, join, basename, dirname, exists
 
 from flask import url_for
-from xpidl.header import idl_basename, header, include, jsvalue_include, \
-    infallible_includes, header_end, forward_decl, write_interface, printComments
+from xpidl.header import (idl_basename, header, include, jsvalue_include,
+                          infallible_includes, header_end, forward_decl,
+                          write_interface, printComments)
 from xpidl.xpidl import Attribute
 
 from dxr.indexers import Ref, Extent, Position
@@ -77,6 +78,17 @@ class IdlVisitor(object):
 
     def __init__(self, parser, contents, rel_path, abs_path, include_folders, header_bucket,
                  tree_config):
+        """
+        Parse an IDL file and visit the productions of its AST.
+
+        :arg parser: IdlParser to use to parse the file
+        :arg contents: the contents of the file, as a string
+        :arg rel_path: relative path to the file from tree root
+        :arg abs_path: absolute path to the file
+        :arg include_folders: list of folders to use to resolve include directives
+        :arg header_bucket: folder in which the generated header would be placed to make links
+        :arg tree_config: A :class:`TreeConfig` object for the current tree
+        """
         self.tree = tree_config
         # Hold on to the URL so we do not have to regenerate it everywhere.
         self.header_filename = basename(rel_path.replace('.idl', '.h'))
@@ -85,28 +97,24 @@ class IdlVisitor(object):
         self.generated_url = url_for('.browse',
                                      tree=self.tree.name,
                                      path=header_path)
-        self.ast = parser.parse(contents, basename(rel_path))
+        ast = parser.parse(contents, basename(rel_path))
         # Might raise IdlError
         self.search_paths = [dirname(abs_path)] + include_folders
-        self.ast.resolve(self.search_paths, parser)
-        self.line_map = header_line_numbers(self.ast, self.header_filename)
+        ast.resolve(self.search_paths, parser)
+        self.line_map = header_line_numbers(ast, self.header_filename)
         self.line_list = contents.splitlines()
         # List of (start, end, Ref) where start and end are byte offsets into the file.
         self.refs = []
         self.needles = []
 
         # Initiate visitations.
-        for item in self.ast.productions:
-            if item.kind == 'include':
-                self.visit_include(item)
-            elif item.kind == 'typedef':
-                self.visit_typedef(item)
-            elif item.kind == 'forward':
-                self.visit_forward(item)
-            elif item.kind == 'interface':
-                self.visit_interface(item)
+        for item in ast.productions:
+            try:
+                getattr(self, 'visit_' + item.kind)(item)
+            except AttributeError:
                 # TODO: can we do something useful for these?
                 # Unhandled: {'builtin', 'cdata', 'native', 'attribute'}
+                pass
 
     def check_lineno(self, needle, line):
         """Check whether needle string appears on line; if it doesn't then try the one above and

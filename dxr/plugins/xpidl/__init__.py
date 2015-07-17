@@ -1,3 +1,15 @@
+"""XPIDL plugin: analyze XPIDL files using the mozilla-central xpidl parser.
+
+This plugin analyzes XPIDL files by attempting to parse all files ending in '.idl' using the
+xpidl parser. Then it delicately walks the productions in the AST to pull out relevant
+information, such as interface and member declarations, and shoves them into refs and needles to
+feed to ES. The plugin borrows the xpidl C++ header generating code to find direct hops from
+interface constructs to their corresponding output in header land. It also donates Filters which
+use the discovered needles to perform structural queries.
+
+For further reference, see https://developer.mozilla.org/en-US/docs/Mozilla/XPIDL.
+"""
+
 from functools import partial
 from os.path import abspath
 
@@ -10,13 +22,13 @@ from dxr.plugins.xpidl.mappings import mappings
 from dxr.plugins.xpidl.indexers import FileToIndex
 
 
-def split_on_colon_into_abspaths(value):
-    return map(abspath, value.strip().split(':'))
+def split_on_space_into_abspaths(value):
+    return map(abspath, value.strip().split())
 
 
 ColonPathList = And(basestring,
-                    Use(split_on_colon_into_abspaths),
-                    error='This should be a colon-separated list of paths.')
+                    Use(split_on_space_into_abspaths),
+                    error='This should be a space-separated list of paths.')
 
 plugin = Plugin(
     tree_to_index=partial(AdHocTreeToIndex,
