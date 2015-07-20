@@ -72,7 +72,7 @@ https://bitbucket.org/pelmers/python-hglib/get/issue3924-version-fix.tar.gz#egg=
 # sha256: YTZ7nrL0uBn2nqEWdQMFJw8d-IWZksnjVtaoUfJaS0c
 ply==3.6
 
-# sha256: C2XnVAXBBJEJIdP2IcCoRLBtKDODWFowmZ8AFtsUYXw-Bo
+# sha256: C2XnVAXBBJEJIdP2IcCoRLBtKDODWFowmZ8AFtsUYXw
 xpidl==1.0
 
 # For deployment script only:
