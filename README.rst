@@ -16,4 +16,4 @@ than is possible with simple tools like grep.
 .. image:: docs/source/screenshot.png
 
 * Example: http://dxr.mozilla.org/
-* Documentation: https://dxr.readthedocs.org/
+* Documentation: https://dxr.readthedocs.org/en/es/
