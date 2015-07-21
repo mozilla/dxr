@@ -209,15 +209,18 @@ def browse(tree, path=''):
         return _browse_folder(tree, path.rstrip('/'), config)
     except NotFound:
         frozen = frozen_config(tree)
-        # Grab the FILE doc, just for the sidebar nav links:
+        # Grab the FILE doc, just for the sidebar nav links and the symlink target:
         files = filtered_query(
             frozen['es_alias'],
             FILE,
             filter={'path': path},
             size=1,
-            include=['links'])
+            include=['link', 'links'])
         if not files:
             raise NotFound
+        if 'link' in files[0]:
+            # Then this path is a symlink, so redirect to the real thing.
+            return redirect(url_for('.browse', tree=tree, path=files[0]['link'][0]))
 
         lines = filtered_query(
             frozen['es_alias'],
@@ -279,7 +282,7 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(f['modified']) if 'modified' in f else None,
              f.get('size'),
-             url_for('.browse', tree=tree, path=f['path'][0]),
+             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]),
              f.get('is_binary', [False])[0])
             for f in files_and_folders])
 

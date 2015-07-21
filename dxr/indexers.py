@@ -4,7 +4,7 @@ import cgi
 from collections import namedtuple
 import json
 from operator import itemgetter
-from os.path import join
+from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
@@ -209,10 +209,10 @@ class FileToSkim(PluginConfig):
         :meth:`~dxr.indexers.FileToSkim.links()`,
         :meth:`~dxr.indexers.FileToSkim.refs()`, etc.
 
-        The default implementation selects only text files.
+        The default implementation selects only text files that are not symlinks.
 
         """
-        return self.contains_text()
+        return self.contains_text() and not islink(self.absolute_path())
 
     def links(self):
         """Return an iterable of links for the navigation pane::
