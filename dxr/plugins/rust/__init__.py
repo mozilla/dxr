@@ -65,18 +65,17 @@ class FileToIndex(indexers.FileToIndex):
         return self.all_needles()
 
     def refs(self):
-        def make_menu(table_name, menu_maker):
-            data = self.tree_index.by_file(table_name, self.path)
-            for datum in data:
-                menu = menu_maker.from_intermediate(self.tree, self.tree_index, datum)
-                if menu and 'extent_start' in datum:
+        def make_menu(table_name, ref_maker):
+            for datum in self.tree_index.by_file(table_name, self.path):
+                ref = ref_maker(self.tree_index, datum, self.tree)
+                if ref and 'extent_start' in datum:
                     yield (int(datum['extent_start']),
                            int(datum['extent_end']),
-                           menu)
+                           ref)
 
-        for m in make_menu('functions', menu.function_menu):
+        for m in make_menu('functions', menu.function_ref):
             yield m
-        for m in make_menu('function_refs', menu.function_ref_menu):
+        for m in make_menu('function_refs', menu.function_ref_ref):
             yield m
         for m in make_menu('variables', menu.variable_menu):
             yield m
@@ -1079,4 +1078,5 @@ mappings = {
 
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
-                mappings=mappings)
+                mappings=mappings,
+                menus=)

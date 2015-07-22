@@ -106,3 +106,12 @@ class SingleDatumMenuMaker(MenuMaker):
     @classmethod
     def from_es(cls, tree, data):
         return cls(tree, data)
+
+
+class MultiDatumMenuMaker(MenuMaker):
+    """Abstract superclass for MenuMakers that serialize as a fixed-length
+    sequence of data"""
+
+    @classmethod
+    def from_es(cls, tree, data):
+        return cls(tree, *data)

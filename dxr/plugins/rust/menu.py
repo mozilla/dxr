@@ -34,48 +34,62 @@ def truncate_value(value, typ=""):
     return result
 
 
+class FindReferencesMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
+    """A sort of compound menumaker that handles finding various sorts of
+    references
+
+    Should be broken into several.
+
+    """
+    def menu_items(self):
+        kind, filter, qualname = self.data
+        yield {'html':   "Find references",
+               'title':  "Find references to this " + kind,
+               'href':   search_url(self.tree, "+" + filter + ":%s" % quote(qualname)),
+               'icon':   'reference'}
+
+
 def add_find_references(tree_config, menu, qualname, search_term, kind):
-    menu.append({
-        'html':   "Find references",
-        'title':  "Find references to this " + kind,
-        'href':   search_url(tree_config, "+" + search_term + ":%s" % quote(qualname)),
-        'icon':   'reference'
-    })
+    menu.append(FindReferencesMenuMaker(tree_config, (kind, filter, qualname))
+
+
+class StdLibMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
+    def menu_items(self):
+        # TODO: Stop storing entire URLs in ES.
+        def get_domain(url):
+            start = url.find('//') + 2
+            return url[start:url.find('/', start)]
+
+        def add_link_to_menu(url, html, title):
+            if url:
+                menu.append({'html': html,
+                             'title': title,
+                             'href': url,
+                             'icon': 'jump'})
+
+        menu = []
+        doc_url, src_url, dxr_url, extra_text = self.data
+        add_link_to_menu(doc_url,
+                         'Go to docs' + extra_text,
+                         'Go to documentation for this crate on ' + get_domain(doc_url))
+        add_link_to_menu(src_url,
+                         'Go to source' + extra_text,
+                         'Go to source code for this crate on ' + get_domain(doc_url))
+        add_link_to_menu(dxr_url,
+                         'Go to DXR index' + extra_text,
+                         'Go to DXR index of this crate on ' + get_domain(doc_url))
+        return menu
 
 
 def std_lib_links(tree_config, menu, (docurl, srcurl, dxrurl), extra_text = ""):
-    def get_domain(url):
-        start = url.find('//') + 2
-        return url[start:url.find('/', start)]
-
-    def add_link_to_menu(menu, url, text, long_text):
-        if not url:
-            return menu;
-
-        menu.insert(0, {
-            'html':   text,
-            'title':  long_text,
-            'href':   url,
-            'icon':   'jump'
-        })
-        return menu
-
-    add_link_to_menu(menu, dxrurl,
-                     "Go to DXR index" + extra_text,
-                     "Go to DXR index of this crate on " + get_domain(dxrurl))
-    add_link_to_menu(menu, srcurl,
-                     "Go to source" + extra_text,
-                     "Go to source code for this crate on " + get_domain(srcurl))
-    add_link_to_menu(menu, docurl,
-                     "Go to docs" + extra_text,
-                     "Go to documentation for this crate on " + get_domain(docurl))
+    menu.insert(0, StdLibMenuMaker(tree_config, (doc_url, src_url, dxr_url, extra_text)))
 
 
-# Menu items shared by function def/decls and function refs
 def function_menu_generic(datum, tree_config):
-    makers = CallMenuMaker(tree_config, datum)
+    """Return menu makers shared by function def/decls and function refs."""
+    makers = [CallMenuMaker(tree_config, datum)]
     add_find_references(tree_config, makers, datum['qualname'], "function-ref", "function")
-    return menu
+    return makers
 
 
 class _RustPluginAttr(object):
@@ -95,7 +109,8 @@ class CallMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
                  'icon': 'method'}]
 
 
-class _JumpToTarget(MenuMaker):
+# TODO: DRY with clang plugin.
+class _JumpToTarget(MultiDatumMenuMaker):
     """A MenuMaker that jumps straight to a specific line of a file
 
     :classvar target_name: A description of the kind of thing I point to, like
@@ -109,10 +124,6 @@ class _JumpToTarget(MenuMaker):
 
     def es(self):
         return self.path, self.row
-
-    @classmethod
-    def from_es(cls, tree, data):
-        return cls(tree, *data)
 
     @classmethod
     def from_decl(cls, tree, decl):
@@ -172,7 +183,23 @@ class JumpToFunctionDeclarationMenuMaker(_JumpToTarget, _RustPluginAttr):
     target_name = 'function declaration'
 
 
-def function_ref(tree, datum, tree_config):
+class TraitImplMenuMaker(MultiDatumMenuMaker):
+    def __init__(self, tree, qualname, count):
+        super(TraitImplMenuMaker, self).__init__(tree)
+        self.qualname = qualname
+        self.count = count
+
+    def es(self):
+        return self.qualname, self.count
+
+    def menu_items(self):
+        yield {'html': "Find implementations (%d)" % self.count,
+               'title': "Find implementations of this trait method",
+               'href': search_url(self.tree, "+fn-impls:%s" % quote(self.qualname)),
+               'icon': 'method'}
+
+
+def function_menu(tree, datum, tree_config):
     makers = []
     if 'declid' in datum and datum['declid'] in tree.data.functions:
         # It's an implementation; find the decl:
@@ -182,20 +209,14 @@ def function_ref(tree, datum, tree_config):
         # it's a decl, find implementations
         impls = tree.data.index('functions', 'declid')
         count = len(impls[datum['id']]) if datum['id'] in impls else 0
-        if count > 0:
-            # NEXT: Turn this into a maker. Or go rewrite the other calls to add_jump_definition().
-            menu.append({
-                'html': "Find implementations (%d)" % count,
-                'title': "Find implementations of this trait method",
-                'href': search_url(tree_config, "+fn-impls:%s" % quote(datum['qualname'])),
-                'icon': 'method'
-            })
+        if count:
+            makers.append(TraitImplMenuMaker(tree_config, datum['qualname'], count))
     makers = [CallMenuMaker(tree_config, datum['qualname'])]
 
     return Ref(makers)  # TODO: Filter out Nones in makers, here and elsewhere? Do they actually happen?
 
 
-def function_ref_ref(tree, datum, tree_config):
+def function_ref_menu(tree, datum, tree_config):
     """Return a Ref with menus suitable to a function reference."""
     fn_def = None
     fn_decl = None
