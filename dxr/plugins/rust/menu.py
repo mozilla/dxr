@@ -272,31 +272,30 @@ def variable_ref_menu(tree, datum, tree_config):
     #print "variable ref missing def"
 
 
-def type_menu_generic(tree, datum, tree_config):
-    menu = []
-    kind = datum['kind']
-    if kind == 'trait':
-        menu.append({
-            'html': "Find sub-traits",
-            'title': "Find sub-traits of this trait",
-            'href': search_url(tree_config, "+derived:%s" % quote(datum['qualname'])),
-            'icon': 'type'
-        })
-        menu.append({
-            'html': "Find super-traits",
-            'title': "Find super-traits of this trait",
-            'href': search_url(tree_config, "+bases:%s" % quote(datum['qualname'])),
-            'icon': 'type'
-        })
+class TypeMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
+    def menu_items(self):
+        kind, qualname = self.data
+        if kind == 'trait':
+            yield {'html': "Find sub-traits",
+                   'title': "Find sub-traits of this trait",
+                   'href': search_url(tree_config, "+derived:%s" % quote(qualname)),
+                   'icon': 'type'}
+            yield {'html': "Find super-traits",
+                   'title': "Find super-traits of this trait",
+                   'href': search_url(tree_config, "+bases:%s" % quote(qualname)),
+                   'icon': 'type'}
+        if kind == 'struct' or kind == 'enum' or kind == 'trait':
+            yield {'html': "Find impls",
+                   'title': "Find impls which involve this " + kind,
+                   'href': search_url(tree_config, "+impl:%s" % quote(qualname)),
+                   'icon': 'reference'}
 
-    if kind == 'struct' or kind == 'enum' or kind == 'trait':
-        menu.append({
-            'html': "Find impls",
-            'title': "Find impls which involve this " + kind,
-            'href': search_url(tree_config, "+impl:%s" % quote(datum['qualname'])),
-            'icon': 'reference'
-        })
-    add_find_references(tree_config, menu, datum['qualname'], "type-ref", kind)
+
+def type_menu_generic(tree, datum, tree_config):
+    kind = datum['kind']
+    qualname = datum['qualname']
+    menu = [TypeMenuMaker(tree_config, (kind, qualname))]
+    add_find_references(tree_config, menu, qualname, "type-ref", kind)
     return menu
 
 
