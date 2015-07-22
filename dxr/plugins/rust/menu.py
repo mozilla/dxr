@@ -317,14 +317,17 @@ def type_ref_menu(tree, datum, tree_config):
         return Ref(makers, hover=truncate_value("", title))
 
 
+class UseItemsMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
+    def menu_items(self):
+        qualname = self.data
+        yield {'html': "Find use items",
+               'title': "Find instances of this module in 'use' items",
+               'href': search_url(self.tree, "+module-use:%s" % quote(qualname)),
+               'icon': 'reference'}
+
+
 def module_menu_generic(tree, datum, tree_config):
-    menu = []
-    menu.append({
-        'html': "Find use items",
-        'title': "Find instances of this module in 'use' items",
-        'href': search_url(tree_config, "+module-use:%s" % quote(datum['qualname'])),
-        'icon': 'reference'
-    })
+    menu = [UseItemsMenuMaker(tree_config, datum['qualname'])]
     add_find_references(tree_config, menu, datum['qualname'], "module-ref", "module")
     return menu
 
