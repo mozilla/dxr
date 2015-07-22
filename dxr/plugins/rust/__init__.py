@@ -29,13 +29,14 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
                    constantly, icat)
 
 from dxr import indexers
-from dxr.plugins import Plugin, filters_from_namespace
+from dxr.plugins import Plugin, filters_from_namespace, menus_from_namespace
 import dxr.utils as utils
 from dxr.filters import LINE
 from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines, QUALIFIED_LINE_NEEDLE
 
 from dxr.plugins.rust import filters
-import dxr.plugins.rust.menu
+from dxr.plugins.rust import menu
+
 
 PLUGIN_NAME = 'rust'
 RUST_DXR_FLAG = " -Zsave-analysis"
@@ -73,9 +74,9 @@ class FileToIndex(indexers.FileToIndex):
                            int(datum['extent_end']),
                            ref)
 
-        for m in make_menu('functions', menu.function_ref):
+        for m in make_menu('functions', menu.function_menu):
             yield m
-        for m in make_menu('function_refs', menu.function_ref_ref):
+        for m in make_menu('function_refs', menu.function_ref_menu):
             yield m
         for m in make_menu('variables', menu.variable_menu):
             yield m
@@ -1079,4 +1080,4 @@ mappings = {
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
                 mappings=mappings,
-                menus=)
+                menus=menus_from_namespace(menu.__dict__))

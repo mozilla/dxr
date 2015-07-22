@@ -1,6 +1,7 @@
 import os
 
 from dxr.lines import Ref
+from dxr.menus import MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker
 from dxr.utils import search_url
 
 
@@ -34,6 +35,10 @@ def truncate_value(value, typ=""):
     return result
 
 
+class _RustPluginAttr(object):
+    plugin = 'rust'
+
+
 class FindReferencesMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
     """A sort of compound menumaker that handles finding various sorts of
     references
@@ -49,8 +54,8 @@ class FindReferencesMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
                'icon':   'reference'}
 
 
-def add_find_references(tree_config, menu, qualname, search_term, kind):
-    menu.append(FindReferencesMenuMaker(tree_config, (kind, filter, qualname))
+def add_find_references(tree_config, menu, qualname, filter, kind):
+    menu.append(FindReferencesMenuMaker(tree_config, (kind, filter, qualname)))
 
 
 class StdLibMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
@@ -135,7 +140,7 @@ class _JumpToTarget(MultiDatumMenuMaker):
         """
         path = decl['file_name']
         if path:
-            return cls(tree, (path, decl['file_line']))
+            return cls(tree, path, decl['file_line'])
         else:
             warn("Can't add jump to empty path.")  # Can this happen?
 
@@ -203,7 +208,7 @@ def function_menu(tree, datum, tree_config):
         impls = tree.data.index('functions', 'declid')
         count = len(impls[datum['id']]) if datum['id'] in impls else 0
         if count:
-            makers.append(TraitImplMenuMaker(tree_config, datum['qualname'], count))
+            makers.append(TraitImplMenuMaker(tree_config, (datum['qualname'], count)))
     makers = [CallMenuMaker(tree_config, datum['qualname'])]
 
     return Ref(makers)  # TODO: Filter out Nones in makers, here and elsewhere? Do they actually happen?
@@ -224,11 +229,10 @@ def function_ref_menu(tree, datum, tree_config):
     makers = []
     name = None
     if fn_def:
-        makers.append(JumpToTraitMethodMenuMaker.from_decl(tree_config, fn_decl))
+        makers.append(JumpToDefinitionMenuMaker.from_decl(tree_config, fn_def))
         if fn_decl and (fn_def['file_name'] != fn_decl['file_name'] or fn_def['file_line'] != fn_decl['file_line']):
             makers.append(JumpToTraitMethodMenuMaker.from_decl(tree_config, fn_decl))
         makers.extend(function_menu_generic(fn_def, tree_config))
-        makers.append(JumpToDefinitionMenuMaker.from_decl(tree_config, fn_def))
         name = fn_def['qualname']
     elif fn_decl:
         makers = function_menu_generic(fn_decl, tree_config)
@@ -344,7 +348,7 @@ def module_menu(tree, datum, tree_config):
 def module_ref_menu(tree, datum, tree_config):
     # Add straightforward aliases to modules
     if datum['refid']:
-        menu = []
+        makers = []
         mod = None
         if datum['refid'] in tree.data.modules:
             mod = tree.data.modules[datum['refid']]
@@ -360,25 +364,25 @@ def module_ref_menu(tree, datum, tree_config):
                     # Add references to extern mods via aliases (known local crates)
                     crate = tree.crates_by_name[alias['location']]
                     makers.append(JumpToCrateMenuMaker(tree_config, crate['file_name'], 1))
-                    add_find_references(tree_config, menu, alias['qualname'], "module-alias-ref", "alias")
+                    add_find_references(tree_config, makers, alias['qualname'], "module-alias-ref", "alias")
                 elif 'location' in alias and alias['location'] in tree.locations:
                     # Add references to extern mods via aliases (standard library crates)
                     urls = tree.locations[alias['location']]
-                    menu = []
-                    add_find_references(tree_config, menu, alias['qualname'], "module-alias-ref", "alias")
-                    std_lib_links(tree_config, menu, urls)
+                    makers = []
+                    add_find_references(tree_config, makers, alias['qualname'], "module-alias-ref", "alias")
+                    std_lib_links(tree_config, makers, urls)
                 elif 'location' in alias:
                     # Add references to extern mods via aliases (unknown local crates)
-                    menu = []
-                    add_find_references(tree_config, menu, alias['qualname'], "module-alias-ref", "alias")
+                    makers = []
+                    add_find_references(tree_config, makers, alias['qualname'], "module-alias-ref", "alias")
                 elif 'file_name' in mod:
                     makers.append(JumpToModuleDefinitionMenuMaker.from_decl(tree_config, mod))
             else:
                 if 'file_name' in mod and 'def_file' in mod and mod['def_file'] == mod['file_name']:
-                    menu.append(JumpToDefinitionMenuMaker.from_decl(tree_config, mod))
+                    makers.append(JumpToDefinitionMenuMaker.from_decl(tree_config, mod))
                 else:
-                    menu.append(JumpToModuleDefinitionMenuMaker(tree_config, mod['def_file'], 1))
-                    menu.append(JumpToModuleDeclarationMenuMaker.from_decl(tree_config, mod))
+                    makers.append(JumpToModuleDefinitionMenuMaker(tree_config, mod['def_file'], 1))
+                    makers.append(JumpToModuleDeclarationMenuMaker.from_decl(tree_config, mod))
             makers.extend(module_menu_generic(tree, mod, tree_config))
             return Ref(makers)
 
@@ -392,7 +396,7 @@ def module_ref_menu(tree, datum, tree_config):
                 title = typ['value']
             else:
                 warn('no value for %s %s' % (typ['kind'], typ['qualname']))
-            return Ref(menu, hover=truncate_value('', title))
+            return Ref(makers, hover=truncate_value('', title))
 
 
 def module_alias_menu(tree, datum, tree_config):
@@ -406,39 +410,39 @@ def module_alias_menu(tree, datum, tree_config):
             # there is no link for the alias, but we add the alias menu stuff to the
             # module ref.
             makers = [JumpToModuleDefinitionMenuMaker(tree_config, mod['def_file'], 1)]
-            add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
-            return Ref(menu)
+            add_find_references(tree_config, makers, datum['qualname'], "module-alias-ref", "alias")
+            return Ref(makers)
 
     # 'module' aliases to types
     if datum['refid'] and datum['refid'] in tree.data.types:
         typ = tree.data.types[datum['refid']]
         if typ['name'] != datum['name']:
             makers = [JumpToTypeDeclarationMenuMaker.from_decl(tree_config, typ)]
-            add_find_references(tree_config, menu, datum['qualname'], "type-ref", "alias")
-            return Ref(menu)
+            add_find_references(tree_config, makers, datum['qualname'], "type-ref", "alias")
+            return Ref(makers)
 
     # 'module' aliases to variables
     if datum['refid'] and datum['refid'] in tree.data.variables:
         var = tree.data.variables[datum['refid']]
         if var['name'] != datum['name']:
             makers = [JumpToVariableDeclarationMenuMaker.from_decl(tree_config, var)]
-            add_find_references(tree_config, menu, datum['qualname'], "var-ref", "alias")
-            return Ref(menu)
+            add_find_references(tree_config, makers, datum['qualname'], "var-ref", "alias")
+            return Ref(makers)
 
     # 'module' aliases to functions
     if datum['refid'] and datum['refid'] in tree.data.functions:
         fn = tree.data.functions[datum['refid']]
         if fn['name'] != datum['name']:
             makers = [JumpToFunctionDeclarationMenuMaker.from_decl(tree_config, fn)]
-            add_find_references(tree_config, menu, datum['qualname'], "function-ref", "alias")
-            return Ref(menu)
+            add_find_references(tree_config, makers, datum['qualname'], "function-ref", "alias")
+            return Ref(makers)
 
     # extern crates to known local crates
     if 'location' in datum and datum['location'] and datum['location'] in tree.crates_by_name:
         crate = tree.crates_by_name[datum['location']]
         makers = [JumpToCrateMenuMaker(tree_config, crate['file_name'], 1)]
-        add_find_references(tree_config, menu, datum['qualname'], "module-alias-ref", "alias")
-        return Ref(menu)
+        add_find_references(tree_config, makers, datum['qualname'], "module-alias-ref", "alias")
+        return Ref(makers)
 
     # extern crates to standard library crates
     if 'location' in datum and datum['location'] and datum['location'] in tree.locations:
