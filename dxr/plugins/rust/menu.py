@@ -183,16 +183,9 @@ class JumpToFunctionDeclarationMenuMaker(_JumpToTarget, _RustPluginAttr):
     target_name = 'function declaration'
 
 
-class TraitImplMenuMaker(MultiDatumMenuMaker):
-    def __init__(self, tree, qualname, count):
-        super(TraitImplMenuMaker, self).__init__(tree)
-        self.qualname = qualname
-        self.count = count
-
-    def es(self):
-        return self.qualname, self.count
-
+class TraitImplMenuMaker(SingleDatumMenuMaker):
     def menu_items(self):
+        qualname, count = self.data
         yield {'html': "Find implementations (%d)" % self.count,
                'title': "Find implementations of this trait method",
                'href': search_url(self.tree, "+fn-impls:%s" % quote(self.qualname)),
