@@ -44,6 +44,10 @@ class Vcs(object):
         """Return a recognizable name for the VCS."""
         return type(self).__name__
 
+    def can_make_links(self):
+        """Returns if this object can produce useful links."""
+        return False
+
     @classmethod
     def invoke_vcs(cls, args, cwd, **kwargs):
         """Return the result of invoking the VCS command on the repository from
@@ -129,6 +133,9 @@ class Mercurial(Vcs):
             return cls(path)
         return None
 
+    def can_make_links(self):
+        return True
+
     def display_rev(self, path):
         return self.revision[:12]
 
@@ -190,6 +197,9 @@ class Git(Vcs):
             return cls(path)
         return None
 
+    def can_make_links(self):
+        return self.upstream is not None
+
     def display_rev(self, path):
         return self.revision[:10]
 
@@ -232,6 +242,9 @@ class Perforce(Vcs):
         if os.path.exists(os.path.join(path, os.environ['P4CONFIG'])):
             return cls(path, tree.p4web_url)
         return None
+
+    def can_make_links(self):
+        return self.upstream is not None
 
     def _p4run(self, args):
         ret = []
