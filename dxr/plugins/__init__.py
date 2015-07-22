@@ -9,6 +9,7 @@ from pkg_resources import iter_entry_points
 
 from dxr.filters import Filter, LINE
 from dxr.indexers import TreeToIndex
+from dxr.menus import MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker
 
 
 class AdHocTreeToIndex(TreeToIndex):
@@ -199,13 +200,13 @@ def menus_from_namespace(namespace):
     Our convention is to end with "MenuMaker" and not start with "_".
 
     """
-    # TODO: Don't return superclasses like SingleDatumMenuMaker. Consider
-    # switching to an isinstance() test so we don't have to keep typing
-    # "MenuMaker".
+    # TODO: Consider switching to an isinstance() test so we don't have to
+    # keep typing "MenuMaker".
     return [v for k, v in namespace.iteritems() if
             isclass(v) and
             not k.startswith('_') and
-            k.endswith('MenuMaker')]
+            k.endswith('MenuMaker') and
+            v not in [MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker]]
 
 
 def direct_search(priority, domain=LINE):
