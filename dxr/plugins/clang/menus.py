@@ -5,7 +5,7 @@ from os.path import basename
 from flask import url_for
 
 from dxr.app import DXR_BLUEPRINT
-from dxr.menus import MenuMaker, SingleDatumMenuMaker
+from dxr.menus import MultiDatumMenuMaker, SingleDatumMenuMaker
 from dxr.utils import search_url, without_ending, BROWSE
 
 
@@ -166,7 +166,7 @@ class FunctionMenuMaker(SingleDatumMenuMaker, _ClangPluginAttr):
         return menu
 
 
-class DefinitionMenuMaker(MenuMaker, _ClangPluginAttr):
+class DefinitionMenuMaker(MultiDatumMenuMaker, _ClangPluginAttr):
     """A one-item menu for jumping directly to something's definition"""
 
     def __init__(self, tree, path, row):
@@ -176,10 +176,6 @@ class DefinitionMenuMaker(MenuMaker, _ClangPluginAttr):
 
     def es(self):
         return self.path, self.row
-
-    @classmethod
-    def from_es(cls, tree, data):
-        return cls(tree, *data)
 
     def menu_items(self):
         yield {'html': "Jump to definition",
