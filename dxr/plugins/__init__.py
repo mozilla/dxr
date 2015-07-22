@@ -199,6 +199,9 @@ def menus_from_namespace(namespace):
     Our convention is to end with "MenuMaker" and not start with "_".
 
     """
+    # TODO: Don't return superclasses like SingleDatumMenuMaker. Consider
+    # switching to an isinstance() test so we don't have to keep typing
+    # "MenuMaker".
     return [v for k, v in namespace.iteritems() if
             isclass(v) and
             not k.startswith('_') and

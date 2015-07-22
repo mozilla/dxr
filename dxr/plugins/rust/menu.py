@@ -251,7 +251,7 @@ def variable_menu(tree, datum, tree_config):
     if 'type' in datum:
         typ = datum['type']
     else:
-        print "no type for variable", datum['qualname']
+        warn("no type for variable %s" % (datum['qualname'],))
     return Ref(menu, hover=truncate_value("", typ))
 
 
@@ -473,4 +473,4 @@ def unknown_ref_menu(tree, datum, tree_config):
             std_lib_links(tree_config, menu, urls)
         return Ref(menu)
 
-    print "unknown unknown!"
+    warn("unknown unknown!")
