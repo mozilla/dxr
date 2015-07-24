@@ -99,7 +99,8 @@ mappings = {
                         'properties': {
                             'icon': UNINDEXED_STRING,
                             'title': UNINDEXED_STRING,
-                            'href': UNINDEXED_STRING
+                            'href': UNINDEXED_STRING,
+                            'sync': UNINDEXED_STRING
                         }
                     }
                 }
