@@ -30,6 +30,12 @@ class FunctionFilter(_PyFilter):
     description = Markup('Function or method definition: <code>function:foo</code>')
 
 
+class FunctionRefFilter(_PyFilter):
+    name = 'function-ref'
+    is_reference = True
+    description = Markup('Function or method reference: <code>function-ref:foo</code>')
+
+
 class DerivedFilter(_QualifiedPyFilter):
     name = 'derived'
     description = Markup('Subclasses of a class: <code>derived:SomeSuperclass</code>')
@@ -42,7 +48,6 @@ class BasesFilter(_QualifiedPyFilter):
 
 class CallersFilter(_PyFilter):
     name = 'callers'
-    is_reference = True
     description = Markup('Calls to the given function: <code>callers:some_function</code>')
 
 

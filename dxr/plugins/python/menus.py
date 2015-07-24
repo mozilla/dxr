@@ -13,3 +13,23 @@ def class_menu(tree, qualname):
          'href': search_url(tree, '+bases:' + qualname),
          'icon': 'type'},
     ]
+
+
+def function_ref_menu(tree, name):
+    """Generate menu for function references."""
+    return {
+        'html': 'Find references',
+        'title': 'Find references to this function',
+        'href': search_url(tree, 'ref:' + name),
+        'icon': 'method'
+    }
+
+
+def function_id_menu(tree, name):
+    """Generate menu for a search for function definition."""
+    return {
+        'html': 'Find definition',
+        'title': 'Find definition of this function',
+        'href': search_url(tree, 'id:' + name),
+        'icon': 'method'
+    }

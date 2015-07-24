@@ -11,7 +11,7 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
                           with_start_and_end, Ref)
 from dxr.plugins.python.analysis import TreeAnalysis
-from dxr.plugins.python.menus import class_menu
+from dxr.plugins.python.menus import class_menu, function_id_menu, function_ref_menu
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
                                       path_to_module)
@@ -27,6 +27,7 @@ mappings = {
         'properties': {
             'py_type': QUALIFIED_LINE_NEEDLE,
             'py_function': QUALIFIED_LINE_NEEDLE,
+            'py_function_ref': QUALIFIED_LINE_NEEDLE,
             'py_derived': QUALIFIED_LINE_NEEDLE,
             'py_bases': QUALIFIED_LINE_NEEDLE,
             'py_callers': QUALIFIED_LINE_NEEDLE,
@@ -98,16 +99,22 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         for name, call_start, call_end in call_needles:
             self.yield_needle('py_callers', name, start, end)
             self.yield_needle('py_called_by', node.name, call_start, call_end)
+            self.yield_needle('py_function_ref', name, call_start, call_end)
+
+        self.yield_ref(start, end,
+                       [function_ref_menu(self.file_to_index.tree, node.name)])
 
     def visit_Call(self, node):
         # Save this call if we're currently tracking function calls.
-        if self.function_call_stack:
-            call_needles = self.function_call_stack[-1]
-            name = convert_node_to_name(node.func)
-            if name:
-                start, end = self.file_to_index.get_node_start_end(node)
+        name = convert_node_to_name(node.func)
+        if name:
+            start, end = self.file_to_index.get_node_start_end(node)
+            self.yield_ref(start, end,
+                           [function_id_menu(self.file_to_index.tree, name),
+                            function_ref_menu(self.file_to_index.tree, name)])
+            if self.function_call_stack:
+                call_needles = self.function_call_stack[-1]
                 call_needles.append((name, start, end))
-
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
