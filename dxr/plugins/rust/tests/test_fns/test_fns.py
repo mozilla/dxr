@@ -4,10 +4,6 @@ class FunctionTests(RustDxrInstanceTestCase):
     def test_simple_function(self):
         self.found_line_eq('function:foo', "fn <b>foo</b>() {", 3)
 
-    def test_case_insensitive(self):
-        self.found_line_eq('function:FOO', "fn <b>foo</b>() {", 3,
-                           is_case_sensitive=False)
-
     def test_methods_are_functions_too(self):
         # Test a method in an inherant impl.
         self.found_line_eq('function:baz', "fn <b>baz</b>(&amp;self) {}", 10)
@@ -47,8 +43,7 @@ class FunctionTests(RustDxrInstanceTestCase):
 
     # FIXME this fails, but test::foo works, so I think qualname searches with case insensitive is broken
     #def test_case_insensitive_qual(self):
-    #    self.found_line_eq('+function:TEST::FOO', "fn <b>foo</b>() {", 3,
-    #                       is_case_sensitive=False)
+    #    self.found_line_eq('+function:TEST::FOO', "fn <b>foo</b>() {", 3)
 
     # FIXME should be test::<Baz>::baz
     def test_methods_are_functions_too_qual(self):
