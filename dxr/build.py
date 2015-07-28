@@ -230,7 +230,7 @@ def index_tree(tree, es, verbose=False):
                 settings={
                     'settings': {
                         'index': {
-                            'number_of_shards': 1,  # Fewer should be faster, assuming enough RAM.
+                            'number_of_shards': tree.es_shards,  # Fewer should be faster, assuming enough RAM.
                             'number_of_replicas': 0  # for speed
                         },
                         # Default analyzers and mappings are in the core plugin.

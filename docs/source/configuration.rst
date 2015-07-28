@@ -162,6 +162,9 @@ per-tree options take effect when the tree is next indexed.
     Plugins enabled in this tree. Default: ``*``, which enables the same
     plugins enabled in the ``[DXR]`` section.
 
+``es_shards``
+    The number of shards to break the elasticsearch index into. Default: 5
+
 ``ignore_patterns``
     Whitespace-separated list of Unix `shell-style
     <http://docs.python.org/library/fnmatch.html>`__ file names or paths to

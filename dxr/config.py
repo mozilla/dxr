@@ -121,7 +121,7 @@ class Config(DotSection):
                 Optional('es_catalog_index', default='dxr_catalog'):
                     basestring,
                 Optional('es_catalog_replicas', default=1):
-                    basestring,
+                    Use(int, error='"es_catalog_replicas" must be an integer.'),
                 Optional('max_thumbnail_size', default=20000):
                     And(Use(int),
                         lambda v: v >= 0,
@@ -133,8 +133,7 @@ class Config(DotSection):
                         error='"es_indexing_timeout" must be a non-negative '
                               'integer.'),
                 Optional('es_refresh_interval', default=60):
-                    And(Use(int),
-                        error='"es_indexing_timeout" must be an integer.')
+                    Use(int, error='"es_indexing_timeout" must be an integer.')
             },
             basestring: dict
         })
@@ -205,6 +204,8 @@ class TreeConfig(DotSectionWrapper):
             Optional('description', default=''): basestring,
             Optional('disabled_plugins', default=plugin_list('')): Plugins,
             Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+            Optional('es_shards', default=5):
+                Use(int, error='"es_shards" must be an integer.'),
             Optional('ignore_patterns',
                      default=['.hg', '.git', 'CVS', '.svn', '.bzr',
                               '.deps', '.libs', '.DS_Store', '.nfs*', '*~',
