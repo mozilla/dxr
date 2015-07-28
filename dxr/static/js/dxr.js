@@ -341,21 +341,6 @@ $(function() {
             });
 
             if (!append) {
-                // If we have promoted results then pass in a formatted query which bubbles the
-                // non-filtered term to the front, so we can put path: in front of the query
-                // and remain valid.
-                if (data.promoted.length > 0) {
-                    var splitTerms = data.query.split(' ');
-                    for (var i = 0; i < splitTerms.length; i++) {
-                        if (splitTerms[i].indexOf(':') === -1) {
-                            // Put the term at the front and remove it from its original spot.
-                            splitTerms.splice(0, 0, splitTerms[i]);
-                            splitTerms.splice(i + 1, 1);
-                            break;
-                        }
-                    }
-                    data.formatted_query = splitTerms.join(' ');
-                }
                 contentContainer
                     .empty()
                     .append(nunjucks.render('partial/results_container.html', data));

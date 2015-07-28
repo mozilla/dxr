@@ -67,6 +67,13 @@ class Filter(object):
         self._term = term
         self._enabled_plugins = enabled_plugins
 
+    def __str__(self):
+        """Return a string representation of this Filter as name:term, as it
+        appeared in the query string.
+        """
+
+        return "%s:%s" % (self.name, self._term['arg'])
+
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
         found set of lines (or files and folders, if :attr:`domain` is FILES).
@@ -243,7 +250,8 @@ class QualifiedNameFilterBase(NameFilterBase):
 
 
 def some_filters(plugins, condition):
-    """Return a list of filters of the given plugins for which condition(filter) is True.
+    """Return a list of filters of the given plugins for which
+    condition(filter) is True.
 
     :arg plugins: An iterable of plugins
     :arg condition: A function which takes a filter and returns True or False

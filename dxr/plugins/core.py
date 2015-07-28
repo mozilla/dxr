@@ -1,6 +1,7 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 from base64 import b64encode
+from copy import deepcopy
 from itertools import chain
 from os.path import relpath, splitext
 import re
@@ -42,11 +43,11 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 
 # Add segments field to path map for FILE docs so we can find exact matches on path segments,
 # which we use in path promotion.
-FILE_PATH_MAPPING = PATH_MAPPING.copy()
-FILE_PATH_MAPPING['fields'] = merge(PATH_MAPPING['fields'],
-                                    {'segments': {'type': 'string', 'analyzer': 'path_analyzer'},
-                                     'segments_lower': {'type': 'string',
-                                                        'analyzer': 'path_analyzer_lower'}})
+FILE_PATH_MAPPING = deepcopy(PATH_MAPPING)
+FILE_PATH_MAPPING['fields'].update(
+    {'segments': {'type': 'string', 'analyzer': 'path_analyzer'},
+     'segments_lower': {'type': 'string',
+                        'analyzer': 'path_analyzer_lower'}})
 
 
 EXT_MAPPING = {

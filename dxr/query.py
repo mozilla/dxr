@@ -32,8 +32,8 @@ def direct_searchers(plugins):
 
 
 def _make_es_query(filters):
-    """Construct an ES query from nested list of filters by applying OR to each inner list of
-    filters and AND between lists of filter.
+    """Construct an ES query from nested list of filters by applying OR to each
+    inner list of filters and AND between lists of filter.
 
     """
     # An ORed-together ball for each term's filters, omitting filters that
@@ -69,7 +69,8 @@ class Query(object):
 
         # A list of dicts describing query terms:
         grammar = query_grammar(self.enabled_plugins)
-        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
+        self._terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
+        self._filters = self._instantiate_filters(self._terms)
 
     def single_term(self):
         """Return the single, non-negated textual term in the query.
@@ -78,8 +79,9 @@ class Query(object):
         non-textual one, return None.
 
         """
-        if len(self.terms) == 1:
-            term = self.terms[0]
+        text_terms = [term for term in self._terms if term['name'] == 'text' and not term['not']]
+        if len(text_terms) == 1:
+            term = text_terms[0]
             if term['name'] == 'text' and not term['not']:
                 return term
 
@@ -115,16 +117,17 @@ class Query(object):
                    [],
                    file.get('is_binary', False))
 
-    def instantiate_filters(self):
-        """Instantiate applicable filters, yielding a list of lists, each inner list
-        representing the filters of the name of the parallel term. We will OR the elements of
-        the inner lists and then AND those OR balls together."""
+    def _instantiate_filters(self, terms):
+        """Instantiate applicable filters, yielding a list of lists, each inner
+        list representing the filters of the name of the parallel term. We will
+        OR the elements of the inner lists and then AND those OR balls
+        together."""
 
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
         return [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
-                for term in self.terms]
+                for term in terms]
 
-    def results(self, filters, offset=0, limit=100):
+    def results(self, offset=0, limit=100):
         """Return a tuple of (total number of results, search results),
         where results have the form:
 
@@ -141,15 +144,14 @@ class Query(object):
             """Return an iterable of lists of ES filters for each term, filtered on
             predicate(Filter)."""
 
-            return ([f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]
-                     if predicate(f)] for term in self.terms)
+            return (filter(predicate, term_filters) for term_filters in self._filters)
 
         def group_filters_by_name(predicate):
-            """Return an iterable of a list of ES filters for each unique filter name, filtered on
-            predicate(Filter)."""
+            """Return an iterable of a list of ES filters for each unique
+            filter name, filtered on predicate(Filter)."""
 
             d = {}
-            for term in self.terms:
+            for term in self._terms:
                 for f in enabled_filters_by_name[term['name']]:
                     if predicate(f):
                         d.setdefault(term['name'], []).append(f(term, self.enabled_plugins))
@@ -173,13 +175,13 @@ class Query(object):
 
     # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 
-    def promoted_paths(self, filters, term, promote_limit=5):
-        """Return a tuple (total number of path results, promoted paths),
+    def promoted_paths(self, term, promote_limit=5):
+        """Return a tuple (total number of path results, promoted paths, querystring),
         where the number of promoted paths is no more than promote_limit."""
 
         # Filter out the FILE domain filters, and add our own path filter at the end.
         file_filters = [[f for f in named_filters if f.domain == FILE] for named_filters in
-                        filters] + [[PathFilter(term, self.enabled_plugins)]]
+                        self._filters] + [[PathFilter(term, self.enabled_plugins)]]
         filtered_query = _make_es_query(file_filters)
         path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
         # We add a second query that boosts exact path segment matches.
@@ -198,7 +200,8 @@ class Query(object):
             }
         }
         # We ask not to sort by path and line, falling back to score ranking instead.
-        return self._do_search_and_highlight(query, file_filters, False, 0, promote_limit, False)
+        result_count, results = self._do_search_and_highlight(query, file_filters, False, 0, promote_limit, False)
+        return result_count, results, ' '.join((str(f) for f in chain.from_iterable(file_filters)))
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -209,7 +212,7 @@ class Query(object):
 
         """
         term = self.single_term()
-        if not term:
+        if not term or len(self._terms) > 1:
             return None
 
         for searcher in direct_searchers(self.enabled_plugins):
@@ -250,7 +253,7 @@ class Query(object):
         numerically by line
 
         """
-        # Decide on the sort mode: either alphabeticanumerically or by score.
+        # Decide on the sort mode: either alphanumerically or by score.
         if alphabetize:
             sort_mode = ['path', 'number'] if is_line_query else ['path']
         else:
@@ -382,7 +385,7 @@ class QueryVisitor(NodeVisitor):
         return term_dict
 
     def visit_text(self, text, ((some_text,), _)):
-        """Create the dictionary that lives in Query.terms. Return it with a
+        """Create the dictionary that lives in Query._terms. Return it with a
         filter name of 'text', indicating that this is a bare or quoted run of
         text. If it is actually an argument to a filter,
         ``visit_filtered_term`` will overrule us later.

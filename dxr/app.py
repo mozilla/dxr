@@ -1,11 +1,11 @@
 from cStringIO import StringIO
 from datetime import datetime
 from functools import partial
-from itertools import chain, imap, izip
+from itertools import chain, izip
 from logging import StreamHandler
 from mimetypes import guess_type
 import os
-from os.path import join, basename, split, relpath
+from os.path import join, basename, split
 from sys import stderr
 
 from flask import (Blueprint, Flask, current_app,
@@ -92,7 +92,7 @@ def search(tree):
     if _request_wants_json():
         return _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config)
     else:
-        return _search_html(query, tree, query_text, is_case_sensitive, config)
+        return _search_html(tree, query_text, is_case_sensitive, config)
 
 
 def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
@@ -124,15 +124,16 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
 
     try:
-        filters = query.instantiate_filters()
         # Pull up all the non-negated text terms.
-        text_terms = [term for term in query.terms if term['name'] == 'text' and not term['not']]
-        count, results = query.results(filters, offset, limit)
-        promoted_count, promoted = 0, []
-        if offset == 0 and len(text_terms) == 1:
+        single_term = query.single_term()
+        count, results = query.results(offset, limit)
+        promoted_count, promoted, promoted_query = 0, [], ""
+        if offset == 0 and single_term:
             # Now we pull out the single line term and pass into promoted paths.
             try:
-                promoted_count, promoted = query.promoted_paths(filters, text_terms[0])
+                promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
+                promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
+                                         redirect='false')
             except BadTerm:
                 # If we get BadTerm here, just return no promoted results rather than bailing
                 # out of the whole query.
@@ -148,10 +149,11 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'result_count': count,
         'promoted_count': format_number(promoted_count),
         'result_count_formatted': format_number(count),
+        'promoted_query': promoted_query,
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
 
 
-def _search_html(query, tree, query_text, is_case_sensitive, config):
+def _search_html(tree, query_text, is_case_sensitive, config):
     """Return the rendered template for search.html.
 
     """

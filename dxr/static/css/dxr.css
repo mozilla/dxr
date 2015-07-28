@@ -199,6 +199,12 @@ mark {
 .promoted-container {
     /* cannot grow, can shrink, prefers 30% size */
     flex: 0 1 30%;
+    border: 1px solid #a0a0a0;
+    border-radius: 4px;
+    padding: 1.5em 2em;
+}
+.promoted-see-more {
+    margin: 0 0 1rem;
 }
 .promoted-icon {
     width: 16px;
@@ -210,7 +216,7 @@ mark {
     display: inline;
 }
 .promoted-row {
-    margin-bottom: 5px;
+    margin-top: .4rem
 }
 .promoted-line.left-column {
     display: inline;

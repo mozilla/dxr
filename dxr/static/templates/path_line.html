@@ -5,8 +5,8 @@
     <a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
 {%- endif -%}
 {# Remark: it is possible for <b> tags to be unbalanced within fragments if it opens in one
-   fragment and closes in another, but we avoid any issue by showing the entire path inline
-   as we do currently. #}
+   fragment and closes in another, but we avoid any issue by showing the entire path as a
+   series of inline-level tags. #}
 {{ display_path|safe }}
 {%- if not is_binary or is_dir -%}
     </a>
