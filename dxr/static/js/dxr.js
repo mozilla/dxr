@@ -110,9 +110,8 @@ $(function() {
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
         for (var pathIndex = 0; pathIndex < paths.length; pathIndex++) {
-            var index = parseInt(pathIndex),
-                isFirstOrOnly = index === 0 || splitPathLength === 1,
-                isLastOrOnly = (splitPathLength - 1) === index || splitPathLength === 1;
+            var isFirstOrOnly = pathIndex === 0 || splitPathLength === 1,
+                isLastOrOnly = (splitPathLength - 1) === pathIndex || splitPathLength === 1;
 
             // Strip the highlighting when building the data path.
             dataPath.push(paths[pathIndex].replace(/<\/?b>/g, ""));

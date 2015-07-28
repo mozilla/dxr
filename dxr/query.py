@@ -70,20 +70,23 @@ class Query(object):
         # A list of dicts describing query terms:
         grammar = query_grammar(self.enabled_plugins)
         self._terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
-        self._filters = self._instantiate_filters(self._terms)
 
-    def single_term(self):
+        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
+        # A list of lists, each inner list representing the filters of the name
+        # of the parallel term. We OR the elements of the inner lists and then
+        # AND those OR balls together.
+        self._filters = [[f(term, self.enabled_plugins) for f in
+                          enabled_filters_by_name[term['name']]] for term in self._terms]
+
+    def single_text_term(self):
         """Return the single, non-negated textual term in the query.
 
-        If there is more than one term in the query or if the single term is a
-        non-textual one, return None.
+        If there is not exactly one such term, return None.
 
         """
         text_terms = [term for term in self._terms if term['name'] == 'text' and not term['not']]
         if len(text_terms) == 1:
-            term = text_terms[0]
-            if term['name'] == 'text' and not term['not']:
-                return term
+            return text_terms[0]
 
     def _line_query_results(self, filters, results, path_highlighters):
         """Return an iterable of results of a LINE-domain query."""
@@ -116,16 +119,6 @@ class Query(object):
                                  h(file) for h in path_highlighters)),
                    [],
                    file.get('is_binary', False))
-
-    def _instantiate_filters(self, terms):
-        """Instantiate applicable filters, yielding a list of lists, each inner
-        list representing the filters of the name of the parallel term. We will
-        OR the elements of the inner lists and then AND those OR balls
-        together."""
-
-        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
-        return [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
-                for term in terms]
 
     def results(self, offset=0, limit=100):
         """Return a tuple of (total number of results, search results),
@@ -211,7 +204,7 @@ class Query(object):
         rather than any specific line. If no result is found, return just None.
 
         """
-        term = self.single_term()
+        term = self.single_text_term()
         if not term or len(self._terms) > 1:
             return None
 

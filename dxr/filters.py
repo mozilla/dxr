@@ -68,11 +68,16 @@ class Filter(object):
         self._enabled_plugins = enabled_plugins
 
     def __str__(self):
-        """Return a string representation of this Filter as name:term, as it
-        appeared in the query string.
+        """Return a string representation of this Filter as it appeared in the
+        query string, defaulting to name:term. Override this method for Filters
+        whose string representation does not match this format.
         """
 
-        return "%s:%s" % (self.name, self._term['arg'])
+        # If the term has spaces, then surround with double quotes and escape internal quotes.
+        if ' ' in self._term['arg']:
+            return '%s:"%s"' % (self.name, self._term['arg'].replace('"', r'\"'))
+        else:
+            return '%s:%s' % (self.name, self._term['arg'])
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the

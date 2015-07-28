@@ -125,7 +125,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
 
     try:
         # Pull up all the non-negated text terms.
-        single_term = query.single_term()
+        single_term = query.single_text_term()
         count, results = query.results(offset, limit)
         promoted_count, promoted, promoted_query = 0, [], ""
         if offset == 0 and single_term:

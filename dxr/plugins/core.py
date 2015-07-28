@@ -305,6 +305,12 @@ class TextFilter(Filter):
                 _find_iter(maybe_lower(result['content'][0]),
                            maybe_lower(self._term['arg'])))
 
+    def __str__(self):
+        if ' ' in self._term['arg']:
+            return '"%s"' % self._term['arg'].replace('"', r'\"')
+        else:
+            return self._term['arg']
+
 
 class PathFilter(Filter):
     """Substring filter for paths
