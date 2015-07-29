@@ -314,9 +314,8 @@ class QueryVisitor(NodeVisitor):
         return term_dict
 
     def visit_cased_text(self, cased_text, (at_, term_dict)):
-        """Flip case_sensitive bit in the term_dict."""
-        # Negate our case sensitivity guess if we prepend an @.
-        term_dict['case_sensitive'] = not term_dict['case_sensitive']
+        """Force case_sensitive to True in the term_dict."""
+        term_dict['case_sensitive'] = True
         return term_dict
 
     def visit_text(self, text, ((some_text,), _)):

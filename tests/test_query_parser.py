@@ -86,7 +86,7 @@ class VisitorTests(TestCase):
 
     def test_normal_things(self):
         """Make sure normal, everyday things that should work do."""
-        eq_(self.visit('regexp:smoo -regexp:foo|bar -baz qux foo Foo @foo @foO type:yeah'),
+        eq_(self.visit('regexp:smoo -regexp:foo|bar -baz qux foo Foo @foo type:yeah'),
             [{'arg': 'smoo',
               'name': 'regexp',
               'not': False,
@@ -121,11 +121,6 @@ class VisitorTests(TestCase):
               'name': 'text',
               'not': False,
               'case_sensitive': True,
-              'qualified': False},
-             {'arg': 'foO',
-              'name': 'text',
-              'not': False,
-              'case_sensitive': False,
               'qualified': False},
              {'arg': 'yeah',
               'name': 'type',
