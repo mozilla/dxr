@@ -2,11 +2,11 @@ from dxr.menus import SingleDatumMenuMaker
 from dxr.utils import search_url
 
 
-class PythonPluginAttr(object):
+class _PythonPluginAttr(object):
     plugin = 'python'
 
 
-class ClassMenuMaker(SingleDatumMenuMaker, PythonPluginAttr):
+class ClassMenuMaker(SingleDatumMenuMaker, _PythonPluginAttr):
     """Menu generator for class definitions"""
 
     def menu_items(self):

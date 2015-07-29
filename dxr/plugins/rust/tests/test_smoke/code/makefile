@@ -5,4 +5,3 @@ code: main.rs krate2
 	$(RUSTC) $< -o $@ -L$(@D)
 clean:
 	rm -rf code *.so
-

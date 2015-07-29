@@ -1,8 +1,11 @@
 import os
+from warnings import warn
+
+from flask import url_for
 
 from dxr.lines import Ref
-from dxr.menus import MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker
-from dxr.utils import search_url
+from dxr.menus import MultiDatumMenuMaker, SingleDatumMenuMaker
+from dxr.utils import BROWSE, search_url
 
 
 def quote(qualname):
@@ -86,7 +89,7 @@ class StdLibMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
         return menu
 
 
-def std_lib_links(tree_config, menu, (docurl, srcurl, dxrurl), extra_text = ""):
+def std_lib_links(tree_config, menu, (doc_url, src_url, dxr_url), extra_text = ""):
     menu.insert(0, StdLibMenuMaker(tree_config, (doc_url, src_url, dxr_url, extra_text)))
 
 
@@ -204,7 +207,7 @@ def function_menu(tree, datum, tree_config):
         decl = tree.data.functions[datum['declid']]
         makers.append(JumpToTraitMethodMenuMaker.from_decl(tree_config, decl))
     else:
-        # it's a decl, find implementations
+        # It's a decl; find implementations:
         impls = tree.data.index('functions', 'declid')
         count = len(impls[datum['id']]) if datum['id'] in impls else 0
         if count:
@@ -282,16 +285,16 @@ class TypeMenuMaker(SingleDatumMenuMaker, _RustPluginAttr):
         if kind == 'trait':
             yield {'html': "Find sub-traits",
                    'title': "Find sub-traits of this trait",
-                   'href': search_url(tree_config, "+derived:%s" % quote(qualname)),
+                   'href': search_url(self.tree, "+derived:%s" % quote(qualname)),
                    'icon': 'type'}
             yield {'html': "Find super-traits",
                    'title': "Find super-traits of this trait",
-                   'href': search_url(tree_config, "+bases:%s" % quote(qualname)),
+                   'href': search_url(self.tree, "+bases:%s" % quote(qualname)),
                    'icon': 'type'}
         if kind == 'struct' or kind == 'enum' or kind == 'trait':
             yield {'html': "Find impls",
                    'title': "Find impls which involve this " + kind,
-                   'href': search_url(tree_config, "+impl:%s" % quote(qualname)),
+                   'href': search_url(self.tree, "+impl:%s" % quote(qualname)),
                    'icon': 'reference'}
 
 

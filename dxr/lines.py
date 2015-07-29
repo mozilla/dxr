@@ -94,8 +94,8 @@ class Ref(object):
 
         """
         def rehydrate_menu_makers(dried):
-            """Given the contents of the 'menu' key from ES, return a list of
-            MenuMakers."""
+            """Given the contents of the 'menu' key from ES, return an
+            iterable of MenuMakers."""
             plugins = all_plugins()
             for d in dried:
                 try:
