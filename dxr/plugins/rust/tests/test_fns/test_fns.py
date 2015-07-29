@@ -4,9 +4,6 @@ class FunctionTests(RustDxrInstanceTestCase):
     def test_simple_function(self):
         self.found_line_eq('function:foo', "fn <b>foo</b>() {", 3)
 
-    def test_case_insensitive(self):
-        self.found_line_eq('function:@FOO', "fn <b>foo</b>() {", 3)
-
     def test_methods_are_functions_too(self):
         # Test a method in an inherant impl.
         self.found_line_eq('function:baz', "fn <b>baz</b>(&amp;self) {}", 10)

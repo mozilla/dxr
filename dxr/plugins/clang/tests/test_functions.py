@@ -34,7 +34,7 @@ class DefinitionTests(CSingleFileTestCase):
     def test_names_caseless(self):
         """Try searching for function names case-insensitively."""
         self.found_line_eq(
-            'function:@MAIN',
+            'function:main',
             'int <b>main</b>(int argc, char* argv[]) {')
 
     def test_qualnames_unqualified(self):

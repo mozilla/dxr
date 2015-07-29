@@ -73,9 +73,9 @@ class DataTypesTests(RustDxrInstanceTestCase):
 
     def test_struct_name_case_insensitive(self):
         self.found_line_eq('type:nofields', "struct <b>NoFields</b>;", 6)
-        self.found_line_eq('type:@SOMEFIELDS', "struct <b>SomeFields</b> {", 8)
-        self.found_line_eq('type:@sfAlias', "type <b>SFAlias</b> = SomeFields;", 13)
-        self.found_line_eq('type:@ENUMfielDs', "enum <b>EnumFields</b> {", 15)
+        self.found_line_eq('type:somefields', "struct <b>SomeFields</b> {", 8)
+        self.found_line_eq('type:sfalias', "type <b>SFAlias</b> = SomeFields;", 13)
+        self.found_line_eq('type:enumfields', "enum <b>EnumFields</b> {", 15)
 
     # FIXME qualname/case insensitive
     def test_struct_qual_name_case_insensitive(self):
@@ -86,13 +86,13 @@ class DataTypesTests(RustDxrInstanceTestCase):
         #self.found_line_eq('+type:tESt::enumFIELDS', "enum <b>EnumFields</b> {", 15)
 
     def test_struct_ref_case_insensitive(self):
-        self.found_lines_eq('type-ref:@Nofields',
+        self.found_lines_eq('type-ref:nofields',
                             [("field2: <b>NoFields</b>,", 10),
                              ("field2: <b>NoFields</b> },", 19),
                              ("let _a = <b>NoFields</b>;", 24),
                              ("let b = SomeFields { field1: 42, field2: <b>NoFields</b> };", 26),
                              ("let c = SFAlias { field1: 42, field2: <b>NoFields</b> };", 32)])
-        self.found_lines_eq('type-ref:@SomeFields',
+        self.found_lines_eq('type-ref:somefields',
                             [("type SFAlias = <b>SomeFields</b>;", 13),
                              ("Nested(<b>SomeFields</b>),", 20),
                              ("let b = <b>SomeFields</b> { field1: 42, field2: NoFields };", 26),
