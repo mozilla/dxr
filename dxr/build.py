@@ -27,7 +27,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
 import dxr
 from dxr.app import make_app
 from dxr.config import FORMAT
-from dxr.es import UNINDEXED_STRING, TREE
+from dxr.es import UNINDEXED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
@@ -79,7 +79,8 @@ def deploy_tree(tree, es, index_name):
 
     # Create catalog index if it doesn't exist.
     try:
-        es.create_index(
+        create_index_and_wait(
+            es,
             config.es_catalog_index,
             settings={
                 'settings': {
@@ -225,7 +226,8 @@ def index_tree(tree, es, verbose=False):
             index = config.es_index.format(format=FORMAT,
                                            tree=tree.name,
                                            unique=uuid1())
-            es.create_index(
+            create_index_and_wait(
+                es,
                 index,
                 settings={
                     'settings': {
