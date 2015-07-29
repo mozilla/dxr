@@ -156,7 +156,7 @@ tr.binary_row > td {
     padding-top: .5em;
     padding-bottom: .5em;
 }
-tr.binary_row {
+.binary_row {
     opacity: 0.6;
 }
 .highlighted,
