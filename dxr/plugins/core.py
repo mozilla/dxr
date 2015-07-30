@@ -161,15 +161,9 @@ mappings = {
                 'payload': {
                     'type': 'object',
                     'properties': {
-                        # Array of menu makers and their data:
-                        'menu': {
-                            'type': 'object',
-                            'properties': {
-                                'plugin': UNINDEXED_STRING,
-                                'id': UNINDEXED_STRING,  # MenuMaker ID
-                                'data': UNINDEXED_STRING
-                            }
-                        },
+                        'plugin': UNINDEXED_STRING,
+                        'id': UNINDEXED_STRING,  # MenuMaker ID
+                        'menu_data': UNINDEXED_STRING,  # opaque to ES
                         'hover': UNINDEXED_STRING,
                         # Hash of qualname of the symbol we're hanging the
                         # menu off of, if it is a symbol and we can come up

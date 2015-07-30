@@ -134,7 +134,7 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
         # Show a menu when hovering over this class.
         self.yield_ref(start, end,
-                       [ClassMenuMaker(self.file_to_index.tree, class_name)])
+                       ClassRef(self.file_to_index.tree, class_name))
 
         super(IndexingNodeVisitor, self).visit_ClassDef(node)
 
@@ -166,11 +166,11 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         needle = line_needle(*args, **kwargs)
         self.needles.append(needle)
 
-    def yield_ref(self, start, end, menu):
+    def yield_ref(self, start, end, ref):
         self.refs.append((
             self.file_to_index.char_offset(*start),
             self.file_to_index.char_offset(*end),
-            Ref(menu),
+            ref,
         ))
 
 

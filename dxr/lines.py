@@ -36,19 +36,37 @@ class Line(object):
 LINE = Line()
 
 
-class Ref(object):
-    """A cross-reference attached to a run of text
+class RefClassIdTagger(type):
+    """Metaclass which automatically generates an ``id`` attr on the class as
+    a serializable class identifier.
 
-    Carries with it a context menu and other metadata.
+    Having a dedicated identifier allows Ref subclasses to move or change name
+    without breaking index compatibility.
+
+    Expects a ``_plugin`` attr to use as a prefix.
+
+    """
+    def __new__(metaclass, name, bases, dict):
+        dict['id'] = without_ending('Ref', name)
+        return type.__new__(metaclass, name, bases, dict)
+
+
+class Ref(object):
+    """Abstract superclass for a cross-reference attached to a run of text
+
+    Carries enough data to construct a context menu, highlight instances of
+    the same symbol, and show something informative on hover.
 
     """
     sort_order = 1
-    __slots__ = ['menu', 'hover', 'qualname_hash']
+    __slots__ = ['menu_data', 'hover', 'qualname_hash']
+    __metaclass__ = RefClassIdTagger
 
-    def __init__(self, menu, hover=None, qualname=None, qualname_hash=None):
+    def __init__(self, tree, menu_data, hover=None, qualname=None, qualname_hash=None):
         """
-        :arg menu: a list of MenuMakers that generate the context menu
-        :arg hover: the contents of the <a> tag's title attribute. (The first
+        :arg menu_data: Arbitrary JSON-serializable data from which we can
+            construct a context menu
+        :arg hover: The contents of the <a> tag's title attribute. (The first
             one wins.)
         :arg qualname: A unique identifier for the symbol surrounded by this
             ref, for highlighting
@@ -64,18 +82,19 @@ class Ref(object):
         # wouldn't need serializers within serializers, and every plugin
         # wouldn't have to reinvent factorings around computing hovers and
         # qualnames.
-        self.menu = menu
+        self.tree = tree
+        self.menu_data = menu_data
         self.hover = hover
         self.qualname_hash = hash(qualname) if qualname else qualname_hash
 
     def es(self):
         """Return a serialization of myself to store in elasticsearch."""
-        ret = {'menu': [{'plugin': maker.plugin,
-                         'id': maker.id,
-                         # Smash the data into a string, because it will have
-                         # a different schema from menu maker to menu maker,
-                         # and ES will freak out:
-                         'data': json.dumps(maker.es())} for maker in self.menu]}
+        ret = {'plugin': maker.plugin,
+               'id': maker.id,
+               # Smash the data into a string, because it will have a
+               # different schema from subclass to subclass, and ES will freak
+               # out:
+               'menu_data': json.dumps(self.menu_data)}
         if self.hover:
             ret['hover'] = self.hover
         if self.qualname_hash is not None:  # could be 0
@@ -83,14 +102,14 @@ class Ref(object):
         return ret
 
     @classmethod
-    def es_to_triple(cls, es_ref, tree):
+    def es_to_triple(cls, es_data, tree):
         """Convert ES-dwelling ref representation to a (start, end,
         :class:`~dxr.lines.Ref`) triple.
 
-        :arg es_ref: An item from the array under the 'refs' key of an ES LINE
+        :arg es_data: An item from the array under the 'refs' key of an ES LINE
             document
         :arg tree: The :class:`~dxr.config.TreeConfig` representing the tree
-            from which the ``es_ref`` was pulled
+            from which the ``es_data`` was pulled
 
         """
         def rehydrate_menu_makers(dried):
@@ -107,12 +126,29 @@ class Ref(object):
                 else:
                     yield maker.from_es(tree, json.loads(d['data']))
 
-        payload = es_ref['payload']
-        return (es_ref['start'],
-                es_ref['end'],
-                cls(list(rehydrate_menu_makers(payload['menu'])),
-                    hover=payload.get('hover'),
-                    qualname_hash=payload.get('qualname_hash')))
+        payload = es_data['payload']
+        return (es_data['start'],
+                es_data['end'],
+                cls.from_es(tree,
+                            json.loads(payload['menu_data']),
+                            hover=payload.get('hover'),
+                            qualname_hash=payload.get('qualname_hash')))
+
+    def menu_items(self):
+        """Return an iterable of menu items to be attached to a ref.
+
+        Return an iterable of dicts of this form::
+
+            {
+                html: the HTML to be used as the menu item itself
+                href: the URL to visit when the menu item is chosen
+                title: the tooltip text given on hovering over the menu item
+                icon: the icon to show next to the menu item: the name of a PNG
+                    from the ``icons`` folder, without the .png extension
+            }
+
+        """
+        raise NotImplementedError
 
     def opener(self):
         if self.hover:
@@ -124,10 +160,11 @@ class Ref(object):
         else:
             cls = ''
 
-        menus = list(chain.from_iterable(maker.menu_items() for maker in self.menu))
-        return u'<a data-menu="%s"%s%s>' % (cgi.escape(json.dumps(menus), True),
-                                            title,
-                                            cls)
+        menu_items = list(self.menu_items())
+        return u'<a data-menu="%s"%s%s>' % (
+            cgi.escape(json.dumps(menu_items), True),
+            title,
+            cls)
 
     def closer(self):
         return u'</a>'
