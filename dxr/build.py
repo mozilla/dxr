@@ -219,13 +219,10 @@ def index_tree(tree, es, verbose=False):
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:
-            # Make a new index with a semi-random name, having the tree name
-            # and format version in it. TODO: The prefix should come out of
-            # the tree config, falling back to the global config:
-            # dxr_hot_prod_{tree}_{whatever}.
-            index = config.es_index.format(format=FORMAT,
-                                           tree=tree.name,
-                                           unique=uuid1())
+            # Substitute the format, tree name, and uuid into the index identifier.
+            index = tree.es_index.format(format=FORMAT,
+                                         tree=tree.name,
+                                         unique=uuid1())
             create_index_and_wait(
                 es,
                 index,

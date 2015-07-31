@@ -114,6 +114,7 @@ class Config(DotSection):
                 Optional('google_analytics_key', default=''): basestring,
                 Optional('es_hosts', default='http://127.0.0.1:9200/'):
                     WhitespaceList,
+                # A semi-random name, having the tree name and format version in it.
                 Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
                     basestring,
                 Optional('es_alias', default='dxr_{format}_{tree}'):
@@ -204,6 +205,7 @@ class TreeConfig(DotSectionWrapper):
             Optional('description', default=''): basestring,
             Optional('disabled_plugins', default=plugin_list('')): Plugins,
             Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+            Optional('es_index', default=config.es_index): basestring,
             Optional('es_shards', default=5):
                 Use(int, error='"es_shards" must be an integer.'),
             Optional('ignore_patterns',
