@@ -459,8 +459,10 @@ def index_file(tree, tree_indexers, path, es, index):
             raise
 
     rel_path = relpath(path, tree.source_folder)
+    is_text = isinstance(contents, unicode)
+    is_link = islink(path)
     # Index by line if the contents are text and the path is not a symlink.
-    index_by_line = isinstance(contents, unicode) and not islink(path)
+    index_by_line = is_text and not is_link
     if index_by_line:
         lines = contents.splitlines(True)
         num_lines = len(lines)
@@ -475,7 +477,8 @@ def index_file(tree, tree_indexers, path, es, index):
         if file_to_index.is_interesting():
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
-            linkses.append(file_to_index.links())
+            if not is_link:
+                linkses.append(file_to_index.links())
 
             # Per-line stuff:
             if index_by_line:
