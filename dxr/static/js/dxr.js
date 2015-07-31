@@ -344,7 +344,7 @@ $(function() {
                     .empty()
                     .append(nunjucks.render('partial/results_container.html', data));
             } else {
-                var resultsList = contentContainer.find('.results');
+                var resultsList = contentContainer.find('.results-container');
 
                 // If the first result is already on the page (meaning we showed
                 // some of its lines but just fetched more), add new lines to

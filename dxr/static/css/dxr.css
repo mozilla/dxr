@@ -197,8 +197,7 @@ mark {
 
 /* promoted stuff, on the right */
 .promoted-container {
-    /* cannot grow, can shrink, prefers 30% size */
-    flex: 0 1 30%;
+    float: right;
     border: 1px solid #a0a0a0;
     border-radius: 4px;
     padding: 1.5em 2em;
@@ -227,17 +226,18 @@ mark {
 }
 
 /* results */
-.results-row {
-    display: flex;
-}
 .results-container {
-    /* can grow, can shrink, default to fill the page */
-    flex: 1 1;
 }
 
 .results tr:hover,
 .file tr:hover {
     background: none;
+}
+.results {
+    width: auto;
+}
+.results + .results {
+    margin-top: 1em;
 }
 .results tr,
 .file tr {
