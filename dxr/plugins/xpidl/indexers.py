@@ -24,9 +24,10 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # Don't try again if we already excepted.
         if not self._idl and not self._had_idl_exception:
             try:
-                self._idl = IdlVisitor(self.parser, self.contents, self.path, self.absolute_path(),
+                self._idl = IdlVisitor(self.parser, self.contents, self.contents.splitlines(True),
+                                       self.path, self.absolute_path(),
                                        self.plugin_config.include_folders,
-                                       self.plugin_config.header_bucket, self.tree)
+                                       self.plugin_config.header_path, self.tree)
             except IDLError:
                 self._had_idl_exception = True
         return self._idl

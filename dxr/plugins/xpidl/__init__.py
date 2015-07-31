@@ -36,5 +36,5 @@ plugin = Plugin(
     filters=filters_from_namespace(filters.__dict__),
     mappings=mappings,
     config_schema={
-        'header_bucket': AbsPath,
+        'header_path': AbsPath,
         Optional('include_folders', default=[]): ColonPathList})

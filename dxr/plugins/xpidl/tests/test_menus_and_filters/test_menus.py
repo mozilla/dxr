@@ -25,6 +25,8 @@ class IdlMenusTest(DxrInstanceTestCase):
                 {'html': 'See generated source',
                  'href': '/code/source/obj/nsIDownloadHistory.h#20'})
         menu_on(page, 'nsIDownloadHistory',
+                {'html': 'Find definition', 'href': SEARCH % ('type', 'nsIDownloadHistory')})
+        menu_on(page, 'nsIDownloadHistory',
                 {'html': 'Find subclasses', 'href': SEARCH % ('derived', 'nsIDownloadHistory')})
 
     def test_method(self):

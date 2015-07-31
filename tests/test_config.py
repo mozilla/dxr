@@ -26,7 +26,7 @@ def test_enabled_star():
             python_path = /some/path
 
             [[xpidl]]
-            header_bucket = /somewhere
+            header_path = /somewhere
         """)
     ok_('urllink' in (p.name for p in config.trees['some_tree'].enabled_plugins))
 
