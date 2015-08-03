@@ -1,6 +1,6 @@
 
 def foo():
-    pass
+    bar()
 
 def bar():
     pass
