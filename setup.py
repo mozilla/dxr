@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='dxr',
-    version='0.1',
+    version='2.0',
     description='Source code static analysis and browsing',
     long_description=open('README.rst').read(),
     author='Erik Rose',
@@ -36,7 +36,7 @@ setup(
                       'Mercurial>=3.4',
                       'more-itertools>=2.0,<3.0',
                       'ordereddict>=1.1,<2.0',
-                      'parsimonious==0.6',
+                      'parsimonious>=0.6,<0.7',
                       'pyelasticsearch>=1.1,<2.0',
                       'Pygments>=2.0.1,<3.0',
                       'python-hglib>=1.6,<2.0',
