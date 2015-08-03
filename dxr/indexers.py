@@ -215,7 +215,7 @@ class FileToSkim(PluginConfig):
         called because views of symlinks redirect to the original file.
 
         """
-        return self.contains_text() and not islink(self.absolute_path())
+        return self.contains_text() and not self.is_link()
 
     def links(self):
         """Return an iterable of links for the navigation pane::
@@ -308,6 +308,15 @@ class FileToSkim(PluginConfig):
 
         """
         return join(self.tree.source_folder, self.path)
+
+    def is_link(self):
+        """Return whether the file is a symlink.
+
+        Note: symlinks are never displayed in file browsing; a request for a symlink redirects
+        to its target.
+
+        """
+        return islink(self.absolute_path())
 
     # Private methods:
 

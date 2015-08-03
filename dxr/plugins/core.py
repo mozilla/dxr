@@ -438,7 +438,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
-        if islink(self.absolute_path()):
+        if self.is_link():
             # realpath will keep following symlinks until it gets to the 'real' thing.
             yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
