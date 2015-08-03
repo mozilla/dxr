@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext
+from os.path import relpath, splitext, islink, realpath
 import re
 
 from flask import url_for
@@ -59,6 +59,11 @@ mappings = {
             'path': PATH_MAPPING,
 
             'ext': EXT_MAPPING,
+
+            'link': {  # the target path if this FILE is a symlink
+                'type': 'string',
+                'index': 'not_analyzed'
+            },
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
@@ -433,6 +438,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
+        if self.is_link():
+            # realpath will keep following symlinks until it gets to the 'real' thing.
+            yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
         extension = splitext(self.path)[1]
         if extension:

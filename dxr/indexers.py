@@ -4,7 +4,7 @@ import cgi
 from collections import namedtuple
 import json
 from operator import itemgetter
-from os.path import join
+from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
@@ -209,10 +209,13 @@ class FileToSkim(PluginConfig):
         :meth:`~dxr.indexers.FileToSkim.links()`,
         :meth:`~dxr.indexers.FileToSkim.refs()`, etc.
 
-        The default implementation selects only text files.
+        The default implementation selects only text files that are not symlinks.
+        Note: even if a plugin decides that symlinks are interesting, it should
+        remember that links, refs, regions and by-line annotations will not be
+        called because views of symlinks redirect to the original file.
 
         """
-        return self.contains_text()
+        return self.contains_text() and not self.is_link()
 
     def links(self):
         """Return an iterable of links for the navigation pane::
@@ -306,6 +309,15 @@ class FileToSkim(PluginConfig):
         """
         return join(self.tree.source_folder, self.path)
 
+    def is_link(self):
+        """Return whether the file is a symlink.
+
+        Note: symlinks are never displayed in file browsing; a request for a symlink redirects
+        to its target.
+
+        """
+        return islink(self.absolute_path())
+
     # Private methods:
 
     def _line_offsets(self):
@@ -392,6 +404,10 @@ class FileToIndex(FileToSkim):
         unique values will be retained using an elasticsearch array. Values
         may be dicts, in which case common keys get merged by
         :func:`~dxr.utils.append_update()`.
+
+        This method is not called on symlink files, to maintain the illusion
+        that they do not have contents, seeing as they cannot be viewed in
+        file browsing.
 
         """
         return []
