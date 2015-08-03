@@ -10,7 +10,7 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
+from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG, UNANALYZED_STRING
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -41,10 +41,7 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 }
 
 
-EXT_MAPPING = {
-    'type': 'string',
-    'index': 'not_analyzed'
-}
+EXT_MAPPING = UNANALYZED_STRING
 
 
 mappings = {
@@ -62,15 +59,11 @@ mappings = {
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
-            'folder': {  # path/to/a/folder
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            # path/to/a/folder
+            'folder': UNANALYZED_STRING,
 
-            'name': {  # filename.cpp or leaf_folder (for sorting and display)
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            # filename.cpp or leaf_folder (for sorting and display)
+            'name': UNANALYZED_STRING,
             'size': UNINDEXED_INT,  # bytes. not present for folders.
             'modified': {  # not present for folders
                 'type': 'date',
@@ -185,7 +178,11 @@ mappings = {
                 'type': 'object',
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': UNINDEXED_STRING,
+                'payload': {
+                    'type': 'object',
+                    'class': UNINDEXED_STRING,
+                    'text': UNANALYZED_STRING
+                }
             },
 
             'annotations': {

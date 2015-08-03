@@ -12,6 +12,10 @@ UNINDEXED_STRING = {
     'index': 'no',
 }
 
+UNANALYZED_STRING = {
+    'type': 'string',
+    'index': 'not_analyzed',
+}
 
 UNINDEXED_INT = {
     'type': 'integer',

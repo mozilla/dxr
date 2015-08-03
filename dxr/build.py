@@ -530,7 +530,7 @@ def index_file(tree, tree_indexers, path, es, index):
                 # request time we want to be able to merge them individually
                 # with those from skimmers.
                 refs_and_regions = bucket(tags, lambda index_obj: "regions" if
-                                          isinstance(index_obj['payload'], basestring) else
+                                          'class' in index_obj['payload'] else
                                           "refs")
                 if 'refs' in refs_and_regions:
                     total['refs'] = refs_and_regions['refs']
