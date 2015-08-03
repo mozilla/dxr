@@ -156,7 +156,7 @@ class Deployment(object):
                                 verify=True)
         try:
             return (response.json()['buildsByBranchName']
-                                   ['origin/%s' % self.branch]
+                                   ['refs/remotes/origin/%s' % self.branch]
                                    ['revision']
                                    ['SHA1'])
         except ValueError:
