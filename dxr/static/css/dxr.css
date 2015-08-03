@@ -343,7 +343,7 @@ mark {
     transform: rotate3d(0, 0, 1, 270deg);
 }
 .content {
-    margin-top: 55px;
+    margin: 55px 0 25px;
     padding: 1rem 2rem;
 }
 .path-separator {
