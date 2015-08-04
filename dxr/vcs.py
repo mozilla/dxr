@@ -7,8 +7,8 @@ system that tracks the given path. Currently supported VCSs are Mercurial,
 Git, and Perforce.
 
 Currently supported upstream views:
-- git (github)
-- mercurial (hgweb)
+- Git (GitHub)
+- Mercurial (hgweb)
 
 TODO:
 - Add gitweb support for git.
