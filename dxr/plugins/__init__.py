@@ -9,7 +9,6 @@ from pkg_resources import iter_entry_points
 
 from dxr.filters import Filter, LINE
 from dxr.indexers import TreeToIndex
-from dxr.menus import MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker
 
 
 class AdHocTreeToIndex(TreeToIndex):
@@ -48,7 +47,7 @@ class Plugin(object):
                  mappings=None,
                  analyzers=None,
                  direct_searchers=None,
-                 menus=None,
+                 refs=None,
                  config_schema=None):
         """
         :arg filters: A list of filter classes
@@ -79,7 +78,7 @@ class Plugin(object):
                 A more general approach may replace direct search in the
                 future.
 
-        :arg menus: An iterable of :class:`~dxr.menus.MenuMaker` subclasses
+        :arg refs: An iterable of :class:`~dxr.lines.Ref` subclasses
             supported by this plugin. This is used at request time, to turn
             abreviated ES index data back into HTML.
         :arg config_schema: A validation schema for this plugin's
@@ -94,7 +93,8 @@ class Plugin(object):
         """
         self.filters = filters or []
         self.direct_searchers = direct_searchers or []
-        self.menus = dict((m_class.id, m_class) for m_class in (menus or []))
+        self.refs = dict((ref_class.id, ref_class)
+                          for ref_class in (refs or []))
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
@@ -112,6 +112,9 @@ class Plugin(object):
         :arg namespace: A namespace from which to pick components
 
         **Filters** are taken to be any class whose name ends in "Filter" and
+        doesn't start with "_".
+
+        **Refs** are taken to be any class whose name ends in "Ref" and
         doesn't start with "_".
 
         The **tree indexer** is assumed to be called "TreeToIndex". If there isn't
@@ -141,7 +144,7 @@ class Plugin(object):
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
                    direct_searchers=direct_searchers_from_namespace(namespace),
-                   menus=menus_from_namespace(namespace))
+                   refs=refs_from_namespace(namespace))
 
     def __eq__(self, other):
         """Consider instances of the same plugin equal."""
@@ -192,21 +195,22 @@ def direct_searchers_from_namespace(namespace):
             if hasattr(v, 'direct_search_priority') and isfunction(v)]
 
 
-def menus_from_namespace(namespace):
-    """Return a list of :class:`~dxr.menus.MenuMaker` subclasses (or
-    workalikes) defined in a namespace, identified by conforming to our naming
-    convention.
+def refs_from_namespace(namespace):
+    """Return a list of :class:`~dxr.lines.Ref` subclasses (or workalikes)
+    defined in a namespace, identified by conforming to our naming convention.
 
-    Our convention is to end with "MenuMaker" and not start with "_".
+    Our convention is to end with "Ref" and not start with "_".
 
     """
-    # TODO: Consider switching to an isinstance() test so we don't have to
-    # keep typing "MenuMaker".
+    from dxr.lines import Ref
+
+    # TODO: Consider switching to an isinstance() test so plugin authors have
+    # more naming flexibility.
     return [v for k, v in namespace.iteritems() if
             isclass(v) and
             not k.startswith('_') and
-            k.endswith('MenuMaker') and
-            v not in [MenuMaker, MultiDatumMenuMaker, SingleDatumMenuMaker]]
+            k.endswith('Ref') and
+            v is not Ref]
 
 
 def direct_search(priority, domain=LINE):

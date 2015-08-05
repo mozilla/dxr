@@ -6,7 +6,7 @@ structural data to CSV files during compilation. This is then pulled into
 elasticsearch as a post-processing phase.
 
 """
-from dxr.plugins import Plugin, filters_from_namespace, menus_from_namespace
+from dxr.plugins import Plugin, filters_from_namespace, refs_from_namespace
 from dxr.plugins.clang import direct, filters, menus
 from dxr.plugins.clang.indexers import TreeToIndex, mappings
 
@@ -15,4 +15,4 @@ plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
                 mappings=mappings,
                 direct_searchers=direct.searchers,
-                menus=menus_from_namespace(menus.__dict__))
+                refs=refs_from_namespace(menus.__dict__))

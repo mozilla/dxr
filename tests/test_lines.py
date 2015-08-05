@@ -33,8 +33,8 @@ class RemoveOverlappingTests(TestCase):
         tags."""
         # A  _________          (2, 6)
         # B        ____________ (5, 9)
-        a = Ref('a')
-        b = Ref('b')
+        a = RefWithoutData('a')
+        b = RefWithoutData('b')
         tags = [(2, True, a),
                 (5, True, b),
                 (6, False, a),
@@ -52,7 +52,7 @@ class RemoveOverlappingTests(TestCase):
             B (region)        ____________ (5, 9)
 
         """
-        a = Ref('a')
+        a = RefWithoutData('a')
         b = Region('b')
         tags = [(2, True, a),
                 (5, True, b),
@@ -72,7 +72,7 @@ def spaced_tags(tags):
             ('' if is_start else '/',
             'L' if payload is LINE else
                  (payload.css_class if isinstance(payload, Region)
-                  else payload.menu))))
+                  else payload.menu_data))))
     return '\n'.join(segments)
 
 
@@ -96,6 +96,17 @@ def test_tags_from_text():
         '(4, True, Region("c")), (8, False, Region("c"))]')
 
 
+class RefWithoutData(Ref):
+    """A substitute for Ref that doesn't require passing in a tree"""
+
+    def __init__(self, data):
+        super(RefWithoutData, self).__init__('dummy_tree', data)
+
+    def menu_items(self):
+        """Just return what was passed in, verbatim."""
+        return self.menu_data
+
+
 class BalancedTagTests(TestCase):
     def test_horrors(self):
         """Try a fairly horrific scenario::
@@ -111,7 +122,11 @@ class BalancedTagTests(TestCase):
         same time. There's even a Region in there.
 
         """
-        a, b, c, d, e = Ref('a'), Region('b'), Ref('c'), Ref('d'), Ref('e')
+        a = RefWithoutData('a')
+        b = Region('b')
+        c = RefWithoutData('c')
+        d = RefWithoutData('d')
+        e = RefWithoutData('e')
         tags = [(0, True, a), (2, True, b), (5, True, c), (6, False, b),
                 (7, False, a), (8, True, d), (9, False, c), (10, True, e),
                 (11, False, e), (11, False, d)]
@@ -263,12 +278,12 @@ class IntegrationTests(TestCase):
 
     def test_split_anchor_avoidance(self):
         """Don't split anchor tags when we can avoid it."""
-        eq_(text_to_html_lines('this that', [(0, 9, Ref([]))], [(0, 4, Region('k'))]),
+        eq_(text_to_html_lines('this that', [(0, 9, RefWithoutData([]))], [(0, 4, Region('k'))]),
             [u'<a data-menu="[]"><span class="k">this</span> that</a>'])
 
     def test_split_anchor_across_lines(self):
         """Support unavoidable splits of an anchor across lines."""
-        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, Ref([]))]),
+        eq_(text_to_html_lines('this\nthat', refs=[(0, 9, RefWithoutData([]))]),
             [u'<a data-menu="[]">this</a>', u'<a data-menu="[]">that</a>'])
 
     def test_horrors(self):

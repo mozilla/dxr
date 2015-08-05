@@ -29,7 +29,7 @@ from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
                    constantly, icat)
 
 from dxr import indexers
-from dxr.plugins import Plugin, filters_from_namespace, menus_from_namespace
+from dxr.plugins import Plugin, filters_from_namespace, refs_from_namespace
 import dxr.utils as utils
 from dxr.filters import LINE
 from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines, QUALIFIED_LINE_NEEDLE
@@ -1080,4 +1080,4 @@ mappings = {
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
                 mappings=mappings,
-                menus=menus_from_namespace(menu.__dict__))
+                refs=refs_from_namespace(menu.__dict__))

@@ -12,7 +12,7 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           with_start_and_end)
 from dxr.lines import Ref
 from dxr.plugins.python.analysis import TreeAnalysis
-from dxr.plugins.python.menus import ClassMenuMaker
+from dxr.plugins.python.menus import ClassRef
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
                                       path_to_module)

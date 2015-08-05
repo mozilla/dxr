@@ -19,6 +19,7 @@ from warnings import warn
 from jinja2 import Markup
 
 from dxr.plugins import all_plugins
+from dxr.utils import without_ending
 
 
 class Line(object):
@@ -68,20 +69,13 @@ class Ref(object):
             construct a context menu
         :arg hover: The contents of the <a> tag's title attribute. (The first
             one wins.)
-        :arg qualname: A unique identifier for the symbol surrounded by this
-            ref, for highlighting
+        :arg qualname: A hashable unique identifier for the symbol surrounded
+            by this ref, for highlighting
         :arg qualname_hash: The hashed version of ``qualname``, which you can
             pass instead of ``qualname`` if you have access to the
             already-hashed version
 
         """
-        # TODO: Would it be simpler to just kill the idea of MenuMakers and
-        # subclass Ref instead? For instance, you'd have a FunctionRef that
-        # knew not only which menus to spit out and how to serialize what they
-        # need but also what to emit as the hover state and qualname. Then you
-        # wouldn't need serializers within serializers, and every plugin
-        # wouldn't have to reinvent factorings around computing hovers and
-        # qualnames.
         self.tree = tree
         self.menu_data = menu_data
         self.hover = hover
@@ -89,8 +83,8 @@ class Ref(object):
 
     def es(self):
         """Return a serialization of myself to store in elasticsearch."""
-        ret = {'plugin': maker.plugin,
-               'id': maker.id,
+        ret = {'plugin': self.plugin,
+               'id': self.id,
                # Smash the data into a string, because it will have a
                # different schema from subclass to subclass, and ES will freak
                # out:
@@ -101,10 +95,14 @@ class Ref(object):
             ret['qualname_hash'] = self.qualname_hash
         return ret
 
-    @classmethod
-    def es_to_triple(cls, es_data, tree):
+    @staticmethod
+    def es_to_triple(es_data, tree):
         """Convert ES-dwelling ref representation to a (start, end,
-        :class:`~dxr.lines.Ref`) triple.
+        :class:`~dxr.lines.Ref` subclass) triple.
+
+        Return a subclass of Ref, chosen according to the ES data. Into its
+        attributes "menu_data", "hover" and "qualname_hash", copy the ES
+        properties of the same names, JSON-decoding "menu_data" first.
 
         :arg es_data: An item from the array under the 'refs' key of an ES LINE
             document
@@ -112,27 +110,25 @@ class Ref(object):
             from which the ``es_data`` was pulled
 
         """
-        def rehydrate_menu_makers(dried):
-            """Given the contents of the 'menu' key from ES, return an
-            iterable of MenuMakers."""
+        def ref_class(plugin, id):
+            """Return the subclass of Ref identified by a combination of
+            plugin and class ID."""
             plugins = all_plugins()
-            for d in dried:
-                try:
-                    maker = plugins[d['plugin']].menus[d['id']]
-                except KeyError:
-                    warn('Menu maker from plugin %s with ID %s was referenced '
-                         'in the index but not found in the current '
-                         'implementation. Ignored.' % (d['plugin'], d['id']))
-                else:
-                    yield maker.from_es(tree, json.loads(d['data']))
+            try:
+                return plugins[plugin].refs[id]
+            except KeyError:
+                warn('Ref subclass from plugin %s with ID %s was referenced '
+                     'in the index but not found in the current '
+                     'implementation. Ignored.' % (plugin, id))
 
         payload = es_data['payload']
+        cls = ref_class(payload['plugin'], payload['id'])
         return (es_data['start'],
                 es_data['end'],
-                cls.from_es(tree,
-                            json.loads(payload['menu_data']),
-                            hover=payload.get('hover'),
-                            qualname_hash=payload.get('qualname_hash')))
+                cls(tree,
+                    json.loads(payload['menu_data']),
+                    hover=payload.get('hover'),
+                    qualname_hash=payload.get('qualname_hash')))
 
     def menu_items(self):
         """Return an iterable of menu items to be attached to a ref.
@@ -146,6 +142,8 @@ class Ref(object):
                 icon: the icon to show next to the menu item: the name of a PNG
                     from the ``icons`` folder, without the .png extension
             }
+
+        Typically, this pulls data out of ``self.menu_data``.
 
         """
         raise NotImplementedError
