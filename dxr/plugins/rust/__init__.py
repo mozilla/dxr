@@ -30,7 +30,6 @@ from dxr.plugins.rust import filters
 from dxr.plugins.rust import refs
 
 
-PLUGIN_NAME = 'rust'
 RUST_DXR_FLAG = " -Zsave-analysis"
 
 # We know these crates come from the rust distribution (probably, the user could
@@ -329,7 +328,7 @@ class TreeToIndex(indexers.TreeToIndex):
         # The name of the crate being processed
         self.crate_name = None
 
-        self._temp_folder = os.path.join(self.tree.temp_folder, 'plugins', PLUGIN_NAME)
+        self._temp_folder = os.path.join(self.tree.temp_folder, 'plugins', plugin_name)
 
 
     # return data by file, indexed by the file's path
