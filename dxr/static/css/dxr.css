@@ -252,8 +252,11 @@ mark {
     vertical-align: top;
 }
 .results .right-column {
-    /* break long lines up */
     word-break: break-all;
+}
+/* cannot underline block-display nodes. */
+.results .right-column a:hover {
+    background-color: #fffdae;
 }
 .results td {
     padding: .1rem .5rem;
@@ -269,6 +272,10 @@ mark {
 }
 .results code {
     white-space: pre-wrap;
+    /* force display on one line */
+    display: inline-block;
+    max-height: 1.2em;
+    overflow: hidden;
 }
 .result-head td
 {
