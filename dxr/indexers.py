@@ -482,19 +482,24 @@ class Region(object):
 
     sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
                     # them.
-    __slots__ = ['css_class']
+    __slots__ = ['css_class', 'text']
 
-    def __init__(self, css_class):
+    def __init__(self, css_class, text):
         self.css_class = css_class
+        self.text = text
 
     def es(self):
-        return self.css_class
+        return {
+            'class': self.css_class,
+            'text': self.text
+        }
 
     @classmethod
     def es_to_triple(cls, es_region):
         """Convert ES-dwelling region representation to a (start, end,
         :class:`~dxr.indexers.Region`) triple."""
-        return es_region['start'], es_region['end'], cls(es_region['payload'])
+        payload = es_region['payload']
+        return es_region['start'], es_region['end'], cls(payload['class'], payload['text'])
 
     def opener(self):
         return u'<span class="%s">' % cgi.escape(self.css_class, True)

@@ -1,5 +1,6 @@
 from os.path import basename
 
+from jinja2 import Markup
 from pygments.lexers import get_lexer_for_filename, JavascriptLexer
 from pygments.lexer import inherit
 from pygments.token import Token, Comment
@@ -7,7 +8,8 @@ from pygments.util import ClassNotFound
 
 import dxr.indexers
 from dxr.indexers import Region
-
+import dxr.filters
+from dxr.plugins.core import _find_iter
 
 token_classes = {Token.Comment.Preproc: 'p'}
 token_classes.update((t, 'k') for t in [Token.Keyword,
@@ -87,7 +89,7 @@ def _regions_for_contents(lexer, contents):
     for index, token, text in lexer.get_tokens_unprocessed(contents):
         cls = token_classes.get(token)
         if cls:
-            yield index, index + len(text), Region(cls)
+            yield index, index + len(text), Region(cls, text)
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
@@ -111,4 +113,45 @@ class FileToSkim(dxr.indexers.FileToSkim):
         if lexer:
             return _regions_for_contents(lexer, self.contents)
         return []
+
+
+class SyntaxFilter(dxr.filters.Filter):
+    name = 'region'
+    description = Markup('Find lines that contain a specified text in a syntax region.'
+                         '<code>region:str.text</code> or <code>region:k</code>')
+
+    def __init__(self, term, enabled_plugins):
+        super(SyntaxFilter, self).__init__(term, enabled_plugins)
+        if '.' in self._term['arg']:
+            # Split the term to match color.text, and filter on both conditions.
+            self.color, self.text = self._term['arg'].split('.', 1)
+        else:
+            # Otherwise the whole term is the color.
+            self.color, self.text = self._term['arg'], ''
+
+    @dxr.filters.negatable
+    def filter(self):
+        color_term = {
+            "term": {
+                "line.regions.payload.class": self.color
+            }
+        }
+        text_term = {
+            "term": {
+                "line.regions.payload.text": self.text
+            }
+        }
+        if self.text:
+            return {'and': [color_term, text_term]}
+        else:
+            return color_term
+
+    def highlight_content(self, result):
+        if self.text:
+            text_len = len(self.text)
+            return ((i, i + text_len) for i in
+                    _find_iter(result['content'][0].lower(),
+                               self.text.lower()))
+        else:
+            return []
 
