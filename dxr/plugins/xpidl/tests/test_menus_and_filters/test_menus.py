@@ -34,7 +34,7 @@ class IdlMenusTest(DxrInstanceTestCase):
         menu_on(page, 'addDownload',
                 {'html': 'Find declaration', 'href': SEARCH % ('function-decl', 'addDownload')})
         menu_on(page, 'addDownload',
-                {'html': 'Find implementations', 'href': SEARCH % ('function', 'addDownload')})
+                {'html': 'Find overrides', 'href': SEARCH % ('function', 'addDownload')})
 
     def test_type_decl(self):
         menu_on(self.source_page("nsrootidl.idl"), 'PRTime',

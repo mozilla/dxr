@@ -239,8 +239,8 @@ class IdlVisitor(object):
             elif member.kind == 'method':
                 self.yield_name_ref(member.name, member.location, [
                     self.filtered_search_menu('function-decl', member.name, icon='method'),
-                    self.filtered_search_menu('function', member.name, 'Find implementations',
-                                              'Search for implementations of this method',
+                    self.filtered_search_menu('function', member.name, 'Find overrides',
+                                              'Search for overrides of this method',
                                               'method')
                 ])
                 self.yield_name_needle('function_decl', member.name, member.location)

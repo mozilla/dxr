@@ -225,3 +225,14 @@ See :ref:`writing-plugins` for more details on plugin development.
 
 ``python_path``
     Path to the folder from which the codebase imports Python modules
+
+[[xpidl]]
+---------
+
+``header_path``
+    Path to the folder where generated .h headers will be placed, used for
+    URL construction.
+
+``include_folders``
+    Whitespace-separated list of paths to search in to resolve include
+    directives. Default: [] (current folder)
