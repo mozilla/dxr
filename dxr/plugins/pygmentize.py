@@ -1,6 +1,6 @@
 from os.path import basename
 
-from pygments.lexers import get_lexer_for_filename, JavascriptLexer
+from pygments.lexers import get_lexer_for_filename, JavascriptLexer, PythonLexer
 from pygments.lexer import inherit
 from pygments.token import Token, Comment
 from pygments.util import ClassNotFound
@@ -69,13 +69,21 @@ def _lexer_for_filename(filename):
         # Use a custom lexer for js/jsm files to highlight prepocessor
         # directives
         lexer = JavascriptPreprocLexer()
+    elif filename == 'moz.build':
+        lexer = PythonLexer()
     else:
         try:
             # Lex .h files as C++ so occurrences of "class" and such get colored;
             # Pygments expects .H, .hxx, etc. This is okay even for uses of
             # keywords that would be invalid in C++, like 'int class = 3;'.
-            lexer = get_lexer_for_filename('dummy.cpp' if filename.endswith('.h')
-                                                       else filename)
+
+            # Also we can syntax highlight XUL as XML, and IDL/WebIDL as CPP
+            lexer = get_lexer_for_filename(
+                'dummy.cpp' if filename.endswith('.h')
+                               or filename.endswith('.idl')
+                               or filename.endswith('.webidl')
+                else 'dummy.xml' if filename.endswith('.xul')
+                else filename)
         except ClassNotFound:
             return None
 
