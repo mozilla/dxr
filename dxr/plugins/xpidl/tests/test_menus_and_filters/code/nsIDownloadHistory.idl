@@ -1,0 +1,38 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ * vim: sw=2 ts=2 sts=2
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+interface nsIURI;
+
+/**
+ * This interface can be used to add a download to history.
+ */
+[scriptable, uuid(4dcd6a12-a091-4f38-8360-022929635746)]
+interface nsIDownloadHistory : nsISupports {
+  /**
+   * Adds a download to history.
+   */
+  void addDownload(in nsIURI aSource, [optional] in nsIURI aReferrer,
+                   [optional] in PRTime aStartTime,
+                   [optional] in nsIURI aDestination);
+
+  /**
+   * Remove all downloads from history.
+   */
+  void removeAllDownloads();
+
+
+  // some empty lines...
+
+
+  // This line tests var-decl, I copied it over from somewhere else.
+  const unsigned long EVENT_REORDER = 0x0003;
+  /**
+  * Accessible description -- long text associated with this node
+  */
+  readonly attribute AString description;
+};
