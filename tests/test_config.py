@@ -24,8 +24,32 @@ def test_enabled_star():
 
             [[python]]
             python_path = /some/path
+
+            [[xpidl]]
+            header_path = /somewhere
         """)
     ok_('urllink' in (p.name for p in config.trees['some_tree'].enabled_plugins))
+
+
+def test_es_index():
+    """Make sure that we can override es_index on a per-tree level.
+
+    """
+    config = Config("""
+        [DXR]
+        es_index = test_index_{tree}
+        enabled_plugins =
+
+        [some_tree]
+        source_folder = /some/path
+        es_index = some_tree_index
+
+        [another_tree]
+        source_folder = /some/path
+        """)
+    eq_(config.es_index, 'test_index_{tree}')
+    eq_(config.trees['some_tree'].es_index, 'some_tree_index')
+    eq_(config.trees['another_tree'].es_index, 'test_index_{tree}')
 
 
 def test_enabled_plugins():

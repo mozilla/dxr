@@ -27,7 +27,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
 import dxr
 from dxr.app import make_app
 from dxr.config import FORMAT
-from dxr.es import UNINDEXED_STRING, TREE
+from dxr.es import UNINDEXED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
@@ -79,7 +79,8 @@ def deploy_tree(tree, es, index_name):
 
     # Create catalog index if it doesn't exist.
     try:
-        es.create_index(
+        create_index_and_wait(
+            es,
             config.es_catalog_index,
             settings={
                 'settings': {
@@ -218,19 +219,17 @@ def index_tree(tree, es, verbose=False):
                      tree.enabled_plugins if p.tree_to_index]
     try:
         if not skip_indexing:
-            # Make a new index with a semi-random name, having the tree name
-            # and format version in it. TODO: The prefix should come out of
-            # the tree config, falling back to the global config:
-            # dxr_hot_prod_{tree}_{whatever}.
-            index = config.es_index.format(format=FORMAT,
-                                           tree=tree.name,
-                                           unique=uuid1())
-            es.create_index(
+            # Substitute the format, tree name, and uuid into the index identifier.
+            index = tree.es_index.format(format=FORMAT,
+                                         tree=tree.name,
+                                         unique=uuid1())
+            create_index_and_wait(
+                es,
                 index,
                 settings={
                     'settings': {
                         'index': {
-                            'number_of_shards': 1,  # Fewer should be faster, assuming enough RAM.
+                            'number_of_shards': tree.es_shards,  # Fewer should be faster, assuming enough RAM.
                             'number_of_replicas': 0  # for speed
                         },
                         # Default analyzers and mappings are in the core plugin.
@@ -458,7 +457,10 @@ def index_file(tree, tree_indexers, path, es, index):
 
     rel_path = relpath(path, tree.source_folder)
     is_text = isinstance(contents, unicode)
-    if is_text:
+    is_link = islink(path)
+    # Index by line if the contents are text and the path is not a symlink.
+    index_by_line = is_text and not is_link
+    if index_by_line:
         lines = contents.splitlines(True)
         num_lines = len(lines)
         needles_by_line = [{} for _ in xrange(num_lines)]
@@ -472,10 +474,11 @@ def index_file(tree, tree_indexers, path, es, index):
         if file_to_index.is_interesting():
             # Per-file stuff:
             append_update(needles, file_to_index.needles())
-            linkses.append(file_to_index.links())
+            if not is_link:
+                linkses.append(file_to_index.links())
 
             # Per-line stuff:
-            if is_text:
+            if index_by_line:
                 refses.append(file_to_index.refs())
                 regionses.append(file_to_index.regions())
                 append_update_by_line(needles_by_line,
@@ -515,9 +518,8 @@ def index_file(tree, tree_indexers, path, es, index):
             doc['links'] = links
         yield es.index_op(doc, doc_type=FILE)
 
-        # Index all the lines. If it's an empty file (no lines), don't bother
-        # ES. It hates empty dicts.
-        if is_text and needles_by_line:
+        # Index all the lines.
+        if index_by_line:
             for total, annotations_for_this_line, tags in izip(
                     needles_by_line,
                     annotations_by_line,

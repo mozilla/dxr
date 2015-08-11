@@ -2,7 +2,6 @@ import re
 
 import dxr.indexers
 from dxr.lines import Ref
-from dxr.menus import SingleDatumMenuMaker
 
 
 # From http://stackoverflow.com/a/1547940
@@ -13,10 +12,10 @@ class FileToIndex(dxr.indexers.FileToIndex):
     def refs(self):
         for m in url_re.finditer(self.contents):
             url = m.group(0)
-            yield m.start(0), m.end(0), Ref([UrlMenuMaker(self.tree, url)])
+            yield m.start(0), m.end(0), UrlRef(self.tree, url)
 
 
-class UrlMenuMaker(SingleDatumMenuMaker):
+class UrlRef(Ref):
     plugin = 'urllink'
 
     def menu_items(self):

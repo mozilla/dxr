@@ -97,13 +97,35 @@ class Query(object):
                          ...]}
 
         """
+        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
+
+        def group_filters_by_term(predicate):
+            """Return an iterable of lists of ES filters for each term, filtered on
+            predicate(Filter)."""
+
+            return ([f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]
+                     if predicate(f)] for term in self.terms)
+
+        def group_filters_by_name(predicate):
+            """Return an iterable of a list of ES filters for each unique filter name, filtered on
+            predicate(Filter)."""
+
+            d = {}
+            for term in self.terms:
+                for f in enabled_filters_by_name[term['name']]:
+                    if predicate(f):
+                        d.setdefault(term['name'], []).append(f(term, self.enabled_plugins))
+            return d.itervalues()
+
         # Instantiate applicable filters, yielding a list of lists, each inner
         # list representing the filters of the name of the parallel term. We
         # will OR the elements of the inner lists and then AND those OR balls
         # together.
-        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
-        filters = [[f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]]
-                   for term in self.terms]
+        # Some filters, such as ExtFilter, do not make sense to be AND'ed together, so we move
+        # them all to their own lists at the end of the regular filters list, such that they
+        # will be joined by OR instead.
+        filters = list(chain(group_filters_by_term(lambda f: not f.union_only),
+                             group_filters_by_name(lambda f: f.union_only)))
         # See if we're returning lines or just files-and-folders:
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
@@ -118,6 +140,8 @@ class Query(object):
             # Don't show folders yet in search results. I don't think the JS
             # is able to handle them.
             ors.append({'term': {'is_folder': False}})
+            # Filter out all FILE docs who are links.
+            ors.append({'not': {'exists': {'field': 'link'}}})
 
         if ors:
             query = {

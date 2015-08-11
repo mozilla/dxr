@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext
+from os.path import relpath, splitext, islink, realpath
 import re
 
 from flask import url_for
@@ -10,7 +10,7 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT
+from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -59,6 +59,11 @@ mappings = {
             'path': PATH_MAPPING,
 
             'ext': EXT_MAPPING,
+
+            'link': {  # the target path if this FILE is a symlink
+                'type': 'string',
+                'index': 'not_analyzed'
+            },
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
@@ -162,7 +167,7 @@ mappings = {
                     'type': 'object',
                     'properties': {
                         'plugin': UNINDEXED_STRING,
-                        'id': UNINDEXED_STRING,  # MenuMaker ID
+                        'id': UNINDEXED_STRING,  # Ref ID
                         'menu_data': UNINDEXED_STRING,  # opaque to ES
                         'hover': UNINDEXED_STRING,
                         # Hash of qualname of the symbol we're hanging the
@@ -170,7 +175,7 @@ mappings = {
                         # with a qualname. This powers the highlighting of
                         # other occurrences of the symbol when you pull up the
                         # context menu.
-                        'qualname_hash': UNINDEXED_INT
+                        'qualname_hash': UNINDEXED_LONG
                     }
                 }
             },
@@ -311,6 +316,8 @@ class ExtFilter(Filter):
     domain = FILE
     description = Markup('Filename extension: <code>ext:cpp</code>. Always '
                          'case-sensitive.')
+    # The intersection of two different Ext filters would always be nothing.
+    union_only = True
 
     @negatable
     def filter(self):
@@ -395,7 +402,7 @@ class IdFilter(FilterAggregator):
 
 
 class RefFilter(FilterAggregator):
-    """Filter aggregator for ref: queries,groupingg together the results of all filters that find
+    """Filter aggregator for ref: queries, grouping together the results of all filters that find
     references to names."""
 
     name = 'ref'
@@ -425,6 +432,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
+        if self.is_link():
+            # realpath will keep following symlinks until it gets to the 'real' thing.
+            yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
         extension = splitext(self.path)[1]
         if extension:

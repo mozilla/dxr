@@ -1,7 +1,8 @@
 import ast
 import token
 import tokenize
-from StringIO import StringIO
+from os.path import islink
+from cStringIO import StringIO
 
 from dxr.build import unignored
 from dxr.filters import FILE, LINE
@@ -302,4 +303,4 @@ def is_interesting(path):
     analyze.
 
     """
-    return path.endswith('.py')
+    return path.endswith('.py') and not islink(path)
