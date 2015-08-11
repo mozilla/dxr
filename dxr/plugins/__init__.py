@@ -152,6 +152,10 @@ class Plugin(object):
         copy['direct_searchers'] = []
         return copy
 
+    def __repr__(self):
+        return (('<Plugin %s>' % self.name) if hasattr(self, 'name')
+                else super(Plugin, self).__repr__())
+
 
 def filters_from_namespace(namespace):
     """Return the filters which conform to our suggested naming convention.
@@ -195,7 +199,7 @@ def direct_search(priority, domain=LINE):
 
 _plugin_cache = None
 def all_plugins():
-    """Return a dict of plugin name -> Plugin for all registered plugins.
+    """Return a dict of plugin name -> Plugin for all plugins, including core.
 
     Plugins are registered via the ``dxr.plugins`` setuptools entry point,
     which may point to either a module (in which case a Plugin will be
@@ -206,17 +210,10 @@ def all_plugins():
     The core plugin, which provides many of DXR's cross-language, built-in
     features, is always the first plugin when iterating over the returned
     dict. This lets other plugins override bits of its elasticsearch mappings
-    and analyzers.
+    and analyzers when we're building up the schema.
 
     """
     global _plugin_cache
-
-    if _plugin_cache:
-        # Iterating over entrypoints could be kind of expensive, with the FS
-        # reads and all.
-        return _plugin_cache
-
-    import dxr.plugins.core
 
     def name_and_plugin(entry_point):
         """Return the name of an entry point and the Plugin it points to."""
@@ -226,16 +223,40 @@ def all_plugins():
         plugin.name = entry_point.name
         return entry_point.name, plugin
 
-    _plugin_cache = OrderedDict()
-    _plugin_cache['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
-    _plugin_cache['core'].name = 'core'
-    _plugin_cache.update(name_and_plugin(point) for point in
-                              iter_entry_points('dxr.plugins'))
+    if _plugin_cache is None:
+        # Iterating over entrypoints could be kind of expensive, with the FS
+        # reads and all.
+        _plugin_cache = OrderedDict([('core', core_plugin())])
+        _plugin_cache.update(name_and_plugin(point) for point in
+                             iter_entry_points('dxr.plugins'))
+
     return _plugin_cache
 
 
+def all_plugins_but_core():
+    """Do like :func:`all_plugins()`, but don't return the core plugin."""
+    ret = all_plugins().copy()
+    del ret['core']
+    return ret
+
+
+_core_plugin = None
+def core_plugin():
+    """Return the core plugin."""
+    # This is a function in order to dodge a circular import.
+    global _core_plugin
+    import dxr.plugins.core
+
+    if _core_plugin is None:
+        _core_plugin = Plugin.from_namespace(dxr.plugins.core.__dict__)
+        _core_plugin.name = 'core'
+
+    return _core_plugin
+
+
 def plugins_named(names):
-    """Return an iterable of Plugins having the given names.
+    """Return an iterable of the core plugin, along with Plugins having the
+    given names.
 
     :arg names: An iterable of plugin names
 

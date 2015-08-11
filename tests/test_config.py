@@ -28,7 +28,11 @@ def test_enabled_star():
             [[xpidl]]
             header_path = /somewhere
         """)
-    ok_('urllink' in (p.name for p in config.trees['some_tree'].enabled_plugins))
+    enabled_plugins = config.trees['some_tree'].enabled_plugins
+    plugin_names = [p.name for p in enabled_plugins]
+    ok_('urllink' in plugin_names)
+    eq_('core', plugin_names[0])
+    ok_('core' not in plugin_names[1:])
 
 
 def test_es_index():
