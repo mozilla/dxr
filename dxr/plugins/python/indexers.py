@@ -2,7 +2,7 @@ import ast
 import token
 import tokenize
 from os.path import islink
-from cStringIO import StringIO
+from StringIO import StringIO
 
 from dxr.build import unignored
 from dxr.filters import FILE, LINE
