@@ -12,7 +12,7 @@ test: build
 build: $(BUILD_PLUGINS) templates pycs
 
 node:
-	npm install
+	npm install --production
 
 pycs:
 	find . -name "*.pyc" -exec rm -f {} \;
