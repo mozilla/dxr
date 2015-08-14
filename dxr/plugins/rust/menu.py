@@ -1,7 +1,7 @@
-from functools import partial
-
 import os
+from functools import partial
 from warnings import warn
+
 from flask import url_for
 
 from dxr.utils import BROWSE, search_url
@@ -89,8 +89,9 @@ def call_menu(qualname, tree):
 
 def function_menu_generic(datum, tree_config):
     """Return menu makers shared by function def/decls and function refs."""
-    return [call_menu(datum['qualname'], tree_config),
-            find_references_menu(tree_config, datum['qualname'], "function-ref", "function")]
+    menus = call_menu(datum['qualname'], tree_config)
+    menus.append(find_references_menu(tree_config, datum['qualname'], "function-ref", "function"))
+    return menus
 
 
 def jump_to_target_menu(target_name, tree_config, path, row):
@@ -125,6 +126,7 @@ jump_to_type_declaration_menu = partial(jump_to_target_menu, target_name='type d
 jump_to_variable_declaration_menu = partial(jump_to_target_menu, target_name='variable declaration')
 jump_to_function_declaration_menu = partial(jump_to_target_menu, target_name='function declaration')
 
+
 def trait_impl_menu(tree_config, qualname, count):
     return {'html': "Find implementations (%d)" % count,
             'title': "Find implementations of this trait method",
@@ -133,7 +135,7 @@ def trait_impl_menu(tree_config, qualname, count):
 
 
 def variable_menu_generic(datum, tree_config):
-    yield find_references_menu(tree_config, datum['qualname'], "var-ref", "variable")
+    return [find_references_menu(tree_config, datum['qualname'], "var-ref", "variable")]
 
 
 def type_menu(tree_config, kind, qualname):
@@ -156,8 +158,8 @@ def type_menu(tree_config, kind, qualname):
 def type_menu_generic(datum, tree_config):
     kind = datum['kind']
     qualname = datum['qualname']
-    menu = [type_menu(tree_config, kind, qualname),
-            find_references_menu(tree_config, qualname, "type-ref", kind)]
+    menu = list(type_menu(tree_config, kind, qualname))
+    menu.append(find_references_menu(tree_config, qualname, "type-ref", kind))
     return menu
 
 
@@ -168,8 +170,6 @@ def use_items_menu(tree_config, qualname):
             'icon': 'reference'}
 
 
-def module_menu_generic(tree, datum, tree_config):
+def module_menu_generic(datum, tree_config):
     return [use_items_menu(tree_config, datum['qualname']),
             find_references_menu(tree_config, datum['qualname'], "module-ref", "module")]
-
-
