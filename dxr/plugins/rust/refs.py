@@ -7,8 +7,7 @@ from dxr.plugins.rust.menu import (
     jump_to_trait_method_menu, function_menu_generic, variable_menu_generic, truncate_value,
     type_menu_generic, jump_to_module_definition_menu, module_menu_generic,
     jump_to_alias_definition_menu, jump_to_crate_menu, find_references_menu, std_lib_links,
-    jump_to_module_declaration_menu, jump_to_type_declaration_menu,
-    jump_to_variable_declaration_menu, jump_to_function_declaration_menu, trait_impl_menu)
+    jump_to_module_declaration_menu, jump_to_type_declaration_menu, trait_impl_menu)
 
 
 def trim_dict(dictionary, keys):

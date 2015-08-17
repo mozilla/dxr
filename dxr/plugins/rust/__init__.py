@@ -19,23 +19,15 @@ Line and column numbers are stored as strings though.
 """
 import csv
 import os
-import sys
-from operator import itemgetter
-from itertools import chain, izip, ifilter
-from functools import partial
-
-from jinja2 import Markup
-from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
-                   constantly, icat)
+from itertools import chain
 
 from dxr import indexers
 from dxr.plugins import Plugin, filters_from_namespace, refs_from_namespace
-import dxr.utils as utils
 from dxr.filters import LINE
 from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines, QUALIFIED_LINE_NEEDLE
 
 from dxr.plugins.rust import filters
-from dxr.plugins.rust import menu
+from dxr.plugins.rust import refs
 
 
 PLUGIN_NAME = 'rust'
@@ -74,25 +66,25 @@ class FileToIndex(indexers.FileToIndex):
                            int(datum['extent_end']),
                            ref)
 
-        for m in make_menu('functions', menu.function_menu):
+        for m in make_menu('functions', refs.FunctionRef):
             yield m
-        for m in make_menu('function_refs', menu.function_ref_menu):
+        for m in make_menu('function_refs', refs.FunctionRefRef):
             yield m
-        for m in make_menu('variables', menu.variable_menu):
+        for m in make_menu('variables', refs.VariableRef):
             yield m
-        for m in make_menu('variable_refs', menu.variable_ref_menu):
+        for m in make_menu('variable_refs', refs.VariableRefRef):
             yield m
-        for m in make_menu('types', menu.type_menu):
+        for m in make_menu('types', refs.TypeRef):
             yield m
-        for m in make_menu('type_refs', menu.type_ref_menu):
+        for m in make_menu('type_refs', refs.TypeRefRef):
             yield m
-        for m in make_menu('modules', menu.module_menu):
+        for m in make_menu('modules', refs.ModuleRef):
             yield m
-        for m in make_menu('module_refs', menu.module_ref_menu):
+        for m in make_menu('module_refs', refs.ModuleRefRef):
             yield m
-        for m in make_menu('module_aliases', menu.module_alias_menu):
+        for m in make_menu('module_aliases', refs.ModuleAliasRef):
             yield m
-        for m in make_menu('unknown_refs', menu.unknown_ref_menu):
+        for m in make_menu('unknown_refs', refs.UnknownRef):
             yield m
 
         # Note there is no ref for impls since both the trait and struct parts
@@ -136,7 +128,7 @@ class FileToIndex(indexers.FileToIndex):
         data = self.tree_index.by_file(table_name, self.path)
         return self.needles_for_table(filter_name, data)
 
-    def needles_for_table(self ,filter_name, data):
+    def needles_for_table(self, filter_name, data):
         # Each needle is a (needle name, needle value dict, Extent) triple.
         result = (('rust_{0}'.format(filter_name),
                  datum,
@@ -1080,4 +1072,4 @@ mappings = {
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
                 mappings=mappings,
-                refs=refs_from_namespace(menu.__dict__))
+                refs=refs_from_namespace(refs.__dict__))

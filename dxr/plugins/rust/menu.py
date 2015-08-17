@@ -123,8 +123,6 @@ jump_to_module_declaration_menu = partial(jump_to_target_menu, target_name='modu
 jump_to_alias_definition_menu = partial(jump_to_target_menu, target_name='alias definition')
 jump_to_crate_menu = partial(jump_to_target_menu, target_name='crate')
 jump_to_type_declaration_menu = partial(jump_to_target_menu, target_name='type declaration')
-jump_to_variable_declaration_menu = partial(jump_to_target_menu, target_name='variable declaration')
-jump_to_function_declaration_menu = partial(jump_to_target_menu, target_name='function declaration')
 
 
 def trait_impl_menu(tree_config, qualname, count):
