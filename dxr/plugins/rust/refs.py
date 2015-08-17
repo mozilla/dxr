@@ -3,15 +3,17 @@ from warnings import warn
 from dxr.lines import Ref
 # import ALL THE THINGS
 from dxr.plugins.rust.menu import (
-    jump_to_target_from_decl, jump_to_definition_menu,
-    jump_to_trait_method_menu, function_menu_generic, variable_menu_generic, truncate_value,
-    type_menu_generic, jump_to_module_definition_menu, module_menu_generic,
-    jump_to_alias_definition_menu, jump_to_crate_menu, find_references_menu, std_lib_links,
-    jump_to_module_declaration_menu, jump_to_type_declaration_menu, trait_impl_menu)
+    jump_to_target_from_decl, jump_to_definition_menu_item,
+    jump_to_trait_method_menu_item, generic_function_menu, generic_variable_menu, truncate_value,
+    generic_type_menu, jump_to_module_definition_menu_item, generic_module_menu,
+    jump_to_alias_definition_menu_item, jump_to_crate_menu_item, find_references_menu_item,
+    std_lib_links_menu, jump_to_module_declaration_menu_item, jump_to_type_declaration_menu_item,
+    jump_to_variable_declaration_menu_item, jump_to_function_declaration_menu_item,
+    trait_impl_menu_item)
 
 
 def trim_dict(dictionary, keys):
-    """Return a new dict with given keys set from dictionary arg.
+    """Return a new dict with given keys set from dictionary arg, or None if dictionary is falsy.
 
     A key listed in keys but not in the dictionary will not be set in the returned dict.
     """
@@ -33,6 +35,13 @@ class _RustRef(Ref):
             self.menu_data = menu_data
 
     def prepare_menu_data(self, tree_index, datum):
+        """Return necessary data for insertion to ES and later retrieval via menu_items.
+
+        This function should handle any logic that involves tree_index, as it's
+        an index-time construct. Data can be any shape (dicts, lists, etc.) as long as
+        menu_items knows what it's dealing with.
+        """
+
         raise NotImplementedError
 
 
@@ -64,20 +73,19 @@ class FunctionRef(_RustRef):
     def menu_items(self):
         # decl is only defined if datum is not a decl (i.e. we're looking at an impl).
         datum, decl, count = self.menu_data
-        menus = function_menu_generic(datum, self.tree)
+        menu = generic_function_menu(datum, self.tree)
         if decl:
-            menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, decl))
+            menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, decl))
         elif count:
-            menus.append(trait_impl_menu(self.tree, datum['qualname'], count))
-        return menus
+            menu.append(trait_impl_menu_item(self.tree, datum['qualname'], count))
+        return menu
 
 
 class FunctionRefRef(_RustRef):
     """A Ref with menus suitable to a function reference."""
 
     def prepare_menu_data(self, tree_index, datum):
-        fn_def = None
-        fn_decl = None
+        name = fn_def = fn_decl = None
         if 'refid' in datum and datum['refid'] and datum['refid'] in tree_index.data.functions:
             fn_def = tree_index.data.functions[datum['refid']]
         elif 'refid' in datum and datum['refid'] and datum['refid'] in tree_index.data.types:
@@ -86,7 +94,6 @@ class FunctionRefRef(_RustRef):
         if 'declid' in datum and datum['declid'] and datum['declid'] in tree_index.data.functions:
             fn_decl = tree_index.data.functions[datum['declid']]
 
-        name = None
         if fn_def:
             name = fn_def['qualname']
         elif fn_decl:
@@ -100,16 +107,16 @@ class FunctionRefRef(_RustRef):
 
     def menu_items(self):
         fn_def, fn_decl = self.menu_data
-        menus = []
+        menu = []
         if fn_def:
-            menus.insert(0, jump_to_target_from_decl(jump_to_definition_menu, self.tree, fn_def))
+            menu.insert(0, jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, fn_def))
             if fn_decl and (fn_def['file_name'] != fn_decl['file_name'] or fn_def['file_line'] != fn_decl['file_line']):
-                menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
-            menus.extend(function_menu_generic(fn_def, self.tree))
+                menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, fn_decl))
+            menu.extend(generic_function_menu(fn_def, self.tree))
         elif fn_decl:
-            menus = function_menu_generic(fn_decl, self.tree)
-            menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
-        return menus
+            menu = generic_function_menu(fn_decl, self.tree)
+            menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, fn_decl))
+        return menu
 
 
 class VariableRef(_KeysFromDatum):
@@ -121,7 +128,7 @@ class VariableRef(_KeysFromDatum):
                                           qualname_hash)
 
     def menu_items(self):
-        menu = variable_menu_generic(self.menu_data, self.tree)
+        menu = generic_variable_menu(self.menu_data, self.tree)
         typ = self.menu_data.get('type')
         if not typ:
             qualname = self.menu_data.get('qualname')
@@ -145,9 +152,9 @@ class VariableRefRef(_RustRef):
 
     def menu_items(self):
         if self.menu_data:
-            menus = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
-            menus.extend(variable_menu_generic(self.menu_data, self.tree))
-            return menus
+            menu = [jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, self.menu_data)]
+            menu.extend(generic_variable_menu(self.menu_data, self.tree))
+            return menu
         return []
 
 
@@ -155,7 +162,7 @@ class TypeRef(_KeysFromDatum):
     keys = ['kind', 'qualname']
 
     def menu_items(self):
-        return type_menu_generic(self.menu_data, self.tree)
+        return generic_type_menu(self.menu_data, self.tree)
 
 
 class TypeRefRef(_RustRef):
@@ -172,23 +179,26 @@ class TypeRefRef(_RustRef):
 
     def menu_items(self):
         if self.menu_data:
-            return ([jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
-                    + type_menu_generic(self.menu_data, self.tree))
+            return ([jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, self.menu_data)]
+                    + generic_type_menu(self.menu_data, self.tree))
         return []
 
 
 class ModuleRef(_KeysFromDatum):
-    keys = ['def_file', 'file_name', 'file_line']
+    keys = ['def_file', 'file_name', 'file_line', 'qualname']
 
     def menu_items(self):
+        menu = []
         if self.menu_data['def_file'] != self.menu_data['file_name']:
-            yield jump_to_module_definition_menu(self.tree, self.menu_data['def_file'], 1)
+            menu.append(jump_to_module_definition_menu_item(self.tree, self.menu_data['def_file'], 1))
+        menu.extend(generic_module_menu(self.menu_data, self.tree))
+        return menu
 
 
 class ModuleRefRef(_RustRef):
     def prepare_menu_data(self, tree_index, datum):
 
-        mod, alias, crate, urls, typ = [None]*5
+        mod = alias = crate = urls = typ = None
         if datum['refid']:
             # Mod can be in either local crate or extern crate.
             mod = (tree_index.data.modules.get(datum['refid'])
@@ -215,36 +225,35 @@ class ModuleRefRef(_RustRef):
     def menu_items(self):
         # self.menu_data comes in the way of [datum, mod, alias, secondary_datum, type_datum],
         # where (mod, alias, secondary_datum) and type_datum are mutually exclusive.
-
         datum, mod, alias, crate, urls, typ = self.menu_data
-        menus = []
+        menu = []
         if mod:
             if 'file_name' in mod:
-                menus.append(jump_to_target_from_decl(jump_to_alias_definition_menu, self.tree, mod))
+                menu.append(jump_to_target_from_decl(jump_to_alias_definition_menu_item, self.tree, mod))
             if crate:
                 # Add references to extern mods via aliases (known local crates)
-                menus.append(jump_to_crate_menu(self.tree, crate['file_name'], 1))
-                menus.append(find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias"))
+                menu.append(jump_to_crate_menu_item(self.tree, crate['file_name'], 1))
+                menu.append(find_references_menu_item(self.tree, alias['qualname'], "module-alias-ref", "alias"))
             if urls:
                 # Add references to extern mods via aliases (standard library crates)
-                menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
-                menus.extend(std_lib_links(urls))
+                menu = [find_references_menu_item(self.tree, alias['qualname'], "module-alias-ref", "alias")]
+                menu.extend(std_lib_links_menu(urls))
             elif alias and 'location' in alias:
                 # Add references to extern mods via aliases (unknown local crates)
-                menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
+                menu = [find_references_menu_item(self.tree, alias['qualname'], "module-alias-ref", "alias")]
             elif 'file_name' in mod:
-                menus.insert(0, jump_to_target_from_decl(jump_to_module_definition_menu, self.tree, mod))
+                menu.insert(0, jump_to_target_from_decl(jump_to_module_definition_menu_item, self.tree, mod))
             else:
                 if 'file_name' in mod and 'def_file' in mod and mod['def_file'] == mod['file_name']:
-                    menus.insert(0, jump_to_target_from_decl(jump_to_definition_menu, self.tree, mod))
+                    menu.insert(0, jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, mod))
                 else:
-                    menus.insert(0, jump_to_target_from_decl(jump_to_module_declaration_menu, self.tree, mod))
-                    menus.insert(0, jump_to_module_definition_menu(self.tree, mod['def_file'], 1))
-            menus.extend(module_menu_generic(mod, self.tree))
+                    menu.insert(0, jump_to_target_from_decl(jump_to_module_declaration_menu_item, self.tree, mod))
+                    menu.insert(0, jump_to_module_definition_menu_item(self.tree, mod['def_file'], 1))
+            menu.extend(generic_module_menu(mod, self.tree))
         elif typ:
-            menus = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, typ)]
-            menus.extend(type_menu_generic(typ, self.tree))
-        return menus
+            menu = [jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, typ)]
+            menu.extend(generic_type_menu(typ, self.tree))
+        return menu
 
 
 class ModuleAliasRef(_RustRef):
@@ -255,7 +264,7 @@ class ModuleAliasRef(_RustRef):
 
         # menu_data will be [datum, kind, aliased_datum], where kind is of
         # {'modules', 'types', 'variables', 'functions', 'crate','urls'}, describing the target.
-        kind, aliased_datum = None, None
+        kind = aliased_datum = None
 
         # 'module' aliases to modules, types, variables, and functions
         for table_name in ['modules', 'types', 'variables', 'functions']:
@@ -269,40 +278,44 @@ class ModuleAliasRef(_RustRef):
 
         # extern crates to known local crates
         if 'location' in datum and datum['location'] and datum['location'] in tree_index.crates_by_name:
-            kind, aliased_datum = 'crate', trim_dict(tree_index.crates_by_name[datum['location']], secondary_keys)
+            kind = 'crate'
+            aliased_datum = trim_dict(tree_index.crates_by_name[datum['location']], secondary_keys)
 
         # extern crates to standard library crates
         if 'location' in datum and datum['location'] and datum['location'] in tree_index.locations:
-            kind, aliased_datum = 'urls', tree_index.locations[datum['location']]
+            kind = 'urls'
+            aliased_datum = tree_index.locations[datum['location']]
 
         # other references to standard library items
         if datum['refid'] in tree_index.data.unknowns:
-            # FIXME We could probably do better and link to the precise type or static in docs etc., rather than just the crate
-            kind, aliased_datum = 'urls', tree_index.locations[tree_index.data.unknowns[datum['refid']]['crate']]
+            # FIXME We could probably do better and link to the precise type or static in docs
+            #       etc., rather than just the crate
+            kind = 'urls'
+            aliased_datum = tree_index.locations[tree_index.data.unknowns[datum['refid']]['crate']]
 
         return trim_dict(datum, datum_keys), kind, aliased_datum
 
     def menu_items(self):
         datum, kind, aliased_datum = self.menu_data
         if not kind:
-            return [find_references_menu(self.tree, datum['qualname'], "module-alias-ref", "alias")]
+            return [find_references_menu_item(self.tree, datum['qualname'], "module-alias-ref", "alias")]
         elif kind == 'modules':
-            return [jump_to_module_definition_menu(self.tree, aliased_datum['def_file'], 1),
-                    find_references_menu(aliased_datum, datum['qualname'], "module-alias-ref", "alias")]
+            return [jump_to_module_definition_menu_item(self.tree, aliased_datum['def_file'], 1),
+                    find_references_menu_item(aliased_datum, datum['qualname'], "module-alias-ref", "alias")]
         elif kind == 'types':
-            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
-                    find_references_menu(self.tree, datum['qualname'], "type-ref", "alias")]
+            return [jump_to_target_from_decl(jump_to_type_declaration_menu_item, self.tree, aliased_datum),
+                    find_references_menu_item(self.tree, datum['qualname'], "type-ref", "alias")]
         elif kind == 'variables':
-            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
-                    find_references_menu(self.tree, datum['qualname'], "var-ref", "alias")]
+            return [jump_to_target_from_decl(jump_to_variable_declaration_menu_item, self.tree, aliased_datum),
+                    find_references_menu_item(self.tree, datum['qualname'], "var-ref", "alias")]
         elif kind == 'functions':
-            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
-                    find_references_menu(self.tree, datum['qualname'], "function-ref", "alias")]
+            return [jump_to_target_from_decl(jump_to_function_declaration_menu_item, self.tree, aliased_datum),
+                    find_references_menu_item(self.tree, datum['qualname'], "function-ref", "alias")]
         elif kind == 'crate':
-            return [jump_to_crate_menu(self.tree, aliased_datum['file_name'], 1),
-                    find_references_menu(self.tree, datum['qualname'], "module-alias-ref", "alias")]
+            return [jump_to_crate_menu_item(self.tree, aliased_datum['file_name'], 1),
+                    find_references_menu_item(self.tree, datum['qualname'], "module-alias-ref", "alias")]
         elif kind == 'urls':
-            return std_lib_links(aliased_datum)
+            return std_lib_links_menu(aliased_datum)
         return []
 
 
@@ -320,7 +333,7 @@ class UnknownRef(_RustRef):
     def menu_items(self):
         if self.menu_data:
             datum, urls = self.menu_data
-            menu = [find_references_menu(self.tree, str(datum['refid']), "extern-ref", "item")]
+            menu = [find_references_menu_item(self.tree, str(datum['refid']), "extern-ref", "item")]
             if urls:
-                menu.extend(std_lib_links(urls))
+                menu.extend(std_lib_links_menu(urls))
             return menu
