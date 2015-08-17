@@ -149,6 +149,12 @@ class Ref(object):
         raise NotImplementedError
 
     def opener(self):
+        """Emit the opening anchor tag for a cross reference.
+
+        Menu item text, links, and metadata are JSON-encoded and dumped into a
+        data attr on the tag. JS finds them there and creates a menu on click.
+
+        """
         if self.hover:
             title = ' title="' + cgi.escape(self.hover, True) + '"'
         else:
