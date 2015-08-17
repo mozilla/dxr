@@ -14,10 +14,11 @@ from dxr.plugins.rust.menu import (
 def trim_dict(dictionary, keys):
     """Return a new dict with given keys set from dictionary arg.
 
-    A key listed in keys but not in the dictionary will be set to None.
+    A key listed in keys but not in the dictionary will not be set in the returned dict.
     """
 
-    return dict((key, dictionary.get(key)) for key in keys)
+    if dictionary:
+        return dict((key, dictionary[key]) for key in keys if key in dictionary)
 
 
 class _RustRef(Ref):
@@ -116,9 +117,9 @@ class VariableRef(_KeysFromDatum):
     def menu_items(self):
         menu = variable_menu_generic(self.menu_data, self.tree)
         typ = self.menu_data.get('type')
-        qualname = self.menu_data.get('qualname')
         if not typ:
-            warn("no type for variable %s" % qualname)
+            qualname = self.menu_data.get('qualname')
+            warn("no type for variable %s, so the tooltip will be missing" % qualname)
         return menu
 
 
@@ -179,123 +180,126 @@ class ModuleRef(_KeysFromDatum):
             yield jump_to_module_definition_menu(self.tree, self.menu_data['def_file'], 1)
 
 
-# TODO next: turn to class
-def module_ref_menu(tree, datum, tree_config):
-    # Add straightforward aliases to modules
-    if datum['refid']:
-        makers = []
-        mod = None
-        if datum['refid'] in tree.data.modules:
-            mod = tree.data.modules[datum['refid']]
-        elif datum['refid'] in tree.data.extern_crate_mods:
-            mod = tree.data.extern_crate_mods[datum['refid']]
+class ModuleRefRef(_RustRef):
+    def __init__(self, tree_index, datum, tree_config):
+        super(ModuleRefRef, self).__init__(tree_index, None, tree_config)
 
-        if mod:
-            if datum['aliasid'] and datum['aliasid'] in tree.data.module_aliases:
-                alias = tree.data.module_aliases[datum['aliasid']]
-                if 'file_name' in mod:
-                    makers.append(jump_to_target_from_decl(jump_to_alias_definition_menu, tree_config, mod))
-                if 'location' in alias and alias['location'] in tree.crates_by_name:
-                    # Add references to extern mods via aliases (known local crates)
-                    crate = tree.crates_by_name[alias['location']]
-                    makers.append(jump_to_crate_menu(tree_config, crate['file_name'], 1))
-                    makers.append(find_references_menu(tree_config, alias['qualname'], "module-alias-ref", "alias"))
-                elif 'location' in alias and alias['location'] in tree.locations:
-                    # Add references to extern mods via aliases (standard library crates)
-                    urls = tree.locations[alias['location']]
-                    makers = [find_references_menu(tree_config, alias['qualname'], "module-alias-ref", "alias")]
-                    std_lib_links(makers, urls)
-                elif 'location' in alias:
-                    # Add references to extern mods via aliases (unknown local crates)
-                    makers = [find_references_menu(tree_config, alias['qualname'], "module-alias-ref", "alias")]
-                elif 'file_name' in mod:
-                    makers.append(jump_to_target_from_decl(jump_to_module_definition_menu, tree_config, mod))
-            else:
-                if 'file_name' in mod and 'def_file' in mod and mod['def_file'] == mod['file_name']:
-                    makers.append(jump_to_target_from_decl(jump_to_definition_menu, tree_config, mod))
-                else:
-                    makers.append(jump_to_module_definition_menu(tree_config, mod['def_file'], 1))
-                    makers.append(jump_to_target_from_decl(jump_to_module_declaration_menu, tree_config, mod))
-            makers.extend(module_menu_generic(tree, mod, tree_config))
-            return Ref(makers)
+        mod, alias, crate, urls, typ = [None]*5
+        if datum['refid']:
+            # Mod can be in either local crate or extern crate.
+            mod = (tree_index.data.modules.get(datum['refid'])
+                   or tree_index.data.extern_crate_mods.get(datum['refid']))
+            if mod:
+                if datum['aliasid'] and datum['aliasid'] in tree_index.data.module_aliases:
+                    alias = tree_index.data.module_aliases[datum['aliasid']]
+                    if 'location' in alias:
+                        if alias['location'] in tree_index.crates_by_name:
+                            crate = tree_index.crates_by_name[alias['location']]
+                        elif alias['location'] in tree_index.locations:
+                            urls = tree_index.locations[alias['location']]
 
         # types masquerading as modules
-        if datum['refid'] in tree.data.types:
-            typ = tree.data.types[datum['refid']]
-            makers = [jump_to_target_from_decl(jump_to_definition_menu, tree_config, typ)]
-            makers.extend(type_menu_generic(typ, tree_config))
-            title = None
+        if datum['refid'] in tree_index.data.types:
+            typ = tree_index.data.types[datum['refid']]
             if 'value' in typ:
-                title = typ['value']
+                self.hover = typ['value']
             else:
                 warn('no value for %s %s' % (typ['kind'], typ['qualname']))
-            return Ref(makers, hover=truncate_value('', title))
+
+        self.menu_data = (datum, mod, alias, crate, urls, typ)
+
+    def menu_items(self):
+        # self.menu_data comes in the way of [datum, mod, alias, secondary_datum, type_datum],
+        # where (mod, alias, secondary_datum) and type_datum are mutually exclusive.
+
+        datum, mod, alias, crate, urls, typ = self.menu_data
+        menus = []
+        if mod:
+            if 'file_name' in mod:
+                menus.append(jump_to_target_from_decl(jump_to_alias_definition_menu, self.tree, mod))
+            if crate:
+                # Add references to extern mods via aliases (known local crates)
+                menus.append(jump_to_crate_menu(self.tree, crate['file_name'], 1))
+                menus.append(find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias"))
+            if urls:
+                # Add references to extern mods via aliases (standard library crates)
+                menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
+                menus.extend(std_lib_links(urls))
+            elif 'location' in alias:
+                # Add references to extern mods via aliases (unknown local crates)
+                menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
+            elif 'file_name' in mod:
+                menus.append(jump_to_target_from_decl(jump_to_module_definition_menu, self.tree, mod))
+            else:
+                if 'file_name' in mod and 'def_file' in mod and mod['def_file'] == mod['file_name']:
+                    menus.append(jump_to_target_from_decl(jump_to_definition_menu, self.tree, mod))
+                else:
+                    menus.append(jump_to_module_definition_menu(self.tree, mod['def_file'], 1))
+                    menus.append(jump_to_target_from_decl(jump_to_module_declaration_menu, self.tree, mod))
+            menus.extend(module_menu_generic(mod, self.tree))
+        elif typ:
+            menus = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, typ)]
+            menus.extend(type_menu_generic(typ, self.tree))
+        return menus
 
 
-# TODO next: turn to class
-def module_alias_menu(tree, datum, tree_config):
-    # Add straightforward aliases to modules
-    if datum['refid'] and datum['refid'] in tree.data.modules:
-        mod = tree.data.modules[datum['refid']]
-        if mod['name'] != datum['name']:
-            # Add module aliases. 'use' without an explicit alias and without any wildcards,
-            # etc. introduces an implicit alias for the module. E.g, |use a::b::c|
-            # introduces an alias |c|. In these cases, we make the alias transparent -
-            # there is no link for the alias, but we add the alias menu stuff to the
-            # module ref.
-            makers = [jump_to_module_definition_menu(tree_config, mod['def_file'], 1),
-                      find_references_menu(tree_config, datum['qualname'], "module-alias-ref", "alias")]
-            return Ref(makers)
+class ModuleAliasRef(_RustRef):
+    def __init__(self, tree_index, datum, tree_config):
+        super(ModuleAliasRef, self).__init__(tree_index, None, tree_config)
 
-    # 'module' aliases to types
-    if datum['refid'] and datum['refid'] in tree.data.types:
-        typ = tree.data.types[datum['refid']]
-        if typ['name'] != datum['name']:
-            makers = [jump_to_target_from_decl(jump_to_type_declaration_menu, tree_config, typ),
-                      find_references_menu(tree_config, datum['qualname'], "type-ref", "alias")]
-            return Ref(makers)
+        datum_keys = ['qualname']
+        secondary_keys = ['file_name', 'file_line', 'def_file']
 
-    # 'module' aliases to variables
-    if datum['refid'] and datum['refid'] in tree.data.variables:
-        var = tree.data.variables[datum['refid']]
-        if var['name'] != datum['name']:
-            makers = [jump_to_target_from_decl(jump_to_variable_declaration_menu, tree_config, var),
-                      find_references_menu(tree_config, datum['qualname'], "var-ref", "alias")]
-            return Ref(makers)
+        # menu_data will be [datum, kind, aliased_datum], where kind is of
+        # {'modules', 'types', 'variables', 'functions', 'crate','urls'}, describing the target.
+        kind, aliased_datum = None, None
 
-    # 'module' aliases to functions
-    if datum['refid'] and datum['refid'] in tree.data.functions:
-        fn = tree.data.functions[datum['refid']]
-        if fn['name'] != datum['name']:
-            makers = [jump_to_target_from_decl(jump_to_function_declaration_menu, tree_config, fn),
-                      find_references_menu(tree_config, datum['qualname'], "function-ref", "alias")]
-            return Ref(makers)
+        # 'module' aliases to modules, types, variables, and functions
+        for table_name in ['modules', 'types', 'variables', 'functions']:
+            # Pull out each instance var from the tree's index data table and see if it contains
+            #  this refid.
+            index_table = getattr(tree_index.data, table_name)
+            if datum['refid'] and datum['refid'] in index_table:
+                secondary_datum = index_table[datum['refid']]
+                if secondary_datum['name'] != datum['name']:
+                    kind, aliased_datum = index_table, trim_dict(secondary_datum, secondary_keys)
 
-    # extern crates to known local crates
-    if 'location' in datum and datum['location'] and datum['location'] in tree.crates_by_name:
-        crate = tree.crates_by_name[datum['location']]
-        makers = [jump_to_crate_menu(tree_config, crate['file_name'], 1),
-                  find_references_menu(tree_config, datum['qualname'], "module-alias-ref", "alias")]
-        return Ref(makers)
+        # extern crates to known local crates
+        if 'location' in datum and datum['location'] and datum['location'] in tree_index.crates_by_name:
+            kind, aliased_datum = 'crate', trim_dict(tree_index.crates_by_name[datum['location']], secondary_keys)
 
-    # extern crates to standard library crates
-    if 'location' in datum and datum['location'] and datum['location'] in tree.locations:
-        urls = tree.locations[datum['location']]
-        menu = [find_references_menu(tree_config, datum['qualname'], "module-alias-ref", "alias")]
-        std_lib_links(menu, urls)
-        return Ref(menu)
+        # extern crates to standard library crates
+        if 'location' in datum and datum['location'] and datum['location'] in tree_index.locations:
+            kind, aliased_datum = 'urls', tree_index.locations[datum['location']]
 
-    # other references to standard library items
-    if datum['refid'] in tree.data.unknowns:
-        # FIXME We could probably do better and link to the precise type or static in docs etc., rather than just the crate
-        urls = tree.locations[tree.data.unknowns[datum['refid']]['crate']]
-        menu = [find_references_menu(tree_config, datum['qualname'], "module-alias-ref", "alias")]
-        std_lib_links(menu, urls)
-        return Ref(menu)
+        # other references to standard library items
+        if datum['refid'] in tree_index.data.unknowns:
+            # FIXME We could probably do better and link to the precise type or static in docs etc., rather than just the crate
+            kind, aliased_datum = 'urls', tree_index.locations[tree_index.data.unknowns[datum['refid']]['crate']]
 
-    # extern mods to unknown local crates
-    menu = [find_references_menu(tree_config, datum['qualname'], "module-alias-ref", "alias")]
-    return Ref(menu)
+        self.menu_data = (trim_dict(datum, datum_keys), kind, aliased_datum)
+
+    def menu_items(self):
+        datum, kind, aliased_datum = self.menu_data
+        if not kind:
+            return [find_references_menu(self.tree, datum['qualname'], "module-alias-ref", "alias")]
+        elif kind == 'modules':
+            return [jump_to_module_definition_menu(self.tree, aliased_datum['def_file'], 1),
+                    find_references_menu(aliased_datum, datum['qualname'], "module-alias-ref", "alias")]
+        elif kind == 'types':
+            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
+                    find_references_menu(self.tree, datum['qualname'], "type-ref", "alias")]
+        elif kind == 'variables':
+            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
+                    find_references_menu(self.tree, datum['qualname'], "var-ref", "alias")]
+        elif kind == 'functions':
+            return [jump_to_target_from_decl(jump_to_type_declaration_menu, self.tree, aliased_datum),
+                    find_references_menu(self.tree, datum['qualname'], "function-ref", "alias")]
+        elif kind == 'crate':
+            return [jump_to_crate_menu(self.tree, aliased_datum['file_name'], 1),
+                    find_references_menu(self.tree, datum['qualname'], "module-alias-ref", "alias")]
+        elif kind == 'urls':
+            return std_lib_links(aliased_datum)
 
 
 class UnknownRef(_RustRef):
