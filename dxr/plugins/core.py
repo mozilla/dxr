@@ -395,8 +395,8 @@ class FilterAggregator(Filter):
 
 
 class IdFilter(FilterAggregator):
-    """Filter aggregator for id: queries, groups together the results of all filters that find
-    declarations and definitions of names."""
+    """Filter aggregator for id: queries, groups together the results of all
+    filters that find declarations and definitions of names."""
 
     name = 'id'
     domain = LINE
@@ -408,8 +408,8 @@ class IdFilter(FilterAggregator):
 
 
 class RefFilter(FilterAggregator):
-    """Filter aggregator for ref: queries, grouping together the results of all filters that find
-    references to names."""
+    """Filter aggregator for ref: queries, grouping together the results of
+    all filters that find references to names."""
 
     name = 'ref'
     domain = LINE
