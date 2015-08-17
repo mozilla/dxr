@@ -57,34 +57,28 @@ class FileToIndex(indexers.FileToIndex):
         return self.all_needles()
 
     def refs(self):
-        def make_menu(table_name, ref_maker):
+        classes_and_tables = [(refs.FunctionRef, 'functions'),
+                              (refs.FunctionRefRef, 'function_refs'),
+                              (refs.VariableRef, 'variables'),
+                              (refs.VariableRefRef, 'variable_refs'),
+                              (refs.TypeRef, 'types'),
+                              (refs.TypeRefRef, 'type_refs'),
+                              (refs.ModuleRef, 'modules'),
+                              (refs.ModuleRefRef, 'module_refs'),
+                              (refs.ModuleAliasRef, 'module_aliases'),
+                              (refs.UnknownRef, 'unknown_refs')]
+        # Note there is no ref for impls since both the trait and struct parts
+        # are covered as refs already. If you add this, then you will get overlapping
+        # extents, which is bad. We have impl_defs in the db because we do want
+        # to jump _to_ them.
+
+        for make_ref, table_name in classes_and_tables:
             for datum in self.tree_index.by_file(table_name, self.path):
-                ref = ref_maker(self.tree, datum, tree_index=self.tree_index)
+                ref = make_ref(self.tree, datum, tree_index=self.tree_index)
                 if ref and 'extent_start' in datum:
                     yield (int(datum['extent_start']),
                            int(datum['extent_end']),
                            ref)
-
-        for m in make_menu('functions', refs.FunctionRef):
-            yield m
-        for m in make_menu('function_refs', refs.FunctionRefRef):
-            yield m
-        for m in make_menu('variables', refs.VariableRef):
-            yield m
-        for m in make_menu('variable_refs', refs.VariableRefRef):
-            yield m
-        for m in make_menu('types', refs.TypeRef):
-            yield m
-        for m in make_menu('type_refs', refs.TypeRefRef):
-            yield m
-        for m in make_menu('modules', refs.ModuleRef):
-            yield m
-        for m in make_menu('module_refs', refs.ModuleRefRef):
-            yield m
-        for m in make_menu('module_aliases', refs.ModuleAliasRef):
-            yield m
-        for m in make_menu('unknown_refs', refs.UnknownRef):
-            yield m
 
         # Note there is no ref for impls since both the trait and struct parts
         # are covered as refs already. If you add this, then you will get overlapping
