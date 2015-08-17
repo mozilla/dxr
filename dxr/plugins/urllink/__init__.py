@@ -5,7 +5,7 @@ from dxr.lines import Ref
 
 
 # From http://stackoverflow.com/a/1547940
-url_re = re.compile("https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+")
+url_re = re.compile(r"https?://[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+\.[A-Za-z0-9\-\._~:\/\?#[\]@!\$&'()*\+,;=%]+")
 
 
 class FileToIndex(dxr.indexers.FileToIndex):
@@ -20,6 +20,6 @@ class UrlRef(Ref):
 
     def menu_items(self):
         yield {'html': 'Follow link',
-               'title': 'Visit %s' % self.data,
-               'href': self.data,
+               'title': 'Visit %s' % self.menu_data,
+               'href': self.menu_data,
                'icon': 'external_link'}
