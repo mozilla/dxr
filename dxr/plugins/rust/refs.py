@@ -58,7 +58,7 @@ class FunctionRef(_RustRef):
         datum, decl, count = self.menu_data
         menus = function_menu_generic(datum, self.tree)
         if decl:
-            menus.append(jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, decl))
+            menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, decl))
         elif count:
             menus.append(trait_impl_menu(self.tree, datum['qualname'], count))
         return menus
@@ -96,13 +96,13 @@ class FunctionRefRef(_RustRef):
         fn_def, fn_decl = self.menu_data
         menus = []
         if fn_def:
-            menus.append(jump_to_target_from_decl(jump_to_definition_menu, self.tree, fn_def))
+            menus.insert(0, jump_to_target_from_decl(jump_to_definition_menu, self.tree, fn_def))
             if fn_decl and (fn_def['file_name'] != fn_decl['file_name'] or fn_def['file_line'] != fn_decl['file_line']):
-                menus.append(jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
+                menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
             menus.extend(function_menu_generic(fn_def, self.tree))
         elif fn_decl:
             menus = function_menu_generic(fn_decl, self.tree)
-            menus.append(jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
+            menus.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu, self.tree, fn_decl))
         return menus
 
 
@@ -228,13 +228,13 @@ class ModuleRefRef(_RustRef):
                 # Add references to extern mods via aliases (unknown local crates)
                 menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
             elif 'file_name' in mod:
-                menus.append(jump_to_target_from_decl(jump_to_module_definition_menu, self.tree, mod))
+                menus.insert(0, jump_to_target_from_decl(jump_to_module_definition_menu, self.tree, mod))
             else:
                 if 'file_name' in mod and 'def_file' in mod and mod['def_file'] == mod['file_name']:
-                    menus.append(jump_to_target_from_decl(jump_to_definition_menu, self.tree, mod))
+                    menus.insert(0, jump_to_target_from_decl(jump_to_definition_menu, self.tree, mod))
                 else:
-                    menus.append(jump_to_module_definition_menu(self.tree, mod['def_file'], 1))
-                    menus.append(jump_to_target_from_decl(jump_to_module_declaration_menu, self.tree, mod))
+                    menus.insert(0, jump_to_target_from_decl(jump_to_module_declaration_menu, self.tree, mod))
+                    menus.insert(0, jump_to_module_definition_menu(self.tree, mod['def_file'], 1))
             menus.extend(module_menu_generic(mod, self.tree))
         elif typ:
             menus = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, typ)]
