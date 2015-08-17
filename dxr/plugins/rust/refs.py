@@ -23,8 +23,17 @@ def trim_dict(dictionary, keys):
 class _RustRef(Ref):
     plugin = 'rust'
 
-    def __init__(self, tree_index, menu_data, tree_config, hover=None, qualname=None, qualname_hash=None):
-        super(_RustRef, self).__init__(tree_config, menu_data, hover, qualname, qualname_hash)
+    def __init__(self, tree_config, menu_data, tree_index=None, hover=None, qualname=None, qualname_hash=None):
+        super(_RustRef, self).__init__(tree_config, None, hover, qualname, qualname_hash)
+        if tree_index:
+            # If we are at index time, then prepare menu_data for ES insertion.
+            # Otherwise we know we already have menu_data populated from previous preparation.
+            self.menu_data = self.prepare_menu_data(tree_index, menu_data)
+        else:
+            self.menu_data = menu_data
+
+    def prepare_menu_data(self, tree_index, datum):
+        raise NotImplementedError
 
 
 class _KeysFromDatum(_RustRef):
@@ -33,25 +42,24 @@ class _KeysFromDatum(_RustRef):
     :classvar keys: a list of dict keys which will be kept in the data to pass to ES.
     """
 
-    def __init__(self, tree_index, datum, tree_config, hover=None, qualname=None, qualname_hash=None):
-        super(_KeysFromDatum, self).__init__(tree_index, None, tree_config, hover, qualname, qualname_hash)
-        self.menu_data = trim_dict(datum, self.keys)
+    def __init__(self, tree_config, datum, tree_index=None, hover=None, qualname=None, qualname_hash=None):
+        super(_KeysFromDatum, self).__init__(tree_config, datum, tree_index, hover, qualname, qualname_hash)
+
+    def prepare_menu_data(self, tree_index, datum):
+        return trim_dict(datum, self.keys)
 
 
 class FunctionRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(FunctionRef, self).__init__(tree_index, None, tree_config)
+    def prepare_menu_data(self, tree_index, datum):
         if 'declid' in datum and datum['declid'] in tree_index.data.functions:
             # It's an implementation; find the decl:
             decl = tree_index.data.functions[datum['declid']]
-            self.menu_data = [trim_dict(datum, ['qualname']),
-                              trim_dict(decl, ['file_name', 'file_line']),
-                              0]
+            return [trim_dict(datum, ['qualname']), trim_dict(decl, ['file_name', 'file_line']), 0]
         else:
             # It's a decl; find implementations:
             impls = tree_index.data.index('functions', 'declid')
             count = len(impls[datum['id']]) if datum['id'] in impls else 0
-            self.menu_data = [trim_dict(datum, ['qualname']), None, count]
+            return [trim_dict(datum, ['qualname']), None, count]
 
     def menu_items(self):
         # decl is only defined if datum is not a decl (i.e. we're looking at an impl).
@@ -67,9 +75,7 @@ class FunctionRef(_RustRef):
 class FunctionRefRef(_RustRef):
     """A Ref with menus suitable to a function reference."""
 
-    def __init__(self, tree_index, datum, tree_config):
-        super(FunctionRefRef, self).__init__(tree_index, None, tree_config)
-
+    def prepare_menu_data(self, tree_index, datum):
         fn_def = None
         fn_decl = None
         if 'refid' in datum and datum['refid'] and datum['refid'] in tree_index.data.functions:
@@ -90,7 +96,7 @@ class FunctionRefRef(_RustRef):
         self.hover = name
 
         data_keys = ['file_name', 'file_line', 'qualname']
-        self.menu_items = [trim_dict(fn_def, data_keys), trim_dict(fn_decl, data_keys)]
+        return [trim_dict(fn_def, data_keys), trim_dict(fn_decl, data_keys)]
 
     def menu_items(self):
         fn_def, fn_decl = self.menu_data
@@ -109,9 +115,10 @@ class FunctionRefRef(_RustRef):
 class VariableRef(_KeysFromDatum):
     keys = ['type', 'qualname']
 
-    def __init__(self, tree_index, datum, tree_config):
-        super(VariableRef, self).__init__(tree_index, datum, tree_config)
-        self.hover = truncate_value("", datum.get('type'))
+    def __init__(self, tree_config, datum, tree_index=None, hover=None, qualname=None, qualname_hash=None):
+        super(VariableRef, self).__init__(tree_config, datum, tree_index,
+                                          truncate_value("", datum.get('type')), qualname,
+                                          qualname_hash)
 
     def menu_items(self):
         menu = variable_menu_generic(self.menu_data, self.tree)
@@ -123,8 +130,7 @@ class VariableRef(_KeysFromDatum):
 
 
 class VariableRefRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(VariableRefRef, self).__init__(tree_index, None, tree_config)
+    def prepare_menu_data(self, tree_index, datum):
         if datum['refid'] and datum['refid'] in tree_index.data.variables:
             var = tree_index.data.variables[datum['refid']]
             typ = None
@@ -133,15 +139,16 @@ class VariableRefRef(_RustRef):
             else:
                 warn("no type for variable ref %s" % (var['qualname'],))
             self.hover = truncate_value(typ, var['value'])
-            self.menu_data = trim_dict(datum, ['file_line', 'file_name', 'qualname'])
+            return trim_dict(datum, ['file_line', 'file_name', 'qualname'])
         # TODO what is the culprit here?
         # print "variable ref missing def"
 
     def menu_items(self):
         if self.menu_data:
-            makers = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
-            makers.extend(variable_menu_generic(self.menu_data, self.tree))
-            return makers
+            menus = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
+            menus.extend(variable_menu_generic(self.menu_data, self.tree))
+            return menus
+        return []
 
 
 class TypeRef(_KeysFromDatum):
@@ -152,9 +159,8 @@ class TypeRef(_KeysFromDatum):
 
 
 class TypeRefRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(TypeRefRef, self).__init__(tree_index, None, tree_config)
-        if datum['refid'] and datum['refid'] in tree_index.data.types:
+    def prepare_menu_data(self, tree_index, datum):
+        if datum['refid'] and datum['refid'] in tree_index.data.types and 'kind' in datum:
             typ = tree_index.data.types[datum['refid']]
             title = None
             if 'value' in typ:
@@ -162,13 +168,13 @@ class TypeRefRef(_RustRef):
             else:
                 warn('no value for %s %s' % (typ['kind'], typ['qualname']))
             self.hover = truncate_value("", title)
-            self.menu_data = trim_dict(datum, ['file_line', 'file_name', 'qualname', 'kind'])
+            return trim_dict(datum, ['file_line', 'file_name', 'qualname', 'kind'])
 
     def menu_items(self):
         if self.menu_data:
-            makers = [jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
-            makers.extend(type_menu_generic(self.menu_data, self.tree))
-            return makers
+            return ([jump_to_target_from_decl(jump_to_definition_menu, self.tree, self.menu_data)]
+                    + type_menu_generic(self.menu_data, self.tree))
+        return []
 
 
 class ModuleRef(_KeysFromDatum):
@@ -180,8 +186,7 @@ class ModuleRef(_KeysFromDatum):
 
 
 class ModuleRefRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(ModuleRefRef, self).__init__(tree_index, None, tree_config)
+    def prepare_menu_data(self, tree_index, datum):
 
         mod, alias, crate, urls, typ = [None]*5
         if datum['refid']:
@@ -205,7 +210,7 @@ class ModuleRefRef(_RustRef):
             else:
                 warn('no value for %s %s' % (typ['kind'], typ['qualname']))
 
-        self.menu_data = (datum, mod, alias, crate, urls, typ)
+        return datum, mod, alias, crate, urls, typ
 
     def menu_items(self):
         # self.menu_data comes in the way of [datum, mod, alias, secondary_datum, type_datum],
@@ -224,7 +229,7 @@ class ModuleRefRef(_RustRef):
                 # Add references to extern mods via aliases (standard library crates)
                 menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
                 menus.extend(std_lib_links(urls))
-            elif 'location' in alias:
+            elif alias and 'location' in alias:
                 # Add references to extern mods via aliases (unknown local crates)
                 menus = [find_references_menu(self.tree, alias['qualname'], "module-alias-ref", "alias")]
             elif 'file_name' in mod:
@@ -243,8 +248,7 @@ class ModuleRefRef(_RustRef):
 
 
 class ModuleAliasRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(ModuleAliasRef, self).__init__(tree_index, None, tree_config)
+    def prepare_menu_data(self, tree_index, datum):
 
         datum_keys = ['qualname']
         secondary_keys = ['file_name', 'file_line', 'def_file']
@@ -276,7 +280,7 @@ class ModuleAliasRef(_RustRef):
             # FIXME We could probably do better and link to the precise type or static in docs etc., rather than just the crate
             kind, aliased_datum = 'urls', tree_index.locations[tree_index.data.unknowns[datum['refid']]['crate']]
 
-        self.menu_data = (trim_dict(datum, datum_keys), kind, aliased_datum)
+        return trim_dict(datum, datum_keys), kind, aliased_datum
 
     def menu_items(self):
         datum, kind, aliased_datum = self.menu_data
@@ -299,17 +303,17 @@ class ModuleAliasRef(_RustRef):
                     find_references_menu(self.tree, datum['qualname'], "module-alias-ref", "alias")]
         elif kind == 'urls':
             return std_lib_links(aliased_datum)
+        return []
 
 
 class UnknownRef(_RustRef):
-    def __init__(self, tree_index, datum, tree_config):
-        super(UnknownRef, self).__init__(tree_index, None, tree_config)
+    def prepare_menu_data(self, tree_index, datum):
         if datum['refid'] and datum['refid'] in tree_index.data.unknowns:
             unknown = tree_index.data.unknowns[datum['refid']]
             urls = None
             if unknown['crate'] in tree_index.locations:
                 urls = tree_index.locations[unknown['crate']]
-            self.menu_data = [trim_dict(datum, ['refid']), urls]
+            return [trim_dict(datum, ['refid']), urls]
         else:
             warn("unknown unknown!")
 

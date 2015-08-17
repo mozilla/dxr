@@ -94,7 +94,7 @@ def function_menu_generic(datum, tree_config):
     return menus
 
 
-def jump_to_target_menu(target_name, tree_config, path, row):
+def jump_to_target_menu(tree_config, path, row, target_name=None):
     """Make a menu that jumps straight to a specific line of a file."""
 
     return {'html': 'Jump to %s' % target_name,

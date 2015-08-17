@@ -60,7 +60,7 @@ class FileToIndex(indexers.FileToIndex):
     def refs(self):
         def make_menu(table_name, ref_maker):
             for datum in self.tree_index.by_file(table_name, self.path):
-                ref = ref_maker(self.tree_index, datum, self.tree)
+                ref = ref_maker(self.tree, datum, tree_index=self.tree_index)
                 if ref and 'extent_start' in datum:
                     yield (int(datum['extent_start']),
                            int(datum['extent_end']),
