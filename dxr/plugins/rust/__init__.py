@@ -80,11 +80,6 @@ class FileToIndex(indexers.FileToIndex):
                            int(datum['extent_end']),
                            ref)
 
-        # Note there is no ref for impls since both the trait and struct parts
-        # are covered as refs already. If you add this, then you will get overlapping
-        # extents, which is bad. We have impl_defs in the db because we do want
-        # to jump _to_ them.
-
 
     def annotations_by_line(self):
         # FIXME(#4) links in the lefthand margin (warnings, etc.)
