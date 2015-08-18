@@ -171,7 +171,7 @@ class TypeRef(_KeysFromDatum):
 
 class TypeRefRef(_RustRef):
     def prepare_menu_data(self, tree_index, datum):
-        if datum['refid'] and datum['refid'] in tree_index.data.types and 'kind' in datum:
+        if datum['refid'] and datum['refid'] in tree_index.data.types:
             typ = tree_index.data.types[datum['refid']]
             title = None
             if 'value' in typ:
@@ -179,13 +179,14 @@ class TypeRefRef(_RustRef):
             else:
                 warn('no value for %s %s' % (typ['kind'], typ['qualname']))
             self.hover = truncate_value("", title)
-            return trim_dict(datum, ['file_line', 'file_name', 'qualname', 'kind'])
+            return trim_dict(typ, ['file_line', 'file_name', 'qualname', 'kind'])
 
     def menu_items(self):
+        menu = []
         if self.menu_data:
-            return ([jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, self.menu_data)]
-                    + generic_type_menu(self.menu_data, self.tree))
-        return []
+            menu.append(jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, self.menu_data))
+            menu.extend(generic_type_menu(self.menu_data, self.tree))
+        return menu
 
 
 class ModuleRef(_KeysFromDatum):
