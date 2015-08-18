@@ -17,7 +17,6 @@ def test_enabled_star():
 
         [some_tree]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -68,7 +67,6 @@ def test_enabled_plugins():
         [mozilla-central]
         enabled_plugins = urllink   omniglot
         source_folder = /some/path
-        object_folder = /some/path
         """)
     eq_([p.name for p in config.trees['mozilla-central'].enabled_plugins],
         ['core', 'urllink', 'omniglot'])
@@ -86,7 +84,6 @@ def test_plugin_section_required():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
             """)
     except ConfigError as exc:
         eq_(exc.sections, ['mozilla-central'])
@@ -103,7 +100,6 @@ def test_deep_attrs():
 
         [mozilla-central]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -122,7 +118,6 @@ def test_multi_word_strings():
 
         [mozilla-central]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -147,7 +142,6 @@ def test_unknown_options():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
 
                 [[buglink]]
                 url = http://example.com/
@@ -170,7 +164,6 @@ def test_and_error():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
             """)
     except ConfigError as exc:
         eq_(exc.sections, ['DXR'])
