@@ -13,11 +13,13 @@ from dxr.plugins.rust.menu import (
 
 
 def trim_dict(dictionary, keys):
-    """Return a new dict with given keys set from dictionary arg, or None if dictionary is falsy.
+    """Return a new dict with given keys set from dictionary arg, or None if
+    dictionary is falsy.
 
-    A key listed in keys but not in the dictionary will not be set in the returned dict.
+    A key listed in keys but not in the dictionary will not be set in the
+    returned dict.
+
     """
-
     if dictionary:
         return dict((key, dictionary[key]) for key in keys if key in dictionary)
 
@@ -28,8 +30,9 @@ class _RustRef(Ref):
     def __init__(self, tree_config, menu_data, tree_index=None, hover=None, qualname=None, qualname_hash=None):
         super(_RustRef, self).__init__(tree_config, None, hover, qualname, qualname_hash)
         if tree_index:
-            # If we are at index time, then prepare menu_data for ES insertion.
-            # Otherwise we know we already have menu_data populated from previous preparation.
+            # If we are at index time, then prepare menu_data for ES
+            # insertion. Otherwise we know we already have menu_data populated
+            # from previous preparation.
             self.menu_data = self.prepare_menu_data(tree_index, menu_data)
         else:
             self.menu_data = menu_data
@@ -37,20 +40,21 @@ class _RustRef(Ref):
     def prepare_menu_data(self, tree_index, datum):
         """Return necessary data for insertion to ES and later retrieval via menu_items.
 
-        This function should handle any logic that involves tree_index, as it's
-        an index-time construct. Data can be any shape (dicts, lists, etc.) as long as
-        menu_items knows what it's dealing with.
-        """
+        This function should handle any logic that involves tree_index, as
+        it's an index-time construct. Data can be any shape (dicts, lists,
+        etc.) as long as menu_items knows what it's dealing with.
 
+        """
         raise NotImplementedError
 
 
 class _KeysFromDatum(_RustRef):
     """A Ref superclass that only holds onto certain keys of a datum dict.
 
-    :classvar keys: a list of dict keys which will be kept in the data to pass to ES.
-    """
+    :classvar keys: a list of dict keys which will be kept in the data to pass
+    :to ES.
 
+    """
     def __init__(self, tree_config, datum, tree_index=None, hover=None, qualname=None, qualname_hash=None):
         super(_KeysFromDatum, self).__init__(tree_config, datum, tree_index, hover, qualname, qualname_hash)
 
@@ -223,8 +227,9 @@ class ModuleRefRef(_RustRef):
         return datum, mod, alias, crate, urls, typ
 
     def menu_items(self):
-        # self.menu_data comes in the way of [datum, mod, alias, secondary_datum, type_datum],
-        # where (mod, alias, secondary_datum) and type_datum are mutually exclusive.
+        # self.menu_data comes in the way of [datum, mod, alias,
+        # secondary_datum, type_datum], where (mod, alias, secondary_datum)
+        # and type_datum are mutually exclusive.
         datum, mod, alias, crate, urls, typ = self.menu_data
         menu = []
         if mod:
