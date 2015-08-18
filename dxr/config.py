@@ -297,8 +297,9 @@ def plugin_list(value):
 
     """
     if not isinstance(value, basestring):
+        # Probably can't happen
         raise SchemaError('"%s" is neither * nor a whitespace-delimited list '
-                          'of plugin names.' % (value,))
+                          'of plugin names.' % (value,), None)
 
     plugins = all_plugins_but_core()
     names = value.strip().split()
@@ -311,7 +312,8 @@ def plugin_list(value):
         return ret
     except KeyError:
         raise SchemaError('Never heard of plugin "%s". I\'ve heard of '
-                          'these: %s.' % (name, ', '.join(plugins.keys())))
+                          'these: %s.' % (name, ', '.join(plugins.keys())),
+                          None)
 Plugins = Use(plugin_list)
 
 

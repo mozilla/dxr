@@ -170,3 +170,20 @@ def test_and_error():
         ok_('non-negative' in exc.message)
     else:
         self.fail("Didn't raise ConfigError")
+
+
+def test_unknown_plugin():
+    """Make sure we throw the right error when a plugin is unknown."""
+    try:
+        config = Config("""
+            [DXR]
+
+            [mozilla-central]
+            enabled_plugins = wonko
+            source_folder = /some/path
+            """)
+    except ConfigError as exc:
+        ok_('Never heard of plugin "wonko"' in str(exc))
+    else:
+        self.fail("An unknown plugin name passed to enabled_plugins didn't "
+                  "raise ConfigError")
