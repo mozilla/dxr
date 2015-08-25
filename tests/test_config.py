@@ -17,7 +17,6 @@ def test_enabled_star():
 
         [some_tree]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -28,7 +27,11 @@ def test_enabled_star():
             [[xpidl]]
             header_path = /somewhere
         """)
-    ok_('urllink' in (p.name for p in config.trees['some_tree'].enabled_plugins))
+    enabled_plugins = config.trees['some_tree'].enabled_plugins
+    plugin_names = [p.name for p in enabled_plugins]
+    ok_('urllink' in plugin_names)
+    eq_('core', plugin_names[0])
+    ok_('core' not in plugin_names[1:])
 
 
 def test_es_index():
@@ -64,7 +67,6 @@ def test_enabled_plugins():
         [mozilla-central]
         enabled_plugins = urllink   omniglot
         source_folder = /some/path
-        object_folder = /some/path
         """)
     eq_([p.name for p in config.trees['mozilla-central'].enabled_plugins],
         ['core', 'urllink', 'omniglot'])
@@ -82,7 +84,6 @@ def test_plugin_section_required():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
             """)
     except ConfigError as exc:
         eq_(exc.sections, ['mozilla-central'])
@@ -99,7 +100,6 @@ def test_deep_attrs():
 
         [mozilla-central]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -118,7 +118,6 @@ def test_multi_word_strings():
 
         [mozilla-central]
         source_folder = /some/path
-        object_folder = /some/path
 
             [[buglink]]
             url = http://example.com/
@@ -143,7 +142,6 @@ def test_unknown_options():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
 
                 [[buglink]]
                 url = http://example.com/
@@ -166,10 +164,26 @@ def test_and_error():
 
             [mozilla-central]
             source_folder = /some/path
-            object_folder = /some/path
             """)
     except ConfigError as exc:
         eq_(exc.sections, ['DXR'])
         ok_('non-negative' in exc.message)
     else:
         self.fail("Didn't raise ConfigError")
+
+
+def test_unknown_plugin():
+    """Make sure we throw the right error when a plugin is unknown."""
+    try:
+        config = Config("""
+            [DXR]
+
+            [mozilla-central]
+            enabled_plugins = wonko
+            source_folder = /some/path
+            """)
+    except ConfigError as exc:
+        ok_('Never heard of plugin "wonko"' in str(exc))
+    else:
+        self.fail("An unknown plugin name passed to enabled_plugins didn't "
+                  "raise ConfigError")

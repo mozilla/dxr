@@ -425,8 +425,8 @@ def highlight(content, extents):
 
 
 def fix_extents_overlap(extents):
-    """Return a sorted list of extents whose effect is to highlight the same
-    characters the passed-in ones did but without overlapping each other.
+    """Return a sorted iterable of extents whose effect is to highlight the
+    same characters the passed-in ones did but without overlapping each other.
 
     :arg extents: A sorted iterable of (start, end) extent tuples
 

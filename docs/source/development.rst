@@ -183,7 +183,7 @@ If you have trouble, make sure you didn't mistranscribe any colons or
 periods.
 
 To omit the often distracting elasticsearch logs that nose typically presents
-when a test fails, add the ``--nologcapture``, flag.
+when a test fails, add the ``--nologcapture`` flag.
 
 
 .. _writing-plugins:

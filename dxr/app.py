@@ -25,7 +25,7 @@ from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
 from dxr.mime import icon, is_image, is_text
-from dxr.plugins import plugins_named, all_plugins
+from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
@@ -384,13 +384,12 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
         # file_to_skim class.
         skimmers = [plugin.file_to_skim(path,
                                         contents,
-                                        name,
+                                        plugin.name,
                                         tree_config,
                                         file_doc,
                                         line_docs)
-                    for name, plugin in all_plugins().iteritems()
-                    if plugin in tree_config.enabled_plugins
-                    and plugin.file_to_skim]
+                    for plugin in tree_config.enabled_plugins
+                    if plugin.file_to_skim]
         skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
         index_refs = (Ref.es_to_triple(ref, tree_config) for ref in
                       chain.from_iterable(doc.get('refs', [])
