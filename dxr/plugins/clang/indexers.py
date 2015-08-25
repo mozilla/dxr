@@ -80,6 +80,7 @@ class FileToIndex(FileToIndexBase):
         # from_condensed() methods:
         classes_and_getters = [
             (FunctionRef, [getter_or_empty('function'),
+                           kind_getter('decldef', 'function'),
                            # Refs are not structured much like functions, but
                            # they have a qualname key, which is all FunctionRef
                            # requires, so we can just chain kind_getters
@@ -89,7 +90,7 @@ class FileToIndex(FileToIndexBase):
                            kind_getter('ref', 'variable')]),
             (TypeRef, [getter_or_empty('type'),
                        kind_getter('ref', 'type'),
-                       getter_or_empty('decldef')]),
+                       not_kind_getter('decldef', 'function')]),
             (TypedefRef, [getter_or_empty('typedef'),
                           kind_getter('ref', 'typedef')]),
             (NamespaceRef, [getter_or_empty('namespace'),
@@ -173,6 +174,13 @@ class FileToIndex(FileToIndexBase):
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
     return (ref for ref in condensed.get(field, []) if ref.get('kind') == kind)
+
+
+@autocurry
+def not_kind_getter(field, kind, condensed):
+    """Reach into a field and filter out those with given kind."""
+    return (ref for ref in condensed.get(field, []) if ref.get('kind') != kind)
+
 
 
 class TreeToIndex(TreeToIndexBase):
