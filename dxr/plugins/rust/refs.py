@@ -72,16 +72,16 @@ class FunctionRef(_RustRef):
             # It's a decl; find implementations:
             impls = tree_index.data.index('functions', 'declid')
             count = len(impls[datum['id']]) if datum['id'] in impls else 0
-            return [trim_dict(datum, ['qualname']), None, count]
+            return [datum['qualname'], None, count]
 
     def menu_items(self):
         # decl is only defined if datum is not a decl (i.e. we're looking at an impl).
-        datum, decl, count = self.menu_data
-        menu = generic_function_menu(datum, self.tree)
+        qualname, decl, count = self.menu_data
+        menu = generic_function_menu(qualname, self.tree)
         if decl:
             menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, decl))
         elif count:
-            menu.append(trait_impl_menu_item(self.tree, datum['qualname'], count))
+            menu.append(trait_impl_menu_item(self.tree, qualname, count))
         return menu
 
 
@@ -116,9 +116,9 @@ class FunctionRefRef(_RustRef):
             menu.insert(0, jump_to_target_from_decl(jump_to_definition_menu_item, self.tree, fn_def))
             if fn_decl and (fn_def['file_name'] != fn_decl['file_name'] or fn_def['file_line'] != fn_decl['file_line']):
                 menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, fn_decl))
-            menu.extend(generic_function_menu(fn_def, self.tree))
+            menu.extend(generic_function_menu(fn_def['qualname'], self.tree))
         elif fn_decl:
-            menu = generic_function_menu(fn_decl, self.tree)
+            menu = generic_function_menu(fn_decl['qualname'], self.tree)
             menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, fn_decl))
         return menu
 

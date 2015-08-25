@@ -87,11 +87,11 @@ def call_menu(qualname, tree):
              'icon': 'method'}]
 
 
-def generic_function_menu(datum, tree_config):
+def generic_function_menu(qualname, tree_config):
     """Return menu makers shared by function def/decls and function refs."""
 
-    menu = call_menu(datum['qualname'], tree_config)
-    menu.append(find_references_menu_item(tree_config, datum['qualname'], "function-ref", "function"))
+    menu = call_menu(qualname, tree_config)
+    menu.append(find_references_menu_item(tree_config, qualname, "function-ref", "function"))
     return menu
 
 
