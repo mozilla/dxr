@@ -166,10 +166,7 @@ $(function() {
     });
 
     /**
-     * Returns the full Ajax URL for search and explicitly sets
-     * redirect to false and format to json to ensure we never
-     * get a HTML response or redirect from an Ajax call, even
-     * when using the back button.
+     * Return the full Ajax URL for search.
      *
      * @param {string} query - The query string
      * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
@@ -399,7 +396,9 @@ $(function() {
                     displayedRequestNumber = myRequestNumber;
                     populateResults(data, appendResults);
                     var pushHistory = function () {
-                        history.pushState({}, '', queryString);
+                        // Strip off offset= and limit= when updating.
+                        var displayURL = queryString.replace(/&?offset=\d+/, '').replace(/&?limit=\d+/, '');
+                        history.pushState({}, '', displayURL);
                     };
                     if (redirect)
                         // Then the enter key was pressed and we want to update history state now.
