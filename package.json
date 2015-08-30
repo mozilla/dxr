@@ -8,7 +8,9 @@
   },
   "engine": "node >= 0.8.x",
   "dependencies": {
-    "lockdown": "0.0.5"
+    "lockdown": "0.0.6"
   },
-  "scripts": { "preinstall": "lockdown" }
+  "scripts": {
+    "preinstall": "lockdown"
+  }
 }
