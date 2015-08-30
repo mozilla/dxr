@@ -397,7 +397,7 @@ $(function() {
                     populateResults(data, appendResults);
                     var pushHistory = function () {
                         // Strip off offset= and limit= when updating.
-                        var displayURL = queryString.replace(/&?offset=\d+/, '').replace(/&?limit=\d+/, '');
+                        var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
                         history.pushState({}, '', displayURL);
                     };
                     if (redirect)
