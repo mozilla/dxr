@@ -1,36 +1,37 @@
-PLUGINS ?= clang
+# Things you should consider running:
 
-BUILD_PLUGINS = $(PLUGINS:%=build-plugin-%)
-CHECK_PLUGINS = $(PLUGINS:%=check-plugin-%)
-CLEAN_PLUGINS = $(PLUGINS:%=clean-plugin-%)
+all: templates plugins
 
-all: build
-
-test: build
+test: all
 	python setup.py test
 
-build: $(BUILD_PLUGINS) templates pycs
-
-node:
-	npm install
-
-pycs:
+clean:
+	rm -rf node_modules/.bin/grunt \
+	       node_modules/.bin/nunjucks-precompile \
+	       node_modules/grunt* \
+	       node_modules/nunjucks \
+	       .npm_installed
 	find . -name "*.pyc" -exec rm -f {} \;
+	$(MAKE) -C dxr/plugins/clang clean
 
-templates: node
-	node_modules/.bin/grunt precompile
-
-$(BUILD_PLUGINS):
-	$(MAKE) -C $(@:build-plugin-%=dxr/plugins/%) build
-
-$(CHECK_PLUGINS):
-	$(MAKE) -C $(@:check-plugin-%=dxr/plugins/%) check
-
-$(CLEAN_PLUGINS):
-	$(MAKE) -C $(@:clean-plugin-%=dxr/plugins/%) clean
+# For deploy script to call:
+templates: dxr/static/js/templates.js
 
 
-.PHONY: $(BUILD_PLUGINS)
-.PHONY: $(CHECK_PLUGINS)
-.PHONY: $(CLEAN_PLUGINS)
-.PHONY: all build check clean test pycs node
+# Private things:
+
+plugins:
+	$(MAKE) -C dxr/plugins/clang
+
+dxr/static/js/templates.js: dxr/static/templates/nunjucks/*.html \
+                            .npm_installed
+	node_modules/.bin/nunjucks-precompile dxr/static/templates/nunjucks > dxr/static/js/templates.js
+
+# .npm_installed is an empty file we touch whenever we run npm install. This
+# target redoes the install if the packages or lockdown files are newer than
+# that file:
+.npm_installed: package.json lockdown.json
+	npm install
+	touch .npm_installed
+
+.PHONY: all test clean plugins templates
