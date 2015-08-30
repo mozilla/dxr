@@ -25,7 +25,7 @@ $(function() {
     timeouts.history = 2000 - timeouts.search;
 
     // Tell nunjucks our base location for template files.
-    var nunjucksEnv = nunjucks.configure('dxr/static/templates/',
+    var nunjucksEnv = nunjucks.configure('dxr/static/templates',
                                          {autoescape: true});
     htmlEscape = nunjucksEnv.getFilter('escape');
 

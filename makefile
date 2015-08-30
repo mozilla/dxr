@@ -6,9 +6,7 @@ test: all
 	python setup.py test
 
 clean:
-	rm -rf node_modules/.bin/grunt \
-	       node_modules/.bin/nunjucks-precompile \
-	       node_modules/grunt* \
+	rm -rf node_modules/.bin/nunjucks-precompile \
 	       node_modules/nunjucks \
 	       .npm_installed
 	find . -name "*.pyc" -exec rm -f {} \;
