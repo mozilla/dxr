@@ -17,3 +17,4 @@ dxr-temp-*
 /node_modules/grunt*
 /node_modules/nunjucks
 /docs/build
+.npm_installed

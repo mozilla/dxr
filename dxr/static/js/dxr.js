@@ -25,7 +25,7 @@ $(function() {
     timeouts.history = 2000 - timeouts.search;
 
     // Tell nunjucks our base location for template files.
-    var nunjucksEnv = nunjucks.configure('dxr/static/templates/',
+    var nunjucksEnv = nunjucks.configure('dxr/static/templates',
                                          {autoescape: true});
     htmlEscape = nunjucksEnv.getFilter('escape');
 
@@ -325,7 +325,7 @@ $(function() {
         if (!data.results.length) {
             contentContainer
                 .empty()
-                .append(nunjucks.render('partial/results_container.html', data));
+                .append(nunjucks.render('results_container.html', data));
         } else {
             var results = data.results;
             resultsLineCount = countLines(results);
@@ -340,7 +340,7 @@ $(function() {
             if (!append) {
                 contentContainer
                     .empty()
-                    .append(nunjucks.render('partial/results_container.html', data));
+                    .append(nunjucks.render('results_container.html', data));
             } else {
                 var resultsList = contentContainer.find('.results');
 
@@ -352,7 +352,7 @@ $(function() {
                     '.result[data-path="' + firstResult.path + '"]');
                 if (domFirstResult.length) {
                     data.results = data.results.splice(1);
-                    domFirstResult.append(nunjucks.render('partial/result_lines.html', {
+                    domFirstResult.append(nunjucks.render('result_lines.html', {
                         www_root: dxr.wwwRoot,
                         tree: dxr.tree,
                         result: firstResult
@@ -361,7 +361,7 @@ $(function() {
 
                 // Don't render if there was only the first result and it was rendered.
                 if (data.results.length) {
-                    resultsList.append(nunjucks.render('partial/results.html', data));
+                    resultsList.append(nunjucks.render('results.html', data));
                 }
             }
         }
