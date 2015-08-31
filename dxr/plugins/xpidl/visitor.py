@@ -1,17 +1,17 @@
 from cStringIO import StringIO
 from itertools import ifilter
-
 from os.path import relpath, join, basename, dirname, exists
+
 from flask import url_for
 from xpidl.header import (idl_basename, header, include, jsvalue_include,
                           infallible_includes, header_end, forward_decl,
                           write_interface, printComments)
-
 from xpidl.xpidl import Attribute
 
-from dxr.indexers import Ref, Extent, Position
+from dxr.indexers import Extent, Position
 from dxr.plugins.xpidl.filters import PLUGIN_NAME
-from dxr.utils import search_url
+from dxr.plugins.xpidl.refs import ExtendedInterfaceRef, InterfaceRef, VarMemberRef, \
+    MethodMemberRef, TypeDefRef, ForwardInterfaceRef, IncludeRef
 
 
 def start_pos(name, location):
@@ -167,82 +167,39 @@ class IdlVisitor(object):
         if extent:
             self.yield_needle(filter_name, {'name': name}, extent)
 
-    def yield_ref(self, start, end, menus):
-        self.refs.append((start, end, Ref(menus)))
+    def yield_ref(self, start, end, ref):
+        self.refs.append((start, end, ref))
 
-    def yield_name_ref(self, name, location, menus):
-        """Yield menu refs for a particular name on given location."""
+    def yield_name_ref(self, name, location, ref):
+        """Yield ref for a particular name on given location."""
 
         start = start_pos(name, location)
-        self.yield_ref(start, start + len(name), menus)
-
-    def generated_menu(self, production):
-        """Return a menu for jumping to corresponding C++ source using the line map."""
-
-        return {
-            'html': 'See generated source',
-            'title': 'Go to this line in the generated C++ header file',
-            'href': self.generated_url + '#%d' % self.line_map[production],
-            'icon': 'jump'
-        }
-
-    def filtered_search_menu(self, filter_name, name, html='Find declaration',
-                             title='Search for declarations.', icon='class'):
-        return {
-            'html': html,
-            'title': title,
-            'href': search_url(self.tree, '%s:%s' % (filter_name, name)),
-            'icon': icon
-        }
-
-    def subclass_search_menu(self, name):
-        return self.filtered_search_menu('derived', name, 'Find subclasses',
-                                         'Search for children that derive this interface.',
-                                         'class')
-
-    def include_menu(self, item_path):
-        return {
-            'html': 'Jump to file',
-            'title': 'Go to the target of the include statement',
-            'href': url_for('.browse', tree=self.tree.name,
-                            path=relpath(item_path, self.tree.source_folder)),
-            'icon': 'jump'
-        }
+        self.yield_ref(start, start + len(name), ref)
 
     def visit_interface(self, interface):
         # Yield refs for the members, methods, etc. of an interface (and the interface itself).
         if interface.base:
             # The interface that this one extends.
-            self.yield_name_ref(interface.base, interface.location, [
-                self.filtered_search_menu('type-decl', interface.base, icon='type'),
-                self.subclass_search_menu(interface.base)
-            ])
+            self.yield_name_ref(interface.base, interface.location,
+                                ExtendedInterfaceRef(self.tree, interface.base))
             self.yield_name_needle('derived', interface.base, interface.location)
 
-        self.yield_name_ref(interface.name, interface.location, [
-            self.filtered_search_menu('type', interface.name, html='Find definition',
-                                      title='Search for definitions', icon='reference'),
-            self.subclass_search_menu(interface.name),
-            self.generated_menu(interface)
-        ])
+        self.yield_name_ref(interface.name,
+                            interface.location,
+                            InterfaceRef(self.tree,
+                                         (interface.name, self.generated_url,
+                                          self.line_map[interface])))
         self.yield_name_needle('type_decl', interface.name, interface.location)
 
         for member in interface.members:
             if member.kind == 'const' or member.kind == 'attribute':
-                self.yield_name_ref(member.name, member.location, [
-                    self.filtered_search_menu('var-decl', member.name, icon='field'),
-                    self.filtered_search_menu('var', member.name, html='Find definition',
-                                              title='Search for definitions', icon='field'),
-                ])
+                self.yield_name_ref(member.name, member.location,
+                                    VarMemberRef(self.tree, member.name))
                 self.yield_name_needle('var_decl', member.name, member.location)
 
             elif member.kind == 'method':
-                self.yield_name_ref(member.name, member.location, [
-                    self.filtered_search_menu('function-decl', member.name, icon='method'),
-                    self.filtered_search_menu('function', member.name, 'Find overrides',
-                                              'Search for overrides of this method',
-                                              'method')
-                ])
+                self.yield_name_ref(member.name, member.location,
+                                    MethodMemberRef(self.tree, member.name))
                 self.yield_name_needle('function_decl', member.name, member.location)
 
     def visit_include(self, item):
@@ -252,14 +209,18 @@ class IdlVisitor(object):
         # We know that the parser resolved the include in the same way, so we assume we can
         # too and take the first element.
         resolved_path = next(ifilter(exists, (join(path, filename) for path in self.search_paths)))
-        self.yield_name_ref(filename, item.location, [self.include_menu(resolved_path)])
+        include_path = relpath(resolved_path, self.tree.source_folder)
+        self.yield_name_ref(filename, item.location, IncludeRef(self.tree, include_path))
 
     def visit_typedef(self, item):
-        self.yield_name_ref(item.name, item.location, [self.generated_menu(item)])
+        self.yield_name_ref(item.name,
+                            item.location,
+                            TypeDefRef(self.tree,
+                                       (item.name, self.generated_url, self.line_map[item])))
 
     def visit_forward(self, item):
-        self.yield_name_ref(item.name, item.location, [
-            self.filtered_search_menu('type-decl', item.name, icon='type'),
-            self.subclass_search_menu(item.name),
-            self.generated_menu(item)
-        ])
+        self.yield_name_ref(item.name,
+                            item.location,
+                            ForwardInterfaceRef(self.tree,
+                                                (item.name, self.generated_url,
+                                                 self.line_map[item])))

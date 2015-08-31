@@ -142,7 +142,7 @@ mappings = {
                 # length). The limit here (in Unicode points, in an
                 # unfortunate violation of consistency) keeps us under that,
                 # even if every point encodes to a 4-byte sequence. In
-                # real-world terms, this get past all the Chinese in zh.txt in
+                # real-world terms, this gets past all the Chinese in zh.txt in
                 # mozilla-central.
                 'ignore_above': 32766 / 4,
 
@@ -166,15 +166,9 @@ mappings = {
                 'payload': {
                     'type': 'object',
                     'properties': {
-
-                        'menuitems': {
-                            'type': 'object',
-                            'properties': {
-                                'html': UNINDEXED_STRING,
-                                'href': UNINDEXED_STRING,
-                                'icon': UNINDEXED_STRING
-                            }
-                        },
+                        'plugin': UNINDEXED_STRING,
+                        'id': UNINDEXED_STRING,  # Ref ID
+                        'menu_data': UNINDEXED_STRING,  # opaque to ES
                         'hover': UNINDEXED_STRING,
                         # Hash of qualname of the symbol we're hanging the
                         # menu off of, if it is a symbol and we can come up

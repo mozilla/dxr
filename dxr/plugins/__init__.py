@@ -40,7 +40,15 @@ class Plugin(object):
     otherwise.
 
     """
-    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None, direct_searchers=None, config_schema=None):
+    def __init__(self,
+                 filters=None,
+                 tree_to_index=None,
+                 file_to_skim=None,
+                 mappings=None,
+                 analyzers=None,
+                 direct_searchers=None,
+                 refs=None,
+                 config_schema=None):
         """
         :arg filters: A list of filter classes
         :arg tree_to_index: A :class:`TreeToIndex` subclass
@@ -70,6 +78,9 @@ class Plugin(object):
                 A more general approach may replace direct search in the
                 future.
 
+        :arg refs: An iterable of :class:`~dxr.lines.Ref` subclasses
+            supported by this plugin. This is used at request time, to turn
+            abreviated ES index data back into HTML.
         :arg config_schema: A validation schema for this plugin's
             configuration. See https://pypi.python.org/pypi/schema/ for docs.
 
@@ -82,6 +93,8 @@ class Plugin(object):
         """
         self.filters = filters or []
         self.direct_searchers = direct_searchers or []
+        self.refs = dict((ref_class.id, ref_class)
+                          for ref_class in (refs or []))
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
@@ -99,6 +112,9 @@ class Plugin(object):
         :arg namespace: A namespace from which to pick components
 
         **Filters** are taken to be any class whose name ends in "Filter" and
+        doesn't start with "_".
+
+        **Refs** are taken to be any class whose name ends in "Ref" and
         doesn't start with "_".
 
         The **tree indexer** is assumed to be called "TreeToIndex". If there isn't
@@ -127,7 +143,8 @@ class Plugin(object):
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
-                   direct_searchers=direct_searchers_from_namespace(namespace))
+                   direct_searchers=direct_searchers_from_namespace(namespace),
+                   refs=refs_from_namespace(namespace))
 
     def __eq__(self, other):
         """Consider instances of the same plugin equal."""
@@ -158,7 +175,8 @@ class Plugin(object):
 
 
 def filters_from_namespace(namespace):
-    """Return the filters which conform to our suggested naming convention.
+    """Return the filters which conform to our suggested naming convention:
+    ending with "Filter" and not starting with "_".
 
     :arg namespace: The namespace in which to look for filters
 
@@ -179,6 +197,24 @@ def direct_searchers_from_namespace(namespace):
     """
     return [v for v in namespace.itervalues()
             if hasattr(v, 'direct_search_priority') and isfunction(v)]
+
+
+def refs_from_namespace(namespace):
+    """Return a list of :class:`~dxr.lines.Ref` subclasses (or workalikes)
+    defined in a namespace, identified by conforming to our naming convention.
+
+    Our convention is to end with "Ref" and not start with "_".
+
+    """
+    from dxr.lines import Ref
+
+    # TODO: Consider switching to an isinstance() test so plugin authors have
+    # more naming flexibility.
+    return [v for k, v in namespace.iteritems() if
+            isclass(v) and
+            not k.startswith('_') and
+            k.endswith('Ref') and
+            v is not Ref]
 
 
 def direct_search(priority, domain=LINE):

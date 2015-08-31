@@ -6,7 +6,7 @@ from pygments.token import Token, Comment
 from pygments.util import ClassNotFound
 
 import dxr.indexers
-from dxr.indexers import Region
+from dxr.lines import Region
 
 
 token_classes = {Token.Comment.Preproc: 'p'}

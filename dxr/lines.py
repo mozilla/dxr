@@ -13,11 +13,13 @@ except ImportError:
     from itertools import izip
     def compress(data, selectors):
         return (d for d, s in izip(data, selectors) if s)
+import json
 from warnings import warn
 
 from jinja2 import Markup
 
-from dxr.indexers import Ref, Region
+from dxr.plugins import all_plugins
+from dxr.utils import without_ending
 
 
 class Line(object):
@@ -33,6 +35,173 @@ class Line(object):
         return 'Line()'
 
 LINE = Line()
+
+
+class RefClassIdTagger(type):
+    """Metaclass which automatically generates an ``id`` attr on the class as
+    a serializable class identifier.
+
+    Having a dedicated identifier allows Ref subclasses to move or change name
+    without breaking index compatibility.
+
+    Expects a ``_plugin`` attr to use as a prefix.
+
+    """
+    def __new__(metaclass, name, bases, dict):
+        dict['id'] = without_ending('Ref', name)
+        return type.__new__(metaclass, name, bases, dict)
+
+
+class Ref(object):
+    """Abstract superclass for a cross-reference attached to a run of text
+
+    Carries enough data to construct a context menu, highlight instances of
+    the same symbol, and show something informative on hover.
+
+    """
+    sort_order = 1
+    __slots__ = ['menu_data', 'hover', 'qualname_hash']
+    __metaclass__ = RefClassIdTagger
+
+    def __init__(self, tree, menu_data, hover=None, qualname=None, qualname_hash=None):
+        """
+        :arg menu_data: Arbitrary JSON-serializable data from which we can
+            construct a context menu
+        :arg hover: The contents of the <a> tag's title attribute. (The first
+            one wins.)
+        :arg qualname: A hashable unique identifier for the symbol surrounded
+            by this ref, for highlighting
+        :arg qualname_hash: The hashed version of ``qualname``, which you can
+            pass instead of ``qualname`` if you have access to the
+            already-hashed version
+
+        """
+        self.tree = tree
+        self.menu_data = menu_data
+        self.hover = hover
+        self.qualname_hash = hash(qualname) if qualname else qualname_hash
+
+    def es(self):
+        """Return a serialization of myself to store in elasticsearch."""
+        ret = {'plugin': self.plugin,
+               'id': self.id,
+               # Smash the data into a string, because it will have a
+               # different schema from subclass to subclass, and ES will freak
+               # out:
+               'menu_data': json.dumps(self.menu_data)}
+        if self.hover:
+            ret['hover'] = self.hover
+        if self.qualname_hash is not None:  # could be 0
+            ret['qualname_hash'] = self.qualname_hash
+        return ret
+
+    @staticmethod
+    def es_to_triple(es_data, tree):
+        """Convert ES-dwelling ref representation to a (start, end,
+        :class:`~dxr.lines.Ref` subclass) triple.
+
+        Return a subclass of Ref, chosen according to the ES data. Into its
+        attributes "menu_data", "hover" and "qualname_hash", copy the ES
+        properties of the same names, JSON-decoding "menu_data" first.
+
+        :arg es_data: An item from the array under the 'refs' key of an ES LINE
+            document
+        :arg tree: The :class:`~dxr.config.TreeConfig` representing the tree
+            from which the ``es_data`` was pulled
+
+        """
+        def ref_class(plugin, id):
+            """Return the subclass of Ref identified by a combination of
+            plugin and class ID."""
+            plugins = all_plugins()
+            try:
+                return plugins[plugin].refs[id]
+            except KeyError:
+                warn('Ref subclass from plugin %s with ID %s was referenced '
+                     'in the index but not found in the current '
+                     'implementation. Ignored.' % (plugin, id))
+
+        payload = es_data['payload']
+        cls = ref_class(payload['plugin'], payload['id'])
+        return (es_data['start'],
+                es_data['end'],
+                cls(tree,
+                    json.loads(payload['menu_data']),
+                    hover=payload.get('hover'),
+                    qualname_hash=payload.get('qualname_hash')))
+
+    def menu_items(self):
+        """Return an iterable of menu items to be attached to a ref.
+
+        Return an iterable of dicts of this form::
+
+            {
+                html: the HTML to be used as the menu item itself
+                href: the URL to visit when the menu item is chosen
+                title: the tooltip text given on hovering over the menu item
+                icon: the icon to show next to the menu item: the name of a PNG
+                    from the ``icons`` folder, without the .png extension
+            }
+
+        Typically, this pulls data out of ``self.menu_data``.
+
+        """
+        raise NotImplementedError
+
+    def opener(self):
+        """Emit the opening anchor tag for a cross reference.
+
+        Menu item text, links, and metadata are JSON-encoded and dumped into a
+        data attr on the tag. JS finds them there and creates a menu on click.
+
+        """
+        if self.hover:
+            title = ' title="' + cgi.escape(self.hover, True) + '"'
+        else:
+            title = ''
+        if self.qualname_hash is not None:
+            cls = ' class="tok%i"' % self.qualname_hash
+        else:
+            cls = ''
+
+        menu_items = list(self.menu_items())
+        return u'<a data-menu="%s"%s%s>' % (
+            cgi.escape(json.dumps(menu_items), True),
+            title,
+            cls)
+
+    def closer(self):
+        return u'</a>'
+
+
+class Region(object):
+    """A <span> tag with a CSS class, wrapped around a run of text"""
+
+    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
+                    # them.
+    __slots__ = ['css_class']
+
+    def __init__(self, css_class):
+        self.css_class = css_class
+
+    def es(self):
+        return self.css_class
+
+    @classmethod
+    def es_to_triple(cls, es_region):
+        """Convert ES-dwelling region representation to a (start, end,
+        :class:`~dxr.lines.Region`) triple."""
+        return es_region['start'], es_region['end'], cls(es_region['payload'])
+
+    def opener(self):
+        return u'<span class="%s">' % cgi.escape(self.css_class, True)
+
+    def closer(self):
+        return u'</span>'
+
+    def __repr__(self):
+        """Return a nice representation for debugging."""
+        return 'Region("%s")' % self.css_class
 
 
 def balanced_tags(tags):

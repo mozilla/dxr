@@ -23,8 +23,7 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
-from dxr.indexers import Ref, Region
-from dxr.lines import html_line, tags_per_line, finished_tags
+from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
 from dxr.mime import icon, is_image, is_text
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
@@ -380,23 +379,24 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
             # stitching the lines together.
             contents = ''.join(lines)
         offsets = cumulative_sum(imap(len, lines))
+        tree_config = config.trees[tree]
         # Construct skimmer objects for all enabled plugins that define a
         # file_to_skim class.
         skimmers = [plugin.file_to_skim(path,
                                         contents,
                                         plugin.name,
-                                        config.trees[tree],
+                                        tree_config,
                                         file_doc,
                                         line_docs)
-                    for plugin in config.trees[tree].enabled_plugins
+                    for plugin in tree_config.enabled_plugins
                     if plugin.file_to_skim]
         skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
-        index_refs = imap(Ref.es_to_triple,
-                          chain.from_iterable(doc.get('refs', [])
-                                              for doc in line_docs))
-        index_regions = imap(Region.es_to_triple,
-                             chain.from_iterable(doc.get('regions', [])
-                                                 for doc in line_docs))
+        index_refs = (Ref.es_to_triple(ref, tree_config) for ref in
+                      chain.from_iterable(doc.get('refs', [])
+                                          for doc in line_docs))
+        index_regions = (Region.es_to_triple(region) for region in
+                         chain.from_iterable(doc.get('regions', [])
+                                             for doc in line_docs))
         tags = finished_tags(lines,
                              chain(chain.from_iterable(refses), index_refs),
                              chain(chain.from_iterable(regionses), index_regions))

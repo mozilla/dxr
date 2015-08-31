@@ -16,8 +16,8 @@ from os.path import abspath
 from schema import Optional, Use, And
 
 from dxr.config import AbsPath
-from dxr.plugins import Plugin, AdHocTreeToIndex, filters_from_namespace
-from dxr.plugins.xpidl import filters
+from dxr.plugins import Plugin, AdHocTreeToIndex, filters_from_namespace, refs_from_namespace
+from dxr.plugins.xpidl import filters, refs
 from dxr.plugins.xpidl.mappings import mappings
 from dxr.plugins.xpidl.indexers import FileToIndex
 
@@ -33,6 +33,7 @@ ColonPathList = And(basestring,
 plugin = Plugin(
     tree_to_index=partial(AdHocTreeToIndex,
                           file_to_index_class=FileToIndex),
+    refs=refs_from_namespace(refs.__dict__),
     filters=filters_from_namespace(filters.__dict__),
     mappings=mappings,
     config_schema={
