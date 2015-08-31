@@ -166,10 +166,7 @@ $(function() {
     });
 
     /**
-     * Returns the full Ajax URL for search and explicitly sets
-     * redirect to false and format to json to ensure we never
-     * get a HTML response or redirect from an Ajax call, even
-     * when using the back button.
+     * Return the full Ajax URL for search.
      *
      * @param {string} query - The query string
      * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
@@ -195,31 +192,8 @@ $(function() {
      * Starts or restarts the scroll position poller.
      */
     function pollScrollPosition() {
+        clearInterval(scrollPoll);
         scrollPoll = setInterval(infiniteScroll, 250);
-    }
-
-    // On document ready start the scroll pos poller.
-    pollScrollPosition();
-
-    /**
-     * Updates the window's history entry to not break the back button with
-     * infinite scroll.
-     * @param {int} offset - The offset to store in the URL
-     */
-    function setHistoryState(offset) {
-        var state = {},
-            re = /offset=\d+/,
-            locationSearch = '';
-
-        if (location.search.indexOf('offset') > -1) {
-            locationSearch = location.search.replace(re, 'offset=' + offset);
-        } else {
-            locationSearch = location.search ? location.search + '&offset=' + offset : '?offset=' + offset;
-        }
-
-        var url = dxr.baseUrl + location.pathname + locationSearch + location.hash;
-
-        history.replaceState(state, '', url);
     }
 
     function infiniteScroll() {
@@ -245,22 +219,9 @@ $(function() {
                 dataOffset += previousDataLimit;
                 previousDataLimit = defaultDataLimit;
 
-                //Resubmit query for the next set of results, making sure redirect is turned off.
-                $.getJSON(buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset, false), function(data) {
-                    data.query = query;
-                    if (data.results.length > 0) {
-                        // Use the results.html partial so we do not inject the entire container again.
-                        populateResults(data, true);
-                        // update URL with new offset
-                        setHistoryState(dataOffset);
-                        // start the scrolling poller
-                        pollScrollPosition();
-                    }
-                })
-                .fail(function() {
-                    // Should we fail silently here or notify the user?
-                    console.log('query failed');
-                });
+                // Resubmit query for the next set of results, making sure redirect is turned off.
+                var requestUrl = buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset, false);
+                doQuery(false, requestUrl, true);
             }
         }
     }
@@ -377,14 +338,18 @@ $(function() {
      * @param {bool} [redirect] - Whether to redirect if we hit a direct result.
      * @param {string} [queryString] - The url to which to send the request. If left out,
      * queryString will be constructed from the contents of the query field.
+     * @param {bool} [appendResults] - Whether to append new results to the current list,
+     * otherwise replace.
      */
-    function doQuery(redirect, queryString) {
+    function doQuery(redirect, queryString, appendResults) {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber,
             lineHeight = parseInt(contentContainer.css('line-height'), 10),
             limit = Math.floor((window.innerHeight / lineHeight) + 25);
 
         redirect = redirect || false;
+        // Turn into a boolean if it was undefined.
+        appendResults = !!appendResults;
         queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
@@ -418,7 +383,7 @@ $(function() {
             url: queryString,
             // We need to disable caching of this result because otherwise we break the undo close
             // tab feature on search pages (Chrome and Firefox).
-            cache: false,
+            cache: appendResults,
             success: function (data) {
                 // Check whether to redirect to a direct hit.
                 if (data.redirect) {
@@ -426,23 +391,30 @@ $(function() {
                     return;
                 }
                 data.query = query;
-                // New results, overwrite
+                // New results, display them.
                 if (myRequestNumber > displayedRequestNumber) {
                     displayedRequestNumber = myRequestNumber;
-                    populateResults(data, false);
-                    var pushHistory = function() {
-                        history.pushState({}, '', queryString);
+                    populateResults(data, appendResults);
+                    var pushHistory = function () {
+                        // Strip off offset= and limit= when updating.
+                        var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
+                        history.pushState({}, '', displayURL);
                     };
                     if (redirect)
                         // Then the enter key was pressed and we want to update history state now.
                         pushHistory();
-                    else
+                    else if (!appendResults)
+                        // Update the history state if we're not appending: this is a new search.
                         historyWaiter = setTimeout(pushHistory, timeouts.history);
                 }
 
-                previousDataLimit = limit;
-                dataOffset = 0;
+                if (!appendResults) {
+                    previousDataLimit = limit;
+                    dataOffset = 0;
+                }
 
+                // Start the scroll pos poller.
+                pollScrollPosition();
                 oneFewerRequest();
             }
         })
@@ -572,7 +544,7 @@ $(function() {
     });
 
     // If on load of the search endpoint we have a query string then we need to
-    // load the results of the query.
+    // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
         if (/search$/.test(window.location.pathname) && window.location.search) {
             doQuery(false, window.location.href);
