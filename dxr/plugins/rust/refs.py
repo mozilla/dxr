@@ -27,6 +27,9 @@ def trim_dict(dictionary, keys):
 class _RustRef(Ref):
     plugin = 'rust'
 
+    # TODO: I don't like the polymorphic constructor that ignores the
+    # menu_data arg if tree_index is filled in. Let's have 2 constructors like
+    # in the clang plugin.
     def __init__(self, tree_config, menu_data, tree_index=None, hover=None, qualname=None, qualname_hash=None):
         super(_RustRef, self).__init__(tree_config, None, hover, qualname, qualname_hash)
         if tree_index:
