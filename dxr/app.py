@@ -35,7 +35,7 @@ from dxr.vcs import file_contents_at_rev
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           'dxr',
-                          template_folder='static/templates',
+                          template_folder='templates',
                           # static_folder seems to register a "static" route
                           # with the blueprint so the url_prefix (set later)
                           # takes effect for static files when found through

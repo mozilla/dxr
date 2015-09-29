@@ -21,9 +21,9 @@ templates: dxr/static/js/templates.js
 plugins:
 	$(MAKE) -C dxr/plugins/clang
 
-dxr/static/js/templates.js: dxr/static/templates/nunjucks/*.html \
+dxr/static/js/templates.js: dxr/templates/nunjucks/*.html \
                             .npm_installed
-	node_modules/.bin/nunjucks-precompile dxr/static/templates/nunjucks > dxr/static/js/templates.js
+	node_modules/.bin/nunjucks-precompile dxr/templates/nunjucks > dxr/static/js/templates.js
 
 # .npm_installed is an empty file we touch whenever we run npm install. This
 # target redoes the install if the packages or lockdown files are newer than
