@@ -204,8 +204,8 @@ class Deployment(object):
                     python = join(new_build_path, VENV_NAME, 'bin', 'python')
                     run('{python} ./peep.py install -r requirements.txt',
                         python=python)
-                    # Compile nunjucks templates:
-                    run('make templates &> /dev/null')
+                    # Compile nunjucks templates and cachebust static assets:
+                    run('make static &> /dev/null')
                     # Quiet the complaint about there being no matches for *.so:
                     run('{python} setup.py install 2>/dev/null', python=python)
 
