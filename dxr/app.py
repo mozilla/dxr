@@ -34,12 +34,62 @@ from dxr.vcs import file_contents_at_rev
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           'dxr',
-                          template_folder='static/templates',
+                          template_folder='templates',
                           # static_folder seems to register a "static" route
                           # with the blueprint so the url_prefix (set later)
                           # takes effect for static files when found through
                           # url_for('static', ...).
                           static_folder='static')
+
+
+class HashedStatics(object):
+    """A Flask extension which adds hashes to static asset URLs, as determined
+    by a static_manifest file just outside the static folder"""
+
+    def __init__(self, app=None):
+        self.app = None
+        self.manifests = {}
+        if app is not None:
+            self.init_app(app)
+
+    def init_app(self, app):
+        self.app = app
+        app.url_defaults(self._hashed_url)
+
+    def _manifest_near(self, static_folder):
+        """Cache and return a manifest for a specific static folder.
+
+        The manifest must be in a file called "static_manifest" just outside
+        the static folder.
+
+        """
+        manifest = self.manifests.get(static_folder)
+        if manifest is None:
+            try:
+                with open(join(dirname(static_folder),
+                               'static_manifest')) as file:
+                    manifest = self.manifests[static_folder] = \
+                        dict(line.split() for line in file)
+            except IOError:
+                # Probably no such file
+                manifest = self.manifests[static_folder] = {}
+        return manifest
+
+    def _hashed_url(self, route, values):
+        """Map an unhashed URL to a hashed one.
+
+        If no mapping is found in the manifest, leave it alone, which will
+        result in a 404.
+
+        """
+        if route == 'static' or route.endswith('.static'):
+            filename = values.get('filename')
+            if filename:
+                blueprint = request.blueprint
+                static_folder = (self.app.blueprints[blueprint].static_folder
+                                 if blueprint else self.app.static_folder)
+                manifest = self._manifest_near(static_folder)
+                values['filename'] = manifest.get(filename, filename)
 
 
 def make_app(config):
@@ -51,6 +101,7 @@ def make_app(config):
     app = Flask('dxr')
     app.dxr_config = config
     app.register_blueprint(dxr_blueprint, url_prefix=config.www_root)
+    HashedStatics(app=app)
 
     # Log to Apache's error log in production:
     app.logger.addHandler(StreamHandler(stderr))
@@ -330,7 +381,8 @@ def _build_common_file_template(tree, path, date, config):
             plugins_named(frozen_config(tree)['enabled_plugins'])),
         # File template variables
         'paths_and_names': _linked_pathname(path, tree),
-        'icon': icon(path),
+        'icon_url': url_for('.static',
+                            filename='icons/mimetypes/%s.png' % icon(path)),
         'path': path,
         'name': basename(path)
     }

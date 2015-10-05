@@ -1,7 +1,9 @@
 *.pyc
 *.o
 *.so
-/dxr/static/js/templates.js
+/dxr/static
+/dxr/static_manifest
+/dxr/static_unhashed/js/templates.js
 dxr-logs-*
 dxr-temp-*
 **/tests/*/code/code

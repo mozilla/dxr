@@ -12,8 +12,6 @@ $(function() {
 
     dxr.wwwRoot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
-    dxr.icons = dxr.wwwRoot + '/static/icons/';
-    dxr.views = dxr.wwwRoot + '/static/templates';
     dxr.searchUrl = constants.data('search');
     dxr.tree = constants.data('tree');
 
@@ -25,7 +23,7 @@ $(function() {
     timeouts.history = 2000 - timeouts.search;
 
     // Tell nunjucks our base location for template files.
-    var nunjucksEnv = nunjucks.configure('dxr/static/templates',
+    var nunjucksEnv = nunjucks.configure('dxr/templates',
                                          {autoescape: true});
     htmlEscape = nunjucksEnv.getFilter('escape');
 
