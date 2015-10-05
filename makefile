@@ -2,8 +2,24 @@
 
 all: requirements static plugins
 
-test: all
-	python setup.py test
+testimage:
+	cp Dockerfile.test Dockerfile
+	docker build -t dxr .
+	rm Dockerfile
+
+runimage:
+	cp Dockerfile.run Dockerfile
+	docker build -t dxr .
+	rm Dockerfile
+
+test:
+	docker run --net container:es --tty --name dxr dxr --with-progressive
+
+index:
+	docker run --net container:es --name dxr dxr index
+
+serve:
+	docker run --net container:es --name dxr dxr serve -a
 
 clean: static_clean
 	rm -rf node_modules/.bin/nunjucks-precompile \
@@ -11,6 +27,7 @@ clean: static_clean
 	       .npm_installed \
 	       .peep_installed
 	find . -name "*.pyc" -exec rm -f {} \;
+	docker rm -f dxr
 	$(MAKE) -C dxr/plugins/clang clean
 
 static_clean:
