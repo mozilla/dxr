@@ -14,9 +14,10 @@ def main(map_path, input_path):
 
     def replacer(match):
         url = match.group(1)
-        return ("url('%s')" % map[url]) if url in map else match.group()
+        return (("url('/static/%s')" % map[url]) if url in map
+                else match.group())
 
     with open(input_path) as file:
-        return re.sub(r"url\('(/static/[^']+)'\)", replacer, file.read())
+        return re.sub(r"url\('/static/([^']+)'\)", replacer, file.read())
 
 print main(argv[1], argv[2])
