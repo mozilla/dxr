@@ -192,6 +192,9 @@ class FileToIndex(indexers.FileToIndex):
             if datum['id'] not in inheritance:
                 continue
             for s in inheritance[datum['id']]:
+                if s not in all_types:
+                    continue
+
                 t = {
                     'qualname': all_types[s]['qualname'],
                     'name': all_types[s]['name']
