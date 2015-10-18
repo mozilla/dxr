@@ -4,17 +4,18 @@ from os.path import splitext
 def icon(path):
     """Return the basename (no extension) of the icon file to use for a path."""
     root, ext = splitext(path)
-    return ext_map.get(ext[1:], 'unknown')
+    return ext_map.get(ext[1:].lower(), 'unknown')
 
 
 def is_text(data):
     # Simple stupid test that apparently works rather well :)
     return '\0' not in data
 
+
 def is_image(path):
     """Determine whether the path is an image."""
     _, ext = splitext(path)
-    return ext_map.get(ext[1:], False) == 'image'
+    return ext_map.get(ext[1:].lower(), False) == 'image'
 
 
 # File extension known as this point
@@ -66,6 +67,5 @@ ext_map = {
     "jpg":        'image',
     "jpeg":       'image',
     "png":        'image',
-    "gif":        'image',
-    "svg":        'image'
+    "gif":        'image'
 }

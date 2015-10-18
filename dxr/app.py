@@ -465,6 +465,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                 'is_text': True,
                 'sections': sidebar_links(links + skim_links)}))
 
+
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
 def rev(tree, revision, path):
     """Display a page showing the file at path at specified revision by
@@ -485,6 +486,7 @@ def rev(tree, revision, path):
                             contents=contents)
     else:
         raise NotFound
+
 
 def _linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be

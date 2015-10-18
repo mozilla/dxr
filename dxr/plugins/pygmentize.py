@@ -83,6 +83,7 @@ def _lexer_for_filename(filename):
                                or filename.endswith('.idl')
                                or filename.endswith('.webidl')
                 else 'dummy.xml' if filename.endswith('.xul')
+                                    or filename.endswith('.svg')
                 else filename)
         except ClassNotFound:
             return None

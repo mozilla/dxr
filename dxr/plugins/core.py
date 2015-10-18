@@ -429,6 +429,11 @@ class FileToIndex(dxr.indexers.FileToIndex):
     def __init__(self, path, contents, plugin_name, tree, vcs):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.vcs = vcs
+        self.extension = splitext(self.path)[1].lower()
+        # We handle svg a little differently: we index it to search through
+        # the source of the svg as an XML document, and we also keep around the
+        # raw_data field so we can display the file as an image if requested.
+        self.is_svg = self.extension and self.extension[1:] == 'svg'
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
@@ -436,10 +441,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
             # realpath will keep following symlinks until it gets to the 'real' thing.
             yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
-        extension = splitext(self.path)[1]
-        if extension:
-            yield 'ext', extension[1:]  # skip the period
-        if is_image(self.path):
+        if self.extension:
+            yield 'ext', self.extension[1:]  # skip the period
+        if is_image(self.path) or self.is_svg:
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
@@ -464,6 +468,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
                                                        path=self.path))])
+        if self.is_svg:
+            yield (4, 'SVG', [('svgview', 'View image',
+                               url_for('.raw', tree=self.tree.name, path=self.path))])
         else:
             yield 5, 'Untracked file', []
 
