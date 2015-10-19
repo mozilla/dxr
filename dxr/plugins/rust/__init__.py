@@ -336,7 +336,7 @@ class TreeToIndex(indexers.TreeToIndex):
         # Setup environment variables for using the rust-dxr tool
         # We'll store all the havested metadata in the plugins temporary folder.
 
-        env['RUSTC'] = env.get('RUSTC', 'rustc') + RUST_DXR_FLAG
+        env['CARGO_HOME'] = os.path.join(self.tree.source_folder, '.cargo')
         if 'RUSTFLAGS_STAGE2' in env:
             env['RUSTFLAGS_STAGE2'] += RUST_DXR_FLAG
         else:
@@ -775,6 +775,9 @@ def process_crate(args, tree):
         crate.
         Note that this gets called twice for the same crate line - once per pass. """
 
+    # Note that the file_name for the crate will not have been adjusted to include
+    # the crate root, since we don't know it until after we process this item.
+
     if args['name'] not in tree.local_libs:
         tree.local_libs.append(args['name'])
     args = tree.convert_ids(args)
@@ -919,7 +922,7 @@ def process_method_call(args, tree):
     ex_decl = tree.add_external_decl(args)
     if ex_def and ex_decl:
         return;
-    if (ex_def and not args['declid']) or (ex_decl and not args['refid']):
+    if (ex_def and not args['refid']) or (ex_decl and not args['declid']):
         # FIXME, I think this is meant to be an assertion, but not sure
         print "Unexpected(?) missing id in method call"
         return;
