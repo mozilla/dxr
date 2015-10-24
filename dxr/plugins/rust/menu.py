@@ -78,12 +78,8 @@ def std_lib_links_menu((doc_url, src_url, dxr_url), extra_text=""):
 
 def call_menu(qualname, tree):
     return [{'html': "Find callers",
-             'title': "Find functions that call this function",
+             'title': "Find calls of this function",
              'href': search_url(tree, "+callers:%s" % quote(qualname)),
-             'icon': 'method'},
-            {'html': "Find callees",  # TODO: Probably useless. Remove.
-             'title': "Find functions that are called by this function",
-             'href': search_url(tree, "+called-by:%s" % quote(qualname)),
              'icon': 'method'}]
 
 

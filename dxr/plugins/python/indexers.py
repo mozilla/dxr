@@ -32,7 +32,6 @@ mappings = {
             'py_derived': QUALIFIED_LINE_NEEDLE,
             'py_bases': QUALIFIED_LINE_NEEDLE,
             'py_callers': QUALIFIED_LINE_NEEDLE,
-            'py_called_by': QUALIFIED_LINE_NEEDLE,
             'py_overrides': QUALIFIED_LINE_NEEDLE,
             'py_overridden': QUALIFIED_LINE_NEEDLE,
         },
@@ -92,14 +91,14 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         start, end = self.file_to_index.get_node_start_end(node)
         self.yield_needle('py_function', node.name, start, end)
 
-        # Index function calls within this function for the callers: and
-        # called-by filters.
+        # Index function calls within this function for the callers: filter.
         self.function_call_stack.append([])
         super(IndexingNodeVisitor, self).visit_FunctionDef(node)
         call_needles = self.function_call_stack.pop()
         for name, call_start, call_end in call_needles:
+            # TODO: py_callers should be all calls, not just ones that
+            # take place within a function.
             self.yield_needle('py_callers', name, start, end)
-            self.yield_needle('py_called_by', node.name, call_start, call_end)
 
     def visit_Call(self, node):
         # Save this call if we're currently tracking function calls.

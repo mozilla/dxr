@@ -1,4 +1,4 @@
-"""Tests for searches using callers and called-by"""
+"""Tests for searches using callers"""
 
 from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
 
