@@ -108,7 +108,6 @@ class FileToIndex(indexers.FileToIndex):
             self.fn_impls_needles(),
             self.inherit_needles(self.tree_index.super_traits, 'derived'),
             self.inherit_needles(self.tree_index.sub_traits, 'bases'),
-            self.call_needles(self.tree_index.callers, 'called_by'),
             self.call_needles(self.tree_index.callees, 'callers'),
         ))))
 
@@ -1055,7 +1054,6 @@ mappings = {
             'rust_bases': QUALIFIED_LINE_NEEDLE,
             'rust_derived': QUALIFIED_LINE_NEEDLE,
             'rust_callers': QUALIFIED_LINE_NEEDLE,
-            'rust_called_by': QUALIFIED_LINE_NEEDLE,
         }
     }
 }
