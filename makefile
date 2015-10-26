@@ -24,9 +24,6 @@ static: dxr/static_manifest
 
 # Private things:
 
-# Just to make the old deploy script happy:
-templates: static
-
 plugins:
 	$(MAKE) -C dxr/plugins/clang
 
