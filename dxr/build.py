@@ -31,7 +31,7 @@ from dxr.es import UNINDEXED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import is_text, icon, is_image
+from dxr.mime import is_text, icon
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)

@@ -31,13 +31,20 @@ class BinaryFileTests(DxrInstanceTestCase):
         ok_('href="/code/source/Green%20circle.jpg" class="icon image too_fat"' in response.data)
 
     def test_svg(self):
-        """Make sure we show the source of the svg, but allow way to reach its image."""
+        """Make sure we show the source of the svg, but allow a way to reach its image."""
         response = self.client().get('/code/source/yellow_circle.svg')
         ok_('href="/code/raw/yellow_circle.svg"' in response.data)
         response = self.client().get('/code/raw/yellow_circle.svg')
         ok_(response.status_code, 200)
 
-    def test_some_bytes(self):
+    def test_some_bytes_visible(self):
+        """We want some_bytes to show in the folder index, but without its own page."""
+        response = self.client().get('/code/source/')
+        ok_('some_bytes' in response.data)
+        response = self.client().get('/code/source/some_bytes')
+        ok_(response.status_code, 404)
+
+    def test_some_bytes_not_searchable(self):
         """We want some_bytes to show on search page, but not be clickable."""
         response = self.client().get('/code/search?q=path%3Asome_bytes&redirect=true')
         ok_('some_bytes' in response.data)

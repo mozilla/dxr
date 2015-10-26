@@ -4,7 +4,7 @@ from os.path import splitext
 def icon(path):
     """Return the basename (no extension) of the icon file to use for a path."""
     root, ext = splitext(path)
-    return ext_map.get(ext[1:].lower(), 'unknown')
+    return ext_map.get(ext[1:], 'unknown')
 
 
 def is_text(data):
@@ -12,10 +12,14 @@ def is_text(data):
     return '\0' not in data
 
 
-def is_image(path):
-    """Determine whether the path is an image."""
-    _, ext = splitext(path)
-    return ext_map.get(ext[1:].lower(), False) == 'image'
+def is_binary_image(path):
+    """Determine whether the path is a binary image."""
+    return icon(path) == 'image'
+
+
+def is_indexable_image(path):
+    """Determine whether the path is an image with indexable (text) contents."""
+    return icon(path) in {'svg'}
 
 
 # File extension known as this point
@@ -32,6 +36,7 @@ ext_map = {
     "c":          'c',
     "xul":        'ui',
     "svg":        'svg',
+    "SVG":        'svg',
     "in":         'build',
     "idl":        'conf',
     "java":       'java',
