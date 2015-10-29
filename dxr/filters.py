@@ -196,7 +196,9 @@ class NameFilterBase(Filter):
         """
         maybe_lower = (identity if self._term['case_sensitive'] else
                        unicode.lower)
-        return maybe_lower(entity['name']) == maybe_lower(self._term['arg'])
+        return ('name' in entity
+                and isinstance(entity['name'], unicode)
+                and maybe_lower(entity['name']) == maybe_lower(self._term['arg']))
 
     def highlight_content(self, result):
         """Highlight any structural entity whose name matches the term."""
