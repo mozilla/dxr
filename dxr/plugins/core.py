@@ -436,7 +436,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             # realpath will keep following symlinks until it gets to the 'real' thing.
             yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
-        extension = splitext(self.path)[1].lower()
+        extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
         # Remark: We store both the indexed contents and the raw data of
