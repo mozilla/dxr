@@ -13,3 +13,15 @@ class UnicodeTests(PythonSingleFileTestCase):
         If it doesn't crash, the test passed.
 
         """
+
+
+class EncodingCommentTests(PythonSingleFileTestCase):
+    source = u'# -*- coding: utf-8 -*-\ndef foo():\n    return 42'
+
+    def test_encoding_comment_files_are_not_skipped(self):
+        # Calling ast.parse on unicode objects that have an encoding comment
+        # in the first two lines is subject to a bug in Python 2.  See
+        # http://bugs.python.org/issue22221.  Show that we can process such a
+        # file without skipping or error.
+
+        self.found_line_eq('function:foo', "def <b>foo</b>():", 2)
