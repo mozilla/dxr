@@ -3,6 +3,7 @@ import token
 import tokenize
 from os.path import islink
 from StringIO import StringIO
+from itertools import izip
 
 from dxr.build import unignored
 from dxr.filters import FILE, LINE
@@ -219,33 +220,44 @@ class FileToIndex(FileToIndexBase):
         for indexing.
 
         """
+        # Run the file contents through the tokenizer, both as unicode
+        # and as a utf-8 encoded string.  This will allow us to build
+        # up a mapping between the byte offset and the character offset.
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
+        utf8_token_gen = tokenize.generate_tokens(
+            StringIO(self.contents.encode('utf-8')).readline)
 
+        # These are a mapping from the utf-8 byte starting points provided by
+        # the ast nodes, to the unicode character offset tuples for both the
+        # start and the end points.
         node_start_table = {}
         call_start_table = {}
 
         node_type, node_start = None, None
         paren_level, paren_stack = 0, {}
 
-        for tok_type, tok_name, start, end, _ in token_gen:
+        for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
+            tok_type, tok_name, start, end, _ = unicode_token
+            utf8_start = utf8_token[2]
+
             if tok_type == token.NAME:
                 # AST nodes for classes and functions point to the position of
                 # their 'def' and 'class' tokens. To get the position of their
                 # names, we look for 'def' and 'class' tokens and store the
                 # position of the token immediately following them.
                 if node_start and node_type == 'definition':
-                    node_start_table[node_start] = (start, end)
+                    node_start_table[node_start[0]] = (start, end)
                     node_type, node_start = None, None
                     continue
 
                 if tok_name in ('def', 'class'):
-                    node_type, node_start = 'definition', start
+                    node_type, node_start = 'definition', (utf8_start, start)
                     continue
 
                 # Record all name nodes in the token table.  Currently unused,
                 # but will be needed for recording variable references.
-                node_start_table[start] = (start, end)
-                node_type, node_start = 'name', start
+                node_start_table[utf8_start] = (start, end)
+                node_type, node_start = 'name', (utf8_start, start)
 
             elif tok_type == token.OP:
                 # In order to properly capture the start and end of function
@@ -261,7 +273,7 @@ class FileToIndex(FileToIndexBase):
                     paren_level -= 1
                     if paren_level in paren_stack:
                         call_start = paren_stack.pop(paren_level)
-                        call_start_table[call_start] = (call_start, end)
+                        call_start_table[call_start[0]] = (call_start[1], end)
 
                 node_type, node_start = None, None
 
