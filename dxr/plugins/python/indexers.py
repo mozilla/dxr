@@ -16,7 +16,7 @@ from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import ClassRef
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
-                                      path_to_module)
+                                      path_to_module, ast_parse)
 
 
 mappings = {
@@ -190,7 +190,7 @@ class FileToIndex(FileToIndexBase):
         if not self._visitor:
             self.node_start_table, self.call_start_table = self.analyze_tokens()
             self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
-            syntax_tree = ast.parse(self.contents)
+            syntax_tree = ast_parse(self.contents)
             self._visitor.visit(syntax_tree)
         return self._visitor
 
