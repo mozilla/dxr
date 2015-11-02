@@ -201,18 +201,16 @@ class Deployment(object):
                     run('git fsck --no-dangling')
 
                     # Install stuff, using the new copy of peep from the checkout:
-                    python = join(new_build_path, VENV_NAME, 'bin', 'python')
-                    run('{python} ./peep.py install -r requirements.txt',
-                        python=python)
+                    venv = join(new_build_path, VENV_NAME)
+                    run('VIRTUAL_ENV={venv} make requirements', venv=venv)
                     # Compile nunjucks templates and cachebust static assets:
                     run('make static &> /dev/null')
-                    # Quiet the complaint about there being no matches for *.so:
-                    run('{python} setup.py install 2>/dev/null', python=python)
+                    run('{pip} install --no-deps -e .',
+                        pip=join(venv, 'bin', 'pip'))
 
                 # After installing, you always have to re-run this, even if we
                 # were reusing a venv:
-                run('virtualenv --relocatable {venv}',
-                    venv=join(new_build_path, VENV_NAME))
+                run('virtualenv --relocatable {venv}', venv=venv)
 
                 run('chmod 755 .')  # mkdtemp uses a very conservative mask.
         except Exception:

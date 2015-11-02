@@ -21,3 +21,4 @@ dxr-temp-*
 /node_modules/nunjucks
 /docs/build
 .npm_installed
+.peep_installed

@@ -1,6 +1,6 @@
 # Things you should consider running:
 
-all: static plugins
+all: requirements static plugins
 
 test: all
 	python setup.py test
@@ -24,6 +24,9 @@ static: dxr/static_manifest
 
 # Private things:
 
+# Install Python requirements:
+requirements: .peep_installed
+
 plugins:
 	$(MAKE) -C dxr/plugins/clang
 
@@ -36,6 +39,11 @@ dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 # that file:
 .npm_installed: package.json lockdown.json
 	npm install
+	touch $@
+
+# Install requirements in current virtualenv:
+.peep_installed: requirements.txt
+	$$VIRTUAL_ENV/bin/python peep.py install -r requirements.txt
 	touch $@
 
 # Static-file cachebusting:
@@ -87,4 +95,4 @@ dxr/static_manifest: $(CSS_TEMPS) dxr/build/leaf_manifest dxr/build/css_manifest
 	
 	cat dxr/build/leaf_manifest dxr/build/css_manifest > $@
 
-.PHONY: all test clean static_clean static templates plugins
+.PHONY: all test clean static_clean static requirements plugins
