@@ -9,7 +9,7 @@ function onEsc(func) {
         // so, we check both.
         var keyPressed = event.key || event.keyCode;
         // esc key pressed.
-        if (keyPressed === 27 || keyPressed === 'Esc')
+        if (keyPressed === 27 || keyPressed === 'Escape' || keyPressed === 'Esc')
             func();
         else
             return true;
