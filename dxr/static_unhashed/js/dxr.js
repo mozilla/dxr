@@ -545,6 +545,11 @@ $(function() {
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
         if (/search$/.test(window.location.pathname) && window.location.search) {
+            // Set case-sensitive checkbox according to the URL, and make sure
+            // the localstorage mirrors it.
+            var urlIsCaseSensitive = caseFromUrl() === true;
+            caseSensitiveBox.prop('checked', urlIsCaseSensitive);
+            localStorage.setItem('caseSensitive', urlIsCaseSensitive);
             doQuery(false, window.location.href);
         }
     });
