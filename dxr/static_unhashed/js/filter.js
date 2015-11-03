@@ -17,7 +17,6 @@ $(function() {
 
     // Show/Hide the options
     trigger.click(function(event) {
-        event.stopPropagation();
 
         var optionsContainer = $('.sf-select-options');
         var expanded = optionsContainer.attr('aria-expanded');
@@ -32,14 +31,22 @@ $(function() {
         }
     });
 
+    // Hide the options if anything outside the options or trigger box is
+    // clicked.
+    $(document.documentElement).on('mousedown', function(event) {
+        if ($(event.target).is(':not(.sf-select-trigger, ' +
+                                    '.sf-select-options, .sf-select-options *)')) {
+            $('.sf-select-options').hide();
+        }
+    });
+
     options.on('click', 'a', function(event) {
         event.stopPropagation();
 
         appendFilter($(this).data('value'));
 
-        hideOptions();
+        $('.sf-select-options').hide();
     });
 
-    window.addEventListener('click', hideOptions, false);
-    onEsc(hideOptions);
+    onEsc(hideOptionsAndHelp);
 });

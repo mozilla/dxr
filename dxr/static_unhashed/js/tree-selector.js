@@ -20,7 +20,6 @@ $(function() {
 
     // Show/Hide the options
     contentContainer.on('click', '.ts-select-trigger', function(event) {
-        event.stopPropagation();
 
         var optionsFilter = $('.options-filter');
         var optionsContainer = $('.tree-selector').find('.select-options');
@@ -41,15 +40,23 @@ $(function() {
         }
     });
 
+    // Hide the options if anything outside the options or trigger box is
+    // clicked.
+    $(document.documentElement).on('mousedown', function(event) {
+        if ($(event.target).is(':not(.ts-select-trigger, ' +
+                                    '.select-options, .select-options *)')) {
+            $('.select-options').hide();
+        }
+    });
+
     options.on('click', 'a', function(event) {
         event.stopPropagation();
         setSelectedItem($(this));
         // Set the value of the relevant hidden type element to
         // the selected value.
         $('#ts-value').val($(this).text());
-        hideOptions();
+        $('.select-options').hide();
     });
 
-    window.addEventListener('click', hideOptions, false);
-    onEsc(hideOptions);
+    onEsc(hideOptionsAndHelp);
 });
