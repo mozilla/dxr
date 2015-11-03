@@ -8,7 +8,8 @@ test: all
 clean: static_clean
 	rm -rf node_modules/.bin/nunjucks-precompile \
 	       node_modules/nunjucks \
-	       .npm_installed
+	       .npm_installed \
+	       .peep_installed
 	find . -name "*.pyc" -exec rm -f {} \;
 	$(MAKE) -C dxr/plugins/clang clean
 
