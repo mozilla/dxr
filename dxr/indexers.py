@@ -2,9 +2,8 @@
 
 import cgi
 from collections import namedtuple
-import json
 from operator import itemgetter
-from os.path import join
+from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
@@ -209,10 +208,13 @@ class FileToSkim(PluginConfig):
         :meth:`~dxr.indexers.FileToSkim.links()`,
         :meth:`~dxr.indexers.FileToSkim.refs()`, etc.
 
-        The default implementation selects only text files.
+        The default implementation selects only text files that are not symlinks.
+        Note: even if a plugin decides that symlinks are interesting, it should
+        remember that links, refs, regions and by-line annotations will not be
+        called because views of symlinks redirect to the original file.
 
         """
-        return self.contains_text()
+        return self.contains_text() and not self.is_link()
 
     def links(self):
         """Return an iterable of links for the navigation pane::
@@ -234,7 +236,7 @@ class FileToSkim(PluginConfig):
         holding the contents of the file. (``refs()`` will not be called for
         binary files.)
 
-        ``ref`` is a :class:`~dxr.indexers.Ref`.
+        ``ref`` is a :class:`~dxr.lines.Ref`.
 
         """
         return []
@@ -244,7 +246,7 @@ class FileToSkim(PluginConfig):
         of code.
 
         Yield an ordered list of extents and CSS classes (encapsulated in
-        :class:`~dxr.indexers.Region` instances)::
+        :class:`~dxr.lines.Region` instances)::
 
             (start, end, Region)
 
@@ -305,6 +307,15 @@ class FileToSkim(PluginConfig):
 
         """
         return join(self.tree.source_folder, self.path)
+
+    def is_link(self):
+        """Return whether the file is a symlink.
+
+        Note: symlinks are never displayed in file browsing; a request for a symlink redirects
+        to its target.
+
+        """
+        return islink(self.absolute_path())
 
     # Private methods:
 
@@ -393,102 +404,12 @@ class FileToIndex(FileToSkim):
         may be dicts, in which case common keys get merged by
         :func:`~dxr.utils.append_update()`.
 
+        This method is not called on symlink files, to maintain the illusion
+        that they do not have contents, seeing as they cannot be viewed in
+        file browsing.
+
         """
         return []
-
-
-class Ref(object):
-    """A context menu and other metadata attached to a run of text"""
-
-    sort_order = 1
-    __slots__ = ['menu', 'hover', 'qualname_hash']
-
-    def __init__(self, menu, hover=None, qualname=None, qualname_hash=None):
-        """
-        :arg hover: the contents of the <a> tag's title attribute. (The first
-            one wins.)
-        :arg menu: a list of mappings, each representing an item of the
-            context menu::
-
-                [{'html': 'description',
-                  'title': 'longer description',
-                  'href': 'URL',
-                  'icon': 'extensionless name of a PNG from the icons folder'},
-                 ...]
-        :arg qualname: A unique identifier for the symbol surrounded by this
-            ref, for highlighting
-        :arg qualname_hash: The hashed version of ``qualname``, which you can
-            pass instead of ``qualname`` if you have access to the
-            already-hashed version
-
-        """
-        self.menu = menu
-        self.hover = hover
-        self.qualname_hash = hash(qualname) if qualname else qualname_hash
-
-    def es(self):
-        ret = {'menuitems': self.menu}
-        if self.hover:
-            ret['hover'] = self.hover
-        if self.qualname_hash is not None:  # could be 0
-            ret['qualname_hash'] = self.qualname_hash
-        return ret
-
-    @classmethod
-    def es_to_triple(cls, es_ref):
-        """Convert ES-dwelling ref representation to a (start, end,
-        :class:`~dxr.indexers.Ref`) triple."""
-        payload = es_ref['payload']
-        return (es_ref['start'],
-                es_ref['end'],
-                cls(payload['menuitems'],
-                    hover=payload.get('hover'),
-                    qualname_hash=payload.get('qualname_hash')))
-
-    def opener(self):
-        menu = cgi.escape(json.dumps(self.menu), True)
-        if self.hover:
-            title = ' title="' + cgi.escape(self.hover, True) + '"'
-        else:
-            title = ''
-        if self.qualname_hash is not None:
-            cls = ' class="tok%i"' % self.qualname_hash
-        else:
-            cls = ''
-        return u'<a data-menu="%s"%s%s>' % (menu, title, cls)
-
-    def closer(self):
-        return u'</a>'
-
-
-class Region(object):
-    """A <span> tag with a CSS class, wrapped around a run of text"""
-
-    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
-                    # them.
-    __slots__ = ['css_class']
-
-    def __init__(self, css_class):
-        self.css_class = css_class
-
-    def es(self):
-        return self.css_class
-
-    @classmethod
-    def es_to_triple(cls, es_region):
-        """Convert ES-dwelling region representation to a (start, end,
-        :class:`~dxr.indexers.Region`) triple."""
-        return es_region['start'], es_region['end'], cls(es_region['payload'])
-
-    def opener(self):
-        return u'<span class="%s">' % cgi.escape(self.css_class, True)
-
-    def closer(self):
-        return u'</span>'
-
-    def __repr__(self):
-        """Return a nice representation for debugging."""
-        return 'Region("%s")' % self.css_class
 
 
 # Conveniences:

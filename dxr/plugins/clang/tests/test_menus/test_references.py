@@ -23,7 +23,7 @@ class ReferenceTests(DxrInstanceTestCase):
                 'type-ref:numba path:main.cpp',
                 '<b>numba</b> a = another_file();',
                 6)
-        self.found_line_eq('type-ref:MyClass', '<b>MyClass</b> c;', 7)
+        self.found_line_eq('type-ref:MyClass path:main.cpp', '<b>MyClass</b> c;', 7)
 
     def test_var(self):
         """Test var-refs.

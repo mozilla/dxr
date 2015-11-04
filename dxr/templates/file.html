@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% from "nunjucks/switch_tree.html" import tree_menu %}
+
+{% block title %}{{ name }} - DXR{% endblock %}
+
+{% block head %}
+  <link rel="shortcut icon" href="{{ icon_url }}" />
+{% endblock %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block content %}
+  <div class="breadcrumbs">
+    {%- for path, name in paths_and_names -%}
+      {%- if not loop.first or loop.last -%}
+        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- else -%}
+        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+
+  {{ tree_menu(tree_tuples, tree) }}
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ url_for('.static', filename='js/panel.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/tree-selector.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/code-highlighter.js') }}"></script>
+{% endblock %}

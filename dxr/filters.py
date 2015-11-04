@@ -41,8 +41,13 @@ class Filter(object):
         one encountered will be used. An empty description will hide a filter
         from the menu. This should probably be used only internally, by the
         TextFilter.
-    :ivar union_only: Whether this filter will always be ORed with others of the same name,
-        useful for filters where the intersection would always be empty, such as extensions
+    :ivar union_only: Whether this filter will always be ORed with others of
+        the same name, useful for filters where the intersection would always
+        be empty, such as extensions
+    :ivar is_reference: Whether to include this filter in the "ref:" aggregate
+        filter
+    :ivar is_identifier: Whether to include this filter in the "id:" aggregate
+        filter
 
     """
     domain = LINE

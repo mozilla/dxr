@@ -1,11 +1,14 @@
 *.pyc
 *.o
 *.so
-/dxr/static/js/templates.js
+/dxr/static
+/dxr/static_manifest
+/dxr/static_unhashed/js/templates.js
 dxr-logs-*
 dxr-temp-*
 **/tests/*/code/code
 **/tests/*/code2/code
+/dxr/plugins/rust/tests/test_smoke/code/libkrate2.rlib
 /vagrantconfig_local.yaml
 /.vagrant
 /.noseids
@@ -17,3 +20,5 @@ dxr-temp-*
 /node_modules/grunt*
 /node_modules/nunjucks
 /docs/build
+.npm_installed
+.peep_installed

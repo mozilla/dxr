@@ -1,0 +1,20 @@
+{% from "result_lines.html" import result_lines -%}
+
+{% macro results_list(results, www_root, tree) -%}
+  {% for result in results %}
+    <tbody class="result" data-path="{{ result.path }}">
+      <tr class="result-head {% if result.is_binary %} binary_row {% endif %}">
+        <td class="left-column">
+          <div class="{{result.iconClass}} icon-container"></div>
+        </td>
+        <td>
+          {{ result.pathLine|safe }}
+        </td>
+      </tr>
+      {{ result_lines(result, www_root, tree) }}
+    </tbody>
+  {% endfor %}
+{%- endmacro %}
+
+{# When not being included as a macro, render the code above. #}
+{{ results_list(results, www_root, tree) }}

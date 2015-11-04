@@ -1,0 +1,21 @@
+FROM quay.io/fubar/ubuntu-indexer
+MAINTAINER Peter
+
+# Install Rust.
+RUN curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=2015-06-14 --yes
+# Replace the distributed dxr with the one from here (working copy).
+ADD . /builds/dxr-build-env/dxr
+# Run make.
+RUN . venv/bin/activate && \
+    dxr/peep.py install -r dxr/requirements.txt && \
+    cd dxr && \
+    python setup.py install && \
+    make && \
+    cd - && \
+    deactivate
+
+# Expose port 8000
+EXPOSE 8000
+# Entrypoint is dxr.
+WORKDIR /builds/dxr-build-env/dxr/docker
+ENTRYPOINT ["dxr"]

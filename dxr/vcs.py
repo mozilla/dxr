@@ -1,19 +1,21 @@
-"""Let DXR understand the concept of version control systems. The main entry
-points are `tree_to_repos`, which produces a mapping of roots to VCS objects
-for each version control root discovered under the provided tree, and
-`path_to_vcs`, which returns a VCS object for the version control system that
-tracks the given path. Currently supported VCS are Mercurial, Git, and
-Perforce.
+"""DXR's concept of version control systems
+
+The main entry points are `tree_to_repos`, which produces a mapping of roots
+to VCS objects for each version control root discovered under the provided
+tree, and `path_to_vcs`, which returns a VCS object for the version control
+system that tracks the given path. Currently supported VCSs are Mercurial,
+Git, and Perforce.
 
 Currently supported upstream views:
-- git (github)
-- mercurial (hgweb)
+- Git (GitHub)
+- Mercurial (hgweb)
 
-Todos:
-- add gitweb support for git
-- add cvs, svn, bzr support
-- produce in-DXR blame information using VCSs
-- check if the mercurial paths are specific to Mozilla's customization or not.
+TODO:
+- Add gitweb support for git.
+- Add cvs, svn, bzr support.
+- Produce in-DXR blame information using VCSs.
+- Check if the mercurial paths are specific to Mozilla's customization or not.
+
 """
 import marshal
 import os
@@ -25,6 +27,8 @@ from warnings import warn
 
 import hglib
 from ordereddict import OrderedDict
+
+from dxr.utils import without_ending
 
 
 class Vcs(object):
@@ -173,8 +177,7 @@ class Git(Vcs):
                 if repo.startswith("git@github.com:"):
                     return "https://github.com/" + repo[len("git@github.com:"):]
                 elif repo.startswith(("git://github.com/", "https://github.com/")):
-                    if repo.endswith(".git"):
-                        repo = repo[:-len(".git")]
+                    repo = without_ending('.git', repo)
                     if repo.startswith("git:"):
                         repo = "https" + repo[len("git"):]
                     return repo
@@ -276,7 +279,9 @@ class Perforce(Vcs):
         info = self.have[path]
         return '#' + info['haveRev']
 
+
 every_vcs = [Mercurial, Git, Perforce]
+
 
 def tree_to_repos(tree):
     """Given a TreeConfig, return a mapping {root: Vcs object} where root is a
@@ -358,4 +363,3 @@ class VcsCache(object):
                 self._path_cache[path] = vcs
                 break
         return self._path_cache.get(path)
-

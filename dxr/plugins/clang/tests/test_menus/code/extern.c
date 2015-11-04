@@ -13,7 +13,12 @@ int var = 5;
 class MyClass;
 class MyClass
 {
+  int fib(int n);
 };
+
+int MyClass::fib(int n) {
+  return (n <= 1)? 1: fib(n-1) + fib(n-2);
+}
 
 namespace Space {
   void foo() {}

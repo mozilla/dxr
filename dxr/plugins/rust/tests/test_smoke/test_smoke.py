@@ -7,10 +7,6 @@ from nose.tools import eq_,ok_
 from dxr.testing import DxrInstanceTestCase
 import os
 
-# We'll also need rust libs to be in LD_LIBRARY_PATH, but there's not an easy
-# way to test for that.
-if 'RUSTC' not in os.environ:
-    raise SkipTest
 
 class RustTests(DxrInstanceTestCase):
     """Test indexing of Rust projects"""

@@ -30,11 +30,8 @@ class BasicTests(DxrInstanceTestCase):
         This tests trilite's substr-extents query type.
 
         """
-        self.found_files_eq('really',
-                            ['README.mkd'],
-                            is_case_sensitive=True)
-        self.found_nothing('REALLY',
-                           is_case_sensitive=True)
+        self.found_files_eq('really', ['README.mkd'])
+        self.found_nothing('REALLY')
 
     def test_case_insensitive(self):
         """Test case-insensitive free-text searching without extents.
@@ -44,8 +41,7 @@ class BasicTests(DxrInstanceTestCase):
         This tests trilite's isubstr query type.
 
         """
-        results = self.search_results(
-            'path:makefile -CODE', is_case_sensitive=False)
+        results = self.search_results('path:makefile -code')
         eq_(results,
             [{"path": "makefile",
               "lines": [
@@ -62,9 +58,7 @@ class BasicTests(DxrInstanceTestCase):
         This tests trilite's isubstr-extents query type.
 
         """
-        self.found_files_eq('MAIN',
-                            ['main.c', 'makefile'],
-                            is_case_sensitive=False)
+        self.found_files_eq('main', ['main.c', 'makefile'])
 
     def test_index(self):
         """Make sure the index controller redirects."""

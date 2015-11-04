@@ -100,13 +100,8 @@ host and still use the VM to run DXR.
 After making changes to DXR, a build step is sometimes needed to see the
 effects of your work:
 
-Changes to C++ or other code with an explicit compilation phase:
+Changes to C++ code or to HTML templates in the nunjucks folder:
     ``make`` (at the root of the project)
-
-Changes to HTML templates that are used on the client side:
-    ``make templates``. (This is a subset of ``make``, above, and may be
-    faster.) Alternatively, leave ``node_modules/.bin/grunt watch`` running,
-    and it will take care of recompiling the templates as necessary.
 
 Changes to the format of the elasticsearch index:
     Re-run ``dxr index`` inside your test folder (e.g.,
@@ -183,7 +178,7 @@ If you have trouble, make sure you didn't mistranscribe any colons or
 periods.
 
 To omit the often distracting elasticsearch logs that nose typically presents
-when a test fails, add the ``--nologcapture``, flag.
+when a test fails, add the ``--nologcapture`` flag.
 
 
 .. _writing-plugins:

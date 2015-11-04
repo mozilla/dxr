@@ -27,19 +27,15 @@ class DefinitionTests(SingleFileTestCase):
 
     def test_names(self):
         """Try searching for function names case-sensitively."""
-        self.found_line_eq(
-            'function:main', 'int <b>main</b>(int argc, char* argv[]) {')
-        self.found_line_eq(
-            'function:getHello', 'const char* <b>getHello</b>() {')
-        self.found_nothing(
-            'function:getHELLO')
+        self.found_line_eq('function:@main', 'int <b>main</b>(int argc, char* argv[]) {')
+        self.found_line_eq('function:getHello', 'const char* <b>getHello</b>() {')
+        self.found_nothing('function:getHELLO')
 
     def test_names_caseless(self):
         """Try searching for function names case-insensitively."""
         self.found_line_eq(
-            'function:MAIN',
-            'int <b>main</b>(int argc, char* argv[]) {',
-            is_case_sensitive=False)
+            'function:main',
+            'int <b>main</b>(int argc, char* argv[]) {')
 
     def test_qualnames_unqualified(self):
         """Qualnames should be found when searching unqualified as well."""
@@ -59,7 +55,7 @@ class DefinitionTests(SingleFileTestCase):
         this behavior and didn't expressly condemn it.
 
         """
-        self.found_nothing('+function:SPACE::FOO(int)', is_case_sensitive=False)
+        self.found_nothing('+function:SPACE::FOO(int)')
 
 
 class TemplateClassMemberReferenceTests(SingleFileTestCase):
