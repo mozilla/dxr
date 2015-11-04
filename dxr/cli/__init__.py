@@ -9,9 +9,9 @@ from dxr.cli.clean import clean
 from dxr.cli.delete import delete
 from dxr.cli.deploy import deploy
 from dxr.cli.index import index
+from dxr.cli.list import list
 from dxr.cli.serve import serve
 from dxr.cli.shell import shell
-from dxr.cli.utils import tree_objects, config_option, tree_names_argument
 
 
 def main():
@@ -37,9 +37,10 @@ def dxr():
     """Pass dxr COMMAND --help to learn more about an individual command."""
 
 
-dxr.add_command(index)
 dxr.add_command(clean)
 dxr.add_command(delete)
+dxr.add_command(deploy)
+dxr.add_command(index)
+dxr.add_command(list)
 dxr.add_command(serve)
 dxr.add_command(shell)
-dxr.add_command(deploy)

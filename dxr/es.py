@@ -61,7 +61,7 @@ def es_alias_or_not_found(tree):
 
 
 def filtered_query(*args, **kwargs):
-    """Do a simple, filtered term query, returning an iterable of _sources.
+    """Do a simple, filtered term query, returning an iterable of sources.
 
     This is just a mindless upfactoring. It probably shouldn't be blown up
     into a full-fledged API.
@@ -69,7 +69,7 @@ def filtered_query(*args, **kwargs):
     ``include`` and ``exclude`` are mutually exclusive for now.
 
     """
-    return _sources(filtered_query_hits(*args, **kwargs))
+    return sources(filtered_query_hits(*args, **kwargs))
 
 
 def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None, exclude=None):
@@ -108,6 +108,6 @@ def create_index_and_wait(es, index, settings=None):
               timeout='5m')
 
 
-def _sources(search_results):
+def sources(search_results):
     """Return just the _source attributes of some ES search results."""
     return [r['_source'] for r in search_results]

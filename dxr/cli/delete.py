@@ -18,10 +18,10 @@ from dxr.es import TREE
 @tree_names_argument
 def delete(config, tree_names, all, force):
     """Delete indices and their catalog entries.
-    
+
     This deletes the indices that have the format version of the copy of DXR
     this runs under.
-    
+
     """
     es = ElasticSearch(config.es_hosts)
     if all:

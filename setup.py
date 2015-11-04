@@ -41,6 +41,7 @@ setup(
                       'pyelasticsearch>=1.1,<2.0',
                       'Pygments>=2.0.1,<3.0',
                       'python-hglib>=1.7,<2.0',
+                      'tabulate>=0.7.5,<0.8',
                       'xpidl>=1.0',
                       'requests>=1.0,<2.0'],
     tests_require=['nose>=1.3.0,<2.0'],

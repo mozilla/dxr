@@ -56,6 +56,9 @@ simplejson==3.7.3
 # sha256: 4kBSQR_E-9H2cmNVN8P8IzDZSBsYwDF2lbRiWVEskdU
 six==1.9.0
 
+# sha256: kHGqy9l6mpFQlsGq8NxoSsJnKQTNh221kECF1trJgQ4
+tabulate==0.7.5
+
 # sha256: ZBpAwMfRRPA1hMwRv6NwK1N7EDbz3DmhkFzy50HZRdY
 # sha256: UhMealYUZvEgbhpkjZpz3aKoBND3DoN4K9iElFQt7Qk
 urllib3==1.10.4
