@@ -153,7 +153,7 @@ class VariableRefRef(_RustRef):
             else:
                 warn("no type for variable ref %s" % (var['qualname'],))
             self.hover = truncate_value(typ, var['value'])
-            return trim_dict(datum, ['file_line', 'file_name', 'qualname'])
+            return trim_dict(var, ['file_line', 'file_name', 'qualname'])
         # TODO what is the culprit here?
         # print "variable ref missing def"
 
