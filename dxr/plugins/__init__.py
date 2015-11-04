@@ -40,7 +40,15 @@ class Plugin(object):
     otherwise.
 
     """
-    def __init__(self, filters=None, tree_to_index=None, file_to_skim=None, mappings=None, analyzers=None, direct_searchers=None, config_schema=None):
+    def __init__(self,
+                 filters=None,
+                 tree_to_index=None,
+                 file_to_skim=None,
+                 mappings=None,
+                 analyzers=None,
+                 direct_searchers=None,
+                 refs=None,
+                 config_schema=None):
         """
         :arg filters: A list of filter classes
         :arg tree_to_index: A :class:`TreeToIndex` subclass
@@ -70,6 +78,9 @@ class Plugin(object):
                 A more general approach may replace direct search in the
                 future.
 
+        :arg refs: An iterable of :class:`~dxr.lines.Ref` subclasses
+            supported by this plugin. This is used at request time, to turn
+            abreviated ES index data back into HTML.
         :arg config_schema: A validation schema for this plugin's
             configuration. See https://pypi.python.org/pypi/schema/ for docs.
 
@@ -82,6 +93,8 @@ class Plugin(object):
         """
         self.filters = filters or []
         self.direct_searchers = direct_searchers or []
+        self.refs = dict((ref_class.id, ref_class)
+                          for ref_class in (refs or []))
         # Someday, these might become lists of indexers or skimmers, and then
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
@@ -99,6 +112,9 @@ class Plugin(object):
         :arg namespace: A namespace from which to pick components
 
         **Filters** are taken to be any class whose name ends in "Filter" and
+        doesn't start with "_".
+
+        **Refs** are taken to be any class whose name ends in "Ref" and
         doesn't start with "_".
 
         The **tree indexer** is assumed to be called "TreeToIndex". If there isn't
@@ -127,7 +143,8 @@ class Plugin(object):
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
-                   direct_searchers=direct_searchers_from_namespace(namespace))
+                   direct_searchers=direct_searchers_from_namespace(namespace),
+                   refs=refs_from_namespace(namespace))
 
     def __eq__(self, other):
         """Consider instances of the same plugin equal."""
@@ -152,9 +169,14 @@ class Plugin(object):
         copy['direct_searchers'] = []
         return copy
 
+    def __repr__(self):
+        return (('<Plugin %s>' % self.name) if hasattr(self, 'name')
+                else super(Plugin, self).__repr__())
+
 
 def filters_from_namespace(namespace):
-    """Return the filters which conform to our suggested naming convention.
+    """Return the filters which conform to our suggested naming convention:
+    ending with "Filter" and not starting with "_".
 
     :arg namespace: The namespace in which to look for filters
 
@@ -177,6 +199,24 @@ def direct_searchers_from_namespace(namespace):
             if hasattr(v, 'direct_search_priority') and isfunction(v)]
 
 
+def refs_from_namespace(namespace):
+    """Return a list of :class:`~dxr.lines.Ref` subclasses (or workalikes)
+    defined in a namespace, identified by conforming to our naming convention.
+
+    Our convention is to end with "Ref" and not start with "_".
+
+    """
+    from dxr.lines import Ref
+
+    # TODO: Consider switching to an isinstance() test so plugin authors have
+    # more naming flexibility.
+    return [v for k, v in namespace.iteritems() if
+            isclass(v) and
+            not k.startswith('_') and
+            k.endswith('Ref') and
+            v is not Ref]
+
+
 def direct_search(priority, domain=LINE):
     """Mark a function as being a direct search provider.
 
@@ -195,7 +235,7 @@ def direct_search(priority, domain=LINE):
 
 _plugin_cache = None
 def all_plugins():
-    """Return a dict of plugin name -> Plugin for all registered plugins.
+    """Return a dict of plugin name -> Plugin for all plugins, including core.
 
     Plugins are registered via the ``dxr.plugins`` setuptools entry point,
     which may point to either a module (in which case a Plugin will be
@@ -206,17 +246,10 @@ def all_plugins():
     The core plugin, which provides many of DXR's cross-language, built-in
     features, is always the first plugin when iterating over the returned
     dict. This lets other plugins override bits of its elasticsearch mappings
-    and analyzers.
+    and analyzers when we're building up the schema.
 
     """
     global _plugin_cache
-
-    if _plugin_cache:
-        # Iterating over entrypoints could be kind of expensive, with the FS
-        # reads and all.
-        return _plugin_cache
-
-    import dxr.plugins.core
 
     def name_and_plugin(entry_point):
         """Return the name of an entry point and the Plugin it points to."""
@@ -226,16 +259,40 @@ def all_plugins():
         plugin.name = entry_point.name
         return entry_point.name, plugin
 
-    _plugin_cache = OrderedDict()
-    _plugin_cache['core'] = Plugin.from_namespace(dxr.plugins.core.__dict__)
-    _plugin_cache['core'].name = 'core'
-    _plugin_cache.update(name_and_plugin(point) for point in
-                              iter_entry_points('dxr.plugins'))
+    if _plugin_cache is None:
+        # Iterating over entrypoints could be kind of expensive, with the FS
+        # reads and all.
+        _plugin_cache = OrderedDict([('core', core_plugin())])
+        _plugin_cache.update(name_and_plugin(point) for point in
+                             iter_entry_points('dxr.plugins'))
+
     return _plugin_cache
 
 
+def all_plugins_but_core():
+    """Do like :func:`all_plugins()`, but don't return the core plugin."""
+    ret = all_plugins().copy()
+    del ret['core']
+    return ret
+
+
+_core_plugin = None
+def core_plugin():
+    """Return the core plugin."""
+    # This is a function in order to dodge a circular import.
+    global _core_plugin
+    import dxr.plugins.core
+
+    if _core_plugin is None:
+        _core_plugin = Plugin.from_namespace(dxr.plugins.core.__dict__)
+        _core_plugin.name = 'core'
+
+    return _core_plugin
+
+
 def plugins_named(names):
-    """Return an iterable of Plugins having the given names.
+    """Return an iterable of the core plugin, along with Plugins having the
+    given names.
 
     :arg names: An iterable of plugin names
 

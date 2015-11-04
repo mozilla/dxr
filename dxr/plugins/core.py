@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext
+from os.path import relpath, splitext, islink, realpath
 import re
 
 from flask import url_for
@@ -59,6 +59,11 @@ mappings = {
             'path': PATH_MAPPING,
 
             'ext': EXT_MAPPING,
+
+            'link': {  # the target path if this FILE is a symlink
+                'type': 'string',
+                'index': 'not_analyzed'
+            },
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
@@ -137,7 +142,7 @@ mappings = {
                 # length). The limit here (in Unicode points, in an
                 # unfortunate violation of consistency) keeps us under that,
                 # even if every point encodes to a 4-byte sequence. In
-                # real-world terms, this get past all the Chinese in zh.txt in
+                # real-world terms, this gets past all the Chinese in zh.txt in
                 # mozilla-central.
                 'ignore_above': 32766 / 4,
 
@@ -161,15 +166,9 @@ mappings = {
                 'payload': {
                     'type': 'object',
                     'properties': {
-
-                        'menuitems': {
-                            'type': 'object',
-                            'properties': {
-                                'html': UNINDEXED_STRING,
-                                'href': UNINDEXED_STRING,
-                                'icon': UNINDEXED_STRING
-                            }
-                        },
+                        'plugin': UNINDEXED_STRING,
+                        'id': UNINDEXED_STRING,  # Ref ID
+                        'menu_data': UNINDEXED_STRING,  # opaque to ES
                         'hover': UNINDEXED_STRING,
                         # Hash of qualname of the symbol we're hanging the
                         # menu off of, if it is a symbol and we can come up
@@ -390,8 +389,8 @@ class FilterAggregator(Filter):
 
 
 class IdFilter(FilterAggregator):
-    """Filter aggregator for id: queries, groups together the results of all filters that find
-    declarations and definitions of names."""
+    """Filter aggregator for id: queries, groups together the results of all
+    filters that find declarations and definitions of names."""
 
     name = 'id'
     domain = LINE
@@ -403,8 +402,8 @@ class IdFilter(FilterAggregator):
 
 
 class RefFilter(FilterAggregator):
-    """Filter aggregator for ref: queries, grouping together the results of all filters that find
-    references to names."""
+    """Filter aggregator for ref: queries, grouping together the results of
+    all filters that find references to names."""
 
     name = 'ref'
     domain = LINE
@@ -433,6 +432,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles(self):
         """Fill out path (and path.trigrams)."""
+        if self.is_link():
+            # realpath will keep following symlinks until it gets to the 'real' thing.
+            yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
         extension = splitext(self.path)[1]
         if extension:

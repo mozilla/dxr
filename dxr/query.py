@@ -139,6 +139,8 @@ class Query(object):
             # Don't show folders yet in search results. I don't think the JS
             # is able to handle them.
             ors.append({'term': {'is_folder': False}})
+            # Filter out all FILE docs who are links.
+            ors.append({'not': {'exists': {'field': 'link'}}})
 
         if ors:
             query = {
@@ -424,8 +426,8 @@ def highlight(content, extents):
 
 
 def fix_extents_overlap(extents):
-    """Return a sorted list of extents whose effect is to highlight the same
-    characters the passed-in ones did but without overlapping each other.
+    """Return a sorted iterable of extents whose effect is to highlight the
+    same characters the passed-in ones did but without overlapping each other.
 
     :arg extents: A sorted iterable of (start, end) extent tuples
 

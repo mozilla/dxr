@@ -99,6 +99,15 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
         size=size)['hits']['hits']
 
 
+def create_index_and_wait(es, index, settings=None):
+    """Create a new index, and wait for all shards to become ready."""
+    es.create_index(index, settings=settings)
+    es.health(index=index,
+              wait_for_status='yellow',
+              wait_for_relocating_shards=0,  # wait for all
+              timeout='5m')
+
+
 def _sources(search_results):
     """Return just the _source attributes of some ES search results."""
     return [r['_source'] for r in search_results]

@@ -17,7 +17,7 @@ from pkg_resources import resource_string
 from schema import Schema, Optional, Use, And, Schema, SchemaError
 
 from dxr.exceptions import ConfigError
-from dxr.plugins import all_plugins
+from dxr.plugins import all_plugins_but_core, core_plugin
 from dxr.utils import cd, if_raises
 
 
@@ -114,6 +114,7 @@ class Config(DotSection):
                 Optional('google_analytics_key', default=''): basestring,
                 Optional('es_hosts', default='http://127.0.0.1:9200/'):
                     WhitespaceList,
+                # A semi-random name, having the tree name and format version in it.
                 Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
                     basestring,
                 Optional('es_alias', default='dxr_{format}_{tree}'):
@@ -121,7 +122,7 @@ class Config(DotSection):
                 Optional('es_catalog_index', default='dxr_catalog'):
                     basestring,
                 Optional('es_catalog_replicas', default=1):
-                    basestring,
+                    Use(int, error='"es_catalog_replicas" must be an integer.'),
                 Optional('max_thumbnail_size', default=20000):
                     And(Use(int),
                         lambda v: v >= 0,
@@ -133,8 +134,7 @@ class Config(DotSection):
                         error='"es_indexing_timeout" must be a non-negative '
                               'integer.'),
                 Optional('es_refresh_interval', default=60):
-                    And(Use(int),
-                        error='"es_indexing_timeout" must be an integer.')
+                    Use(int, error='"es_indexing_timeout" must be an integer.')
             },
             basestring: dict
         })
@@ -160,7 +160,7 @@ class Config(DotSection):
                 # Then explicitly enable anything that isn't explicitly
                 # disabled:
                 self._section['enabled_plugins'] = [
-                        p for p in all_plugins().values()
+                        p for p in all_plugins_but_core().values()
                         if p not in self.disabled_plugins]
 
             # Now that enabled_plugins and the other keys that TreeConfig
@@ -205,6 +205,9 @@ class TreeConfig(DotSectionWrapper):
             Optional('description', default=''): basestring,
             Optional('disabled_plugins', default=plugin_list('')): Plugins,
             Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+            Optional('es_index', default=config.es_index): basestring,
+            Optional('es_shards', default=5):
+                Use(int, error='"es_shards" must be an integer.'),
             Optional('ignore_patterns',
                      default=['.hg', '.git', 'CVS', '.svn', '.bzr',
                               '.deps', '.libs', '.DS_Store', '.nfs*', '*~',
@@ -236,7 +239,7 @@ class TreeConfig(DotSectionWrapper):
         if tree['enabled_plugins'].is_all:
             tree['enabled_plugins'] = [p for p in config.enabled_plugins
                                        if p not in tree['disabled_plugins']]
-        tree['enabled_plugins'].insert(0, all_plugins()['core'])
+        tree['enabled_plugins'].insert(0, core_plugin())
 
         # Split ignores into paths and filenames:
         tree['ignore_paths'] = [i for i in tree['ignore_patterns']
@@ -254,11 +257,10 @@ class TreeConfig(DotSectionWrapper):
             if all(isinstance(k, Optional) for k in p.config_schema.iterkeys()))
         plugin_schema = Schema(merge(
             dict((Optional(name) if plugin in enableds_with_all_optional_config
-                                 or plugin not in tree['enabled_plugins']
-                  else name,
+                                    or plugin not in tree['enabled_plugins']
+                                 else name,
                   plugin.config_schema)
-                 for name, plugin in all_plugins().iteritems()
-                 if name != 'core'),
+                 for name, plugin in all_plugins_but_core().iteritems()),
             # And whatever isn't a plugin section, that we don't care about:
             {object: object}))
         # Insert empty missing sections for enabled plugins with entirely
@@ -291,12 +293,15 @@ def plugin_list(value):
     """Turn a space-delimited series of plugin names into a ListAndAll of
     Plugins.
 
+    Never return the core plugin.
+
     """
     if not isinstance(value, basestring):
+        # Probably can't happen
         raise SchemaError('"%s" is neither * nor a whitespace-delimited list '
-                          'of plugin names.' % (value,))
+                          'of plugin names.' % (value,), None)
 
-    plugins = all_plugins()
+    plugins = all_plugins_but_core()
     names = value.strip().split()
     is_all = names == ['*']
     if is_all:
@@ -307,7 +312,8 @@ def plugin_list(value):
         return ret
     except KeyError:
         raise SchemaError('Never heard of plugin "%s". I\'ve heard of '
-                          'these: %s.' % (name, ', '.join(plugins.keys())))
+                          'these: %s.' % (name, ', '.join(plugins.keys())),
+                          None)
 Plugins = Use(plugin_list)
 
 

@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% from "nunjucks/switch_tree.html" import tree_menu %}
+
+{% block title %}{{ name }} - DXR{% endblock %}
+
+{% block site_css %}
+  {{ super() }}
+  <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% set state_eof = True %}
+
+{% block content %}
+  <div class="breadcrumbs">
+    {%- for path, name in paths_and_names -%}
+      {%- if not loop.first or loop.last and loop.length != 1 -%}
+        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- else -%}
+        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+
+  {{ tree_menu(tree_tuples, tree) }}
+
+  <table class="folder-content">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Modified</th>
+        <th scope="col">Size</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for icon, name, modified, size, relative_url, is_binary in files_and_folders %}
+        {% if is_binary %}
+          <tr class="binary_row">
+            <td><span class="icon {{ icon }}">{{ name }}</span></td>
+            <td>{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</td>
+            <td>{{ '' if size is none else size|filesizeformat }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
+            <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
+            <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block site_js %}
+  {{ super() }}
+  <script src="{{ url_for('.static', filename='js/tree-selector.js') }}"></script>
+{% endblock %}

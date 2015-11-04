@@ -74,6 +74,14 @@ You update your dependencies explicitly, relock, and commit:
 
 done!
 
+### Using an npm mirror
+
+You can fetch resources from an npm mirror by specifying the NPM_CONFIG_REGISTRY
+environment variable when invoking `npm install`. If NPM_CONFIG_REGISTRY is not
+specified, http://registry.npmjs.org will be used.
+
+    NPM_CONFIG_REGISTRY=http://registry.npmjs.eu/ npm install
+
 ## Notes:
 
   * You should use the latest stable version of lockdown, find it from the [npm registry](https://npmjs.org/package/lockdown)

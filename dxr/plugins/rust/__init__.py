@@ -19,25 +19,17 @@ Line and column numbers are stored as strings though.
 """
 import csv
 import os
-import sys
-from operator import itemgetter
-from itertools import chain, izip, ifilter
-from functools import partial
-
-from jinja2 import Markup
-from funcy import (merge, imap, group_by, is_mapping, repeat, compose,
-                   constantly, icat)
+from itertools import chain
 
 from dxr import indexers
-from dxr.plugins import Plugin, filters_from_namespace
-import dxr.utils as utils
+from dxr.plugins import Plugin, filters_from_namespace, refs_from_namespace
 from dxr.filters import LINE
 from dxr.indexers import Extent, Position, iterable_per_line, with_start_and_end, split_into_lines, QUALIFIED_LINE_NEEDLE
 
 from dxr.plugins.rust import filters
-import dxr.plugins.rust.menu
+from dxr.plugins.rust import refs
 
-PLUGIN_NAME = 'rust'
+
 RUST_DXR_FLAG = " -Zsave-analysis"
 
 # We know these crates come from the rust distribution (probably, the user could
@@ -65,42 +57,28 @@ class FileToIndex(indexers.FileToIndex):
         return self.all_needles()
 
     def refs(self):
-        def make_menu_and_title(table_name, function_name):
-            data = self.tree_index.by_file(table_name, self.path)
-            for datum in data:
-                menu_func = getattr(menu, function_name)
-                menu_and_title = menu_func(self.tree_index, datum, self.tree)
-                if menu_and_title:
-                    if 'extent_start' in datum:
-                        yield (int(datum['extent_start']),
-                               int(datum['extent_end']),
-                               menu_and_title)
-
-        for m in make_menu_and_title('functions', 'function_menu'):
-            yield m
-        for m in make_menu_and_title('function_refs', 'function_ref_menu'):
-            yield m
-        for m in make_menu_and_title('variables', 'variable_menu'):
-            yield m
-        for m in make_menu_and_title('variable_refs', 'variable_ref_menu'):
-            yield m
-        for m in make_menu_and_title('types', 'type_menu'):
-            yield m
-        for m in make_menu_and_title('type_refs', 'type_ref_menu'):
-            yield m
-        for m in make_menu_and_title('modules', 'module_menu'):
-            yield m
-        for m in make_menu_and_title('module_refs', 'module_ref_menu'):
-            yield m
-        for m in make_menu_and_title('module_aliases', 'module_alias_menu'):
-            yield m
-        for m in make_menu_and_title('unknown_refs', 'unknown_ref_menu'):
-            yield m
-
+        classes_and_tables = [(refs.FunctionRef, 'functions'),
+                              (refs.FunctionRefRef, 'function_refs'),
+                              (refs.VariableRef, 'variables'),
+                              (refs.VariableRefRef, 'variable_refs'),
+                              (refs.TypeRef, 'types'),
+                              (refs.TypeRefRef, 'type_refs'),
+                              (refs.ModuleRef, 'modules'),
+                              (refs.ModuleRefRef, 'module_refs'),
+                              (refs.ModuleAliasRef, 'module_aliases'),
+                              (refs.UnknownRef, 'unknown_refs')]
         # Note there is no ref for impls since both the trait and struct parts
         # are covered as refs already. If you add this, then you will get overlapping
         # extents, which is bad. We have impl_defs in the db because we do want
         # to jump _to_ them.
+
+        for make_ref, table_name in classes_and_tables:
+            for datum in self.tree_index.by_file(table_name, self.path):
+                ref = make_ref(self.tree, datum, tree_index=self.tree_index)
+                if ref and 'extent_start' in datum:
+                    yield (int(datum['extent_start']),
+                           int(datum['extent_end']),
+                           ref)
 
 
     def annotations_by_line(self):
@@ -130,7 +108,6 @@ class FileToIndex(indexers.FileToIndex):
             self.fn_impls_needles(),
             self.inherit_needles(self.tree_index.super_traits, 'derived'),
             self.inherit_needles(self.tree_index.sub_traits, 'bases'),
-            self.call_needles(self.tree_index.callers, 'called_by'),
             self.call_needles(self.tree_index.callees, 'callers'),
         ))))
 
@@ -138,7 +115,7 @@ class FileToIndex(indexers.FileToIndex):
         data = self.tree_index.by_file(table_name, self.path)
         return self.needles_for_table(filter_name, data)
 
-    def needles_for_table(self ,filter_name, data):
+    def needles_for_table(self, filter_name, data):
         # Each needle is a (needle name, needle value dict, Extent) triple.
         result = (('rust_{0}'.format(filter_name),
                  datum,
@@ -214,6 +191,9 @@ class FileToIndex(indexers.FileToIndex):
             if datum['id'] not in inheritance:
                 continue
             for s in inheritance[datum['id']]:
+                if s not in all_types:
+                    continue
+
                 t = {
                     'qualname': all_types[s]['qualname'],
                     'name': all_types[s]['name']
@@ -339,7 +319,7 @@ class TreeToIndex(indexers.TreeToIndex):
         # The name of the crate being processed
         self.crate_name = None
 
-        self._temp_folder = os.path.join(self.tree.temp_folder, 'plugins', PLUGIN_NAME)
+        self._temp_folder = os.path.join(self.tree.temp_folder, 'plugins', plugin_name)
 
 
     # return data by file, indexed by the file's path
@@ -1074,11 +1054,11 @@ mappings = {
             'rust_bases': QUALIFIED_LINE_NEEDLE,
             'rust_derived': QUALIFIED_LINE_NEEDLE,
             'rust_callers': QUALIFIED_LINE_NEEDLE,
-            'rust_called_by': QUALIFIED_LINE_NEEDLE,
         }
     }
 }
 
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
-                mappings=mappings)
+                mappings=mappings,
+                refs=refs_from_namespace(refs.__dict__))

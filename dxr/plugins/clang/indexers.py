@@ -11,12 +11,11 @@ from funcy import (merge, imap, group_by, is_mapping, repeat,
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
-                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig, Ref)
+                          QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
+from dxr.lines import Ref
 from dxr.plugins.clang.condense import condense_file, condense_global
-from dxr.plugins.clang.menus import (function_menu, variable_menu, type_menu,
-                                     namespace_menu, namespace_alias_menu,
-                                     macro_menu, include_menu, typedef_menu,
-                                     definition_menu)
+from dxr.plugins.clang.menus import (FunctionRef, VariableRef, TypeRef,
+    NamespaceRef, NamespaceAliasRef, MacroRef, IncludeRef, TypedefRef)
 from dxr.plugins.clang.needles import all_needles
 
 
@@ -74,34 +73,41 @@ class FileToIndex(FileToIndexBase):
                 self.children)
 
     def refs(self):
-        def silent_itemgetter(y):
+        def getter_or_empty(y):
             return lambda x: x.get(y, [])
 
-        # Refs are not structured much like functions, but they have a
-        # qualname key, which is all that function_menu() requires, so we can
-        # just chain kind_getters together with other getters.
-        #
-        # Menu makers and the thing-getters over which they run:
-        menus_and_views = [
-                (function_menu, [silent_itemgetter('function'),
-                                 kind_getter('ref', 'function')]),
-                (variable_menu, [silent_itemgetter('variable'),
-                                 kind_getter('ref', 'variable')]),
-                (type_menu, [silent_itemgetter('type'),
-                             kind_getter('ref', 'type')]),
-                (type_menu, [silent_itemgetter('decldef')]),
-                (typedef_menu, [silent_itemgetter('typedef'),
-                                kind_getter('ref', 'typedef')]),
-                (namespace_menu, [silent_itemgetter('namespace'),
-                                  kind_getter('ref', 'namespace')]),
-                (namespace_alias_menu, [silent_itemgetter('namespace_alias'),
-                                        kind_getter('ref', 'namespace_alias')]),
-                (macro_menu,
-                 [silent_itemgetter('macro'), kind_getter('ref', 'macro')],
-                 silent_itemgetter('text')),
-                (include_menu, [silent_itemgetter('include')])]
-        return chain.from_iterable(self._refs_from_view(*mv) for mv in
-                                   menus_and_views)
+        # Ref subclasses and the thing-getters that provide input to their
+        # from_condensed() methods:
+        classes_and_getters = [
+            (FunctionRef, [getter_or_empty('function'),
+                           kind_getter('decldef', 'function'),
+                           # Refs are not structured much like functions, but
+                           # they have a qualname key, which is all FunctionRef
+                           # requires, so we can just chain kind_getters
+                           # together with other getters.
+                           kind_getter('ref', 'function')]),
+            (VariableRef, [getter_or_empty('variable'),
+                           kind_getter('ref', 'variable')]),
+            (TypeRef, [getter_or_empty('type'),
+                       kind_getter('ref', 'type'),
+                       not_kind_getter('decldef', 'function')]),
+            (TypedefRef, [getter_or_empty('typedef'),
+                          kind_getter('ref', 'typedef')]),
+            (NamespaceRef, [getter_or_empty('namespace'),
+                            kind_getter('ref', 'namespace')]),
+            (NamespaceAliasRef, [getter_or_empty('namespace_alias'),
+                                 kind_getter('ref', 'namespace_alias')]),
+            (MacroRef, [getter_or_empty('macro'),
+                        kind_getter('ref', 'macro')]),
+            (IncludeRef, [getter_or_empty('include')])]
+
+        for ref_class, getters in classes_and_getters:
+            for prop in chain.from_iterable(g(self.condensed) for g in getters):
+                if 'span' in prop:
+                    start, end = prop['span']
+                    yield (self.char_offset(start.row, start.col),
+                           self.char_offset(end.row, end.col),
+                           ref_class.from_condensed(self.tree, prop))
 
     @unsparsify
     def annotations_by_line(self):
@@ -117,39 +123,6 @@ class FileToIndex(FileToIndexBase):
                 'style': icon
             }
             yield annotation, span
-
-    def _refs_from_view(self, menu_maker, views, tooltip=constantly(None)):
-        """Return an iterable of (start, end, (menu, tooltip)), running
-        ``menu_maker`` across each item that comes of applying ``view`` to
-        ``self.condensed`` and adding "Jump to definition" where applicable.
-
-        :arg menu_maker: A function that takes a tree and an item from
-            ``view()`` and returns a ref menu
-        :arg views: An iterable of functions that take self.condensed and
-            return an iterable of things to call ``menu_maker()`` on
-        :arg tooltip: A function that takes one of those things from the
-            iterable and emits a value to be shown in the mouseover of the ref
-
-        """
-        for prop in chain.from_iterable(v(self.condensed) for v in views):
-            if 'span' in prop:  # TODO: This used to be unconditional. Should we still try to do it sometime if span isn't in prop? Both cases in test_direct are examples of this. [Marcell says no.]
-                definition = prop.get('defloc')
-                # If we can look up the target of this ref and it's not
-                # outside the source tree (which results in an absolute path
-                # starting with "/")...
-                if definition and not definition[0].startswith('/'):
-                    menu = definition_menu(self.tree,
-                                           path=definition[0],
-                                           row=definition[1].row)
-                else:
-                    menu = []
-
-                menu.extend(menu_maker(self.tree, prop))
-                start, end = prop['span']
-
-                yield (self.char_offset(start.row, start.col),
-                       self.char_offset(end.row, end.col),
-                       Ref(menu, hover=tooltip(prop), qualname=prop.get('qualname')))
 
     def links(self):
         """Yield a section for each class, type, enum, etc., as well as one
@@ -200,7 +173,14 @@ class FileToIndex(FileToIndexBase):
 @autocurry
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
-    return (ref for ref in condensed.get(field) if ref.get('kind') == kind)
+    return (ref for ref in condensed.get(field, []) if ref.get('kind') == kind)
+
+
+@autocurry
+def not_kind_getter(field, kind, condensed):
+    """Reach into a field and filter out those with given kind."""
+    return (ref for ref in condensed.get(field, []) if ref.get('kind') != kind)
+
 
 
 class TreeToIndex(TreeToIndexBase):

@@ -35,8 +35,8 @@ sudo -H -u vagrant -s -- <<THEEND
 virtualenv $VENV
 source $VENV/bin/activate
 cd ~vagrant/dxr
-./peep.py install -r requirements.txt
-python setup.py develop
+pip install --no-deps -e .
+# make will install the requirements when the user runs it.
 pip install pdbpp nose-progressive Sphinx==1.3.1
 THEEND
 # Activate the virtualenv all the time:

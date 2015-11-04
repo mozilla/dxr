@@ -19,4 +19,4 @@ check: build
 clean:
 	$(RM) *.o libclang-index-plugin.so
 
-.PHONY: build clean
+.PHONY: build check clean

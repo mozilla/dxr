@@ -91,6 +91,14 @@ class MenuTests(DxrInstanceTestCase):
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3Anumba'})
 
+    def test_method_decl(self):
+        menu_on(self.source_page('extern.c'),
+                'fib',
+                {'html': 'Jump to definition',
+                 'href': '/code/source/extern.c#19'},
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bfunction-ref%3AMyClass%3A%3Afib%28int%29'})
+
     def test_namespace(self):
         menu_on(self.source_page('extern.c'),
                 'Space',
@@ -101,7 +109,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('main.cpp'),
                 'Space',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#18'},
+                 'href': '/code/source/extern.c#23'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bnamespace-ref%3ASpace'})
 
@@ -115,7 +123,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('main.cpp'),
                 'Bar',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#21'},
+                 'href': '/code/source/extern.c#26'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bnamespace-alias-ref%3ABar'})
 
@@ -129,7 +137,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('main.cpp'),
                 'MACRO',
                 {'html': 'Jump to definition',
-                 'href': '/code/source/extern.c#23'},
+                 'href': '/code/source/extern.c#28'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bmacro-ref%3AMACRO'})
 

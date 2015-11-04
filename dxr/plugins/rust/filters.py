@@ -20,10 +20,6 @@ class CallersFilter(_QualifiedNameFilter):
     is_reference = True
     description = 'Function callers'
 
-class CalledByFilter(_QualifiedNameFilter):
-    name = 'called-by'
-    description = 'Functions called by this function'
-
 class FnImplsFilter(_QualifiedNameFilter):
     name = 'fn-impls'
     is_identifier = True

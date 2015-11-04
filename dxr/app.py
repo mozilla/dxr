@@ -23,10 +23,9 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
-from dxr.indexers import Ref, Region
-from dxr.lines import html_line, tags_per_line, finished_tags
+from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
 from dxr.mime import icon, is_image, is_text
-from dxr.plugins import plugins_named, all_plugins
+from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
                        format_number, append_update, append_by_line, cumulative_sum)
@@ -35,12 +34,62 @@ from dxr.vcs import file_contents_at_rev
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           'dxr',
-                          template_folder='static/templates',
+                          template_folder='templates',
                           # static_folder seems to register a "static" route
                           # with the blueprint so the url_prefix (set later)
                           # takes effect for static files when found through
                           # url_for('static', ...).
                           static_folder='static')
+
+
+class HashedStatics(object):
+    """A Flask extension which adds hashes to static asset URLs, as determined
+    by a static_manifest file just outside the static folder"""
+
+    def __init__(self, app=None):
+        self.app = None
+        self.manifests = {}
+        if app is not None:
+            self.init_app(app)
+
+    def init_app(self, app):
+        self.app = app
+        app.url_defaults(self._hashed_url)
+
+    def _manifest_near(self, static_folder):
+        """Cache and return a manifest for a specific static folder.
+
+        The manifest must be in a file called "static_manifest" just outside
+        the static folder.
+
+        """
+        manifest = self.manifests.get(static_folder)
+        if manifest is None:
+            try:
+                with open(join(dirname(static_folder),
+                               'static_manifest')) as file:
+                    manifest = self.manifests[static_folder] = \
+                        dict(line.split() for line in file)
+            except IOError:
+                # Probably no such file
+                manifest = self.manifests[static_folder] = {}
+        return manifest
+
+    def _hashed_url(self, route, values):
+        """Map an unhashed URL to a hashed one.
+
+        If no mapping is found in the manifest, leave it alone, which will
+        result in a 404.
+
+        """
+        if route == 'static' or route.endswith('.static'):
+            filename = values.get('filename')
+            if filename:
+                blueprint = request.blueprint
+                static_folder = (self.app.blueprints[blueprint].static_folder
+                                 if blueprint else self.app.static_folder)
+                manifest = self._manifest_near(static_folder)
+                values['filename'] = manifest.get(filename, filename)
 
 
 def make_app(config):
@@ -52,6 +101,7 @@ def make_app(config):
     app = Flask('dxr')
     app.dxr_config = config
     app.register_blueprint(dxr_blueprint, url_prefix=config.www_root)
+    HashedStatics(app=app)
 
     # Log to Apache's error log in production:
     app.logger.addHandler(StreamHandler(stderr))
@@ -203,15 +253,18 @@ def browse(tree, path=''):
         return _browse_folder(tree, path.rstrip('/'), config)
     except NotFound:
         frozen = frozen_config(tree)
-        # Grab the FILE doc, just for the sidebar nav links:
+        # Grab the FILE doc, just for the sidebar nav links and the symlink target:
         files = filtered_query(
             frozen['es_alias'],
             FILE,
             filter={'path': path},
             size=1,
-            include=['links'])
+            include=['link', 'links'])
         if not files:
             raise NotFound
+        if 'link' in files[0]:
+            # Then this path is a symlink, so redirect to the real thing.
+            return redirect(url_for('.browse', tree=tree, path=files[0]['link'][0]))
 
         lines = filtered_query(
             frozen['es_alias'],
@@ -273,7 +326,7 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(f['modified']) if 'modified' in f else None,
              f.get('size'),
-             url_for('.browse', tree=tree, path=f['path'][0]),
+             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]),
              f.get('is_binary', [False])[0])
             for f in files_and_folders])
 
@@ -322,7 +375,8 @@ def _build_common_file_template(tree, path, date, config):
             plugins_named(frozen_config(tree)['enabled_plugins'])),
         # File template variables
         'paths_and_names': _linked_pathname(path, tree),
-        'icon': icon(path),
+        'icon_url': url_for('.static',
+                            filename='icons/mimetypes/%s.png' % icon(path)),
         'path': path,
         'name': basename(path)
     }
@@ -371,24 +425,24 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
             # stitching the lines together.
             contents = ''.join(lines)
         offsets = cumulative_sum(imap(len, lines))
+        tree_config = config.trees[tree]
         # Construct skimmer objects for all enabled plugins that define a
         # file_to_skim class.
         skimmers = [plugin.file_to_skim(path,
                                         contents,
-                                        name,
-                                        config.trees[tree],
+                                        plugin.name,
+                                        tree_config,
                                         file_doc,
                                         line_docs)
-                    for name, plugin in all_plugins().iteritems()
-                    if plugin in config.trees[tree].enabled_plugins
-                    and plugin.file_to_skim]
+                    for plugin in tree_config.enabled_plugins
+                    if plugin.file_to_skim]
         skim_links, refses, regionses, annotationses = skim_file(skimmers, len(line_docs))
-        index_refs = imap(Ref.es_to_triple,
-                          chain.from_iterable(doc.get('refs', [])
-                                              for doc in line_docs))
-        index_regions = imap(Region.es_to_triple,
-                             chain.from_iterable(doc.get('regions', [])
-                                                 for doc in line_docs))
+        index_refs = (Ref.es_to_triple(ref, tree_config) for ref in
+                      chain.from_iterable(doc.get('refs', [])
+                                          for doc in line_docs))
+        index_regions = (Region.es_to_triple(region) for region in
+                         chain.from_iterable(doc.get('regions', [])
+                                             for doc in line_docs))
         tags = finished_tags(lines,
                              chain(chain.from_iterable(refses), index_refs),
                              chain(chain.from_iterable(regionses), index_regions))
