@@ -13,9 +13,9 @@ class ClassRef(Ref, _PythonPluginAttr):
         qualname = self.menu_data
         yield {'html': 'Find subclasses',
                'title': 'Find subclasses of this class',
-               'href': search_url(self.tree, '+derived:' + qualname),
+               'href': search_url(self.tree.name, '+derived:' + qualname),
                'icon': 'type'}
         yield {'html': 'Find base classes',
                'title': 'Find base classes of this class',
-               'href': search_url(self.tree, '+bases:' + qualname),
+               'href': search_url(self.tree.name, '+bases:' + qualname),
                'icon': 'type'}

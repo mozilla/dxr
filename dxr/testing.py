@@ -27,22 +27,62 @@ from dxr.utils import file_text, run
 
 
 class TestCase(unittest.TestCase):
-    """Abstract container for general convenience functions for DXR tests"""
+    """Basic test harness for DXR
+
+    Provides Flask application context (if you call app()) and various
+    convenience functions.
+
+    """
+    @classmethod
+    def setup_class(cls):
+        """Create a temporary DXR instance on the FS, and build it."""
+        cls._config_dir_path = mkdtemp()
+
+    @classmethod
+    def teardown_class(cls):
+        rmtree(cls._config_dir_path)
+
+    def app(self):
+        if not hasattr(self, '_app'):
+            self._app = make_app(self.config())
+            self._app.config['TESTING'] = True  # Disable error trapping during requests.
+        return self._app
 
     def client(self):
-        self._app = make_app(self.config())
-        self._app.config['TESTING'] = True  # Disable error trapping during requests.
-        return self._app.test_client()
+        return self.app().test_client()
 
     def url_for(self, *args, **kwargs):
         """Do the magic needed to make url_for() work under tests."""
-        with self._app.test_request_context():
+        with self.app().test_request_context():
             return url_for(*args, **kwargs)
 
     @classmethod
     def config(cls):
         return Config(cls.config_input(cls._config_dir_path),
                       relative_to=cls._config_dir_path)
+
+    @classmethod
+    def config_input(cls, config_dir_path):
+        """Return a dictionary or string of config options for building the
+        tree.
+
+        Override this in subclasses to customize the config. This default
+        implementation returns just enough to instantiate the Flask app.
+
+        """
+        return {
+            'DXR': {
+                'enabled_plugins': '',
+                'temp_folder': '{0}/temp'.format(config_dir_path),
+                'es_index': 'dxr_test_{format}_{tree}_{unique}',
+                'es_alias': 'dxr_test_{format}_{tree}',
+                'es_catalog_index': 'dxr_test_catalog'
+            },
+            'code': {
+                'source_folder': '{0}/code'.format(config_dir_path),
+                'build_command': ''
+            }
+        }
 
     def source_page(self, path):
         """Return the text of a source page."""
@@ -276,24 +316,10 @@ class SingleFileTestCase(TestCase):
 
     @classmethod
     def config_input(cls, config_dir_path):
-        """Return a dictionary of config options for building the tree.
-
-        Override this in subclasses to customize the config.
-        """
-        return {
-            'DXR': {
-                'enabled_plugins': 'pygmentize clang',
-                'temp_folder': '{0}/temp'.format(config_dir_path),
-                'es_index': 'dxr_test_{format}_{tree}_{unique}',
-                'es_alias': 'dxr_test_{format}_{tree}',
-                'es_catalog_index': 'dxr_test_catalog'
-            },
-            'code': {
-                'source_folder': '{0}/code'.format(config_dir_path),
-                'object_folder': '{0}/code'.format(config_dir_path),
-                'build_command': '$CXX -o main main.cpp'
-            }
-        }
+        input = super(SingleFileTestCase, cls).config_input(config_dir_path)
+        input['DXR']['enabled_plugins'] = 'pygmentize clang'
+        input['code']['build_command'] = '$CXX -o main main.cpp'
+        return input
 
     @classmethod
     def teardown_class(cls):
