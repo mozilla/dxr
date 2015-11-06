@@ -95,7 +95,7 @@ def jump_to_target_menu_item(tree_config, path, row, target_name):
     return {'html': 'Jump to %s' % target_name,
             'title': "Jump to %s in '%s'" % (target_name,
                                              os.path.basename(path)),
-            'href': browse_file_url(tree_config.name, path, _anchor=row),
+            'href': browse_file_url(tree_config.name, path, _anchor=int(row)),
             'icon': 'jump'}
 
 def jump_to_target_from_decl(menu_maker, tree, decl):
