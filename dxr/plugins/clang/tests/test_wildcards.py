@@ -5,10 +5,10 @@
 from nose import SkipTest
 raise SkipTest
 
-from dxr.testing import SingleFileTestCase
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
-class WildcardTests(SingleFileTestCase):
+class WildcardTests(CSingleFileTestCase):
     source = r"""
         int get_foo() {
             return 0;

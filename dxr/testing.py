@@ -293,14 +293,14 @@ class SingleFileTestCase(TestCase):
     of files in the FS. I'll slam it down into a temporary DXR instance and
     then kick off the usual build process, deleting the instance afterward.
 
+    :cvar source_filename: The filename used for the source file
+
     """
     # Set this to True in a subclass to keep the generated instance around and
     # host it on port 8000 so you can examine it:
     stop_for_interaction = False
 
-    # Override this in a subclass to change the filename used for the
-    # source file.
-    source_filename = 'main.cpp'
+    source_filename = 'main'
 
     @classmethod
     def setup_class(cls):
@@ -313,13 +313,6 @@ class SingleFileTestCase(TestCase):
         for tree in cls.config().trees.itervalues():
             index_and_deploy_tree(tree)
         cls._es().refresh()
-
-    @classmethod
-    def config_input(cls, config_dir_path):
-        input = super(SingleFileTestCase, cls).config_input(config_dir_path)
-        input['DXR']['enabled_plugins'] = 'pygmentize clang'
-        input['code']['build_command'] = '$CXX -o main main.cpp'
-        return input
 
     @classmethod
     def teardown_class(cls):
@@ -385,23 +378,17 @@ class SingleFileTestCase(TestCase):
                 query, expected_pairs, is_case_sensitive=is_case_sensitive)
 
     def direct_result_eq(self, query, line_number, is_case_sensitive=True):
-        """Assume the filename "main.cpp"."""
-        return super(SingleFileTestCase, self).direct_result_eq(query, 'main.cpp', line_number, is_case_sensitive=is_case_sensitive)
+        return super(SingleFileTestCase, self).direct_result_eq(
+            query,
+            self.source_filename,
+            line_number,
+            is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
     with open(join(path, filename), 'w') as file:
         file.write(contents.encode('utf-8'))
-
-
-# Tests that don't otherwise need a main() can append this one just to get
-# their code to compile:
-MINIMAL_MAIN = """
-    int main(int argc, char* argv[]) {
-        return 0;
-    }
-    """
 
 
 def _decoded_menu_on(haystack, text):

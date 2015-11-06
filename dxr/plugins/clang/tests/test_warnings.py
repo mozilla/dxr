@@ -2,10 +2,10 @@
 
 import commands
 import re
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class TautWarningTests(SingleFileTestCase):
+class TautWarningTests(CSingleFileTestCase):
     """Tests for searches of a tautological comparison warning"""
 
     source = r"""
@@ -26,7 +26,7 @@ class TautWarningTests(SingleFileTestCase):
             'warning-opt:-Wtautological-compare', 'if (<b>x</b> &lt; 0)')
 
 
-class MultipleOnSameLineWarningTests(SingleFileTestCase):
+class MultipleOnSameLineWarningTests(CSingleFileTestCase):
     """Tests for searches when there are multiple warnings on one line"""
 
     source = r"""

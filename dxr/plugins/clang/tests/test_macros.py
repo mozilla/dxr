@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class MacroTests(SingleFileTestCase):
+class MacroTests(CSingleFileTestCase):
     """Tests for ``macro`` queries"""
 
     source = """
@@ -19,7 +19,7 @@ class MacroTests(SingleFileTestCase):
         self.found_line_eq('macro:ADD', '#define <b>ADD</b>(x, y) ((x) + (y))')
 
 
-class MacroRefTests(SingleFileTestCase):
+class MacroRefTests(CSingleFileTestCase):
     """Tests for ``+macro-ref`` queries"""
 
     source = """
@@ -56,7 +56,7 @@ class MacroRefTests(SingleFileTestCase):
             ('#undef <b>MACRO</b>', 13)])
 
 
-class MacroArgumentReferenceTests(SingleFileTestCase):
+class MacroArgumentReferenceTests(CSingleFileTestCase):
     source = """
         #define ID2(x) (x)
         #define ID(x) ID2(x)
@@ -82,7 +82,7 @@ class MacroArgumentReferenceTests(SingleFileTestCase):
             ('ADD(x, <b>y</b>);', 12)])
 
 
-class MacroArgumentFieldReferenceTests(SingleFileTestCase):
+class MacroArgumentFieldReferenceTests(CSingleFileTestCase):
     source = """
         #define ID2(x) (x)
         #define ID(x) ID2(x)
@@ -115,7 +115,7 @@ class MacroArgumentFieldReferenceTests(SingleFileTestCase):
             ('FIELD(foo, <b>bar</b>);', 18)])
 
 
-class MacroArgumentDeclareTests(SingleFileTestCase):
+class MacroArgumentDeclareTests(CSingleFileTestCase):
 
     source = """
         #define ID2(x) x

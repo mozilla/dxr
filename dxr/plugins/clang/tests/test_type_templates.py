@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class TypeTests(SingleFileTestCase):
+class TypeTests(CSingleFileTestCase):
     source = r"""
         template <typename T>
         class Foo
@@ -19,7 +19,7 @@ class TypeTests(SingleFileTestCase):
         self.found_line_eq('type-ref:Foo',
                            '<b>Foo</b>&lt;int&gt;();')
 
-class BaseClassTests(SingleFileTestCase):
+class BaseClassTests(CSingleFileTestCase):
     source = r"""
         template <typename T>
         class Foo
@@ -35,7 +35,7 @@ class BaseClassTests(SingleFileTestCase):
         self.found_line_eq('type-ref:Foo',
                            'class Bar : public <b>Foo</b>&lt;T&gt;')
 
-class TemplateParameterTests(SingleFileTestCase):
+class TemplateParameterTests(CSingleFileTestCase):
     source = r"""
         template <typename T>
         class Foo

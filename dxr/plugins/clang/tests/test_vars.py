@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class VarTests(SingleFileTestCase):
+class VarTests(CSingleFileTestCase):
     source = r"""
         int global;
         int decoy;

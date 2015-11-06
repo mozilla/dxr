@@ -1,12 +1,12 @@
 import os.path
 
 from dxr.query import Query
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 from nose.tools import eq_
 
 
-class TypeAndMethodTests(SingleFileTestCase):
+class TypeAndMethodTests(CSingleFileTestCase):
     source = """
         class MemberFunction {
             public:
@@ -91,7 +91,7 @@ class TypeAndMethodTests(SingleFileTestCase):
         self.direct_result_eq('MemberFunction', 2)
 
 
-class MacroTypedefTests(SingleFileTestCase):
+class MacroTypedefTests(CSingleFileTestCase):
     source = """
         #ifndef MACRO_NAME
         #define MACRO_NAME(arg1, arg2) 0

@@ -1,9 +1,9 @@
 """Tests for searches using callers"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class DirectCallTests(SingleFileTestCase):
+class DirectCallTests(CSingleFileTestCase):
     """Tests for searches involving direct calls"""
 
     source = r"""
@@ -48,7 +48,7 @@ class DirectCallTests(SingleFileTestCase):
             ('<b>called_twice()</b>;', 22)])
 
 
-class IndirectCallTests(SingleFileTestCase):
+class IndirectCallTests(CSingleFileTestCase):
     """Tests for searches involving indirect (virtual) calls"""
 
     source = r"""

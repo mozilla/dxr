@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class MemberVariableTests(SingleFileTestCase):
+class MemberVariableTests(CSingleFileTestCase):
     source = """
         class MemberVariable {
             public:
@@ -16,7 +16,7 @@ class MemberVariableTests(SingleFileTestCase):
                            'int <b>member_variable</b>;')
 
 
-class MemberVariableCtorTests(SingleFileTestCase):
+class MemberVariableCtorTests(CSingleFileTestCase):
     """Members that do not have an explicit initializer on the constructor
     should not show the constructor as having a reference to that member.
     There's no convenient place in the source to use for the extents for such
@@ -44,7 +44,7 @@ class MemberVariableCtorTests(SingleFileTestCase):
         self.found_line_eq('+var-ref:Foo::baz', 'Foo() : <b>baz</b>(0) {}')
 
 
-class MemberFunctionTests(SingleFileTestCase):
+class MemberFunctionTests(CSingleFileTestCase):
     source = """
         class MemberFunction {
             public:
@@ -62,7 +62,7 @@ class MemberFunctionTests(SingleFileTestCase):
                            u'void MemberFunction::<b>member_function</b>() {')
 
 
-class StaticMemberTests(SingleFileTestCase):
+class StaticMemberTests(CSingleFileTestCase):
     source = """
         class StaticMember {
             public:
@@ -76,7 +76,7 @@ class StaticMemberTests(SingleFileTestCase):
         self.found_line_eq('+var:StaticMember::static_member', 'int StaticMember::<b>static_member</b> = 0;')
 
 
-class MemberTests(SingleFileTestCase):
+class MemberTests(CSingleFileTestCase):
     # We could probably strip this down a fair bit:
     source = """
         #include <stdint.h>

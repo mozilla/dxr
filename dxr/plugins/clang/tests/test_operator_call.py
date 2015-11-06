@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
-class OperatorCallTests(SingleFileTestCase):
+class OperatorCallTests(CSingleFileTestCase):
     source = """
         struct Foo
         {
@@ -41,7 +41,7 @@ class OperatorCallTests(SingleFileTestCase):
             'foo[<b>beta</b>];')
 
 
-class ExplicitOperatorCallTests(SingleFileTestCase):
+class ExplicitOperatorCallTests(CSingleFileTestCase):
     source = """
         struct Foo
         {

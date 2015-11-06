@@ -4,14 +4,18 @@ from nose import SkipTest
 from nose.tools import eq_, ok_
 
 from dxr.query import highlight
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.testing import SingleFileTestCase
 
 
 class StringTests(SingleFileTestCase):
     source = """
         void main_idea() {
         }
-        """ + MINIMAL_MAIN
+
+        int main(int argc, char* argv[]) {
+            return 0;
+        }
+        """
 
     def test_negated_word(self):
         """Make sure a negated word with underscores supresses results."""
@@ -59,7 +63,7 @@ class RegexpTests(SingleFileTestCase):
     source = """// Which of us is the beaver?
         // The paddle-shaped tail is a dead giveaway.
         // We know it's you, Shahad.
-        """ + MINIMAL_MAIN
+        """
 
     def test_case_sensitive(self):
         self.found_line_eq('regexp:" ?The ?"',

@@ -1,9 +1,9 @@
 """Tests for searches about namespaces"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class NamespaceDefTests(SingleFileTestCase):
+class NamespaceDefTests(CSingleFileTestCase):
     """Tests for finding definitions of namespaces"""
 
     source = r"""
@@ -22,7 +22,7 @@ class NamespaceDefTests(SingleFileTestCase):
         self.found_line_eq('+namespace:Outer::Inner', 'namespace <b>Inner</b> {')
 
 
-class NamespaceExprRefTests(SingleFileTestCase):
+class NamespaceExprRefTests(CSingleFileTestCase):
     """Tests for finding references to namespaces in expressions"""
 
     source = r"""
@@ -50,7 +50,7 @@ class NamespaceExprRefTests(SingleFileTestCase):
         self.found_line_eq('+namespace-ref:Outer::Inner', 'Outer::<b>Inner</b>::bar();')
 
 
-class NamespaceDeclRefTests(SingleFileTestCase):
+class NamespaceDeclRefTests(CSingleFileTestCase):
     """Tests for finding references to namespaces in declarations"""
 
     source = r"""
@@ -75,7 +75,7 @@ class NamespaceDeclRefTests(SingleFileTestCase):
         self.found_line_eq('+namespace-ref:Outer::Inner', 'Outer::<b>Inner</b>::MyClass *y;')
 
 
-class NamespaceUsingDirectiveTests(SingleFileTestCase):
+class NamespaceUsingDirectiveTests(CSingleFileTestCase):
     """Tests for the 'using' directive"""
 
     source = r"""
@@ -94,7 +94,7 @@ class NamespaceUsingDirectiveTests(SingleFileTestCase):
         self.found_line_eq('+namespace-ref:Outer::Inner', 'using namespace Outer::<b>Inner</b>;')
 
 
-class NamespaceUsingDeclarationTests(SingleFileTestCase):
+class NamespaceUsingDeclarationTests(CSingleFileTestCase):
     """Tests for the 'using' declaration"""
 
     source = r"""
@@ -121,7 +121,7 @@ class NamespaceUsingDeclarationTests(SingleFileTestCase):
         self.found_line_eq('+namespace-ref:Outer::Inner', 'using Outer::<b>Inner</b>::bar;')
 
 
-class NamespaceAliasTests(SingleFileTestCase):
+class NamespaceAliasTests(CSingleFileTestCase):
     """Tests for namespace aliases"""
 
     source = r"""

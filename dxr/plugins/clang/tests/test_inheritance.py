@@ -1,9 +1,9 @@
 """Tests for queries about superclasses and subclasses"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class InheritanceTests(SingleFileTestCase):
+class InheritanceTests(CSingleFileTestCase):
     source = r"""
         class A {
         };

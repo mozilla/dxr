@@ -1,5 +1,6 @@
 from dxr.testing import SingleFileTestCase
 
+
 class RustSingleFileTestCase(SingleFileTestCase):
     """Test case suited to testing the Rust plugin."""
     source_filename = 'mod.rs'

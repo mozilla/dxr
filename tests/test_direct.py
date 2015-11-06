@@ -1,4 +1,4 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.testing import SingleFileTestCase
 
 
 class DirectSearchTests(SingleFileTestCase):
@@ -9,14 +9,14 @@ class DirectSearchTests(SingleFileTestCase):
         // How are you gentlemen
         // All your base
         // Are belong to us
-        """ + MINIMAL_MAIN
+        """
 
     def test_line_number(self):
         """A file name and line number should take you directly to that file
         and line number."""
-        self.direct_result_eq('main.cpp:6', 6)
+        self.direct_result_eq('main:6', 6)
 
     def test_file(self):
         """A file name should take you directly to that file, without
         highlighting a particular line."""
-        self.direct_result_eq('main.cpp', None)
+        self.direct_result_eq('main', None)
