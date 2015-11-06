@@ -24,7 +24,7 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
-from dxr.mime import icon, is_binary_image, is_text, is_indexable_image
+from dxr.mime import icon, is_binary_image, is_text
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,

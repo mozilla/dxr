@@ -13,13 +13,14 @@ def is_text(data):
 
 
 def is_binary_image(path):
-    """Determine whether the path is a binary image."""
+    """Return whether the path points to an image without human-readable
+    contents."""
     return icon(path) == 'image'
 
 
-def is_indexable_image(path):
-    """Determine whether the path is an image with indexable (text) contents."""
-    return icon(path) in {'svg'}
+def is_textual_image(path):
+    """Return whether the path points to an image with text contents."""
+    return icon(path) == 'svg'
 
 
 # File extension known as this point

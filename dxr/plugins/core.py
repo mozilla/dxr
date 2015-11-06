@@ -14,7 +14,7 @@ from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
-from dxr.mime import is_binary_image, is_indexable_image
+from dxr.mime import is_binary_image, is_textual_image
 from dxr.query import some_filters
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
@@ -439,10 +439,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
-        # Remark: We store both the indexed contents and the raw data of
-        # indexable images, so that they can both show up in searches and be
-        # previewed in the browser.
-        if is_binary_image(self.path) or is_indexable_image(self.path):
+        # We store both the contents of textual images twice so that they can
+        # both show up in searches and be previewed in the browser.
+        if is_binary_image(self.path) or is_textual_image(self.path):
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
@@ -467,12 +466,12 @@ class FileToIndex(dxr.indexers.FileToIndex):
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
                                                        path=self.path))])
-        if is_indexable_image(self.path):
+        if is_textual_image(self.path):
             yield (4,
-                   'Indexable image',
-                   [('svgview', 'View image', url_for('.raw',
-                                                      tree=self.tree.name,
-                                                      path=self.path))])
+                   'Image',
+                   [('svgview', 'View', url_for('.raw',
+                                                tree=self.tree.name,
+                                                path=self.path))])
         else:
             yield 5, 'Untracked file', []
 
