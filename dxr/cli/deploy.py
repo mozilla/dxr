@@ -205,7 +205,7 @@ class Deployment(object):
                     run('VIRTUAL_ENV={venv} make requirements', venv=venv)
                     # Compile nunjucks templates and cachebust static assets:
                     run('make static &> /dev/null')
-                    run('{pip} install --no-deps -e .',
+                    run('{pip} install --no-deps .',
                         pip=join(venv, 'bin', 'pip'))
 
                 # After installing, you always have to re-run this, even if we
