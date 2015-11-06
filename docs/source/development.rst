@@ -283,17 +283,13 @@ see all the data attached to files-as-a-whole with... ::
 File Skimmers
 =============
 
-.. note::
-
-    The code that will call skimmers isn't in place yet.
-
 .. autoclass:: dxr.indexers.FileToSkim
    :members:
 
-.. autoclass:: dxr.indexers.Ref
+.. autoclass:: dxr.lines.Ref
    :members:
 
-.. autoclass:: dxr.indexers.Region
+.. autoclass:: dxr.lines.Region
    :members:
 
 Filters
