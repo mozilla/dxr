@@ -24,7 +24,7 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
-from dxr.mime import icon, is_image, is_text
+from dxr.mime import icon, is_binary_image, is_text
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
@@ -423,7 +423,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
 
     common = _build_common_file_template(tree, path, date, config)
     links = file_doc.get('links', [])
-    if is_image(path):
+    if is_binary_image(path):
         return render_template(
             'image_file.html',
             **common)
@@ -469,6 +469,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                 'is_text': True,
                 'sections': sidebar_links(links + skim_links)}))
 
+
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
 def rev(tree, revision, path):
     """Display a page showing the file at path at specified revision by
@@ -489,6 +490,7 @@ def rev(tree, revision, path):
                             contents=contents)
     else:
         raise NotFound
+
 
 def _linked_pathname(path, tree_name):
     """Return a list of (server-relative URL, subtree name) tuples that can be

@@ -11,10 +11,16 @@ def is_text(data):
     # Simple stupid test that apparently works rather well :)
     return '\0' not in data
 
-def is_image(path):
-    """Determine whether the path is an image."""
-    _, ext = splitext(path)
-    return ext_map.get(ext[1:], False) == 'image'
+
+def is_binary_image(path):
+    """Return whether the path points to an image without human-readable
+    contents."""
+    return icon(path) == 'image'
+
+
+def is_textual_image(path):
+    """Return whether the path points to an image with text contents."""
+    return icon(path) == 'svg'
 
 
 # File extension known as this point
@@ -31,6 +37,7 @@ ext_map = {
     "c":          'c',
     "xul":        'ui',
     "svg":        'svg',
+    "SVG":        'svg',
     "in":         'build',
     "idl":        'conf',
     "java":       'java',
@@ -66,6 +73,5 @@ ext_map = {
     "jpg":        'image',
     "jpeg":       'image',
     "png":        'image',
-    "gif":        'image',
-    "svg":        'image'
+    "gif":        'image'
 }
