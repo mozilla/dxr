@@ -60,19 +60,13 @@ Python Packages
 ---------------
 
 You'll also need several third-party Python packages. In order to isolate the
-specific versions we need from the rest of the system, use
-Virtualenv_::
+specific versions we need from the rest of the system, use Virtualenv_::
 
    virtualenv dxr_venv  # Create a new virtual environment.
    source dxr_venv/bin/activate
 
 You'll need to repeat that :command:`activate` command each time you want to
 use DXR from a new shell.
-
-Now, with your new virtualenv active, you can install the requisite packages::
-
-    cd dxr
-    ./peep.py install -r requirements.txt
 
 
 Configuring Elasticsearch
@@ -119,12 +113,18 @@ First, arrange for the correct versions of :command:`llvm-config`,
 :command:`clang`, and :command:`clang++` to be available under those names,
 whether by a mechanism like Debian's alternatives system or with symlinks.
 
-Then, build DXR from its top-level directory::
+Then, activate the Python virtualenv you made above if you haven't already in
+your current login session::
+
+    source dxr_venv/bin/activate
+
+Next, build DXR from its top-level directory::
 
     make
 
-It will build :file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang`
-and compile the JavaScript-based templates.
+It will build :file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang`,
+compile the JavaScript-based templates, cache-bust the static assets, and
+install the Python dependencies.
 
 To ensure everything has built correctly, you can run the tests::
 
@@ -136,13 +136,13 @@ Installation
 
 Once you've built it, install DXR in the activated virtualenv::
 
-    python setup.py install
+    pip install --no-deps .
 
 .. note::
 
-    If you intend to develop DXR itself, don't ever run ``install``, which
-    makes a copy of the code, severing its relationship with the source
-    checkout. Do ``python setup.py develop`` instead.
+    If you intend to develop DXR itself, run ``pip install --no-deps -e .``
+    instead. Otherwise, pip will make a copy of the code, severing its
+    relationship with the source checkout.
 
 
 Indexing
