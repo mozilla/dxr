@@ -9,7 +9,7 @@ def filtered_search_menu(tree, term, html, title, filter_name, icon):
     return {
         'html': html,
         'title': title,
-        'href': search_url(tree, '%s:%s' % (filter_name, term)),
+        'href': search_url(tree.name, '%s:%s' % (filter_name, term)),
         'icon': icon
     }
 

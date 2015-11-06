@@ -2,9 +2,7 @@ import os
 from functools import partial
 from warnings import warn
 
-from flask import url_for
-
-from dxr.utils import BROWSE, search_url
+from dxr.utils import browse_file_url, search_url
 
 
 def quote(qualname):
@@ -46,7 +44,7 @@ def find_references_menu_item(tree_config, qualname, filter_name, kind):
     """
     return {'html':   "Find references",
             'title':  "Find references to this " + kind,
-            'href':   search_url(tree_config, "+" + filter_name + ":%s" % quote(qualname)),
+            'href':   search_url(tree_config.name, "+" + filter_name + ":%s" % quote(qualname)),
             'icon':   'reference'}
 
 
@@ -79,7 +77,7 @@ def std_lib_links_menu((doc_url, src_url, dxr_url), extra_text=""):
 def call_menu(qualname, tree):
     return [{'html': "Find callers",
              'title': "Find calls of this function",
-             'href': search_url(tree, "+callers:%s" % quote(qualname)),
+             'href': search_url(tree.name, "+callers:%s" % quote(qualname)),
              'icon': 'method'}]
 
 
@@ -97,7 +95,7 @@ def jump_to_target_menu_item(tree_config, path, row, target_name):
     return {'html': 'Jump to %s' % target_name,
             'title': "Jump to %s in '%s'" % (target_name,
                                              os.path.basename(path)),
-            'href': url_for(BROWSE, tree=tree_config.name, path=path, _anchor=row),
+            'href': browse_file_url(tree_config.name, path, _anchor=row),
             'icon': 'jump'}
 
 def jump_to_target_from_decl(menu_maker, tree, decl):
@@ -128,7 +126,7 @@ jump_to_function_declaration_menu_item = partial(jump_to_target_menu_item, targe
 def trait_impl_menu_item(tree_config, qualname, count):
     return {'html': "Find implementations (%d)" % count,
             'title': "Find implementations of this trait method",
-            'href': search_url(tree_config, "+fn-impls:%s" % quote(qualname)),
+            'href': search_url(tree_config.name, "+fn-impls:%s" % quote(qualname)),
             'icon': 'method'}
 
 
@@ -140,16 +138,16 @@ def type_menu(tree_config, kind, qualname):
     if kind == 'trait':
         yield {'html': "Find sub-traits",
                'title': "Find sub-traits of this trait",
-               'href': search_url(tree_config, "+derived:%s" % quote(qualname)),
+               'href': search_url(tree_config.name, "+derived:%s" % quote(qualname)),
                'icon': 'type'}
         yield {'html': "Find super-traits",
                'title': "Find super-traits of this trait",
-               'href': search_url(tree_config, "+bases:%s" % quote(qualname)),
+               'href': search_url(tree_config.name, "+bases:%s" % quote(qualname)),
                'icon': 'type'}
     if kind == 'struct' or kind == 'enum' or kind == 'trait':
         yield {'html': "Find impls",
                'title': "Find impls which involve this " + kind,
-               'href': search_url(tree_config, "+impl:%s" % quote(qualname)),
+               'href': search_url(tree_config.name, "+impl:%s" % quote(qualname)),
                'icon': 'reference'}
 
 
@@ -164,7 +162,7 @@ def generic_type_menu(datum, tree_config):
 def use_items_menu_item(tree_config, qualname):
     return {'html': "Find use items",
             'title': "Find instances of this module in 'use' items",
-            'href': search_url(tree_config, "+module-use:%s" % quote(qualname)),
+            'href': search_url(tree_config.name, "+module-use:%s" % quote(qualname)),
             'icon': 'reference'}
 
 

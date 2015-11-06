@@ -2,11 +2,9 @@
 
 from os.path import basename
 
-from flask import url_for
-
 from dxr.app import DXR_BLUEPRINT
 from dxr.lines import Ref
-from dxr.utils import search_url, BROWSE
+from dxr.utils import browse_file_url, search_url
 
 
 def quote(qualname):
@@ -54,7 +52,7 @@ class _RefWithDefinition(_ClangRef):
         else:
             menu = [{'html': "Jump to definition",
                      'title': "Jump to the definition in '%s'" % basename(path),
-                     'href': url_for(BROWSE, tree=self.tree.name, path=path, _anchor=row),
+                     'href': browse_file_url(self.tree.name, path, _anchor=row),
                      'icon': 'jump'}]
         menu.extend(self._more_menu_items(self.menu_data[2:]))
         return menu
@@ -95,9 +93,7 @@ class IncludeRef(_ClangRef):
         # won't build pages for.
         yield {'html': 'Jump to file',
                'title': 'Jump to what is included here.',
-               'href': url_for(BROWSE,
-                               tree=self.tree.name,
-                               path=self.menu_data),
+               'href': browse_file_url(self.tree.name, self.menu_data),
                'icon': 'jump'}
 
 
@@ -114,7 +110,7 @@ class MacroRef(_RefWithDefinition):
 
     def _more_menu_items(self, (macro_name,)):
         yield {'html': 'Find references',
-               'href': search_url(self.tree, '+macro-ref:%s' % macro_name),
+               'href': search_url(self.tree.name, '+macro-ref:%s' % macro_name),
                'title': 'Find references to macros with this name',
                'icon': 'reference'}
 
@@ -130,24 +126,24 @@ class TypeRef(_QualnameRef):
         """Return menu for type reference."""
         yield {'html': "Find declarations",
                'title': "Find declarations of this class",
-               'href': search_url(self.tree, "+type-decl:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+type-decl:%s" % quote(qualname)),
                'icon': 'reference'}
         if kind == 'class' or kind == 'struct':
             yield {'html': "Find subclasses",
                    'title': "Find subclasses of this class",
-                   'href': search_url(self.tree, "+derived:%s" % quote(qualname)),
+                   'href': search_url(self.tree.name, "+derived:%s" % quote(qualname)),
                    'icon': 'type'}
             yield {'html': "Find base classes",
                    'title': "Find base classes of this class",
-                   'href': search_url(self.tree, "+bases:%s" % quote(qualname)),
+                   'href': search_url(self.tree.name, "+bases:%s" % quote(qualname)),
                    'icon': 'type'}
         yield {'html': "Find members",
                'title': "Find members of this class",
-               'href': search_url(self.tree, "+member:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+member:%s" % quote(qualname)),
                'icon': 'members'}
         yield {'html': "Find references",
                'title': "Find references to this class",
-               'href': search_url(self.tree, "+type-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+type-ref:%s" % quote(qualname)),
                'icon': 'reference'}
 
 
@@ -155,7 +151,7 @@ class TypedefRef(_QualnameRef):
     def _more_menu_items(self, (qualname,)):
         yield {'html': "Find references",
                'title': "Find references to this typedef",
-               'href': search_url(self.tree, "+type-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+type-ref:%s" % quote(qualname)),
                'icon': 'reference'}
 
 
@@ -163,11 +159,11 @@ class VariableRef(_QualnameRef):
     def _more_menu_items(self, (qualname,)):
         yield {'html': "Find declarations",
                'title': "Find declarations of this variable",
-               'href': search_url(self.tree, "+var-decl:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+var-decl:%s" % quote(qualname)),
                'icon': 'reference'}
         yield {'html': "Find references",
                'title': "Find reference to this variable",
-               'href': search_url(self.tree, "+var-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+var-ref:%s" % quote(qualname)),
                'icon': 'field'}
 
 
@@ -175,11 +171,11 @@ class NamespaceRef(_QualnameRef):
     def _more_menu_items(self, (qualname,)):
         yield {'html': "Find definitions",
                'title': "Find definitions of this namespace",
-               'href': search_url(self.tree, "+namespace:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+namespace:%s" % quote(qualname)),
                'icon': 'jump'}
         yield {'html': "Find references",
                'title': "Find references to this namespace",
-               'href': search_url(self.tree, "+namespace-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+namespace-ref:%s" % quote(qualname)),
                'icon': 'reference'}
 
 
@@ -188,7 +184,7 @@ class NamespaceAliasRef(_QualnameRef):
         """Build menu for a namespace."""
         yield {'html': "Find references",
                'title': "Find references to this namespace alias",
-               'href': search_url(self.tree, "+namespace-alias-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+namespace-alias-ref:%s" % quote(qualname)),
                'icon': 'reference'}
 
 
@@ -202,22 +198,22 @@ class FunctionRef(_RefWithDefinition):
     def _more_menu_items(self, (qualname, is_virtual)):
         yield {'html': "Find declarations",
                'title': "Find declarations of this function",
-               'href': search_url(self.tree, "+function-decl:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+function-decl:%s" % quote(qualname)),
                'icon': 'reference'}
         yield {'html': "Find callers",
                'title': "Find functions that call this function",
-               'href': search_url(self.tree, "+callers:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+callers:%s" % quote(qualname)),
                'icon': 'method'}
         yield {'html': "Find references",
                'title': "Find references to this function",
-               'href': search_url(self.tree, "+function-ref:%s" % quote(qualname)),
+               'href': search_url(self.tree.name, "+function-ref:%s" % quote(qualname)),
                'icon': 'reference'}
         if is_virtual:
             yield {'html': "Find overridden",
                    'title': "Find functions that this function overrides",
-                   'href': search_url(self.tree, "+overridden:%s" % quote(qualname)),
+                   'href': search_url(self.tree.name, "+overridden:%s" % quote(qualname)),
                    'icon': 'method'}
             yield {'html': "Find overrides",
                    'title': "Find overrides of this function",
-                   'href': search_url(self.tree, "+overrides:%s" % quote(qualname)),
+                   'href': search_url(self.tree.name, "+overrides:%s" % quote(qualname)),
                    'icon': 'method'}

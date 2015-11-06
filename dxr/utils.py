@@ -10,19 +10,45 @@ from os import chdir, dup, fdopen, getcwd
 from os.path import join
 from shutil import rmtree
 from sys import stdout
+from urllib import quote, quote_plus
 
-from flask import url_for
+from flask import current_app
 
 from dxr.exceptions import CommandFailure
 
 
 DXR_BLUEPRINT = 'dxr_blueprint'
-BROWSE = DXR_BLUEPRINT + '.browse'
+
+
+def browse_file_url(tree, path, _anchor=None):
+    """Return the URL to the file-browsing endpoint.
+
+    :arg tree: The unicode or str name of the tree whose file to browse
+    :arg int _anchor: The line of the file to browse to
+
+    """
+    return '%s/%s/source/%s%s' % (current_app.dxr_www_root,
+                                  quote(tree.encode('utf-8')),
+                                  quote(path.encode('utf-8')),
+                                  '' if _anchor is None else '#%i' % _anchor)
 
 
 def search_url(tree, query):
-    """Get the search url for a query."""
-    return url_for(DXR_BLUEPRINT + '.search', tree=tree.name, q=query)
+    """Return the URL to the search endpoint.
+
+    This is equivalent to ``url_for('dxr_blueprint.search', tree=tree.name,
+    q=query)``, except it is much faster. We called url_for() 77K times in a
+    representative 13KLOC C++ file, and it took 17s. This and
+    ``browse_file_url()`` brought it down to 4s.
+
+    :arg tree: The unicode or str name of the tree to search
+    :arg query: A unicode or str search query
+
+    """
+    return '%s/%s/search?q=%s' % (current_app.dxr_www_root,
+                                  quote(tree.encode('utf-8')),
+                                  # quote_plus needs a string.
+                                  quote_plus(query.encode('utf-8')))
 
 
 def open_log(folder, name, use_stdout=False):

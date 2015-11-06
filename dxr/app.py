@@ -103,6 +103,10 @@ def make_app(config):
     app.register_blueprint(dxr_blueprint, url_prefix=config.www_root)
     HashedStatics(app=app)
 
+    # The url_prefix we pass when registering the blueprint is not stored
+    # anywhere. This saves gymnastics in our custom URL builders to get it back:
+    app.dxr_www_root = config.www_root
+
     # Log to Apache's error log in production:
     app.logger.addHandler(StreamHandler(stderr))
 
