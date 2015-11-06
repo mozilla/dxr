@@ -455,22 +455,22 @@ $(function() {
 
     // Toggle the help box when the help icon is clicked, and hide it when
     // anything outside of the box is clicked.
-    var helpIcon = $('.help-icon'),
-        helpMsg = helpIcon.find('.help-msg');
 
-    $(document.documentElement).on('click', '.help-icon', function(e) {
-        if ($(e.target).is(':not(.help-icon *)')) {
-            helpIcon.toggleClass('open');
-            helpMsg.toggle();
-        }
-    });
+    $(document.documentElement)
+        .on('click', '.help-icon', function(e) {
+            if ($(e.target).is(':not(.help-icon *)')) {
+                var helpIcon = $('.help-icon'),
+                    helpMsg = helpIcon.find('.help-msg');
 
-    $(document.documentElement).on('click', function(e) {
-        if ($(e.target).is(':not(.help-icon, .help-icon *)')) {
-            helpIcon.removeClass('open');
-            helpMsg.hide();
-        }
-    });
+                helpIcon.toggleClass('open');
+                helpMsg.toggle();
+            }
+        })
+        .on('mousedown', function(e) {
+            if ($(e.target).is(':not(.help-icon, .help-icon *)')) {
+                hideHelp();
+            }
+        });
 
 
     /**
