@@ -263,6 +263,11 @@ class FileToIndex(FileToIndexBase):
                         call_start = paren_stack.pop(paren_level)
                         call_start_table[call_start] = (call_start, end)
 
+                node_type, node_start = None, None
+
+            else:
+                node_type, node_start = None, None
+
         return node_start_table, call_start_table
 
     def get_node_start_end(self, node):
