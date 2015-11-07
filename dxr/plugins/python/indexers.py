@@ -82,7 +82,6 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
         self.file_to_index = file_to_index
         self.tree_analysis = tree_analysis
-        self.function_call_stack = []  # List of lists of function names.
         self.needles = []
         self.refs = []
 
@@ -91,23 +90,14 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         start, end = self.file_to_index.get_node_start_end(node)
         self.yield_needle('py_function', node.name, start, end)
 
-        # Index function calls within this function for the callers: filter.
-        self.function_call_stack.append([])
         super(IndexingNodeVisitor, self).visit_FunctionDef(node)
-        call_needles = self.function_call_stack.pop()
-        for name, call_start, call_end in call_needles:
-            # TODO: py_callers should be all calls, not just ones that
-            # take place within a function.
-            self.yield_needle('py_callers', name, start, end)
 
     def visit_Call(self, node):
-        # Save this call if we're currently tracking function calls.
-        if self.function_call_stack:
-            call_needles = self.function_call_stack[-1]
-            name = convert_node_to_name(node.func)
-            if name:
-                start, end = self.file_to_index.get_node_start_end(node)
-                call_needles.append((name, start, end))
+        # Index function/method call sites
+        name = convert_node_to_name(node.func)
+        if name:
+            start, end = self.file_to_index.get_node_start_end(node)
+            self.yield_needle('py_callers', name, start, end)
 
         self.generic_visit(node)
 
