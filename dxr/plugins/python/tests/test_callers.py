@@ -22,18 +22,23 @@ class CallersTests(PythonSingleFileTestCase):
         def inner_call_foo():
             foo()
         bar()
+
+    outer_call_bar()
     """)
 
     def test_called_once(self):
-        self.found_line_eq('callers:called_once', 'def <b>call_once</b>():')
+        self.found_line_eq('callers:called_once', '<b>called_once()</b>', 3)
 
     def test_called_multiple_times(self):
-        self.found_line_eq('callers:called_multiple', 'def <b>call_multiple</b>():')
+        self.found_lines_eq('callers:called_multiple', [
+            ('<b>called_multiple()</b>', 6),
+            ('<b>called_multiple()</b>', 7),
+        ])
 
     def test_called_in_several_functions(self):
         self.found_lines_eq('callers:called_in_separate_functions', [
-            'def <b>call_in_separate_functions_1</b>():',
-            'def <b>call_in_separate_functions_2</b>():',
+            ('<b>called_in_separate_functions()</b>', 10),
+            ('<b>called_in_separate_functions()</b>', 13),
         ])
 
     def test_called_in_inner_function(self):
@@ -41,11 +46,18 @@ class CallersTests(PythonSingleFileTestCase):
         function only.
 
         """
-        self.found_line_eq('callers:foo', 'def <b>inner_call_foo</b>():')
+        self.found_line_eq('callers:foo', '<b>foo()</b>', 17)
 
     def test_called_in_outer_function(self):
         """Make sure inner function definitions do not affect other
         calls in the outer function.
 
         """
-        self.found_line_eq('callers:bar', 'def <b>outer_call_bar</b>():')
+        self.found_line_eq('callers:bar', '<b>bar()</b>', 18)
+
+    def test_called_outside_of_function(self):
+        """Make sure calls that take place at the top level in a module are
+        still recorded.
+
+        """
+        self.found_line_eq('callers:outer_call_bar', '<b>outer_call_bar()</b>', 20)
