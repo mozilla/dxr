@@ -188,7 +188,7 @@ class FileToIndex(FileToIndexBase):
 
         """
         if not self._visitor:
-            self.node_start_table = self.analyze_tokens()
+            self.node_start_table, self.call_start_table = self.analyze_tokens()
             self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
             syntax_tree = ast.parse(self.contents)
             self._visitor.visit(syntax_tree)
@@ -219,42 +219,65 @@ class FileToIndex(FileToIndexBase):
         for indexing.
 
         """
-        # AST nodes for classes and functions point to the position of
-        # their 'def' and 'class' tokens. To get the position of their
-        # names, we look for 'def' and 'class' tokens and store the
-        # position of the token immediately following them.
-        node_start_table = {}
-        previous_start = None
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
 
+        node_start_table = {}
+        call_start_table = {}
+
+        node_type, node_start = None, None
+        paren_level, paren_stack = 0, {}
+
         for tok_type, tok_name, start, end, _ in token_gen:
-            if tok_type != token.NAME:
-                continue
+            if tok_type == token.NAME:
+                # AST nodes for classes and functions point to the position of
+                # their 'def' and 'class' tokens. To get the position of their
+                # names, we look for 'def' and 'class' tokens and store the
+                # position of the token immediately following them.
+                if node_start and node_type == 'definition':
+                    node_start_table[node_start] = (start, end)
+                    node_type, node_start = None, None
+                    continue
 
-            if tok_name in ('def', 'class'):
-                previous_start = start
-            elif previous_start is not None:
-                node_start_table[previous_start] = start
-                previous_start = None
+                if tok_name in ('def', 'class'):
+                    node_type, node_start = 'definition', start
+                    continue
 
-        return node_start_table
+                # Record all name nodes in the token table.  Currently unused,
+                # but will be needed for recording variable references.
+                node_start_table[start] = (start, end)
+                node_type, node_start = 'name', start
+
+            elif tok_type == token.OP:
+                # In order to properly capture the start and end of function
+                # calls, we need to keep track of the parens.  Put the
+                # starting positions on a stack (here implemented with a dict
+                # so that it can be sparse), but only if the previous node was
+                # a name.
+                if tok_name == '(':
+                    if node_type == 'name':
+                        paren_stack[paren_level] = node_start
+                    paren_level += 1
+                elif tok_name == ')':
+                    paren_level -= 1
+                    if paren_level in paren_stack:
+                        call_start = paren_stack.pop(paren_level)
+                        call_start_table[call_start] = (call_start, end)
+
+        return node_start_table, call_start_table
 
     def get_node_start_end(self, node):
         """Return start and end positions within the file for the given
         AST Node.
 
         """
-        start = node.lineno, node.col_offset
-        if start in self.node_start_table:
-            start = self.node_start_table[start]
+        loc = node.lineno, node.col_offset
 
-        end = None
         if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            end = start[0], start[1] + len(node.name)
+            start, end = self.node_start_table[loc]
         elif isinstance(node, ast.Call):
-            name = convert_node_to_name(node.func)
-            if name:
-                end = start[0], start[1] + len(name)
+            start, end = self.call_start_table[loc]
+        else:
+            start, end = None, None
 
         return start, end
 
