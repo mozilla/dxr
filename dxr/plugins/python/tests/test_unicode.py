@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests that try to provoke UnicodeErrors"""
 
+from textwrap import dedent
+
 from dxr.plugins.python.tests import PythonSingleFileTestCase
 
 
@@ -25,3 +27,22 @@ class EncodingCommentTests(PythonSingleFileTestCase):
         # file without skipping or error.
 
         self.found_line_eq('function:foo', "def <b>foo</b>():", 2)
+
+
+class UnicodeOffsetTests(PythonSingleFileTestCase):
+    source = dedent(u"""
+    # -*- coding: utf-8 -*-
+
+    def kilroy():
+        return "Mr. Roboto"
+
+    def main():
+        # domo arigato
+        print u"どうもありがとう " + kilroy()
+    """)
+
+    def test_call_offsets(self):
+        # Check that the offset of the function call is calculated in
+        # unicode characters, not bytes.
+
+        self.found_line_eq('callers:kilroy', u'print u"どうもありがとう " + <b>kilroy()</b>', 9)
