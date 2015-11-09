@@ -4,16 +4,11 @@ So if you run `dxr index`, that happens here.
 Usage of the docker environment:
 Put a dxr.config and source code directory here.
 
-Run an elasticsearch docker container, and expose port 8000.
-docker run --name es -p 80:8000 elasticsearch
-
-Remark: By default the elasticsearch container does not support javascript
-queries, which DXR uses -- regexp searches will fail unless you rebuild the
-elasticsearch container with an updated config file.
-
 In the parent (repository root):
-docker build -t dxr .
-docker run --net container:es dxr index
-docker run --net container:es dxr serve -a
+
+Run an elasticsearch docker container, and expose port 8000.
+make es
+make image
+make index clean serve
 
 Visit $DOCKER_IP in the browser.
