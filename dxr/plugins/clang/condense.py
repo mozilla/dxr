@@ -57,6 +57,14 @@ def process_function(props):
     props['type'] = c_type_sig(input_args, props['type'])
     return props
 
+def process_maybe_override(overrides, overriddens, props):
+    qualname = props.get('qualname')
+    if qualname in overrides or qualname in overriddens:
+        # Mark this function as virtual.
+        props['override'] = True
+
+    return props
+
 
 def process_override(overrides, overriddens, props):
     """Note overrides of methods, and organize them so we can emit
@@ -233,9 +241,7 @@ def lines_from_csvs(folder, file_glob):
     return chain.from_iterable(lines_from_csv(p) for p in paths)
 
 
-DISPATCH_TABLE = {'call': process_call,
-                  'function': process_function}
-def condense_file(csv_folder, file_path):
+def condense_file(csv_folder, file_path, overrides, overriddens):
     """Return a dict representing an analysis of one source file.
 
     This is phase 2: the file-at-a-time phase.
@@ -248,11 +254,33 @@ def condense_file(csv_folder, file_path):
         compiler plugin
     :arg file_path: A path to the file to analyze, relative to the tree's
         source folder
+    :arg overrides: A dict whose keys are function qualnames that are overrides
+    :arg overriddens: A dict whose keys are function qualnames that are
+        overriddens
 
     """
+    def process_function_for_override(overrides, overriddens, props):
+        override_props = process_maybe_override(overrides, overriddens, props)
+        return process_function(override_props)
+
+    def process_maybe_function(overrides, overriddens, props):
+        if props.get('kind') == 'function':
+            return process_maybe_override(overrides, overriddens, props)
+        else:
+            return props
+
+    process_maybe_function_for_override = partial(process_maybe_function,
+                                                  overrides, overriddens)
+
+    dispatch_table = {'call': process_call,
+                      'function': partial(process_function_for_override,
+                                          overrides, overriddens),
+                      'ref': process_maybe_function_for_override,
+                      'decldef': process_maybe_function_for_override}
+
     return condense(lines_from_csvs(csv_folder,
                                     '{0}.*.csv'.format(sha1(file_path).hexdigest())),
-                    DISPATCH_TABLE)
+                    dispatch_table)
 
 
 def condense_global(csv_folder):

@@ -11,11 +11,13 @@ from StringIO import StringIO
 from nose.tools import eq_
 
 from dxr.indexers import Extent, Position, FuncSig
-from dxr.plugins.clang.condense import condense, DISPATCH_TABLE
+from dxr.plugins.clang.condense import condense, process_call, process_function
 from dxr.plugins.clang.needles import sig_needles
 
 
 DEFAULT_EXTENT = Extent(start=Position(0, 0), end=Position(0, 0))
+DISPATCH_TABLE = {'call': process_call,
+                  'function': process_function}
 
 
 def condense_csv(csv_str):

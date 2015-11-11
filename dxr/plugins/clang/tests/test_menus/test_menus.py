@@ -6,6 +6,7 @@ unscathed.
 
 """
 from dxr.testing import DxrInstanceTestCase, menu_on, menu_item_not_on
+import nose.tools
 
 
 class MenuTests(DxrInstanceTestCase):
@@ -154,3 +155,55 @@ class MenuTests(DxrInstanceTestCase):
         menu_item_not_on(self.source_page('main.cpp'),
                          'VERY_EXTERNAL',
                          'Jump to definition')
+
+    def test_override_overrides(self):
+        """Make sure virtual functions that have an override are recognized."""
+        menu_on(self.source_page('extern.c'),
+                'virtualFunc',
+                {'html': 'Find overrides',
+                 'href': '/code/search?q=%2Boverrides%3ABaseClass%3A%3AvirtualFunc%28%29'})
+
+    def test_override_overridden(self):
+        """Make sure virtual functions that override something are
+        recognized."""
+        menu_on(self.source_page('extern.c'),
+                'virtualFunc',
+                {'html': 'Find overridden',
+                 'href': '/code/search?q=%2Boverridden%3ADerivedClass%3A%3AvirtualFunc%28%29'},
+                 text_instance=2)
+
+    def test_override_def(self):
+        """Make sure virtual function defs are recognized."""
+        menu_on(self.source_page('extern.c'),
+                'virtualFunc',
+                {'html': 'Find overridden',
+                 'href': '/code/search?q=%2Boverridden%3ADerivedClass%3A%3AvirtualFunc%28%29'},
+                 text_instance=3)
+
+    def test_override_ref(self):
+        """Make sure virtual function refs are recognized."""
+        menu_on(self.source_page('main.cpp'),
+                'virtualFunc',
+                {'html': 'Find overrides',
+                 'href': '/code/search?q=%2Boverrides%3ABaseClass%3A%3AvirtualFunc%28%29'})
+
+    # We don't yet recognize pure virtual functions as something that gets
+    # overridden - activate the next two tests when that gets fixed.
+
+    @nose.tools.raises(AssertionError) # remove this line when fixed
+    def test_override_pure_overrides(self):
+        """Make sure pure virtual functions that have an override are
+        recognized."""
+        menu_on(self.source_page('extern.c'),
+                'pVirtualFunc',
+                {'html': 'Find overrides',
+                 'href': '/code/search?q=%2Boverrides%3ABaseClass%3A%3ApVirtualFunc%28%29'})
+
+    @nose.tools.raises(AssertionError) # remove this line when fixed
+    def test_override_pure_overridden(self):
+        """Make sure overrides of a pure virtual function are recognized."""
+        menu_on(self.source_page('extern.c'),
+                'pVirtualFunc',
+                {'html': 'Find overridden',
+                 'href': '/code/search?q=%2Boverridden%3ADerivedClass%3A%3ApVirtualFunc%28%29'},
+                 text_instance=2)
