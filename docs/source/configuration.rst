@@ -239,3 +239,17 @@ See :ref:`writing-plugins` for more details on plugin development.
 ``include_folders``
     Whitespace-separated list of paths to search in to resolve include
     directives. Default: [] (current folder)
+
+
+Syntax
+=======
+
+``#`` comments out the remainder of its line in most cases. To express a config
+value that contains ``#``, place it in triple quotes::
+
+    regex = '''(?i)bug\s+\#?([0-9]+)'''
+    regex = """(?i)bug\s+\#?([0-9]+)"""
+
+A single surrounding pair of single or double quotes will end up as part of the
+value at the moment, due to an apparent `bug in configobj
+<https://github.com/DiffSK/configobj/issues/97>`_.
