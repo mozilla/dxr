@@ -240,7 +240,7 @@ def condense_file(csv_folder, file_path):
 
     This is phase 2: the file-at-a-time phase.
 
-    This may comprise several CSVs if, for example, proprocessor magic results
+    This may comprise several CSVs if, for example, preprocessor magic results
     in the file being built several different times, with different effective
     contents each time.
 
