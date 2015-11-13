@@ -1,6 +1,29 @@
 import ast
 import os
+import re
 from contextlib import contextmanager
+
+
+# The actual check that Python uses seems to be done in C, but this
+# regex was taken from lib2to3.pgen.tokenize.
+encoding_re = re.compile(r'^[ \t\f]*#.*coding[:=][ \t]*([-\w.]+)')
+
+
+def ast_parse(contents):
+    """Return the abstract syntax parse tree of some Python file contents,
+    stripped of the encoding cookie, if any.
+
+    Solves a problem where compiling a unicode string with an encoding
+    declaration is a SyntaxError in Python 2 (issue #22221).
+
+    """
+    return ast.parse(
+        u''.join(
+            # The encoding declaration is only meaningful in the top two lines.
+            u'\n' if i < 2 and encoding_re.match(line) else line
+            for i, line in enumerate(contents.splitlines(True))
+        )
+    )
 
 
 def local_name(absolute_name):
