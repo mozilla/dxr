@@ -57,13 +57,30 @@ def process_function(props):
     props['type'] = c_type_sig(input_args, props['type'])
     return props
 
+
 def process_maybe_override(overrides, overriddens, props):
     qualname = props.get('qualname')
-    if qualname in overrides or qualname in overriddens:
-        # Mark this function as virtual.
-        props['override'] = True
+    if qualname in overrides:
+        # Keys of overrides are functions that override something, so this
+        # function has overriddens in the sense of the "Find overriddens" menu
+        # option.
+        props['has_overriddens'] = True
+    if qualname in overriddens:
+        props['has_overrides'] = True
 
     return props
+
+
+def process_maybe_function(overrides, overriddens, props):
+    if props.get('kind') == 'function':
+        return process_maybe_override(overrides, overriddens, props)
+    else:
+        return props
+
+
+def process_function_for_override(overrides, overriddens, props):
+    override_props = process_maybe_override(overrides, overriddens, props)
+    return process_function(override_props)
 
 
 def process_override(overrides, overriddens, props):
@@ -259,16 +276,6 @@ def condense_file(csv_folder, file_path, overrides, overriddens):
         overriddens
 
     """
-    def process_function_for_override(overrides, overriddens, props):
-        override_props = process_maybe_override(overrides, overriddens, props)
-        return process_function(override_props)
-
-    def process_maybe_function(overrides, overriddens, props):
-        if props.get('kind') == 'function':
-            return process_maybe_override(overrides, overriddens, props)
-        else:
-            return props
-
     process_maybe_function_for_override = partial(process_maybe_function,
                                                   overrides, overriddens)
 

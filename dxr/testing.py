@@ -400,16 +400,15 @@ def _decoded_menu_on(haystack, text, text_instance=1):
     """
     # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
     # compiling the entirety of lxml to run pyquery.
-    pattern = '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>'
-    if text_instance == 1:
-        match = re.search(pattern, haystack)
-    else:
-        matches = re.finditer(pattern, haystack)
-        for _ in range(text_instance):
-            try:
-                match = matches.next()
-            except StopIteration:
-                match = None
+    matches = re.finditer(
+              '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+              haystack)
+    for _ in xrange(text_instance):
+        try:
+            match = matches.next()
+        except StopIteration:
+            match = None
+            break
 
     if match:
         return json.loads(match.group(1).replace('&quot;', '"')
@@ -464,6 +463,9 @@ def menu_on(haystack, text, *menu_items, **kwargs):
         return False
 
     text_instance = kwargs.pop('text_instance', 1)
+    if kwargs:
+        raise TypeError('Unexpected **kwargs: %r' % kwargs)
+
     found_items = _decoded_menu_on(haystack, text, text_instance)
     for expected in menu_items:
         removed = removed_match(expected, found_items)
