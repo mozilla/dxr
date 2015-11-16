@@ -391,37 +391,49 @@ def _make_file(path, filename, contents):
         file.write(contents.encode('utf-8'))
 
 
-def _decoded_menu_on(haystack, text):
-    """Return the JSON-decoded menu found around the source code ``text`` in
-    the HTML ``haystack``.
+def _decoded_menu_on(haystack, text, text_instance=1):
+    """Return the JSON-decoded menu found around the ``text_instance``th source
+    code occurrence of ``text`` in the HTML ``haystack``.
 
     Raise an AssertionError if there is no menu there.
 
     """
     # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
     # compiling the entirety of lxml to run pyquery.
-    match = re.search(
-            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
-            haystack)
+    matches = re.finditer(
+              '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+              haystack)
+    for _ in xrange(text_instance):
+        try:
+            match = matches.next()
+        except StopIteration:
+            match = None
+            break
+
     if match:
         return json.loads(match.group(1).replace('&quot;', '"')
                                         .replace('&lt;', '<')
                                         .replace('&gt;', '>')
                                         .replace('&amp;', '&'))
     else:
-        ok_(False, "No menu around '%s' was found." % text)
+        ok_(False, "No menu around occurrence %d of '%s' was found." %
+                   (text_instance, text))
 
 
-def menu_on(haystack, text, *menu_items):
+def menu_on(haystack, text, *menu_items, **kwargs):
     """Assert that there is a context menu on certain text that contains
     certain menu items.
 
     :arg haystack: The HTML source of a page to search
-    :arg text: The text contained by the menu's anchor tag. The first
-        menu-having anchor tag containing the text is the one compared against.
+    :arg text: The text contained by the menu's anchor tag. The
+        ``text_instance``th menu-having anchor tag containing the text is the
+        one compared against.
     :arg menu_items: Dicts whose pairs must be contained in some item of the
         menu. If an item is found to match, it is discarded can cannot be
         reused to match another element of ``menu_items``.
+    :arg text_instance: An optional keyword-only arg that specifies which
+        occurrence of ``text`` to compare against.  Defaults to 1 (the first
+        occurrence).
 
     """
     def removed_match(expected, found_items):
@@ -450,11 +462,17 @@ def menu_on(haystack, text, *menu_items):
                 return True
         return False
 
-    found_items = _decoded_menu_on(haystack, text)
+    text_instance = kwargs.pop('text_instance', 1)
+    if kwargs:
+        raise TypeError('Unexpected **kwargs: %r' % kwargs)
+
+    found_items = _decoded_menu_on(haystack, text, text_instance)
     for expected in menu_items:
         removed = removed_match(expected, found_items)
         if not removed:
-            ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
+            ok_(False, "No menu item with the keys %r " % (expected) +
+                "was found in the menu around occurrence " +
+                "%d of '%s'." % (text_instance, text))
 
 
 def menu_item_not_on(haystack, text, menu_item_html):

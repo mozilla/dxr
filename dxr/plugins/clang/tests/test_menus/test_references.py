@@ -31,4 +31,4 @@ class ReferenceTests(DxrInstanceTestCase):
         Plain old var: queries are covered in test_c_vardecl.
 
         """
-        self.found_line_eq('var-ref:var', 'return <b>var</b>;', 15)
+        self.found_line_eq('var-ref:var', '<b>var</b>++;', 15)

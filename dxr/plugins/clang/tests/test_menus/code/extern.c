@@ -26,3 +26,17 @@ namespace Space {
 namespace Bar = Space;
 
 #define MACRO "polo"
+
+class BaseClass {
+public:
+  virtual void virtualFunc() { }
+  virtual void pVirtualFunc() = 0;
+};
+
+class DerivedClass : public BaseClass {
+public:
+  void virtualFunc();
+  void pVirtualFunc() { }
+};
+
+void DerivedClass::virtualFunc() { }

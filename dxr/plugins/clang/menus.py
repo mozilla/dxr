@@ -193,9 +193,9 @@ class FunctionRef(_RefWithDefinition):
 
     @classmethod
     def _condensed_menu_data(cls, tree, prop):
-        return prop['qualname'], 'override' in prop
+        return prop['qualname'], 'has_overriddens' in prop, 'has_overrides' in prop
 
-    def _more_menu_items(self, (qualname, is_virtual)):
+    def _more_menu_items(self, (qualname, has_overriddens, has_overrides)):
         yield {'html': "Find declarations",
                'title': "Find declarations of this function",
                'href': search_url(self.tree.name, "+function-decl:%s" % quote(qualname)),
@@ -208,11 +208,12 @@ class FunctionRef(_RefWithDefinition):
                'title': "Find references to this function",
                'href': search_url(self.tree.name, "+function-ref:%s" % quote(qualname)),
                'icon': 'reference'}
-        if is_virtual:
+        if has_overriddens:
             yield {'html': "Find overridden",
                    'title': "Find functions that this function overrides",
                    'href': search_url(self.tree.name, "+overridden:%s" % quote(qualname)),
                    'icon': 'method'}
+        if has_overrides:
             yield {'html': "Find overrides",
                    'title': "Find overrides of this function",
                    'href': search_url(self.tree.name, "+overrides:%s" % quote(qualname)),
