@@ -89,7 +89,8 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
     def visit_FunctionDef(self, node):
         # Index the function itself for the function: filter.
         start, end = self.file_to_index.get_node_start_end(node)
-        self.yield_needle('py_function', node.name, start, end)
+        if start is not None:
+            self.yield_needle('py_function', node.name, start, end)
 
         super(IndexingNodeVisitor, self).visit_FunctionDef(node)
 
@@ -98,14 +99,16 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         name = convert_node_to_name(node.func)
         if name:
             start, end = self.file_to_index.get_node_start_end(node)
-            self.yield_needle('py_callers', name, start, end)
+            if start is not None:
+                self.yield_needle('py_callers', name, start, end)
 
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
         # Index the class itself for the type: filter.
         start, end = self.file_to_index.get_node_start_end(node)
-        self.yield_needle('py_type', node.name, start, end)
+        if start is not None:
+            self.yield_needle('py_type', node.name, start, end)
 
         # Index the class hierarchy for classes for the derived: and
         # bases: filters.
@@ -133,6 +136,8 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         class_name = self.get_class_name(class_node)
         function_qualname = class_name + '.' + function_node.name
         start, end = self.file_to_index.get_node_start_end(function_node)
+        if start is None:
+            return
 
         # Index this function as being overridden by other functions for
         # the overridden: filter.
@@ -290,9 +295,9 @@ class FileToIndex(FileToIndexBase):
         loc = node.lineno, node.col_offset
 
         if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            start, end = self.node_start_table[loc]
+            start, end = self.node_start_table.get(loc, (None, None))
         elif isinstance(node, ast.Call):
-            start, end = self.call_start_table[loc]
+            start, end = self.call_start_table.get(loc, (None, None))
         else:
             start, end = None, None
 

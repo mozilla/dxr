@@ -61,3 +61,26 @@ class CallersTests(PythonSingleFileTestCase):
 
         """
         self.found_line_eq('callers:outer_call_bar', '<b>outer_call_bar()</b>', 20)
+
+
+class CallersMethodTests(PythonSingleFileTestCase):
+    source = dedent("""
+    class Foo(object):
+        @classmethod
+        def class_method(cls):
+            pass
+
+        def method(self):
+            pass
+
+    Foo.class_method()
+
+    foo = Foo()
+    foo.method()
+    """)
+
+    def test_class_method_called(self):
+        self.found_nothing('callers:class_method')
+
+    def test_method_called(self):
+        self.found_nothing('callers:method')
