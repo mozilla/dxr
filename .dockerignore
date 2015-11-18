@@ -1,0 +1,5 @@
+.git
+.vagrant
+.noseids
+build
+dist
