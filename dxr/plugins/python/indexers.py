@@ -110,25 +110,25 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         if start is not None:
             self.yield_needle('py_type', node.name, start, end)
 
-        # Index the class hierarchy for classes for the derived: and
-        # bases: filters.
-        class_name = self.get_class_name(node)
+            # Index the class hierarchy for classes for the derived: and
+            # bases: filters.
+            class_name = self.get_class_name(node)
 
-        bases = self.tree_analysis.get_base_classes(class_name)
-        for qualname in bases:
-            self.yield_needle(needle_type='py_derived',
-                              name=local_name(qualname), qualname=qualname,
-                              start=start, end=end)
+            bases = self.tree_analysis.get_base_classes(class_name)
+            for qualname in bases:
+                self.yield_needle(needle_type='py_derived',
+                                  name=local_name(qualname), qualname=qualname,
+                                  start=start, end=end)
 
-        derived_classes = self.tree_analysis.get_derived_classes(class_name)
-        for qualname in derived_classes:
-            self.yield_needle(needle_type='py_bases',
-                              name=local_name(qualname), qualname=qualname,
-                              start=start, end=end)
+            derived_classes = self.tree_analysis.get_derived_classes(class_name)
+            for qualname in derived_classes:
+                self.yield_needle(needle_type='py_bases',
+                                  name=local_name(qualname), qualname=qualname,
+                                  start=start, end=end)
 
-        # Show a menu when hovering over this class.
-        self.yield_ref(start, end,
-                       ClassRef(self.file_to_index.tree, class_name))
+            # Show a menu when hovering over this class.
+            self.yield_ref(start, end,
+                           ClassRef(self.file_to_index.tree, class_name))
 
         super(IndexingNodeVisitor, self).visit_ClassDef(node)
 
