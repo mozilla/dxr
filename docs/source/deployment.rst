@@ -56,6 +56,37 @@ it over.
     :file:`vagrant_provision.sh` in the DXR source tree, which does the actual
     setup of the VM and is automatically tested.
 
+Additional Installation
+-----------------------
+
+You'll need to install the javascript plugin for elasticsearch on your
+elasticsearch server (regardless of what type of code you're indexing).  The
+plugin version you need depends on your version of elasticsearch (see
+https://github.com/elastic/elasticsearch-lang-javascript).  See
+:file:`vagrant_provision.sh` for the command currently being used to install the
+plugin in the VM, something like::
+
+  sudo /usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-lang-javascript/<version>
+
+where you'll need to insert the appropriate ``<version>``.
+
+(The javascript plugin can be uninstalled with ``sudo
+/usr/share/elasticsearch/bin/plugin remove lang-javascript``.)
+
+To get all of the DXR tests to pass, or if you're indexing rust code, you'll
+also need to install rust.  Again, refer to :file:`vagrant_provision.sh` for the
+currently recommended install command, something like::
+
+  curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=<date> --yes
+
+.. note::
+
+  The 2015-06-14 version of rust has a bug on Fedora-based systems - see
+  https://github.com/rust-lang/rust/issues/15684 for a fix if you're
+  seeing shared library errors during rust compiles.
+
+(Rust can be uninstalled with ``sudo /usr/local/lib/rustlib/uninstall.sh``.)
+
 Python Packages
 ---------------
 
@@ -79,25 +110,37 @@ but these pointers should start you off with reasonable performance:
 * Give ES its own server. It loves RAM and IO speed. If you want high
   availability or need more power than one machine can provide, set up a
   cluster.
-* Whether you intend to set up a cluster or not, beware that ES makes friends
-  all too easily. Be sure to change the ``cluster.name`` to something unusual
-  and disable autodiscovery by setting ``discovery.zen.ping.multicast.enabled``
-  to ``false``, instead specifying your cluster members directly in
-  ``discovery.zen.ping.unicast.hosts``.
-* Crank up your kernel's max file descriptors. Put this in the init script that
-  launches ES::
+* Configure the following in :file:`/etc/elasticsearch/elasticsearch.yml`:
 
-    ulimit -n 65535
-    ulimit -l unlimited
+  * Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
+  * Set ``script.disable_dynamic`` to ``false``.  This enables DXR's use of the
+    javascript plugin.
+  * Whether you intend to set up a cluster or not, beware that ES makes friends
+    all too easily. Be sure to change the ``cluster.name`` to something unusual
+    and disable autodiscovery by setting
+    ``discovery.zen.ping.multicast.enabled`` to ``false``, instead specifying
+    your cluster members directly in ``discovery.zen.ping.unicast.hosts``.
 
-  Doing the equivalent in :file:`/etc/security/limits.conf` tends not to work.
+* And set the following in :file:`/etc/default/elasticsearch` (for debian-based
+  systems) or :file:`/etc/sysconfig/elasticsearch` (for RPM-based
+  distributions):
 
-* Set :envvar:`ES_HEAP_SIZE` to half of your system RAM, not exceeding 32GB,
-  because then the JVM can no longer use compressed pointers. Giving it one
-  big chunk of RAM up front will avoid heap fragmentation and costly
-  reallocations. The remaining memory will easily be filled by the OS's file
-  cache as it tussles with Lucene indices.
-* Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
+  * Crank up your kernel's max file descriptors::
+
+      MAX_OPEN_FILES=65535
+      MAX_LOCKED_MEMORY=unlimited
+
+  * Set :envvar:`ES_HEAP_SIZE` to half of your system RAM, not exceeding 32GB
+    (because at that point the JVM can no longer use compressed
+    pointers). Giving it one big chunk of RAM up front will avoid heap
+    fragmentation and costly reallocations. The remaining memory will easily be
+    filled by the OS's file cache as it tussles with Lucene indices.
+  * If you have storage constraints, you may want to set :envvar:`DATA_DIR` and
+    :envvar:`LOG_DIR` to control where elasticsearch puts its data and logs (the
+    defaults are :file:`/var/lib/elasticsearch` and
+    :file:`/var/log/elasticsearch`).  (Elasticsearch doesn't require much log
+    space...until things go wrong.)
+
 * It is often recommended to use Oracle's JVM, but OpenJDK works fine.
 
 DXR will create one index per indexed tree per :term:`format version`.
@@ -126,13 +169,9 @@ It will build :file:`libclang-index-plugin.so` in :file:`dxr/plugins/clang`,
 compile the JavaScript-based templates, cache-bust the static assets, and
 install the Python dependencies.
 
-To ensure everything has built correctly, you can run the tests::
 
-    make test
-
-
-Installation
-============
+Installation and Tests
+======================
 
 Once you've built it, install DXR in the activated virtualenv::
 
@@ -143,6 +182,13 @@ Once you've built it, install DXR in the activated virtualenv::
     If you intend to develop DXR itself, run ``pip install --no-deps -e .``
     instead. Otherwise, pip will make a copy of the code, severing its
     relationship with the source checkout.
+
+To ensure everything has built correctly and that elasticsearch and other
+dependencies are installed and running correctly, you can run the tests::
+
+    make test
+
+Make sure elasticsearch is started first of course.
 
 
 Indexing
@@ -274,7 +320,7 @@ To update to a new version of DXR...
 
    a. `Python Packages`_
    b. `Building`_
-   c. `Installation`_
+   c. `Installation and Tests`_
 
 
 .. _Virtualenv: https://virtualenv.pypa.io/en/latest/

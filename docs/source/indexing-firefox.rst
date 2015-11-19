@@ -47,21 +47,26 @@ number on your physical host.
 Configure The Source Tree
 =========================
 
-1. Put moz-central checkout in a folder somewhere. Let's call it :file:`src`.
-   You can use ``hg clone`` as documented at
+1. Put mozilla-central checkout in a folder somewhere in the VM, let's say
+   :file:`~/src`. (If you put it somewhere else be sure your choice is reflected
+   in :file:`dxr.config` in Step 4.)  You can use ``hg clone`` as documented at
    https://developer.mozilla.org/en-US/docs/Simple_Firefox_build.
 
-2. Have the compiler include the debug code so it can be analyzed, and enable
-   standard C++ compatibility so we can build with clang. Put this in
-   :file:`src/mozilla-central/.mozconfig`::
+.. note::
+
+   Don't put :file:`src` in Vagrant's shared folder :file:`~/dxr` or IO
+   bridging between host and guest will kill your performance.
+
+2. Have the compiler include the debug code so it can be analyzed. Put this in
+   :file:`src/mozilla-central/mozconfig`::
 
     ac_add_options --enable-debug
-    ac_add_options --enable-stdcxx-compat
 
 3. Get it ready to build::
 
     cd src/mozilla-central
-    ./mach bootstrap``
+    ./mach bootstrap
+    ./mach mercurial-setup
 
 4. Put this into a new :file:`dxr.config` file. It doesn't matter where it is,
    but it's a good idea to keep it outside the checkout. ::
@@ -77,7 +82,7 @@ Configure The Source Tree
 Bump Up Elasticsearch's RAM
 ===========================
 
-1. In :file:`/etc/init.d/elasticsearch`, set ``ES_HEAP_SIZE=2g``.
+1. In :file:`/etc/default/elasticsearch`, set ``ES_HEAP_SIZE=2g``.
 2. ``/etc/init.d/elasticsearch restart``
 
 Kick Off The Build

@@ -111,7 +111,7 @@ apt-get install -y openjdk-7-jdk elasticsearch
 # Make it keep to itself, rather than forming a cluster with everything on the
 # subnet:
 sed -i 's/#\(discovery\.zen\.ping\.multicast\.enabled: false\)/\1/' /etc/elasticsearch/elasticsearch.yml
-sed -i 's/#network\.bind_host: 192\.168\.0\.1/network.bind_host: 127.0.0.1/' /etc/elasticsearch/elasticsearch.yml
+sed -i 's/#network\.host: 192\.168\.0\.1/network.host: 127.0.0.1/' /etc/elasticsearch/elasticsearch.yml
 # Cut RAM so it doesn't take up the whole VM. This should be MUCH bigger for
 # production.
 sed -i 's/#ES_HEAP_SIZE=2g/ES_HEAP_SIZE=128m/' /etc/init.d/elasticsearch
@@ -121,7 +121,7 @@ sed -i 's/#\(bootstrap\.mlockall: true\)/\1/' /etc/elasticsearch/elasticsearch.y
 grep 'script.disable_dynamic: false' /etc/elasticsearch/elasticsearch.yml > /dev/null || echo 'script.disable_dynamic: false' >> /etc/elasticsearch/elasticsearch.yml
 # Come up on startup:
 update-rc.d elasticsearch defaults 95 10
-[ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-lang-javascript/2.4.1
+[ ! -d /usr/share/elasticsearch/plugins/lang-javascript ] && /usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-lang-javascript/2.4.1
 /etc/init.d/elasticsearch start
 
 # Install Rust in /usr/local:
