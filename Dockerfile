@@ -1,61 +1,41 @@
+# A docker setup for DXR development
+#
+# This image has DXR and various compilers installed, so it can be used for
+# indexing, serving web, and interactive debugging.
+#
+# This image should not be used as a base for production setups. Those would
+# want separate images (and separate machines) for indexing. Also, we leave out
+# some image size optimizations and introduce would-be security holes for the
+# sake of a good dev experience.
+
 # Ubuntu 14.04.3
 FROM ubuntu@sha256:0ca448cb174259ddb2ae6e213ebebe7590862d522fe38971e1175faedf0b6823
 
 MAINTAINER Erik Rose <erik@mozilla.com>
 
-# Don't prompt for input:
-ENV DEBIAN_FRONTEND noninteractive
+COPY docker/set_up_ubuntu.sh /tmp/set_up_ubuntu.sh
+RUN /tmp/set_up_ubuntu.sh
 
-# Install OS-level dependencies:
-RUN apt-get -q update \
- && apt-get -q -y install \
-        npm \
-        python-pip python-virtualenv python2.7-dev \
-        mercurial git \
-        llvm-3.5 libclang-3.5-dev clang-3.5 \
-        curl \
-        graphviz \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
-# TODO: graphviz is only for building docs. Install it only for dev.
+COPY docker/set_up_common.sh /tmp/set_up_common.sh
+RUN /tmp/set_up_common.sh
 
-# Alias some things:
-#
-# --force overrides any older-version LLVM alternative lying around. This was
-# useful with vagrant, probably less so with ephemeral containers.
-RUN update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
-# There is no clang++ until we do this:
-RUN update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
-# And we might as well make a clang link so we can compile mozilla-central:
-RUN update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
-RUN ln -sf /usr/bin/nodejs /usr/local/bin/node
+# Give root a known password so devs can become root:
+RUN echo "root:docker" | chpasswd
 
-# Install Rust.
-RUN curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=2015-06-14 --yes
+# Install Graphviz, needed only for building docs.
+# Not running apt-get clean, to keep dev experience snappy.
+RUN apt-get -q -y install graphviz
 
 # Do most of the rest as an unprivileged user:
 RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash dxr
+RUN mkdir -p /home/dxr/dxr
+VOLUME /home/dxr/dxr
 USER dxr
 
-# Make a virtualenv:
-WORKDIR /home/dxr
-ENV VIRTUAL_ENV=/home/dxr/venv
-RUN virtualenv $VIRTUAL_ENV \
- && $VIRTUAL_ENV/bin/pip install pdbpp nose-progressive Sphinx==1.3.1
-# TODO: Install pdbpp, nose, and Sphinx for dev only.
+# Activate a virtualenv. make will make it later.
+ENV VIRTUAL_ENV=/home/dxr/dxr/venv
+ENV PATH=/home/dxr/dxr/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-
-# Install and build DXR:
-#
-# TODO: Replace the COPY with a double mount (http://stackoverflow.com/a/27320731), or figure out some other easy way to build and exfiltrate the Sphinx docs from the container for viewing.
-COPY . /home/dxr/dxr
-USER root
-RUN chown -R dxr /home/dxr/dxr
-USER dxr
 WORKDIR /home/dxr/dxr
-RUN $VIRTUAL_ENV/bin/pip install --no-deps .
-RUN make
 
 EXPOSE 8000
-
-# NEXT: See if this works. Then add a docker-compose thing, a make target to run tests, and more.

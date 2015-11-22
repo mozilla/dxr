@@ -1,29 +1,22 @@
-# Things you should consider running:
+# Things you might normally want to run:
 
-all: requirements static plugins
+## These are meant to be run within whatever virtualized, containerized, or
+## (heaven forbid) bare-metal environment contains DXR:
 
-es:
-	cd docker_es; docker build -t es_dxr .; docker rm -f es_dxr || true; docker run --name es_dxr -p 80:8000 es_dxr
+all: static plugins requirements .dxr_installed
 
-image:
-	docker build -t dxr .
-
-test:
-	docker run --net container:es_dxr --tty --name dxr_test dxr nosetests --with-progressive ${TESTS}
-
-index:
-	docker run --net container:es_dxr --tty --name dxr_index -w "/builds/dxr-build-env/dxr/docker" dxr dxr index
-
-serve:
-	docker run --net container:es_dxr --tty --name dxr_serve -w "/builds/dxr-build-env/dxr/docker" dxr dxr serve -a
+test: all
+	python setup.py test
 
 clean: static_clean
 	rm -rf node_modules/.bin/nunjucks-precompile \
 	       node_modules/nunjucks \
 	       .npm_installed \
-	       .peep_installed
+	       .peep_installed \
+	       venv \
+	       .dxr_dev_image_built \
+	       .dxr_installed
 	find . -name "*.pyc" -exec rm -f {} \;
-	docker rm -f dxr_index dxr_serve dxr_test || true
 	$(MAKE) -C dxr/plugins/clang clean
 
 static_clean:
@@ -35,11 +28,72 @@ static_clean:
 # Cache-bust static assets:
 static: dxr/static_manifest
 
+docs: requirements .dxr_installed
+	$$VIRTUAL_ENV/bin/pip install Sphinx==1.3.1
+	$(MAKE) -C docs html
+
+# Install dev conveniences:
+dev:
+	$$VIRTUAL_ENV/bin/pip install pdbpp nose-progressive
+
+
+## Conveniences to run from your host machine if running DXR in Docker:
+
+# NEXT: "make docker_test" works, except a few tests fail, because the ES image is broken. It's not enabling dynamic scripting atm. Then figure out how to get the ES image built and when to run it. Maybe docker-compose can help. Get ES image putting data on a volume so it persists (its dockerfile already says it should). Call docker-machine automatically on Mac.
+
+docker_es: docker_machine
+	# TODO: Put ES data on a volume so it persists across containers.
+	cd docker_es; docker build -t dxr_es .; docker rm -f dxr_es || true; docker run -d --name dxr_es -p 80:8000 dxr_es
+
+shell: .dxr_dev_image_built docker_machine
+	docker run --rm -ti -v $(PWD):/home/dxr/dxr --net container:dxr_es --tty --name dxr_dev dxr_dev bash
+	#/home/dxr/venv/bin/nosetests --with-progressive ${TESTS}
+
+# Run tests from outside Docker, like for CI:
+docker_test: .dxr_dev_image_built
+	docker run --rm -v $(PWD):/home/dxr/dxr --net container:dxr_es --tty --name dxr_dev dxr_dev make test
+
+docker_clean:
+	docker rm -f dxr_dev || true
+	rm .dxr_dev_image_built
+
+
 
 # Private things:
 
+# If there's an activated virtualenv, use that. Otherwise, make one in the cwd.
+# This lets the installed Python packages persist across container runs when
+# using Docker.
+VIRTUAL_ENV ?= $(PWD)/venv
+DXR_PROD ?= 0
+
+docker_machine:
+	#docker-machine env default || docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
+
+.dxr_dev_image_built: Dockerfile docker/set_up_common.sh docker/set_up_ubuntu.sh
+	docker build -t dxr_dev .
+	touch $@
+
+# Make a virtualenv at $VIRTUAL_ENV if there isn't one. DXR assumes you're
+# using a venv. If you don't specify an external venv, we reason that, after
+# creating one for you, you'll need Python packages installed.
+$(VIRTUAL_ENV)/bin/activate:
+	virtualenv $(VIRTUAL_ENV)
+	rm -f .peep_installed .dxr_installed
+
+# Install DXR into the venv. Reinstall it if the setuptools entry points may
+# have changed. To install it in non-editable mode, set DXR_PROD=1 in the
+# environment.
+.dxr_installed: $(VIRTUAL_ENV)/bin/activate setup.py
+ifeq ($(DXR_PROD),1)
+	$$VIRTUAL_ENV/bin/pip install --no-deps .
+else
+	$$VIRTUAL_ENV/bin/pip install --no-deps -e .
+endif
+	touch $@
+
 # Install Python requirements:
-requirements: .peep_installed
+requirements: $(VIRTUAL_ENV)/bin/activate .peep_installed
 
 plugins:
 	$(MAKE) -C dxr/plugins/clang
@@ -109,4 +163,4 @@ dxr/static_manifest: $(CSS_TEMPS) dxr/build/leaf_manifest dxr/build/css_manifest
 	
 	cat dxr/build/leaf_manifest dxr/build/css_manifest > $@
 
-.PHONY: all test clean static_clean static requirements plugins
+.PHONY: all test clean static_clean static docs dev docker_es shell docker_test docker_clean requirements plugins

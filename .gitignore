@@ -20,5 +20,8 @@ dxr-temp-*
 /node_modules/grunt*
 /node_modules/nunjucks
 /docs/build
+.dxr_installed
 .npm_installed
 .peep_installed
+/venv
+/*.egg
