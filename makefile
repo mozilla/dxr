@@ -10,8 +10,8 @@ test: all
 	$$VIRTUAL_ENV/bin/nosetests -v
 
 clean: static_clean
-	rm -rf node_modules/.bin/nunjucks-precompile \
-	       node_modules/nunjucks \
+	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
+	       tooling/node/node_modules/nunjucks \
 	       .npm_installed \
 	       .peep_installed \
 	       venv \
@@ -99,13 +99,13 @@ plugins:
 
 dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 	                                 .npm_installed
-	node_modules/.bin/nunjucks-precompile dxr/templates/nunjucks > $@
+	tooling/node/node_modules/.bin/nunjucks-precompile dxr/templates/nunjucks > $@
 
 # .npm_installed is an empty file we touch whenever we run npm install. This
 # target redoes the install if the packages or lockdown files are newer than
 # that file:
-.npm_installed: package.json lockdown.json
-	npm install
+.npm_installed: tooling/node/package.json tooling/node/lockdown.json
+	cd tooling/node && npm install
 	touch $@
 
 # Install requirements in current virtualenv:

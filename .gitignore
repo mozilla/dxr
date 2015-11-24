@@ -13,10 +13,8 @@ dxr-temp-*
 /build
 /dist
 /*.egg-info
-/node_modules/.bin/grunt
-/node_modules/.bin/nunjucks-precompile
-/node_modules/grunt*
-/node_modules/nunjucks
+/tooling/node/node_modules/.bin/nunjucks-precompile
+/tooling/node/node_modules/nunjucks
 /docs/build
 .dxr_installed
 .npm_installed
