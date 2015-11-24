@@ -1,9 +1,13 @@
 sudo: required
 
+# We don't use these facilities, but they're lightweight:
+language: C
+
 services:
   - docker
 
 before_install:
+  - sudo chown -R 1000 .
   - make docker_es
 
 script:
