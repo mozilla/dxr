@@ -1,5 +1,10 @@
 sudo: required
 
+# Keep the sliding forward of the ci branch from triggering another build:
+branches:
+  except:
+    - ci
+
 # We don't use these facilities, but they're lightweight:
 language: C
 
@@ -13,3 +18,14 @@ before_install:
 
 script:
   - docker-compose -f tooling/docker/docker-compose.yml run -e DXR_PROD=1 dev make test
+
+deploy:
+  provider: script
+  script: git push -q "https://${GH_TOKEN}@${GH_REF}" docking:ci > /dev/null 2>&1
+  on:
+    branch: docking
+
+env:
+  global:
+    - GH_REF: github.com/mozilla/dxr.git
+    - secure: "ZrbiI+/iRScK2wJWOfzpyPKG/KEwNU3OaXPAVeAUzv3eq+G8cfmJaZB38QKo6Rg0r2ap5b3WUJc0u4pbhliHxJ0KjmiweltzN+fO8jVnbN2nCEh8CFSrJ0xUV7VhRAOY0ibcIaz9aLLIk4eHRDb3l89xwGLvsHDgRf060DN3Hk4="
