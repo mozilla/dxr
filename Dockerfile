@@ -13,10 +13,10 @@ FROM ubuntu@sha256:0ca448cb174259ddb2ae6e213ebebe7590862d522fe38971e1175faedf0b6
 
 MAINTAINER Erik Rose <erik@mozilla.com>
 
-COPY docker/set_up_ubuntu.sh /tmp/set_up_ubuntu.sh
+COPY docker/set_up_ubuntu.sh /tmp/
 RUN /tmp/set_up_ubuntu.sh
 
-COPY docker/set_up_common.sh /tmp/set_up_common.sh
+COPY docker/set_up_common.sh /tmp/
 RUN /tmp/set_up_common.sh
 
 # Give root a known password so devs can become root:
