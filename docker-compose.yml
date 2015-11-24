@@ -1,5 +1,7 @@
 es:
   build: ./docker_es
+  ports:
+    - "8000:8000"
 
 dev:
   build: ./
