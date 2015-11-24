@@ -6,6 +6,7 @@
 all: static plugins requirements .dxr_installed
 
 test: all
+	pip install nose  # Don't just throw it in the cwd.
 	python setup.py test
 
 clean: static_clean
@@ -14,7 +15,6 @@ clean: static_clean
 	       .npm_installed \
 	       .peep_installed \
 	       venv \
-	       .dxr_dev_image_built \
 	       .dxr_installed
 	find . -name "*.pyc" -exec rm -f {} \;
 	$(MAKE) -C dxr/plugins/clang clean
@@ -39,23 +39,14 @@ dev:
 
 ## Conveniences to run from your host machine if running DXR in Docker:
 
-# NEXT: "make docker_test" works, except a few tests fail, because the ES image is broken. It's not enabling dynamic scripting atm. Then figure out how to get the ES image built and when to run it. Maybe docker-compose can help. Get ES image putting data on a volume so it persists (its dockerfile already says it should). Call docker-machine automatically on Mac.
+# Open an interactive shell for development.
+# Presently, nothing outside the source checkout will be preserved on exit.
+shell: docker_es
+	docker-compose run dev
 
-docker_es: docker_machine
-	# TODO: Put ES data on a volume so it persists across containers.
-	cd docker_es; docker build -t dxr_es .; docker rm -f dxr_es || true; docker run -d --name dxr_es -p 80:8000 dxr_es
-
-shell: .dxr_dev_image_built docker_machine
-	docker run --rm -ti -v $(PWD):/home/dxr/dxr --net container:dxr_es --tty --name dxr_dev dxr_dev bash
-	#/home/dxr/venv/bin/nosetests --with-progressive ${TESTS}
-
-# Run tests from outside Docker, like for CI:
-docker_test: .dxr_dev_image_built
-	docker run --rm -v $(PWD):/home/dxr/dxr --net container:dxr_es --tty --name dxr_dev dxr_dev make test
-
-docker_clean:
-	docker rm -f dxr_dev || true
-	rm .dxr_dev_image_built
+# Shut down the elasticsearch server when you're done.
+docker_stop:
+	docker-compose stop
 
 
 
@@ -67,12 +58,12 @@ docker_clean:
 VIRTUAL_ENV ?= $(PWD)/venv
 DXR_PROD ?= 0
 
+# Bring the elasticsearch container up if it isn't:
+docker_es:
+	docker-compose up -d es
+
 docker_machine:
 	#docker-machine env default || docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
-
-.dxr_dev_image_built: Dockerfile docker/set_up_common.sh docker/set_up_ubuntu.sh
-	docker build -t dxr_dev .
-	touch $@
 
 # Make a virtualenv at $VIRTUAL_ENV if there isn't one. DXR assumes you're
 # using a venv. If you don't specify an external venv, we reason that, after

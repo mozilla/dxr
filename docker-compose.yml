@@ -1,0 +1,10 @@
+es:
+  build: ./docker_es
+
+dev:
+  build: ./
+  net: container:es
+  ports:
+    - "8000:8000"
+  volumes:
+      - .:/home/dxr/dxr
