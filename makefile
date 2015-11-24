@@ -39,18 +39,19 @@ dev:
 
 ## Conveniences to run from your host machine if running DXR in Docker:
 
+DOCKER_COMPOSE := docker-compose -f tooling/docker/docker-compose.yml
+
 # Open an interactive shell for development.
 # Presently, nothing outside the source checkout will be preserved on exit.
 # Manually run build because docker-compose does not notice Dockerfile changes
 # automatically on "up".
 shell: docker_es
-	docker-compose build dev
-	docker-compose run dev
+	$(DOCKER_COMPOSE) build dev
+	$(DOCKER_COMPOSE) run dev
 
 # Shut down the elasticsearch server when you're done.
 docker_stop:
-	docker-compose stop
-
+	$(DOCKER_COMPOSE) stop
 
 
 # Private things:
@@ -63,11 +64,14 @@ DXR_PROD ?= 0
 
 # Bring the elasticsearch container up if it isn't:
 docker_es:
-	docker-compose build es
-	docker-compose up -d es
+	$(DOCKER_COMPOSE) build es
+	$(DOCKER_COMPOSE) up -d es
 
+# TODO: Make this work.
 docker_machine:
-	#docker-machine env default || docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
+	#docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
+	#docker-machine start default
+	#eval "$(docker-machine env default)"
 
 # Make a virtualenv at $VIRTUAL_ENV if there isn't one. DXR assumes you're
 # using a venv. If you don't specify an external venv, we reason that, after
@@ -106,7 +110,7 @@ dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 
 # Install requirements in current virtualenv:
 .peep_installed: requirements.txt
-	$$VIRTUAL_ENV/bin/python peep.py install -r requirements.txt
+	$$VIRTUAL_ENV/bin/python tooling/peep.py install -r requirements.txt
 	touch $@
 
 # Static-file cachebusting:
@@ -135,7 +139,7 @@ dxr/build/leaf_manifest: $(LEAVES) dxr/static_unhashed/js/templates.js
 # Copy the CSS files to build/*.css and substitute their references.
 # See https://www.gnu.org/software/make/manual/html_node/Static-Usage.html
 $(CSS_TEMPS): $(TMP_DIR)/%.css: $(SRC_DIR)/css/%.css dxr/build/leaf_manifest
-	./replace_urls.py dxr/build/leaf_manifest $< > $@
+	tooling/replace_urls.py dxr/build/leaf_manifest $< > $@
 
 dxr/build/css_manifest: $(CSS_TEMPS)
 	# Building CSS submanifest...

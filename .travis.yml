@@ -11,4 +11,4 @@ before_install:
   - make docker_es
 
 script:
-  - DXR_PROD=1 docker-compose run dev make test
+  - DXR_PROD=1 docker-compose -f tooling/docker/docker-compose.yml run dev make test
