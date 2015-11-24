@@ -36,7 +36,13 @@ but the usual place is adjacent to your source directory.
 
 .. note::
 
-   Be sure to replace the placeholder paths in the above config.
+   Be sure to replace the placeholder paths in the above config.  You'll need to
+   move your code to be indexed into the VM, either by downloading it from
+   within the VM, or by copying it in through your DXR repository folder, where
+   it will be visible from within the VM in the shared ``~/dxr`` folder.  It's
+   possible to index your code from a folder within ``~/dxr``, but for
+   performance and sanity we recommend keeping your personal code to be indexed
+   outside of ``~/dxr``.
 
 By building your project with clang and under the control of
 :program:`dxr index`, DXR gets a chance to interpose a custom compiler

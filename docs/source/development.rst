@@ -93,9 +93,9 @@ Workflow
 --------
 
 The repository on your host machine is mirrored over to the VM via Vagrant's
-shared-folder magic. Changes you make outside the VM will be instantly
-available within and vice versa, so you can edit using your usual tools on the
-host and still use the VM to run DXR.
+shared-folder magic. Changes you make outside the VM in your DXR repository will
+be instantly available from within under ``~/dxr`` and vice versa, so you can
+edit using your usual tools on the host and still use the VM to run DXR.
 
 After making changes to DXR, a build step is sometimes needed to see the
 effects of your work:
