@@ -41,7 +41,10 @@ dev:
 
 # Open an interactive shell for development.
 # Presently, nothing outside the source checkout will be preserved on exit.
+# Manually run build because docker-compose does not notice Dockerfile changes
+# automatically on "up".
 shell: docker_es
+	docker-compose build dev
 	docker-compose run dev
 
 # Shut down the elasticsearch server when you're done.
@@ -60,6 +63,7 @@ DXR_PROD ?= 0
 
 # Bring the elasticsearch container up if it isn't:
 docker_es:
+	docker-compose build es
 	docker-compose up -d es
 
 docker_machine:
