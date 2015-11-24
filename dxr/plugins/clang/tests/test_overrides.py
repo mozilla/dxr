@@ -1,10 +1,10 @@
 """Tests for searches about overrides of virtual methods"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 import nose.tools
 
 
-class SingleOverrideTests(SingleFileTestCase):
+class SingleOverrideTests(CSingleFileTestCase):
     source = r"""
         class Base {
             virtual void foo();
@@ -29,7 +29,7 @@ class SingleOverrideTests(SingleFileTestCase):
             '+overrides:Base::foo()', 'void Derived::<b>foo</b>() {')
 
 
-class ParallelOverrideTests(SingleFileTestCase):
+class ParallelOverrideTests(CSingleFileTestCase):
     """Test overrides for two classes that both directly inherit from one base
     class."""
 
@@ -63,7 +63,7 @@ class ParallelOverrideTests(SingleFileTestCase):
                              ('void DerivedB::<b>foo</b>() {', 15)])
 
 
-class HierarchyOverrideTests(SingleFileTestCase):
+class HierarchyOverrideTests(CSingleFileTestCase):
     """Test overrides in a three class hierarchy."""
 
     source = r"""
@@ -100,7 +100,7 @@ class HierarchyOverrideTests(SingleFileTestCase):
                            'void Derived2::<b>foo</b>() {')
 
 
-class HierarchyImplicitOverrideTests(SingleFileTestCase):
+class HierarchyImplicitOverrideTests(CSingleFileTestCase):
     """Test overrides in a three class hierarchy where the middle class does
     not explictly define the method."""
 
@@ -128,7 +128,7 @@ class HierarchyImplicitOverrideTests(SingleFileTestCase):
                            'void Derived2::<b>foo</b>() {')
 
 
-class MultipleOverrides(SingleFileTestCase):
+class MultipleOverrides(CSingleFileTestCase):
     """Test overrides when one method simultanously overrides more than one
     other method."""
 

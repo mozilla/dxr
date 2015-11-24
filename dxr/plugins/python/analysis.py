@@ -11,7 +11,7 @@ from warnings import warn
 from dxr.build import file_contents
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, package_for_module,
-                                      path_to_module)
+                                      path_to_module, ast_parse)
 
 
 class TreeAnalysis(object):
@@ -51,8 +51,8 @@ class TreeAnalysis(object):
 
         """
         try:
-            syntax_tree = ast.parse(file_contents(path, encoding))
-        except (IOError, SyntaxError, TypeError) as error:
+            syntax_tree = ast_parse(file_contents(path, encoding))
+        except (IOError, SyntaxError, TypeError, UnicodeDecodeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
                  filename=rel_path, error=error))

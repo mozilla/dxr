@@ -15,7 +15,7 @@ from dxr.cli.shell import shell
 
 
 def main():
-    """Invoke Click's top level without swallowing the trackbacks produced by
+    """Invoke Click's top level without swallowing the tracebacks produced by
     control-C.
 
     The swallowing makes it difficult to debug hangs.

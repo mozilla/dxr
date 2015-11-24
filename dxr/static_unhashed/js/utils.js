@@ -52,11 +52,24 @@ String.prototype.regexLastIndexOf = function(regex, startpos) {
 };
 
 /**
- * Close all the pretend pop-up menus.
+ * Hide the Help pop-up.
  */
-function hideOptions() {
+function hideHelp() {
+
+    var helpIcon = $('.help-icon'),
+        helpMsg = helpIcon.find('.help-msg');
+
+    helpIcon.removeClass('open');
+    helpMsg.hide();
+}
+
+/**
+ * Close options and help pop-ups.
+ */
+function hideOptionsAndHelp() {
     // Because the tree selector can be injected by a JS
     // template, we need to use the selector directly here,
     // as the element will not exist on DOM ready.
     $('.select-options, .sf-select-options').hide();
+    hideHelp();
 }

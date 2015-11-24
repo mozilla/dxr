@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
-class FilterAggregateTests(SingleFileTestCase):
+class FilterAggregateTests(CSingleFileTestCase):
     """Tests the id- and ref- aggregate filters defined in query.py"""
     source = r"""#include <stdio.h>
 

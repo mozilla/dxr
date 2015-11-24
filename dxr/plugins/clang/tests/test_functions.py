@@ -2,10 +2,10 @@
 
 from nose import SkipTest
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class DefinitionTests(SingleFileTestCase):
+class DefinitionTests(CSingleFileTestCase):
     """Tests for finding where functions are defined"""
 
     source = r"""
@@ -62,7 +62,7 @@ class DefinitionTests(SingleFileTestCase):
         self.found_nothing('+function:SPACE::FOO(int)', is_case_sensitive=False)
 
 
-class TemplateClassMemberReferenceTests(SingleFileTestCase):
+class TemplateClassMemberReferenceTests(CSingleFileTestCase):
     """Tests for finding out where member functions of a template class are referenced or declared"""
 
     source = r"""
@@ -100,7 +100,7 @@ class TemplateClassMemberReferenceTests(SingleFileTestCase):
                             [('Foo&lt;int&gt;().<b>bar</b>();', 16)])
 
 
-class ConstTests(SingleFileTestCase):
+class ConstTests(CSingleFileTestCase):
     source = """
         class ConstOverload
         {
@@ -125,7 +125,7 @@ class ConstTests(SingleFileTestCase):
                             'void ConstOverload::<b>foo</b>() const {')
 
 
-class PrototypeParamTests(SingleFileTestCase):
+class PrototypeParamTests(CSingleFileTestCase):
     source = """
         int prototype_parameter_function(int prototype_parameter);
 

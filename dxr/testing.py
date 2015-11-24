@@ -293,14 +293,14 @@ class SingleFileTestCase(TestCase):
     of files in the FS. I'll slam it down into a temporary DXR instance and
     then kick off the usual build process, deleting the instance afterward.
 
+    :cvar source_filename: The filename used for the source file
+
     """
     # Set this to True in a subclass to keep the generated instance around and
     # host it on port 8000 so you can examine it:
     stop_for_interaction = False
 
-    # Override this in a subclass to change the filename used for the
-    # source file.
-    source_filename = 'main.cpp'
+    source_filename = 'main'
 
     @classmethod
     def setup_class(cls):
@@ -313,13 +313,6 @@ class SingleFileTestCase(TestCase):
         for tree in cls.config().trees.itervalues():
             index_and_deploy_tree(tree)
         cls._es().refresh()
-
-    @classmethod
-    def config_input(cls, config_dir_path):
-        input = super(SingleFileTestCase, cls).config_input(config_dir_path)
-        input['DXR']['enabled_plugins'] = 'pygmentize clang'
-        input['code']['build_command'] = '$CXX -o main main.cpp'
-        return input
 
     @classmethod
     def teardown_class(cls):
@@ -385,8 +378,11 @@ class SingleFileTestCase(TestCase):
                 query, expected_pairs, is_case_sensitive=is_case_sensitive)
 
     def direct_result_eq(self, query, line_number, is_case_sensitive=True):
-        """Assume the filename "main.cpp"."""
-        return super(SingleFileTestCase, self).direct_result_eq(query, 'main.cpp', line_number, is_case_sensitive=is_case_sensitive)
+        return super(SingleFileTestCase, self).direct_result_eq(
+            query,
+            self.source_filename,
+            line_number,
+            is_case_sensitive=is_case_sensitive)
 
 
 def _make_file(path, filename, contents):
@@ -395,46 +391,49 @@ def _make_file(path, filename, contents):
         file.write(contents.encode('utf-8'))
 
 
-# Tests that don't otherwise need a main() can append this one just to get
-# their code to compile:
-MINIMAL_MAIN = """
-    int main(int argc, char* argv[]) {
-        return 0;
-    }
-    """
-
-
-def _decoded_menu_on(haystack, text):
-    """Return the JSON-decoded menu found around the source code ``text`` in
-    the HTML ``haystack``.
+def _decoded_menu_on(haystack, text, text_instance=1):
+    """Return the JSON-decoded menu found around the ``text_instance``th source
+    code occurrence of ``text`` in the HTML ``haystack``.
 
     Raise an AssertionError if there is no menu there.
 
     """
     # We just use cheap-and-cheesy regexes for now, to avoid pulling in and
     # compiling the entirety of lxml to run pyquery.
-    match = re.search(
-            '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
-            haystack)
+    matches = re.finditer(
+              '<a data-menu="([^"]+)"[^>]*>' + re.escape(cgi.escape(text)) + '</a>',
+              haystack)
+    for _ in xrange(text_instance):
+        try:
+            match = matches.next()
+        except StopIteration:
+            match = None
+            break
+
     if match:
         return json.loads(match.group(1).replace('&quot;', '"')
                                         .replace('&lt;', '<')
                                         .replace('&gt;', '>')
                                         .replace('&amp;', '&'))
     else:
-        ok_(False, "No menu around '%s' was found." % text)
+        ok_(False, "No menu around occurrence %d of '%s' was found." %
+                   (text_instance, text))
 
 
-def menu_on(haystack, text, *menu_items):
+def menu_on(haystack, text, *menu_items, **kwargs):
     """Assert that there is a context menu on certain text that contains
     certain menu items.
 
     :arg haystack: The HTML source of a page to search
-    :arg text: The text contained by the menu's anchor tag. The first
-        menu-having anchor tag containing the text is the one compared against.
+    :arg text: The text contained by the menu's anchor tag. The
+        ``text_instance``th menu-having anchor tag containing the text is the
+        one compared against.
     :arg menu_items: Dicts whose pairs must be contained in some item of the
         menu. If an item is found to match, it is discarded can cannot be
         reused to match another element of ``menu_items``.
+    :arg text_instance: An optional keyword-only arg that specifies which
+        occurrence of ``text`` to compare against.  Defaults to 1 (the first
+        occurrence).
 
     """
     def removed_match(expected, found_items):
@@ -463,11 +462,17 @@ def menu_on(haystack, text, *menu_items):
                 return True
         return False
 
-    found_items = _decoded_menu_on(haystack, text)
+    text_instance = kwargs.pop('text_instance', 1)
+    if kwargs:
+        raise TypeError('Unexpected **kwargs: %r' % kwargs)
+
+    found_items = _decoded_menu_on(haystack, text, text_instance)
     for expected in menu_items:
         removed = removed_match(expected, found_items)
         if not removed:
-            ok_(False, "No menu item with the keys %r was found in the menu around '%s'." % (expected, text))
+            ok_(False, "No menu item with the keys %r " % (expected) +
+                "was found in the menu around occurrence " +
+                "%d of '%s'." % (text_instance, text))
 
 
 def menu_item_not_on(haystack, text, menu_item_html):

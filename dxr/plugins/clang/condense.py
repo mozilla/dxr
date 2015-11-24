@@ -58,6 +58,31 @@ def process_function(props):
     return props
 
 
+def process_maybe_override(overrides, overriddens, props):
+    qualname = props.get('qualname')
+    if qualname in overrides:
+        # Keys of overrides are functions that override something, so this
+        # function has overriddens in the sense of the "Find overriddens" menu
+        # option.
+        props['has_overriddens'] = True
+    if qualname in overriddens:
+        props['has_overrides'] = True
+
+    return props
+
+
+def process_maybe_function(overrides, overriddens, props):
+    if props.get('kind') == 'function':
+        return process_maybe_override(overrides, overriddens, props)
+    else:
+        return props
+
+
+def process_function_for_override(overrides, overriddens, props):
+    override_props = process_maybe_override(overrides, overriddens, props)
+    return process_function(override_props)
+
+
 def process_override(overrides, overriddens, props):
     """Note overrides of methods, and organize them so we can emit
     "overridden" and "overrides" needles later.
@@ -233,14 +258,12 @@ def lines_from_csvs(folder, file_glob):
     return chain.from_iterable(lines_from_csv(p) for p in paths)
 
 
-DISPATCH_TABLE = {'call': process_call,
-                  'function': process_function}
-def condense_file(csv_folder, file_path):
+def condense_file(csv_folder, file_path, overrides, overriddens):
     """Return a dict representing an analysis of one source file.
 
     This is phase 2: the file-at-a-time phase.
 
-    This may comprise several CSVs if, for example, proprocessor magic results
+    This may comprise several CSVs if, for example, preprocessor magic results
     in the file being built several different times, with different effective
     contents each time.
 
@@ -248,11 +271,23 @@ def condense_file(csv_folder, file_path):
         compiler plugin
     :arg file_path: A path to the file to analyze, relative to the tree's
         source folder
+    :arg overrides: A dict whose keys are function qualnames that are overrides
+    :arg overriddens: A dict whose keys are function qualnames that are
+        overriddens
 
     """
+    process_maybe_function_for_override = partial(process_maybe_function,
+                                                  overrides, overriddens)
+
+    dispatch_table = {'call': process_call,
+                      'function': partial(process_function_for_override,
+                                          overrides, overriddens),
+                      'ref': process_maybe_function_for_override,
+                      'decldef': process_maybe_function_for_override}
+
     return condense(lines_from_csvs(csv_folder,
                                     '{0}.*.csv'.format(sha1(file_path).hexdigest())),
-                    DISPATCH_TABLE)
+                    dispatch_table)
 
 
 def condense_global(csv_folder):

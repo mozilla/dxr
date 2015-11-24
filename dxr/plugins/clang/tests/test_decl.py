@@ -1,9 +1,9 @@
 """Tests for searches for declarations"""
 
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class TypeDeclarationTests(SingleFileTestCase):
+class TypeDeclarationTests(CSingleFileTestCase):
     """Tests for declarations of types"""
 
     source = r"""
@@ -19,7 +19,7 @@ class TypeDeclarationTests(SingleFileTestCase):
             'type-decl:MyClass', 'class <b>MyClass</b>;')
 
 
-class FunctionDeclarationTests(SingleFileTestCase):
+class FunctionDeclarationTests(CSingleFileTestCase):
     """Tests for declarations of functions"""
 
     source = r"""
@@ -35,7 +35,7 @@ class FunctionDeclarationTests(SingleFileTestCase):
             'function-decl:foo', 'void <b>foo</b>();')
 
 
-class VariableDeclarationTests(SingleFileTestCase):
+class VariableDeclarationTests(CSingleFileTestCase):
     """Tests for declarations of variables"""
 
     source = r"""

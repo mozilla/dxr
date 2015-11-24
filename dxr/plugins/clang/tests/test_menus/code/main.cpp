@@ -12,7 +12,13 @@ int main(int argc, char* argv[]) {
 
   MACRO;
 
-  return var;
+  var++;
+
+  BaseClass* der = new DerivedClass;
+  der->virtualFunc();
+  delete der;
+
+  return 1;
 }
 
 VERY_EXTERNAL

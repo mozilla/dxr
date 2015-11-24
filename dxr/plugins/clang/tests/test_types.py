@@ -1,7 +1,7 @@
-from dxr.testing import SingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 
-class TypeTests(SingleFileTestCase):
+class TypeTests(CSingleFileTestCase):
     source = r"""
         class Foo {};
         class Bar {};
@@ -18,7 +18,7 @@ class TypeTests(SingleFileTestCase):
         self.found_nothing('type:*Foo* type:*Quux*')
 
 
-class InjectedTypeTests(SingleFileTestCase):
+class InjectedTypeTests(CSingleFileTestCase):
     source = r"""
         template <typename T>
         class Foo {

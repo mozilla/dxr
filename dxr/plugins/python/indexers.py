@@ -3,6 +3,7 @@ import token
 import tokenize
 from os.path import islink
 from StringIO import StringIO
+from itertools import izip
 
 from dxr.build import unignored
 from dxr.filters import FILE, LINE
@@ -16,7 +17,7 @@ from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import ClassRef
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
                                       convert_node_to_name, local_name,
-                                      path_to_module)
+                                      path_to_module, ast_parse)
 
 
 mappings = {
@@ -82,59 +83,52 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
 
         self.file_to_index = file_to_index
         self.tree_analysis = tree_analysis
-        self.function_call_stack = []  # List of lists of function names.
         self.needles = []
         self.refs = []
 
     def visit_FunctionDef(self, node):
         # Index the function itself for the function: filter.
         start, end = self.file_to_index.get_node_start_end(node)
-        self.yield_needle('py_function', node.name, start, end)
+        if start is not None:
+            self.yield_needle('py_function', node.name, start, end)
 
-        # Index function calls within this function for the callers: filter.
-        self.function_call_stack.append([])
         super(IndexingNodeVisitor, self).visit_FunctionDef(node)
-        call_needles = self.function_call_stack.pop()
-        for name, call_start, call_end in call_needles:
-            # TODO: py_callers should be all calls, not just ones that
-            # take place within a function.
-            self.yield_needle('py_callers', name, start, end)
 
     def visit_Call(self, node):
-        # Save this call if we're currently tracking function calls.
-        if self.function_call_stack:
-            call_needles = self.function_call_stack[-1]
-            name = convert_node_to_name(node.func)
-            if name:
-                start, end = self.file_to_index.get_node_start_end(node)
-                call_needles.append((name, start, end))
+        # Index function/method call sites
+        name = convert_node_to_name(node.func)
+        if name:
+            start, end = self.file_to_index.get_node_start_end(node)
+            if start is not None:
+                self.yield_needle('py_callers', name, start, end)
 
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
         # Index the class itself for the type: filter.
         start, end = self.file_to_index.get_node_start_end(node)
-        self.yield_needle('py_type', node.name, start, end)
+        if start is not None:
+            self.yield_needle('py_type', node.name, start, end)
 
-        # Index the class hierarchy for classes for the derived: and
-        # bases: filters.
-        class_name = self.get_class_name(node)
+            # Index the class hierarchy for classes for the derived: and
+            # bases: filters.
+            class_name = self.get_class_name(node)
 
-        bases = self.tree_analysis.get_base_classes(class_name)
-        for qualname in bases:
-            self.yield_needle(needle_type='py_derived',
-                              name=local_name(qualname), qualname=qualname,
-                              start=start, end=end)
+            bases = self.tree_analysis.get_base_classes(class_name)
+            for qualname in bases:
+                self.yield_needle(needle_type='py_derived',
+                                  name=local_name(qualname), qualname=qualname,
+                                  start=start, end=end)
 
-        derived_classes = self.tree_analysis.get_derived_classes(class_name)
-        for qualname in derived_classes:
-            self.yield_needle(needle_type='py_bases',
-                              name=local_name(qualname), qualname=qualname,
-                              start=start, end=end)
+            derived_classes = self.tree_analysis.get_derived_classes(class_name)
+            for qualname in derived_classes:
+                self.yield_needle(needle_type='py_bases',
+                                  name=local_name(qualname), qualname=qualname,
+                                  start=start, end=end)
 
-        # Show a menu when hovering over this class.
-        self.yield_ref(start, end,
-                       ClassRef(self.file_to_index.tree, class_name))
+            # Show a menu when hovering over this class.
+            self.yield_ref(start, end,
+                           ClassRef(self.file_to_index.tree, class_name))
 
         super(IndexingNodeVisitor, self).visit_ClassDef(node)
 
@@ -142,6 +136,8 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         class_name = self.get_class_name(class_node)
         function_qualname = class_name + '.' + function_node.name
         start, end = self.file_to_index.get_node_start_end(function_node)
+        if start is None:
+            return
 
         # Index this function as being overridden by other functions for
         # the overridden: filter.
@@ -198,9 +194,9 @@ class FileToIndex(FileToIndexBase):
 
         """
         if not self._visitor:
-            self.node_start_table = self.analyze_tokens()
+            self.node_start_table, self.call_start_table = self.analyze_tokens()
             self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
-            syntax_tree = ast.parse(self.contents)
+            syntax_tree = ast_parse(self.contents)
             self._visitor.visit(syntax_tree)
         return self._visitor
 
@@ -229,42 +225,81 @@ class FileToIndex(FileToIndexBase):
         for indexing.
 
         """
-        # AST nodes for classes and functions point to the position of
-        # their 'def' and 'class' tokens. To get the position of their
-        # names, we look for 'def' and 'class' tokens and store the
-        # position of the token immediately following them.
-        node_start_table = {}
-        previous_start = None
+        # Run the file contents through the tokenizer, both as unicode
+        # and as a utf-8 encoded string.  This will allow us to build
+        # up a mapping between the byte offset and the character offset.
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
+        utf8_token_gen = tokenize.generate_tokens(
+            StringIO(self.contents.encode('utf-8')).readline)
 
-        for tok_type, tok_name, start, end, _ in token_gen:
-            if tok_type != token.NAME:
-                continue
+        # These are a mapping from the utf-8 byte starting points provided by
+        # the ast nodes, to the unicode character offset tuples for both the
+        # start and the end points.
+        node_start_table = {}
+        call_start_table = {}
 
-            if tok_name in ('def', 'class'):
-                previous_start = start
-            elif previous_start is not None:
-                node_start_table[previous_start] = start
-                previous_start = None
+        node_type, node_start = None, None
+        paren_level, paren_stack = 0, {}
 
-        return node_start_table
+        for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
+            tok_type, tok_name, start, end, _ = unicode_token
+            utf8_start = utf8_token[2]
+
+            if tok_type == token.NAME:
+                # AST nodes for classes and functions point to the position of
+                # their 'def' and 'class' tokens. To get the position of their
+                # names, we look for 'def' and 'class' tokens and store the
+                # position of the token immediately following them.
+                if node_start and node_type == 'definition':
+                    node_start_table[node_start[0]] = (start, end)
+                    node_type, node_start = None, None
+                    continue
+
+                if tok_name in ('def', 'class'):
+                    node_type, node_start = 'definition', (utf8_start, start)
+                    continue
+
+                # Record all name nodes in the token table.  Currently unused,
+                # but will be needed for recording variable references.
+                node_start_table[utf8_start] = (start, end)
+                node_type, node_start = 'name', (utf8_start, start)
+
+            elif tok_type == token.OP:
+                # In order to properly capture the start and end of function
+                # calls, we need to keep track of the parens.  Put the
+                # starting positions on a stack (here implemented with a dict
+                # so that it can be sparse), but only if the previous node was
+                # a name.
+                if tok_name == '(':
+                    if node_type == 'name':
+                        paren_stack[paren_level] = node_start
+                    paren_level += 1
+                elif tok_name == ')':
+                    paren_level -= 1
+                    if paren_level in paren_stack:
+                        call_start = paren_stack.pop(paren_level)
+                        call_start_table[call_start[0]] = (call_start[1], end)
+
+                node_type, node_start = None, None
+
+            else:
+                node_type, node_start = None, None
+
+        return node_start_table, call_start_table
 
     def get_node_start_end(self, node):
         """Return start and end positions within the file for the given
         AST Node.
 
         """
-        start = node.lineno, node.col_offset
-        if start in self.node_start_table:
-            start = self.node_start_table[start]
+        loc = node.lineno, node.col_offset
 
-        end = None
         if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            end = start[0], start[1] + len(node.name)
+            start, end = self.node_start_table.get(loc, (None, None))
         elif isinstance(node, ast.Call):
-            name = convert_node_to_name(node.func)
-            if name:
-                end = start[0], start[1] + len(name)
+            start, end = self.call_start_table.get(loc, (None, None))
+        else:
+            start, end = None, None
 
         return start, end
 
