@@ -92,10 +92,11 @@ around. When you're done, stop the server with :kbd:`Control-C`.
 Workflow
 --------
 
-The repository on your host machine is mirrored over to the VM via Vagrant's
-shared-folder magic. Changes you make outside the VM in your DXR repository will
-be instantly available from within under ``~/dxr`` and vice versa, so you can
-edit using your usual tools on the host and still use the VM to run DXR.
+The repository on your host machine is mirrored over to the interactive
+container via Docker volume mounting. Changes you make in the DXR repository on
+your host machine will be instantly available within ``/home/dxr/dxr`` on the
+container and vice versa, so you can edit using your usual tools on the host
+and still use the container to run DXR.
 
 After making changes to DXR, a build step is sometimes needed to see the
 effects of your work:
@@ -158,7 +159,8 @@ DXR supports two kinds of integration tests:
 Running the Tests
 =================
 
-To run all the tests, run this from the root of the DXR repository::
+To run all the tests, run this from the root of the DXR repository (in the
+container)::
 
     make test
 

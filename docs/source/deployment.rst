@@ -2,9 +2,16 @@
 Deployment
 ==========
 
+.. note::
+
+    The best deployment story probably involves Docker and our setup scripts in
+    :file:`tooling/docker/dev/`. However, we haven't got that quite figured out
+    yet. Feel free to chip in! In the meantime, enjoy this page about manually
+    installing DXR on bare metal.
+
 Once you decide to put DXR into production for use by multiple people, it's
 time to move beyond the :doc:`getting-started` instructions. You likely need
-real machines—not Vagrant VMs—and you definitely need a robust web server like
+a real elasticsearch cluster, and you definitely need a robust web server like
 Apache. This chapter helps you deploy DXR on the Linux machines [#]_ of your
 choice and configure them to handle multi-user traffic volumes.
 
@@ -20,10 +27,9 @@ Dependencies
 OS Packages
 -----------
 
-Since you're no longer using the Vagrant VM, you'll need to install several
-packages on both your build and web servers. These are the Ubuntu package
-names, but they should be clear enough to map to their equivalents on other
-distributions:
+You'll need to install several packages on both your build and web servers.
+These are the Ubuntu package names, but they should be clear enough to map to
+their equivalents on other distributions:
 
 * make
 * build-essential
@@ -53,18 +59,19 @@ it over.
 
     The list of packages above is maintained by hand and might fall behind,
     despite our best efforts. If you suspect something is missing, look at
-    :file:`vagrant_provision.sh` in the DXR source tree, which does the actual
-    setup of the VM and is automatically tested.
+    :file:`tooling/docker/dev/set_up_ubuntu.sh` in the DXR source tree, which
+    does the actual setup of the included container and is automatically
+    tested.
 
 Additional Installation
 -----------------------
 
 You'll need to install the JavaScript plugin for elasticsearch on your
-elasticsearch server (regardless of what type of code you're indexing).  The
+elasticsearch server (regardless of what type of code you're indexing). The
 plugin version you need depends on your version of elasticsearch (see
-https://github.com/elastic/elasticsearch-lang-javascript).  See
-:file:`vagrant_provision.sh` for the command currently being used to install the
-plugin in the VM, something like::
+https://github.com/elastic/elasticsearch-lang-javascript). See
+:file:`tooling/docker/es/Dockerfile` for the command currently being used to
+install the plugin in our container, something like::
 
   sudo /usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-lang-javascript/<version>
 
@@ -74,8 +81,9 @@ where you'll need to insert the appropriate ``<version>``.
 /usr/share/elasticsearch/bin/plugin remove lang-javascript``.)
 
 To get all of the DXR tests to pass, or if you're indexing rust code, you'll
-also need to install rust.  Again, refer to :file:`vagrant_provision.sh` for the
-currently recommended install command, something like::
+also need to install rust.  Refer to
+:file:`tooling/docker/dev/set_up_common.sh` for the currently recommended
+install command, something like::
 
   curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=<date> --yes
 
@@ -113,7 +121,7 @@ but these pointers should start you off with reasonable performance:
 * Configure the following in :file:`/etc/elasticsearch/elasticsearch.yml`:
 
   * Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
-  * Set ``script.disable_dynamic`` to ``false``.  This enables DXR's use of the
+  * Set ``script.disable_dynamic`` to ``false``. This enables DXR's use of the
     JavaScript plugin.
   * Whether you intend to set up a cluster or not, beware that ES makes friends
     all too easily. Be sure to change the ``cluster.name`` to something unusual
@@ -278,19 +286,13 @@ Apache configuration::
 
 Here is a complete example config, for reference::
 
-    WSGIPythonHome /home/vagrant/dxr_venv
+    WSGIPythonHome /home/dxr/dxr/venv
     <VirtualHost *:80>
         # Serve static resources, like CSS and images, with plain Apache:
-        Alias /static/ /home/vagrant/dxr/dxr/static/
-
-        # We used to make special efforts to also serve the static pages of
-        # HTML-formatted source code from the tree via plain Apache, but that
-        # tangle of RewriteRules saved us only about 20ms per request. You can do
-        # it if you're on a woefully underpowered machine, but I'm not maintaining
-        # it.
+        Alias /static/ /home/dxr/dxr/dxr/static/
 
         # Tell DXR where its config file is:
-        SetEnv DXR_CONFIG /home/vagrant/dxr/tests/test_basic/dxr.config
+        SetEnv DXR_CONFIG /home/dxr/dxr/tests/test_basic/dxr.config
 
         WSGIScriptAlias / /usr/local/lib/python2.7/site-packages/dxr/dxr.wsgi
     </VirtualHost>
