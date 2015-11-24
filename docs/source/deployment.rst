@@ -59,7 +59,7 @@ it over.
 Additional Installation
 -----------------------
 
-You'll need to install the javascript plugin for elasticsearch on your
+You'll need to install the JavaScript plugin for elasticsearch on your
 elasticsearch server (regardless of what type of code you're indexing).  The
 plugin version you need depends on your version of elasticsearch (see
 https://github.com/elastic/elasticsearch-lang-javascript).  See
@@ -70,7 +70,7 @@ plugin in the VM, something like::
 
 where you'll need to insert the appropriate ``<version>``.
 
-(The javascript plugin can be uninstalled with ``sudo
+(The JavaScript plugin can be uninstalled with ``sudo
 /usr/share/elasticsearch/bin/plugin remove lang-javascript``.)
 
 To get all of the DXR tests to pass, or if you're indexing rust code, you'll
@@ -114,7 +114,7 @@ but these pointers should start you off with reasonable performance:
 
   * Set ``bootstrap.mlockall`` to ``true``. You don't want any swapping.
   * Set ``script.disable_dynamic`` to ``false``.  This enables DXR's use of the
-    javascript plugin.
+    JavaScript plugin.
   * Whether you intend to set up a cluster or not, beware that ES makes friends
     all too easily. Be sure to change the ``cluster.name`` to something unusual
     and disable autodiscovery by setting
@@ -136,10 +136,10 @@ but these pointers should start you off with reasonable performance:
     fragmentation and costly reallocations. The remaining memory will easily be
     filled by the OS's file cache as it tussles with Lucene indices.
   * If you have storage constraints, you may want to set :envvar:`DATA_DIR` and
-    :envvar:`LOG_DIR` to control where elasticsearch puts its data and logs (the
-    defaults are :file:`/var/lib/elasticsearch` and
-    :file:`/var/log/elasticsearch`).  (Elasticsearch doesn't require much log
-    space...until things go wrong.)
+    :envvar:`LOG_DIR` to control where elasticsearch puts its data and logs; the
+    defaults are :file:`/var/lib/elasticsearch` and 
+    :file:`/var/log/elasticsearch`. Elasticsearch doesn't require much log
+    space...until things go wrong.
 
 * It is often recommended to use Oracle's JVM, but OpenJDK works fine.
 
@@ -184,11 +184,10 @@ Once you've built it, install DXR in the activated virtualenv::
     relationship with the source checkout.
 
 To ensure everything has built correctly and that elasticsearch and other
-dependencies are installed and running correctly, you can run the tests::
+dependencies are installed and running correctly, you can run the tests. Make
+sure elasticsearch is started first, of course. ::
 
     make test
-
-Make sure elasticsearch is started first of course.
 
 
 Indexing
