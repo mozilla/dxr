@@ -4,7 +4,7 @@
     "repository": {
         "url": "https://github.com/mozilla/dxr",
         "license": "MIT",
-        "tests": "https://ci.mozilla.org/job/dxr/"
+        "tests": "https://travis-ci.org/mozilla/dxr"
     },
     "participate": {
         "home": "https://dxr.readthedocs.org/en/latest/community.html",
