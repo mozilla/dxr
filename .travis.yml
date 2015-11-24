@@ -7,6 +7,7 @@ services:
   - docker
 
 before_install:
+  # Normalize ownership UIDs between host and container so container can write:
   - sudo chown -R 1000 .
   - make docker_es
 
