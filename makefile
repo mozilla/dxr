@@ -6,8 +6,8 @@
 all: static plugins requirements .dxr_installed
 
 test: all
-	pip install nose  # Don't just throw it in the cwd.
-	python setup.py test
+	$$VIRTUAL_ENV/bin/pip install nose
+	$$VIRTUAL_ENV/bin/nosetests -v
 
 clean: static_clean
 	rm -rf node_modules/.bin/nunjucks-precompile \
