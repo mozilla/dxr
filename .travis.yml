@@ -24,6 +24,7 @@ deploy:
   script: git push -q "https://${GH_TOKEN}@${GH_REF}" docking:ci > /dev/null 2>&1
   on:
     branch: docking
+  skip_cleanup: true
 
 env:
   global:
