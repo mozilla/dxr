@@ -19,6 +19,12 @@ before_install:
 script:
   - docker-compose -f tooling/docker/docker-compose.yml run -e DXR_PROD=1 dev make test
 
+notifications:
+  email: false
+  irc:
+    channels:
+      - "irc.mozilla.org#static"
+
 deploy:
   provider: script
   script: git push -q "https://${GH_TOKEN}@${GH_REF}" docking:ci > /dev/null 2>&1
