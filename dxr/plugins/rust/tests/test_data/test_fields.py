@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class FieldsTests(DxrInstanceTestCase):
+class FieldsTests(RustDxrInstanceTestCase):
     def test_qual_field(self):
         self.found_line_eq('+var:test::SomeFields::field1', "<b>field1</b>: i32,", 9)
         self.found_line_eq('+var:test::SomeFields::field2', "<b>field2</b>: NoFields,", 10)
@@ -52,29 +52,29 @@ class FieldsTests(DxrInstanceTestCase):
         self.found_line_eq('+var-ref:test::EnumFields::Struct::field1', "EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42)
         self.found_line_eq('+var-ref:test::EnumFields::Struct::field2', "EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42)
 
-    def test_field_ref(self):
-        self.found_lines_eq('var-ref:field1',
-                            [("let b = SomeFields { <b>field1</b>: 42, field2: NoFields };", 26),
-                             ("let _ = b.<b>field1</b>;", 27),
-                             ("let SomeFields { <b>field1</b>: b1, field2: b2 } = b;", 29),
-                             ("let SomeFields { <b>field1</b>, field2 } = b;", 30),
-                             ("let c = SFAlias { <b>field1</b>: 42, field2: NoFields };", 32),
-                             ("let _ = c.<b>field1</b>;", 33),
-                             ("let SFAlias { <b>field1</b>: c1, field2: c2 } = c;", 35),
-                             ("let SFAlias { <b>field1</b>, field2 } = c;", 36),
-                             ("EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42),
-                             ("EnumFields::Nested(SomeFields { <b>field1</b>, field2 }) =&gt; {}", 43)])
-        self.found_lines_eq('var-ref:field2',
-                            [("let b = SomeFields { field1: 42, <b>field2</b>: NoFields };", 26),
-                             ("let _ = b.<b>field2</b>;", 28),
-                             ("let SomeFields { field1: b1, <b>field2</b>: b2 } = b;", 29),
-                             ("let SomeFields { field1, <b>field2</b> } = b;", 30),
-                             ("let c = SFAlias { field1: 42, <b>field2</b>: NoFields };", 32),
-                             ("let _ = c.<b>field2</b>;", 34),
-                             ("let SFAlias { field1: c1, <b>field2</b>: c2 } = c;", 35),
-                             ("let SFAlias { field1, <b>field2</b> } = c;", 36),
-                             ("EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42),
-                             ("EnumFields::Nested(SomeFields { field1, <b>field2</b> }) =&gt; {}", 43)])
+    # def test_field_ref(self):
+    #     self.found_lines_eq('var-ref:field1',
+    #                         [("let b = SomeFields { <b>field1</b>: 42, field2: NoFields };", 26),
+    #                          ("let _ = b.<b>field1</b>;", 27),
+    #                          ("let SomeFields { <b>field1</b>: b1, field2: b2 } = b;", 29),
+    #                          ("let SomeFields { <b>field1</b>, field2 } = b;", 30),
+    #                          ("let c = SFAlias { <b>field1</b>: 42, field2: NoFields };", 32),
+    #                          ("let _ = c.<b>field1</b>;", 33),
+    #                          ("let SFAlias { <b>field1</b>: c1, field2: c2 } = c;", 35),
+    #                          ("let SFAlias { <b>field1</b>, field2 } = c;", 36),
+    #                          ("EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42),
+    #                          ("EnumFields::Nested(SomeFields { <b>field1</b>, field2 }) =&gt; {}", 43)])
+    #     self.found_lines_eq('var-ref:field2',
+    #                         [("let b = SomeFields { field1: 42, <b>field2</b>: NoFields };", 26),
+    #                          ("let _ = b.<b>field2</b>;", 28),
+    #                          ("let SomeFields { field1: b1, <b>field2</b>: b2 } = b;", 29),
+    #                          ("let SomeFields { field1, <b>field2</b> } = b;", 30),
+    #                          ("let c = SFAlias { field1: 42, <b>field2</b>: NoFields };", 32),
+    #                          ("let _ = c.<b>field2</b>;", 34),
+    #                          ("let SFAlias { field1: c1, <b>field2</b>: c2 } = c;", 35),
+    #                          ("let SFAlias { field1, <b>field2</b> } = c;", 36),
+    #                          ("EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42),
+    #                          ("EnumFields::Nested(SomeFields { field1, <b>field2</b> }) =&gt; {}", 43)])
 
     # TODO case insensitive
     def test_qual_field_case_insensitive(self):
@@ -128,26 +128,26 @@ class FieldsTests(DxrInstanceTestCase):
         self.found_line_eq('+var-ref:test::EnumFields::Struct::field1', "EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42, is_case_sensitive=False)
         self.found_line_eq('+var-ref:test::EnumFields::Struct::field2', "EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42, is_case_sensitive=False)
 
-    def test_field_ref_case_insensitive(self):
-        self.found_lines_eq('var-ref:field1',
-                            [("let b = SomeFields { <b>field1</b>: 42, field2: NoFields };", 26),
-                             ("let _ = b.<b>field1</b>;", 27),
-                             ("let SomeFields { <b>field1</b>: b1, field2: b2 } = b;", 29),
-                             ("let SomeFields { <b>field1</b>, field2 } = b;", 30),
-                             ("let c = SFAlias { <b>field1</b>: 42, field2: NoFields };", 32),
-                             ("let _ = c.<b>field1</b>;", 33),
-                             ("let SFAlias { <b>field1</b>: c1, field2: c2 } = c;", 35),
-                             ("let SFAlias { <b>field1</b>, field2 } = c;", 36),
-                             ("EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42),
-                             ("EnumFields::Nested(SomeFields { <b>field1</b>, field2 }) =&gt; {}", 43)], is_case_sensitive=False)
-        self.found_lines_eq('var-ref:field2',
-                            [("let b = SomeFields { field1: 42, <b>field2</b>: NoFields };", 26),
-                             ("let _ = b.<b>field2</b>;", 28),
-                             ("let SomeFields { field1: b1, <b>field2</b>: b2 } = b;", 29),
-                             ("let SomeFields { field1, <b>field2</b> } = b;", 30),
-                             ("let c = SFAlias { field1: 42, <b>field2</b>: NoFields };", 32),
-                             ("let _ = c.<b>field2</b>;", 34),
-                             ("let SFAlias { field1: c1, <b>field2</b>: c2 } = c;", 35),
-                             ("let SFAlias { field1, <b>field2</b> } = c;", 36),
-                             ("EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42),
-                             ("EnumFields::Nested(SomeFields { field1, <b>field2</b> }) =&gt; {}", 43)], is_case_sensitive=False)
+    # def test_field_ref_case_insensitive(self):
+    #     self.found_lines_eq('var-ref:field1',
+    #                         [("let b = SomeFields { <b>field1</b>: 42, field2: NoFields };", 26),
+    #                          ("let _ = b.<b>field1</b>;", 27),
+    #                          ("let SomeFields { <b>field1</b>: b1, field2: b2 } = b;", 29),
+    #                          ("let SomeFields { <b>field1</b>, field2 } = b;", 30),
+    #                          ("let c = SFAlias { <b>field1</b>: 42, field2: NoFields };", 32),
+    #                          ("let _ = c.<b>field1</b>;", 33),
+    #                          ("let SFAlias { <b>field1</b>: c1, field2: c2 } = c;", 35),
+    #                          ("let SFAlias { <b>field1</b>, field2 } = c;", 36),
+    #                          ("EnumFields::Struct{ <b>field1</b>, field2 } =&gt; {}", 42),
+    #                          ("EnumFields::Nested(SomeFields { <b>field1</b>, field2 }) =&gt; {}", 43)], is_case_sensitive=False)
+    #     self.found_lines_eq('var-ref:field2',
+    #                         [("let b = SomeFields { field1: 42, <b>field2</b>: NoFields };", 26),
+    #                          ("let _ = b.<b>field2</b>;", 28),
+    #                          ("let SomeFields { field1: b1, <b>field2</b>: b2 } = b;", 29),
+    #                          ("let SomeFields { field1, <b>field2</b> } = b;", 30),
+    #                          ("let c = SFAlias { field1: 42, <b>field2</b>: NoFields };", 32),
+    #                          ("let _ = c.<b>field2</b>;", 34),
+    #                          ("let SFAlias { field1: c1, <b>field2</b>: c2 } = c;", 35),
+    #                          ("let SFAlias { field1, <b>field2</b> } = c;", 36),
+    #                          ("EnumFields::Struct{ field1, <b>field2</b> } =&gt; {}", 42),
+    #                          ("EnumFields::Nested(SomeFields { field1, <b>field2</b> }) =&gt; {}", 43)], is_case_sensitive=False)
