@@ -26,12 +26,7 @@ RUN echo "root:docker" | chpasswd
 # Not running apt-get clean, to keep dev experience snappy.
 RUN apt-get -q -y install graphviz
 
-# Create an unprivileged user. We take a user ID from the outside in an effort
-# to match our internal UID with the owner of the files that will be mounted in
-# the volume. If they don't match, we'll have permission issues when we try to
-# make.
-ARG uid=1000
-RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid $uid dxr
+RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid 1000 dxr
 RUN mkdir -p /home/dxr/dxr
 VOLUME /home/dxr/dxr
 USER dxr
