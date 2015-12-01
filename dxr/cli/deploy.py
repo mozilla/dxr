@@ -56,8 +56,6 @@ from dxr.utils import cd, file_text, rmtree_if_exists
         type=Path(exists=True, file_okay=False, resolve_path=True),
         help='Path to the dir containing the builds and symlinks to the '
              'current builds of each kind')
-@option('-h', '--branch',
-        help='Deploy the revision from this branch which last passed Jenkins.')
 @option('-p', '--python',
         'python_path',
         type=Path(exists=True, dir_okay=False, resolve_path=True),
@@ -68,8 +66,7 @@ from dxr.utils import cd, file_text, rmtree_if_exists
 @option('-r', '--rev',
         'manual_rev',
         help='A hash of the revision to deploy. Defaults to the last '
-             'successful Jenkins build on the branch specified by -h (or '
-             'master, by default).')
+             'successful CI build on master.')
 @option('-k', '--kind',
         default='prod',
         help='A token distinguishing an independent installation of DXR. 2 '
@@ -107,7 +104,6 @@ class Deployment(object):
                  base_path='/data',
                  python_path='/usr/bin/python2.7',
                  repo='https://github.com/mozilla/dxr.git',
-                 branch='master',
                  manual_rev=None):
         """Construct.
 
@@ -120,17 +116,14 @@ class Deployment(object):
             virtualenvs
         :arg repo: URL of the git repo from which to download DXR. Use HTTPS if
             possible to ward off spoofing.
-        :arg branch: The most recent passing Jenkins build from this branch
-            will be deployed by default.
         :arg manual_rev: A hash of the revision to deploy. Defaults to the last
-            successful Jenkins build on ``branch``.
+            successful CI build on master.
         """
         self.config = config
         self.kind = kind
         self.base_path = base_path
         self.python_path = python_path
         self.repo = repo
-        self.branch = branch
         self.manual_rev = manual_rev
 
     def rev_to_deploy(self):
@@ -151,16 +144,13 @@ class Deployment(object):
 
     def _latest_successful_build(self):
         """Return the SHA of the latest test-passing commit on master."""
-        response = requests.get('https://ci.mozilla.org/job/dxr/'
-                                'lastSuccessfulBuild/git/api/json',
+        response = requests.get('https://api.github.com/repos/mozilla/dxr/git/'
+                                'refs/heads/ci',
                                 verify=True)
         try:
-            return (response.json()['buildsByBranchName']
-                                   ['refs/remotes/origin/%s' % self.branch]
-                                   ['revision']
-                                   ['SHA1'])
+            return response.json()['object']['sha']
         except ValueError:
-            raise ShouldNotDeploy("Couldn't decode JSON from Jenkins.")
+            raise ShouldNotDeploy("Couldn't decode JSON from GitHub API.")
 
     def build(self, rev):
         """Create and return the path of a new directory containing a new

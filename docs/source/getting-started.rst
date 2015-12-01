@@ -68,19 +68,17 @@ Now that you've told DXR about your codebase, it's time to build an
 .. note::
 
     If you have a large codebase, the VM might run out of RAM. If that happens,
-    make a copy of the
-    :file:`vagrantconfig_local.yaml-dist` file in the top-level :file:`dxr`
-    directory, rename it :file:`vagrantconfig_local.yaml`, and edit it to
-    increase the VM's RAM::
+    wipe out the VM using ``docker-machine rm default``, and then go back to
+    the ``docker-machine create`` instruction and crank up the numbers. For
+    example, this is plenty of space to build Firefox::
 
-        cp vagrantconfig_local.yaml-dist vagrantconfig_local.yaml
-        vi vagrantconfig_local.yaml
+        docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 8000 default
 
-    Then restart the VM::
+        # Reset your shell variables:
+        eval "$(docker-machine env default)"
 
-        vagrant halt
-        vagrant up
-        vagrant ssh
+        # And drop back into the DXR container:
+        make shell
 
 .. note::
 
@@ -102,5 +100,9 @@ and see what you've wrought::
 
     dxr serve --all
 
-Surf to http://33.33.33.77:8000/ from the host machine, and poke around
-your fancy new searchable codebase.
+If you're using ``docker-machine``, run ``docker-machine ip default`` to find
+the address of your VM. Then surf to http://*that IP address*:8000/ from the
+host machine, and poke around your fancy new searchable codebase.
+
+If you're not using ``docker-machine``, your code should be accessible from
+http://localhost:8000/.

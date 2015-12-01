@@ -1,0 +1,3 @@
+This directory holds files used by DXR's build process. You shouldn't have to
+use them directly; the public interface for setting up DXR is its top-level
+makefile.

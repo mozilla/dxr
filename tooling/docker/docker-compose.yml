@@ -1,0 +1,12 @@
+es:
+  build: ./es
+  ports:
+    - "8000:8000"
+
+dev:
+  build: ./dev
+  net: container:es
+  ports:
+    - "8000:8000"
+  volumes:
+      - ../..:/home/dxr/dxr
