@@ -25,7 +25,7 @@ notifications:
     channels:
       - "irc.mozilla.org#static"
     template:
-      - "[%{repository_name} %{branch}] \"%{commit_subject}\" by %{author}: %{result}"
+      - "[%{repository_name} %{branch} %{result}] \"%{commit_subject}\" by %{author}"
       - "Changes: %{compare_url}"
       - "Build details: %{build_url}"
 
