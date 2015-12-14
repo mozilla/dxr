@@ -1,12 +1,22 @@
+# A container that runs elasticsearch. The upstream image has a volume defined,
+# so indexes persist.
 es:
   build: ./es
   ports:
     - "8000:8000"
 
+# An interactive container for experimentation and debugging
 dev:
   build: ./dev
   net: container:es
   ports:
     - "8000:8000"
   volumes:
-      - ../..:/home/dxr/dxr
+    - ../..:/home/dxr/dxr
+  volumes_from:
+    - data
+
+# A Data Volume Container so we don't lose our whole virtualenv and need to
+# re-download all the Python packages every time the dev image is rebuilt
+data:
+  build: ./data

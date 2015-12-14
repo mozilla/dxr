@@ -27,12 +27,11 @@ RUN echo "root:docker" | chpasswd
 RUN apt-get -q -y install graphviz
 
 RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid 1000 dxr
-RUN mkdir -p /home/dxr/dxr
 VOLUME /home/dxr/dxr
 USER dxr
 
 # Activate a virtualenv. make will make it later.
-ENV VIRTUAL_ENV=/home/dxr/dxr/venv PATH=/home/dxr/dxr/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV VIRTUAL_ENV=/venv PATH=/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 WORKDIR /home/dxr/dxr
 
