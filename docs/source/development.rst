@@ -85,8 +85,12 @@ with. To get it running... ::
     dxr index
     dxr serve -a
 
-You can then surf to http://33.33.33.77:8000/ from the host machine and play
-around. When you're done, stop the server with :kbd:`Control-C`.
+If you're using ``docker-machine``, run ``docker-machine ip default`` to find
+the address of your VM. Then surf to http://*that IP address*:8000/ from the
+host machine, and explore the index. If you're not using ``docker-machine``,
+the index should be accessible from http://localhost:8000/.
+
+When you're done, stop the server with :kbd:`Control-C`.
 
 
 Workflow
