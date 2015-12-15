@@ -150,9 +150,6 @@ class MultipleOverrides(CSingleFileTestCase):
         }
         """ + MINIMAL_MAIN
 
-    # This test is not yet working because we don't track that Derived::foo
-    # overrides Base2::foo
-    @nose.tools.raises(AssertionError)  # remove this line when fixed
     def test_overridden(self):
         self.found_lines_eq('+overridden:Derived::foo()',
                             [('void Base1::<b>foo</b>() {', 5),
@@ -162,9 +159,6 @@ class MultipleOverrides(CSingleFileTestCase):
         self.found_line_eq('+overrides:Base1::foo()',
                            'void Derived::<b>foo</b>() {')
 
-    # This test is not yet working because we don't track that Derived::foo
-    # overrides Base2::foo
-    @nose.tools.raises(AssertionError)  # remove this line when fixed
     def test_overrides2(self):
         self.found_line_eq('+overrides:Base2::foo()',
                            'void Derived::<b>foo</b>() {')

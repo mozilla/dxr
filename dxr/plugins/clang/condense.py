@@ -22,9 +22,9 @@ class UselessLine(Exception):
     """A CSV line isn't suitable for getting anything useful out of."""
 
 
-POSSIBLE_KINDS = set(['call', 'macro', 'function', 'variable', 'ref',
-                       'type', 'impl', 'decldef', 'typedef', 'warning',
-                       'namespace', 'namespace_alias', 'include'])
+POSSIBLE_KINDS = set(['call', 'macro', 'function', 'func_override', 'variable',
+                      'ref', 'type', 'impl', 'decldef', 'typedef', 'warning',
+                      'namespace', 'namespace_alias', 'include'])
 
 
 def c_type_sig(inputs, output, method=None):
@@ -103,7 +103,7 @@ def process_override(overrides, overriddens, props):
     """
     # It may not be necessary to have a list here. In multiple inheritance,
     # does clang ever consider a method to override multiple other methods, or
-    # is it at most one each?
+    # is it at most one each?  Answer: clang recognizes multiple overriddens.
     overrides.setdefault(props['qualname'], set()).add(
             (props['overriddenqualname'], props['overriddenname']))
 
@@ -315,10 +315,9 @@ def condense_global(csv_folder):
     condense(
         lines_from_csvs(csv_folder, '*.csv'),
         {'impl': partial(process_impl, parents, children),
-         'function': partial(process_override, overrides, overriddens)},
-        predicate=lambda kind, fields: (kind == 'function' and
-                                        'overriddenname' in fields) or
-                                       kind == 'impl')
+         'func_override': partial(process_override, overrides, overriddens)},
+        predicate=lambda kind, fields: (kind == 'func_override' or
+                                        kind == 'impl'))
 
     # Turn some sets into lists. There's no need to keep them as sets, and
     # lists are tighter on RAM, which will make them faster to pass to workers.

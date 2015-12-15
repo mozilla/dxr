@@ -461,9 +461,12 @@ public:
     if (d->isThisDeclarationADefinition() ||
         d->isPure())  // until we have better support for pure-virtual functions
     {
-      beginRecord("function", d->getLocation());
-      recordValue("name", d->getNameAsString());
-      recordValue("qualname", getQualifiedName(*d));
+      SourceLocation functionLocation = d->getLocation();
+      beginRecord("function", functionLocation);
+      std::string functionName = d->getNameAsString();
+      recordValue("name", functionName);
+      std::string functionQualName = getQualifiedName(*d);
+      recordValue("qualname", functionQualName);
 #if CLANG_AT_LEAST(3, 5)
       recordValue("type", d->getCallResultType().getAsString());
 #else
@@ -482,14 +485,17 @@ public:
       recordValue("loc", locationToString(d->getNameInfo().getBeginLoc()));
       recordValue("locend", locationToString(afterToken(d->getNameInfo().getEndLoc())));
       printScope(d);
+      *out << std::endl;
 
       // Print out overrides
       if (CXXMethodDecl::classof(d)) {  // It's a method.
         CXXMethodDecl *methodDecl = dyn_cast<CXXMethodDecl>(d);
 
         // What do we override?
-        CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
-        if (iter) {
+        for (CXXMethodDecl::method_iterator iter =
+               methodDecl->begin_overridden_methods(),
+               end = methodDecl->end_overridden_methods();
+             iter != end; ++iter) {
           const FunctionDecl *overriddenDecl = nullptr;
           // Get the overridden definition if it exists...
           (*iter)->isDefined(overriddenDecl);
@@ -498,15 +504,15 @@ public:
             overriddenDecl = *iter;
           }
           if (overriddenDecl) {
+            beginRecord("func_override", functionLocation);
+            recordValue("name", functionName);
+            recordValue("qualname", functionQualName);
             recordValue("overriddenname", overriddenDecl->getNameAsString());
             recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
-            // getLocStart() finds the right line but the wrong columns. We
-            // ignore everything but the file path.
-            recordValue("overriddenloc", locationToString(overriddenDecl->getLocStart()));
+            *out << std::endl;
           }
         }
       }
-      *out << std::endl;
     }
 
     const FunctionDecl *def;
