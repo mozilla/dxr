@@ -490,11 +490,19 @@ public:
         // What do we override?
         CXXMethodDecl::method_iterator iter = methodDecl->begin_overridden_methods();
         if (iter) {
-          const FunctionDecl *overriddenDef;
-          if ((*iter)->isDefined(overriddenDef)) {
-            recordValue("overriddenname", overriddenDef->getNameAsString());
-            recordValue("overriddenqualname", getQualifiedName(*overriddenDef));
-            recordValue("overriddenloc", locationToString(overriddenDef->getLocStart())); // Finds the right line but the wrong columns. We ignore everything but the file path.
+          const FunctionDecl *overriddenDecl = nullptr;
+          // Get the overridden definition if it exists...
+          (*iter)->isDefined(overriddenDecl);
+          // Otherwise get the pure virtual declaration if that exists.
+          if (!overriddenDecl && (*iter)->isPure()) {
+            overriddenDecl = *iter;
+          }
+          if (overriddenDecl) {
+            recordValue("overriddenname", overriddenDecl->getNameAsString());
+            recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
+            // getLocStart() finds the right line but the wrong columns. We
+            // ignore everything but the file path.
+            recordValue("overriddenloc", locationToString(overriddenDecl->getLocStart()));
           }
         }
       }
