@@ -15,6 +15,12 @@ class InheritanceTests(CSingleFileTestCase):
 
         class C : public B1, public B2 {
         };
+
+        struct D {
+        };
+
+        struct E : public D {
+        };
         """ + MINIMAL_MAIN
 
     def test_subclasses(self):
@@ -43,3 +49,18 @@ class InheritanceTests(CSingleFileTestCase):
     def test_no_superclasses(self):
         """If there aren't any superclasses, don't find any."""
         self.found_nothing('bases:A')
+
+    # I'm assuming that if bases/derived queries on structs are working at all
+    # then they're working the same way as for classes, so I'm not repeating all
+    # of the class tests here.
+    def test_substructs(self):
+        """Make sure we find substructs."""
+        self.found_line_eq(
+            'derived:D',
+            'struct <b>E</b> : public D {')
+
+    def test_base_structs(self):
+        """Make sure we find base structs."""
+        self.found_line_eq(
+            'bases:E',
+            'struct <b>D</b> {')
