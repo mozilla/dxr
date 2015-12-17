@@ -62,7 +62,9 @@ class FileToIndex(FileToIndexBase):
         self.overriddens = overriddens
         self.parents = parents
         self.children = children
-        self.condensed = condense_file(temp_folder, path, overrides, overriddens)
+        self.condensed = condense_file(temp_folder, path,
+                                       overrides, overriddens,
+                                       parents, children)
 
     def needles_by_line(self):
         return all_needles(

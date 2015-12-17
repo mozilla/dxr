@@ -118,21 +118,21 @@ class MacroRef(_RefWithDefinition):
 class TypeRef(_QualnameRef):
     @classmethod
     def _condensed_menu_data(cls, tree, prop):
-        """Hang onto qualname *and* kind."""
         return (super(TypeRef, cls)._condensed_menu_data(tree, prop) +
-                (prop.get('kind', ''),))
+                ('has_subclass' in prop, 'has_base_class' in prop))
 
-    def _more_menu_items(self, (qualname, kind)):
+    def _more_menu_items(self, (qualname, has_subclass, has_base_class)):
         """Return menu for type reference."""
         yield {'html': "Find declarations",
                'title': "Find declarations of this class",
                'href': search_url(self.tree.name, "+type-decl:%s" % quote(qualname)),
                'icon': 'reference'}
-        if kind == 'class' or kind == 'struct':
+        if has_subclass:
             yield {'html': "Find subclasses",
                    'title': "Find subclasses of this class",
                    'href': search_url(self.tree.name, "+derived:%s" % quote(qualname)),
                    'icon': 'type'}
+        if has_base_class:
             yield {'html': "Find base classes",
                    'title': "Find base classes of this class",
                    'href': search_url(self.tree.name, "+bases:%s" % quote(qualname)),

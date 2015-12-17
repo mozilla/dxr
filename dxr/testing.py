@@ -475,17 +475,21 @@ def menu_on(haystack, text, *menu_items, **kwargs):
                 "%d of '%s'." % (text_instance, text))
 
 
-def menu_item_not_on(haystack, text, menu_item_html):
+def menu_item_not_on(haystack, text, menu_item_html, text_instance=1):
     """Assert that there is a context menu on certain text that doesn't
     contain a given menu item.
 
     :arg haystack: The HTML source of a page to search
-    :arg text: The text contained by the menu's anchor tag. The first
-        menu-having anchor tag containing the text is the one compared against.
+    :arg text: The text contained by the menu's anchor tag. The
+        ``text_instance``th menu-having anchor tag containing the text is the
+        one compared against.
     :arg menu_item_html: The title of a menu item that should be missing from
         the menu, given in HTML
+    :arg text_instance: Specifies which occurrence of ``text`` to compare
+        against.  Defaults to 1 (the first occurrence).
 
     """
-    found_items = _decoded_menu_on(haystack, text)
+    found_items = _decoded_menu_on(haystack, text, text_instance)
     ok_(all(menu_item_html != item['html'] for item in found_items),
-        '"%s" was found in the menu around "%s".' % (menu_item_html, text))
+        '"%s" was found in the menu around occurrence %d of "%s".' %
+         (menu_item_html, text_instance, text))

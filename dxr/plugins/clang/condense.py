@@ -152,6 +152,16 @@ def _process_loc(locstring):
     return src, Position(row, col)
 
 
+def process_maybe_impl(parents, children, props):
+    if props.get('kind') == 'class' or props.get('kind') == 'struct':
+        if props.get('qualname') in parents:
+            props['has_base_class'] = True
+        if props.get('qualname') in children:
+            props['has_subclass'] = True
+
+    return props
+
+
 def process_impl(parents, children, props):
     """Contribute to the whole-program class hierarchy graphs.
 
@@ -258,7 +268,7 @@ def lines_from_csvs(folder, file_glob):
     return chain.from_iterable(lines_from_csv(p) for p in paths)
 
 
-def condense_file(csv_folder, file_path, overrides, overriddens):
+def condense_file(csv_folder, file_path, overrides, overriddens, parents, children):
     """Return a dict representing an analysis of one source file.
 
     This is phase 2: the file-at-a-time phase.
@@ -274,6 +284,10 @@ def condense_file(csv_folder, file_path, overrides, overriddens):
     :arg overrides: A dict whose keys are function qualnames that are overrides
     :arg overriddens: A dict whose keys are function qualnames that are
         overriddens
+    :arg parents: A dict whose keys are class or struct qualnames that have
+        parents
+    :arg children: A dict whose keys are class or struct qualnames that have
+        children
 
     """
     process_maybe_function_for_override = partial(process_maybe_function,
@@ -283,7 +297,8 @@ def condense_file(csv_folder, file_path, overrides, overriddens):
                       'function': partial(process_function_for_override,
                                           overrides, overriddens),
                       'ref': process_maybe_function_for_override,
-                      'decldef': process_maybe_function_for_override}
+                      'decldef': process_maybe_function_for_override,
+                      'type': partial(process_maybe_impl, parents, children)}
 
     return condense(lines_from_csvs(csv_folder,
                                     '{0}.*.csv'.format(sha1(file_path).hexdigest())),

@@ -40,3 +40,8 @@ public:
 };
 
 void DerivedClass::virtualFunc() { }
+
+class DerivedDerivedClass : public DerivedClass {
+ public:
+  void virtualFunc() {}
+};

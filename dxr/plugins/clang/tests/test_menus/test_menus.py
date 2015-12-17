@@ -63,6 +63,46 @@ class MenuTests(DxrInstanceTestCase):
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Btype-ref%3Anumba'})
 
+    def test_impl_has_sub_not_base(self):
+        """Make sure a class with subclasses but not base classes gets a 'Find
+        subclasses' menu option."""
+        menu_on(self.source_page('extern.c'),
+                'BaseClass',
+                {'html': 'Find subclasses',
+                 'href': '/code/search?q=%2Bderived%3ABaseClass'})
+
+    def test_impl_no_base(self):
+        """Make sure a class with subclasses but not base classes doesn't get a
+        'Find base classes' menu option."""
+        menu_item_not_on(self.source_page('extern.c'),
+                'BaseClass',
+                'Find base classes')
+
+    def test_impl_has_sub_and_base(self):
+        """Make sure a class with subclasses and base classes gets both menu
+        options."""
+        menu_on(self.source_page('extern.c'),
+                'DerivedClass',
+                {'html': 'Find subclasses',
+                 'href': '/code/search?q=%2Bderived%3ADerivedClass'},
+                {'html': 'Find base classes',
+                 'href': '/code/search?q=%2Bbases%3ADerivedClass'})
+
+    def test_impl_has_base_not_sub(self):
+        """Make sure a class with base classes but not subclasses gets a 'Find
+        base classes' menu option."""
+        menu_on(self.source_page('extern.c'),
+                'DerivedDerivedClass',
+                {'html': 'Find base classes',
+                 'href': '/code/search?q=%2Bbases%3ADerivedDerivedClass'})
+
+    def test_impl_no_sub(self):
+        """Make sure a class with base classes but not subclasses doesn't get a
+        'Find subclasses' menu option."""
+        menu_item_not_on(self.source_page('extern.c'),
+                'DerivedDerivedClass',
+                'Find subclasses')
+
     def test_type_ref(self):
         menu_on(self.source_page('main.cpp'),
                 'MyClass',
@@ -157,20 +197,47 @@ class MenuTests(DxrInstanceTestCase):
                          'Jump to definition')
 
     def test_override_overrides(self):
-        """Make sure virtual functions that have an override are recognized."""
+        """Make sure virtual functions that have an override but don't themselves
+        override get a 'Find overrides' menu option."""
         menu_on(self.source_page('extern.c'),
                 'virtualFunc',
                 {'html': 'Find overrides',
                  'href': '/code/search?q=%2Boverrides%3ABaseClass%3A%3AvirtualFunc%28%29'})
 
-    def test_override_overridden(self):
-        """Make sure virtual functions that override something are
-        recognized."""
+    def test_override_no_overridden(self):
+        """Make sure virtual functions that don't override don't get a 'Find overridden'
+        menu option."""
+        menu_item_not_on(self.source_page('extern.c'),
+                'virtualFunc',
+                'Find overridden')
+
+    def test_override_overridden_and_overrides(self):
+        """Make sure virtual functions that override something and are overridden
+        get both menu options."""
         menu_on(self.source_page('extern.c'),
                 'virtualFunc',
                 {'html': 'Find overridden',
                  'href': '/code/search?q=%2Boverridden%3ADerivedClass%3A%3AvirtualFunc%28%29'},
+                {'html': 'Find overrides',
+                 'href': '/code/search?q=%2Boverrides%3ADerivedClass%3A%3AvirtualFunc%28%29'},
                  text_instance=2)
+
+    def test_override_overridden(self):
+        """Make sure virtual functions that override something but aren't
+        themselves overridden get a 'Find overridden' menu option."""
+        menu_on(self.source_page('extern.c'),
+                'virtualFunc',
+                {'html': 'Find overridden',
+                 'href': '/code/search?q=%2Boverridden%3ADerivedDerivedClass%3A%3AvirtualFunc%28%29'},
+                 text_instance=4)
+
+    def test_override_no_overrides(self):
+        """Make sure virtual functions that aren't overridden don't get a 'Find overrides'
+        menu option."""
+        menu_item_not_on(self.source_page('extern.c'),
+                'virtualFunc',
+                'Find overrides',
+                text_instance=4)
 
     def test_override_def(self):
         """Make sure virtual function defs are recognized."""
