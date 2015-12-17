@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class TraitTests(DxrInstanceTestCase):
+class TraitTests(RustDxrInstanceTestCase):
     def test_trait_def(self):
         self.found_line_eq('type:Foo', "trait <b>Foo</b> {", 3)
 

@@ -4,11 +4,11 @@
 
 from nose import SkipTest
 from nose.tools import eq_,ok_
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 import os
 
 
-class RustTests(DxrInstanceTestCase):
+class RustTests(RustDxrInstanceTestCase):
     """Test indexing of Rust projects"""
 
     def test_nothing(self):

@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class VarTests(DxrInstanceTestCase):
+class VarTests(RustDxrInstanceTestCase):
     def test_var_def(self):
         self.found_line_eq('var:a', "let <b>a</b> = 32i32;", 31)
         self.found_line_eq('var:w', "<b>w</b> @ _ =&gt; {", 24)

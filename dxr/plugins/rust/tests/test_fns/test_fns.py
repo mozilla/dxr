@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class FunctionTests(DxrInstanceTestCase):
+class FunctionTests(RustDxrInstanceTestCase):
     def test_simple_function(self):
         self.found_line_eq('function:foo', "fn <b>foo</b>() {", 3)
 
