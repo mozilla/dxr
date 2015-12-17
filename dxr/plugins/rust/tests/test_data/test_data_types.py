@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class DataTypesTests(DxrInstanceTestCase):
+class DataTypesTests(RustDxrInstanceTestCase):
     def test_struct_name(self):
         self.found_line_eq('type:NoFields', "struct <b>NoFields</b>;", 6)
         self.found_line_eq('type:SomeFields', "struct <b>SomeFields</b> {", 8)

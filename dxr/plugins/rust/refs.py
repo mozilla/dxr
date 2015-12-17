@@ -299,8 +299,10 @@ class ModuleAliasRef(_RustRef):
         if datum['refid'] in tree_index.data.unknowns:
             # FIXME We could probably do better and link to the precise type or static in docs
             #       etc., rather than just the crate
-            kind = 'urls'
-            aliased_datum = tree_index.locations[tree_index.data.unknowns[datum['refid']]['crate']]
+            loc = tree_index.data.unknowns[datum['refid']]['crate']
+            if loc in tree_index.locations:
+                kind = 'urls'
+                aliased_datum = tree_index.locations[loc]
 
         return trim_dict(datum, datum_keys), kind, aliased_datum
 

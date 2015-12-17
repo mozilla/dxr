@@ -1,6 +1,6 @@
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class GenericsTests(DxrInstanceTestCase):
+class GenericsTests(RustDxrInstanceTestCase):
     def test_generic_def(self):
         # FIXME(#23) perhaps better not to need the scope id for type variables
         self.found_line_eq('type:X$23', "fn foo&lt;<b>X</b>: Foo&gt;(x: &amp;X) {}", 11)

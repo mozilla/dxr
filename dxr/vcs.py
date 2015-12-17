@@ -171,6 +171,8 @@ class Git(Vcs):
     def _construct_upstream_url(self):
         source_urls = self.invoke_vcs(['remote', '-v'], self.root).split('\n')
         for src_url in source_urls:
+            if not src_url:
+                continue
             name, repo, _ = src_url.split()
             # TODO: Why do we assume origin is upstream?
             if name == 'origin':

@@ -1,9 +1,9 @@
 """These tests are testing references involving modules, as opposed to modules themselves.
    All the tests are on funtions, but I believe any other item will be similar."""
 
-from dxr.testing import DxrInstanceTestCase
+from dxr.plugins.rust.tests import RustDxrInstanceTestCase
 
-class ModFnTests(DxrInstanceTestCase):
+class ModFnTests(RustDxrInstanceTestCase):
     def test_fn_def(self):
         self.found_line_eq('function:foo', "pub fn <b>foo</b>() {}", 19)
         self.found_lines_eq('function:bar',
