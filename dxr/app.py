@@ -338,7 +338,7 @@ def _browse_folder(tree, path, config):
              f.get('size'),
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]),
              f.get('is_binary', [False])[0])
-            for f in files_and_folders if 'path' in f])
+            for f in files_and_folders])
 
 
 def skim_file(skimmers, num_lines):
