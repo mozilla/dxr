@@ -45,3 +45,9 @@ class DerivedDerivedClass : public DerivedClass {
  public:
   void virtualFunc() {}
 };
+
+struct BaseStruct {
+};
+
+struct DerivedStruct : public BaseStruct {
+};

@@ -103,6 +103,25 @@ class MenuTests(DxrInstanceTestCase):
                 'DerivedDerivedClass',
                 'Find subclasses')
 
+    # I'm assuming that if the base/substruct menu items appear at all then
+    # they're going to appear in the same way as for classes, so I'm not
+    # repeating all of the class tests for structs.
+    def test_impl_substruct(self):
+        """Make sure a struct with a substruct gets a 'Find substructs menu
+        option."""
+        menu_on(self.source_page('extern.c'),
+                'BaseStruct',
+                {'html': 'Find substructs',
+                 'href': '/code/search?q=%2Bderived%3ABaseStruct'})
+
+    def test_impl_base_struct(self):
+        """Make sure a struct with a base struct gets a 'Find base structs' menu
+        option."""
+        menu_on(self.source_page('extern.c'),
+                'DerivedStruct',
+                {'html': 'Find base structs',
+                 'href': '/code/search?q=%2Bbases%3ADerivedStruct'})
+
     def test_type_ref(self):
         menu_on(self.source_page('main.cpp'),
                 'MyClass',

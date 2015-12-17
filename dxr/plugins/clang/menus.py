@@ -119,30 +119,39 @@ class TypeRef(_QualnameRef):
     @classmethod
     def _condensed_menu_data(cls, tree, prop):
         return (super(TypeRef, cls)._condensed_menu_data(tree, prop) +
-                ('has_subclass' in prop, 'has_base_class' in prop))
+                (prop.get('kind', ''), 'has_subclass' in prop, 'has_base_class' in prop))
 
-    def _more_menu_items(self, (qualname, has_subclass, has_base_class)):
+    def _more_menu_items(self, (qualname, kind, has_subclass, has_base_class)):
         """Return menu for type reference."""
+        def kind_plural():
+            if kind == 'class':
+                return 'classes'
+            elif kind == 'struct':
+                return 'structs'
+            raise TypeError('Unexpected kind: %s' % kind)
+
         yield {'html': "Find declarations",
-               'title': "Find declarations of this class",
+               'title': "Find declarations of this %s" % kind,
                'href': search_url(self.tree.name, "+type-decl:%s" % quote(qualname)),
                'icon': 'reference'}
         if has_subclass:
-            yield {'html': "Find subclasses",
-                   'title': "Find subclasses of this class",
+            kinds = kind_plural()
+            yield {'html': "Find sub%s" % kinds,
+                   'title': "Find sub%s of this %s" % (kinds, kind),
                    'href': search_url(self.tree.name, "+derived:%s" % quote(qualname)),
                    'icon': 'type'}
         if has_base_class:
-            yield {'html': "Find base classes",
-                   'title': "Find base classes of this class",
+            kinds = kind_plural()
+            yield {'html': "Find base %s" % kinds,
+                   'title': "Find base %s of this %s" % (kinds, kind),
                    'href': search_url(self.tree.name, "+bases:%s" % quote(qualname)),
                    'icon': 'type'}
         yield {'html': "Find members",
-               'title': "Find members of this class",
+               'title': "Find members of this %s" % kind,
                'href': search_url(self.tree.name, "+member:%s" % quote(qualname)),
                'icon': 'members'}
         yield {'html': "Find references",
-               'title': "Find references to this class",
+               'title': "Find references to this %s" % kind,
                'href': search_url(self.tree.name, "+type-ref:%s" % quote(qualname)),
                'icon': 'reference'}
 
