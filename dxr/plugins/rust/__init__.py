@@ -16,7 +16,18 @@ interchange format.
 
 Line and column numbers are stored as strings though.
 
+If you are building using Cargo, you must ensure that `rustc` is on the path.
+You must also export the environment variable `RUSTC=path/dxr-rustc.sh`. Where
+path locates dxr-rustc.sh (such as the Rust plugin directory). This is probably
+easiest to do as part of the build_command in your dxr.config.
+
+If you are using rustc directly, then you must ensure that your build command
+includes `-Zsave-analysis`.
+
+If you are indexing the Rust compiler and standard library, you don't need to
+take any extra steps, we do it for you.
 """
+
 import csv
 import os
 from itertools import chain

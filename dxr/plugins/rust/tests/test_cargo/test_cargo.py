@@ -7,7 +7,7 @@ import sys
 class CargoTests(DxrInstanceTestCase):
     @classmethod
     def setup_class(cls):
-        os.environ["RUSTC"] = "./dxr-rustc.sh"
+        os.environ["RUSTC"] = "../../../dxr-rustc.sh"
         super(CargoTests, cls).setup_class()
 
     def test_simple_function(self):
