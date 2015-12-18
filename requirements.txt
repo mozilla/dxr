@@ -44,6 +44,8 @@ pyelasticsearch==1.4
 
 # Pygments 2.0.1 with a C++ lexer patched to fix https://bitbucket.org/birkenfeld/pygments-main/issue/1081/cpplexer-pathological-slowness-case
 # sha256: Ftr99EAuAJQ9S1PJiiUa36knAKmRQDbXsk6WPwt3V1Q
+# It looks like Bitbucket updated its compressor at some point:
+# sha256: -c6mHCfVqrLGkkMx1ldJWNtSX_He88HYbp4jaoGZ9Jc
 https://bitbucket.org/erikrose/pygments-main/get/1081-pragmatic-fix.tar.gz#egg=Pygments
 
 # sha256: mEFMy7mQkCOXKZaP5CJaMXPj8OwbteW9dmq9drwZqNk
