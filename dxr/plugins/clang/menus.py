@@ -119,7 +119,7 @@ class TypeRef(_QualnameRef):
     @classmethod
     def _condensed_menu_data(cls, tree, prop):
         return (super(TypeRef, cls)._condensed_menu_data(tree, prop) +
-                (prop.get('kind', ''), 'has_subclass' in prop, 'has_base_class' in prop))
+                (prop.get('kind', 'type'), 'has_subclass' in prop, 'has_base_class' in prop))
 
     def _more_menu_items(self, (qualname, kind, has_subclass, has_base_class)):
         """Return menu for type reference."""
@@ -128,7 +128,8 @@ class TypeRef(_QualnameRef):
                 return 'classes'
             elif kind == 'struct':
                 return 'structs'
-            raise TypeError('Unexpected kind: %s' % kind)
+            else:
+                return 'types'
 
         yield {'html': "Find declarations",
                'title': "Find declarations of this %s" % kind,

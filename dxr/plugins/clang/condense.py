@@ -59,6 +59,11 @@ def process_function(props):
 
 
 def process_maybe_override(overrides, overriddens, props):
+    """Add 'has_overriddens', 'has_overrides' properties to props if the
+    qualname of this function appears in overrides, respectively
+    overriddens.
+
+    """
     qualname = props.get('qualname')
     if qualname in overrides:
         # Keys of overrides are functions that override something, so this
@@ -72,6 +77,10 @@ def process_maybe_override(overrides, overriddens, props):
 
 
 def process_maybe_function(overrides, overriddens, props):
+    """If these are props for a function, add 'has_overrides', 'has_overriddens'
+    properties to props if overrides, respectively overriddens exist.
+
+    """
     if props.get('kind') == 'function':
         return process_maybe_override(overrides, overriddens, props)
     else:
@@ -79,6 +88,11 @@ def process_maybe_function(overrides, overriddens, props):
 
 
 def process_function_for_override(overrides, overriddens, props):
+    """Add 'has_overrides', 'has_overriddens' keys to props if overrides,
+    respectively overriddens exist, and add a 'type' key to props whose value
+    is the call signature of this function.
+
+    """
     override_props = process_maybe_override(overrides, overriddens, props)
     return process_function(override_props)
 
@@ -153,6 +167,10 @@ def _process_loc(locstring):
 
 
 def process_maybe_impl(parents, children, props):
+    """Add 'has_base_class', 'has_subclass' properties to props if these props
+    are for a class or a struct that has parents, respectively children.
+
+    """
     if props.get('kind') == 'class' or props.get('kind') == 'struct':
         if props.get('qualname') in parents:
             props['has_base_class'] = True
