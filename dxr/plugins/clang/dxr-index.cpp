@@ -89,34 +89,34 @@ class PreprocThunk : public PPCallbacks {
 public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
 #if CLANG_AT_LEAST(3, 3)
-  virtual void MacroDefined(const Token &tok, const MacroDirective *md);
-  virtual void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma);
-  virtual void MacroUndefined(const Token &tok, const MacroDirective *md);
+  void MacroDefined(const Token &tok, const MacroDirective *md) override;
+  void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range, const MacroArgs *ma) override;
+  void MacroUndefined(const Token &tok, const MacroDirective *md) override;
 #if CLANG_AT_LEAST(3, 4)
-  virtual void Defined(const Token &tok, const MacroDirective *md, SourceRange range);
+  void Defined(const Token &tok, const MacroDirective *md, SourceRange range) override;
 #else
-  virtual void Defined(const Token &tok, const MacroDirective *md);
+  void Defined(const Token &tok, const MacroDirective *md) override;
 #endif
-  virtual void Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md);
-  virtual void Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md);
+  void Ifdef(SourceLocation loc, const Token &tok, const MacroDirective *md) override;
+  void Ifndef(SourceLocation loc, const Token &tok, const MacroDirective *md) override;
 #else
-  virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
-  virtual void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI, SourceRange Range);
-  virtual void MacroUndefined(const Token &tok, const MacroInfo *MI);
-  virtual void Defined(const Token &tok);
-  virtual void Ifdef(SourceLocation loc, const Token &tok);
-  virtual void Ifndef(SourceLocation loc, const Token &tok);
+  void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) override;
+  void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI, SourceRange Range) override;
+  void MacroUndefined(const Token &tok, const MacroInfo *MI) override;
+  void Defined(const Token &tok) override;
+  void Ifdef(SourceLocation loc, const Token &tok) override;
+  void Ifndef(SourceLocation loc, const Token &tok) override;
 #endif
-virtual void InclusionDirective(  // same in 3.2 and 3.3
-    SourceLocation hashLoc,
-    const Token &includeTok,
-    StringRef fileName,
-    bool isAngled,
-    CharSourceRange filenameRange,
-    const FileEntry *file,
-    StringRef searchPath,
-    StringRef relativePath,
-    const Module *imported);
+  void InclusionDirective(  // same in 3.2 and 3.3
+      SourceLocation hashLoc,
+      const Token &includeTok,
+      StringRef fileName,
+      bool isAngled,
+      CharSourceRange filenameRange,
+      const FileEntry *file,
+      StringRef searchPath,
+      StringRef relativePath,
+      const Module *imported) override;
 };
 
 class IndexConsumer : public ASTConsumer,
@@ -136,7 +136,7 @@ private:
     it = relmap.find(filename);
     if (it == relmap.end()) {
       // Check if we have this file stored under a canonicalized key.
-      char *real = realpath(filename.c_str(), NULL);
+      char *real = realpath(filename.c_str(), nullptr);
       std::string realstr(real ? real : filename.c_str());
       free(real);
       it = relmap.find(realstr);
@@ -158,17 +158,20 @@ private:
   }
 public:
   IndexConsumer(CompilerInstance &ci) :
-    ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()),
-      m_currentFunction(NULL) {
+    ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()) {
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
     ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
   }
 
-  virtual DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
+#if CLANG_AT_LEAST(3, 3)
+  // `clone` was removed from the DiagnosticConsumer interface in version 3.3,
+  // so this can all be deleted once we're no longer supporting 3.2.
+#else
+  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const override {
     return new IndexConsumer(ci);
-
   }
+#endif
 
   static void setTmpDir(const std::string& dir) { tmpdir = dir; }
 
@@ -371,7 +374,7 @@ public:
   }
 
   // All we need is to follow the final declaration.
-  virtual void HandleTranslationUnit(ASTContext &ctx) {
+  void HandleTranslationUnit(ASTContext &ctx) override {
     TraverseDecl(ctx.getTranslationUnitDecl());
 
     // Emit all files now
@@ -614,7 +617,7 @@ public:
 #else
         VarDecl *first = vd->getFirstDeclaration();
 #endif
-        VarDecl *lastTentative = 0;
+        VarDecl *lastTentative = nullptr;
         for (VarDecl::redecl_iterator i = first->redecls_begin(), e = first->redecls_end();
              i != e; ++i) {
           VarDecl::DefinitionKind kind = i->isThisDeclarationADefinition();
@@ -770,7 +773,7 @@ public:
       return "function";
     if (isa<EnumConstantDecl>(d) || isa<VarDecl>(d) || isa<FieldDecl>(d))
       return "variable";
-    return NULL;   // unhandled for now
+    return nullptr;   // unhandled for now
   }
 
   bool VisitMemberExpr(MemberExpr *e) {
@@ -867,21 +870,6 @@ public:
     recordValue("calltype", "static");
 
     *out << std::endl;
-    return true;
-  }
-
-  // For binding stuff inside the directory, we need to find the containing
-  // function. Unfortunately, there is no way to do this in clang, so we have
-  // to maintain the function stack ourselves. Why is it a stack? Consider:
-  // void foo() { class A { A() { } }; } <-- nested function
-  FunctionDecl *m_currentFunction;
-  bool TraverseDecl(Decl *d) {
-    FunctionDecl *parent = m_currentFunction;
-    if (d && FunctionDecl::classof(d)) {
-      m_currentFunction = dyn_cast<FunctionDecl>(d);
-    }
-    RecursiveASTVisitor<IndexConsumer>::TraverseDecl(d);
-    m_currentFunction = parent;
     return true;
   }
 
@@ -990,8 +978,8 @@ public:
     return loc;
   }
 
-  virtual void HandleDiagnostic(DiagnosticsEngine::Level level,
-      const Diagnostic &info) {
+  void HandleDiagnostic(DiagnosticsEngine::Level level,
+      const Diagnostic &info) override {
     DiagnosticConsumer::HandleDiagnostic(level, info);
     inner->HandleDiagnostic(level, info);
     if (level != DiagnosticsEngine::Warning ||
@@ -1021,7 +1009,7 @@ public:
   }
 
   // Macros!
-  virtual void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) {
+  void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) {
     if (MI->isBuiltinMacro()) return;
     if (!interestingLocation(MI->getDefinitionLoc())) return;
 
@@ -1095,23 +1083,23 @@ public:
     *out << std::endl;
   }
 
-  virtual void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
+  void MacroExpands(const Token &tok, const MacroInfo *MI, SourceRange Range) {
     printMacroReference(tok, MI);
   }
-  virtual void MacroUndefined(const Token &tok, const MacroInfo *MI) {
+  void MacroUndefined(const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
-  virtual void Defined(const Token &tok, const MacroInfo *MI) {
+  void Defined(const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
-  virtual void Ifdef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
+  void Ifdef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
-  virtual void Ifndef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
+  void Ifndef(SourceLocation loc, const Token &tok, const MacroInfo *MI) {
     printMacroReference(tok, MI);
   }
 
-  virtual void InclusionDirective(
+  void InclusionDirective(
       SourceLocation hashLoc,
       const Token &includeTok,
       StringRef fileName,
@@ -1193,13 +1181,13 @@ public:
     real->MacroUndefined(tok, MI);
   }
   void PreprocThunk::Defined(const Token &tok) {
-    real->Defined(tok, NULL);
+    real->Defined(tok, nullptr);
   }
   void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok) {
-    real->Ifdef(loc, tok, NULL);
+    real->Ifdef(loc, tok, nullptr);
   }
   void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
-    real->Ifndef(loc, tok, NULL);
+    real->Ifndef(loc, tok, nullptr);
   }
 #endif
 void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
@@ -1217,12 +1205,12 @@ void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
 
 class DXRIndexAction : public PluginASTAction {
 protected:
-  ASTConsumer *CreateASTConsumer(CompilerInstance &CI, llvm::StringRef f) {
+  ASTConsumer *CreateASTConsumer(CompilerInstance &CI, llvm::StringRef f) override {
     return new IndexConsumer(CI);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string>& args) {
+                 const std::vector<std::string>& args) override {
     if (args.size() != 1) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
@@ -1231,7 +1219,7 @@ protected:
       return false;
     }
     // Load our directories
-    char *abs_src = realpath(args[0].c_str(), NULL);
+    char *abs_src = realpath(args[0].c_str(), nullptr);
     if (!abs_src) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
@@ -1246,7 +1234,7 @@ protected:
       output = env;
     else
       output = abs_src;
-    char *abs_output = realpath(output.c_str(), NULL);
+    char *abs_output = realpath(output.c_str(), nullptr);
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
@@ -1265,7 +1253,7 @@ protected:
     }else
       tmpdir = output;
 
-    char* abs_tmpdir = realpath(tmpdir.c_str(), NULL);
+    char* abs_tmpdir = realpath(tmpdir.c_str(), nullptr);
     if(!abs_tmpdir){
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
@@ -1283,10 +1271,6 @@ protected:
 
     return true;
   }
-  void PrintHelp(llvm::raw_ostream& ros) {
-    ros << "Help for PrintFunctionNames plugin goes here\n";
-  }
-
 };
 
 // define static members
