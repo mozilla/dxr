@@ -60,10 +60,6 @@ const char *hash(std::string &str) {
   return hashstr;
 }
 
-std::string srcdir;
-std::string output;
-std::string tmpdir; // Place to save all the csv files to
-
 struct FileInfo {
   FileInfo(std::string &rname) : realname(rname) {
     interesting = rname.compare(0, srcdir.length(), srcdir) == 0;
@@ -81,6 +77,8 @@ struct FileInfo {
   std::string realname;
   std::ostringstream info;
   bool interesting;
+  static std::string srcdir;  // the project source directory
+  static std::string output;  // the project build directory
 };
 typedef std::shared_ptr<FileInfo> FileInfoPtr;
 
@@ -131,6 +129,7 @@ private:
   std::map<std::string, FileInfoPtr> relmap;
   LangOptions &features;
   DiagnosticConsumer *inner;
+  static std::string tmpdir;  // Place to save all the csv files to
 
   const FileInfoPtr &getFileInfo(const std::string &filename) {
     std::map<std::string, FileInfoPtr>::iterator it;
@@ -170,6 +169,8 @@ public:
     return new IndexConsumer(ci);
 
   }
+
+  static void setTmpDir(const std::string& dir) { tmpdir = dir; }
 
   // Helpers for processing declarations
   // Should we ignore this location?
@@ -1238,12 +1239,13 @@ protected:
       D.Report(DiagID) << args[0];
       return false;
     }
-    srcdir = abs_src;
+    FileInfo::srcdir = abs_src;
     const char *env = getenv("DXR_CXX_CLANG_OBJECT_FOLDER");
+    std::string output;
     if (env)
       output = env;
     else
-      output = srcdir;
+      output = abs_src;
     char *abs_output = realpath(output.c_str(), NULL);
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
@@ -1252,10 +1254,12 @@ protected:
       D.Report(DiagID) << output;
       return false;
     }
-    output = realpath(output.c_str(), NULL);
+    output = abs_output;
     output += "/";
+    FileInfo::output = output;
 
     const char* tmp = getenv("DXR_CXX_CLANG_TEMP_FOLDER");
+    std::string tmpdir;
     if(tmp){
       tmpdir = tmp;
     }else
@@ -1269,8 +1273,9 @@ protected:
       D.Report(DiagID) << tmpdir;
       return false;
     }
-    tmpdir = realpath(tmpdir.c_str(), NULL);
+    tmpdir = abs_tmpdir;
     tmpdir += "/";
+    IndexConsumer::setTmpDir(tmpdir);
 
     free(abs_src);
     free(abs_output);
@@ -1284,6 +1289,10 @@ protected:
 
 };
 
+// define static members
+std::string FileInfo::srcdir;
+std::string FileInfo::output;
+std::string IndexConsumer::tmpdir;
 }
 
 static FrontendPluginRegistry::Add<DXRIndexAction>
