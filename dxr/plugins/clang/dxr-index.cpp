@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,6 +82,7 @@ struct FileInfo {
   std::ostringstream info;
   bool interesting;
 };
+typedef std::shared_ptr<FileInfo> FileInfoPtr;
 
 class IndexConsumer;
 
@@ -126,29 +128,32 @@ private:
   CompilerInstance &ci;
   SourceManager &sm;
   std::ostream *out;
-  std::map<std::string, FileInfo *> relmap;
+  std::map<std::string, FileInfoPtr> relmap;
   LangOptions &features;
   DiagnosticConsumer *inner;
 
-  FileInfo *getFileInfo(const std::string &filename) {
-    std::map<std::string, FileInfo *>::iterator it;
+  const FileInfoPtr &getFileInfo(const std::string &filename) {
+    std::map<std::string, FileInfoPtr>::iterator it;
     it = relmap.find(filename);
     if (it == relmap.end()) {
-      // We haven't seen this file before. We need to make the FileInfo
-      // structure information ourselves
-      const char *real = realpath(filename.c_str(), NULL);
+      // Check if we have this file stored under a canonicalized key.
+      char *real = realpath(filename.c_str(), NULL);
       std::string realstr(real ? real : filename.c_str());
+      free(real);
       it = relmap.find(realstr);
       if (it == relmap.end()) {
-        // Still didn't find it. Make the FileInfo structure
-        FileInfo *info = new FileInfo(realstr);
-        it = relmap.insert(make_pair(realstr, info)).first;
+        // We haven't seen this file before. We need to make the FileInfo
+        // structure information ourselves.
+        it = relmap.insert(make_pair(realstr,
+                                     std::make_shared<FileInfo>(realstr))).first;
       }
+      // Note that the map values for the filename and realstr keys will both
+      // point to the same FileInfo object, which is what we want.
       it = relmap.insert(make_pair(filename, it->second)).first;
     }
     return it->second;
   }
-  FileInfo *getFileInfo(const char *filename) {
+  const FileInfoPtr &getFileInfo(const char *filename) {
     std::string filenamestr(filename);
     return getFileInfo(filenamestr);
   }
@@ -182,7 +187,7 @@ public:
       return false;
 
     // Get the real filename
-    FileInfo *f = getFileInfo(filename);
+    const FileInfoPtr &f = getFileInfo(filename);
     return f->interesting;
   }
 
@@ -284,8 +289,8 @@ public:
     // rather have the expansion location than the presumed one, as we're not
     // interested in lies told by the #lines directive.
     StringRef filename = sm.getFilename(loc);
-    FileInfo *f = getFileInfo(filename);
-    out = &f->info;
+    const FileInfoPtr &f = getFileInfo(filename);
+    out = &(f->info);
     *out << name;
   }
 
@@ -369,7 +374,7 @@ public:
     TraverseDecl(ctx.getTranslationUnitDecl());
 
     // Emit all files now
-    std::map<std::string, FileInfo *>::iterator it;
+    std::map<std::string, FileInfoPtr>::iterator it;
     for (it = relmap.begin(); it != relmap.end(); it++) {
       if (!it->second->interesting)
         continue;
@@ -1115,29 +1120,31 @@ public:
       StringRef searchPath,
       StringRef relativePath,
       const Module *imported) {
-    PresumedLoc presumedHashLoc;
-    FileInfo *target, *source;
-    SourceLocation targetBegin, targetEnd;
+    PresumedLoc presumedHashLoc = sm.getPresumedLoc(hashLoc);
+    const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
+    const FileInfoPtr &target = getFileInfo(file->getName());
+    SourceLocation targetBegin = filenameRange.getBegin();
+    SourceLocation targetEnd = filenameRange.getEnd();
 
     if (!interestingLocation(hashLoc) ||
         filenameRange.isInvalid() ||
-        (presumedHashLoc = sm.getPresumedLoc(hashLoc)).isInvalid() ||
+        presumedHashLoc.isInvalid() ||
 
         // Don't record inclusions of files that are outside the source tree,
         // like stdlibs. file is NULL if an #include can't be resolved, like if
         // you include a nonexistent file.
         !file ||
 
-        !(target = getFileInfo(file->getName()))->interesting ||
+        !(target->interesting) ||
 
         // TODO: Come up with some kind of reasonable extent for macro-based
         // includes, like #include FOO_MACRO.
-        (targetBegin = filenameRange.getBegin()).isMacroID() ||
-        (targetEnd = filenameRange.getEnd()).isMacroID() ||
+        targetBegin.isMacroID() ||
+        targetEnd.isMacroID() ||
 
         // TODO: Support generated files once we run the trigram indexer over
         // them. For now, we skip them.
-        !(source = getFileInfo(presumedHashLoc.getFilename()))->realname.compare(0, GENERATED.size(), GENERATED) ||
+        !(source->realname.compare(0, GENERATED.size(), GENERATED)) ||
         !(target->realname.compare(0, GENERATED.size(), GENERATED)))
       return;
 
@@ -1264,6 +1271,10 @@ protected:
     }
     tmpdir = realpath(tmpdir.c_str(), NULL);
     tmpdir += "/";
+
+    free(abs_src);
+    free(abs_output);
+    free(abs_tmpdir);
 
     return true;
   }
