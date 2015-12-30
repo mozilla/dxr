@@ -237,7 +237,7 @@ def caller_needles(condensed, overriddens):
 def inheritance_needles(condensed, parents, children):
     """Emit needles that let us find parent and child classes of classes."""
     for type in condensed['type']:
-        if type['kind'] == 'class':
+        if type['kind'] == 'class' or type['kind'] == 'struct':
             # Lay down needles at a class's line. These needles' values are
             # any classes that this class is a parent of.
             for needle in needles_from_graph(
