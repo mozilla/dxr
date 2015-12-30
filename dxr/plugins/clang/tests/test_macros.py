@@ -1,5 +1,6 @@
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
+from nose.tools import ok_
 
 class MacroTests(CSingleFileTestCase):
     """Tests for ``macro`` queries"""
@@ -30,7 +31,7 @@ class MacroRefTests(CSingleFileTestCase):
 
         #ifndef MACRO
         #endif
-        
+
         #if defined(MACRO)
         #endif
 
@@ -136,3 +137,27 @@ class MacroArgumentDeclareTests(CSingleFileTestCase):
         self.found_line_eq('+var:foo()::b', 'DECLARE(<b>b</b>);')
         self.found_line_eq('+var:foo()::c', 'DECLARE2(<b>c</b>, d);')
         self.found_line_eq('+var:foo()::d', 'DECLARE2(c, <b>d</b>);')
+
+
+class MacroRefTitleTests(CSingleFileTestCase):
+
+    source = r"""
+#define SD \
+ int s;\
+ int d;
+
+SD //
+        """ + MINIMAL_MAIN
+
+    def test_macro_titles(self):
+        """Test that a ref to a macro gets a title tooltip containing the
+        definition of the macro, and that the macro def doesn't get a title.
+        Also make sure the macro tooltip skips the macro's leading whitespace
+        up to and including an initial backslash newline.
+
+        """
+        markup = self.source_page('main.cpp')
+        # The SD ref link is followed by the '<' of the comment markup.
+        ok_('title=" int s;\\\n int d;">SD</a> <' in markup, msg=markup)
+        # The SD def shouldn't get a title.
+        ok_('title=" int s;\\\n int d;">SD</a> \\' not in markup)

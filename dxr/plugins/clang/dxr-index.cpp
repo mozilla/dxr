@@ -138,6 +138,8 @@ private:
   SourceManager &sm;
   std::ostream *out;
   std::map<std::string, FileInfoPtr> relmap;
+  // Map the SourceLocation of a macro to the text of the macro def.
+  std::map<SourceLocation, std::string> macromap;
   LangOptions &features;
   DiagnosticConsumer *inner;
   static std::string tmpdir;  // Place to save all the csv files to
@@ -1062,11 +1064,17 @@ public:
     } else {
       defnStart = nameLen;
     }
-    // Find the first non-whitespace character for the definition.
+    // Skip leading whitespace in the definition up to and including any first
+    // line continuation.
     for (; defnStart < length; defnStart++) {
       switch (contents[defnStart]) {
         case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
           continue;
+        case '\\':
+          if (defnStart + 2 < length && contents[defnStart + 1] == '\n') {
+            defnStart += 2;
+          }
+          break;
       }
       break;
     }
@@ -1087,7 +1095,7 @@ public:
             text[i] != '\t' && text[i] != '\n')
           text[i] = '?';
       }
-      recordValue("text", text, true);
+      macromap.insert(make_pair(nameStart, text));
     }
     *out << std::endl;
   }
@@ -1110,6 +1118,11 @@ public:
     recordValue("loc", locationToString(refLoc));
     recordValue("locend", locationToString(afterToken(refLoc)));
     recordValue("kind", "macro");
+    std::map<SourceLocation, std::string>::const_iterator it =
+      macromap.find(macroLoc);
+    if (it != macromap.end()) {
+      recordValue("text", it->second, true);
+    }
     *out << std::endl;
   }
 
