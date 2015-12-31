@@ -61,10 +61,11 @@ class Query(object):
         # Group lines into files:
         for path, lines in groupby(results, lambda r: r['path'][0]):
             lines = list(lines)
-            highlit_path = highlight(
-                path,
-                chain.from_iterable((h(lines[0]) for h in
-                                     path_highlighters)))
+            highlit_path = {'path': path,
+                            'highlit_path_segs': highlight_path(
+                                path,
+                                chain.from_iterable(h(lines[0]) for h in
+                                                    path_highlighters))}
             icon_for_path = icon(path)
             yield (icon_for_path,
                    highlit_path,
@@ -78,10 +79,13 @@ class Query(object):
     def _file_query_results(self, results, path_highlighters):
         """Return an iterable of results of a FILE-domain query."""
         for file in results:
-            yield (icon(file['path'][0]),
-                   highlight(file['path'][0],
-                             chain.from_iterable(
-                                 h(file) for h in path_highlighters)),
+            file_path = file['path'][0]
+            yield (icon(file_path),
+                   {'path': file_path,
+                    'highlit_path_segs': highlight_path(
+                        file_path,
+                        chain.from_iterable(h(file) for h in
+                                            path_highlighters))},
                    [],
                    file.get('is_binary', False))
 
@@ -91,7 +95,8 @@ class Query(object):
 
             {'result_count': 12,
              'results': [(icon,
-                          path within tree,
+                          {'path': path within tree,
+                           'highlit_path_segs': [highlit path segment 1, ...]},
                           [(line_number, highlighted_line_of_code), ...],
                           whether it is binary),
                          ...]}
@@ -396,7 +401,7 @@ def filter_menu_items(plugins):
             if filter.description)
 
 
-def highlight(content, extents):
+def highlight(content, extents, extents_are_clean=False):
     """Return ``content`` with the union of all ``extents`` highlighted.
 
     Put ``<b>`` before the beginning of each highlight and ``</b>`` at the
@@ -405,13 +410,15 @@ def highlight(content, extents):
     :arg content: The unicode string against which the extents are reported
     :arg extents: An iterable of unsorted, possibly overlapping (start offset,
         end offset) tuples describing each extent to highlight.
+    :arg extents_are_clean: True if extents are already ordered and
+        nonoverlapping.
 
     Leading whitespace is stripped.
 
     """
-    def chunks():
+    def chunks(sorted_nonoverlapping_extents):
         chars_before = None
-        for start, end in fix_extents_overlap(sorted(extents)):
+        for start, end in sorted_nonoverlapping_extents:
             if start > end:
                 raise ValueError('Extent start was after its end.')
             yield cgi.escape(content[chars_before:start])
@@ -421,7 +428,70 @@ def highlight(content, extents):
             chars_before = end
         # Make sure to get the rest of the line after the last highlight:
         yield cgi.escape(content[chars_before:])
-    return ''.join(chunks()).lstrip()
+    if not extents_are_clean:
+        extents = fix_extents_overlap(sorted(extents))
+    return ''.join(chunks(extents)).lstrip()
+
+
+def highlight_path(path, extents):
+    """Return a list of highlit path segments (from ``path`` split on '/').
+
+    Each path segment is highlit individually, as in :func:`highlight()`, by all
+    ``extents`` that interesect it.
+
+    :arg path: The unicode string against which the extents are reported
+    :arg extents: An iterable of unsorted, possibly overlapping (start offset,
+        end offset) tuples describing each extent to highlight.  Note that
+        extents may cross '/' segment boundaries.
+
+    """
+    extents = sorted(extents)
+    if not extents:
+        return path.split('/')
+
+    # Get the slice extents of each segment of the path:
+    path_segments_extents = []
+    start_segment = 0
+    end_segment = path.find('/')
+    while end_segment != -1:
+        path_segments_extents.append([start_segment, end_segment])
+        start_segment = end_segment + 1
+        end_segment = path.find('/', start_segment)
+    else:
+        if start_segment < len(path):
+            path_segments_extents.append([start_segment, len(path)])
+
+    # For a given path segment keyed by its start index, populate
+    # highlight_extents with the list of extents to be highlit.
+    highlight_extents = {}
+    path_segments = path_segments_extents
+    for extent_start, extent_end in fix_extents_overlap(extents):
+        next_segment_start_index = 0
+        for i, (p_seg_start, p_seg_end) in enumerate(path_segments):
+            # Clamp extent_start up to at least the start of this segment...
+            pse_start = max(p_seg_start, extent_start)
+            # and clamp extent_end down to at most the end of this segment.
+            pse_end = min(p_seg_end, extent_end)
+            if pse_start < pse_end:
+                highlight_extents.setdefault(p_seg_start, []).append(
+                    # Record the extents relative to this path segment, for
+                    # highlighting this segment:
+                    (pse_start - p_seg_start, pse_end - p_seg_start))
+            elif p_seg_start > extent_end:
+                # This path segment and all those remaining are past this
+                # extent, so move on to the next extent.
+                break
+            elif p_seg_end < extent_start:
+                # This extent and all those remaining are past this path
+                # segment, so we no longer need to consider this segment for any
+                # other extents.
+                next_segment_start_index = i + 1
+        if next_segment_start_index:
+            path_segments = path_segments[next_segment_start_index:]
+
+    return [highlight(path[seg_start:seg_end],
+                      highlight_extents.setdefault(seg_start, []), True) for
+            seg_start, seg_end in path_segments_extents]
 
 
 def fix_extents_overlap(extents):

@@ -47,7 +47,9 @@ class BasicTests(DxrInstanceTestCase):
         results = self.search_results(
             'path:makefile -CODE', is_case_sensitive=False)
         eq_(results,
-            [{"path": "makefile",
+            [{"path_data": {
+                "path": "makefile",
+                "highlit_path_segs": ["<b>makefile</b>"]},
               "lines": [
                 {"line_number": 3,
                   "line": "$(CXX) -o $@ $^"},
@@ -79,7 +81,9 @@ class BasicTests(DxrInstanceTestCase):
 
         """
         eq_(self.search_results('path:makefile'),
-            [{"path": "makefile",
+            [{"path_data": {
+                "path": "makefile",
+                "highlit_path_segs": ["<b>makefile</b>"]},
               "lines": [],
               "icon": "unknown",
               "is_binary": False}])

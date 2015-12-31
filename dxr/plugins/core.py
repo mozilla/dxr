@@ -308,6 +308,12 @@ class PathFilter(Filter):
             raise BadTerm('Path globs need at least 3 literal characters in a row '
                           'for speed.')
 
+    def highlight_path(self, result):
+        search_term = self._term['arg']
+        text_len = len(search_term)
+        return ((i, i + text_len) for i in _find_iter(result['path'][0],
+                                                      search_term))
+
 
 class ExtFilter(Filter):
     """Case-sensitive filter for exact matching on file extensions"""
@@ -326,6 +332,11 @@ class ExtFilter(Filter):
             'term': {'ext': extension[1:] if extension.startswith('.')
                             else extension}
         }
+
+    def highlight_path(self, result):
+        extension = self._term['arg']
+        result_path = result['path'][0]
+        return ((len(result_path) - len(extension), len(result_path)),)
 
 
 class RegexpFilter(Filter):

@@ -95,29 +95,34 @@ $(function() {
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
      *
-     * @param {string} fullPath - The full path of the currently displayed file.
+     * @param {object} pathData - Data on the full path of the currently displayed file.
+     * @param {string} pathData.path - The full path of the currently displayed file.
+     * @param {string} pathData.highlit_path_segs - A list of path segments (from
+                       pathData.path.split('/')) with highlighting markup applied.
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
      */
-    function buildResultHead(fullPath, tree, icon, isBinary) {
+    function buildResultHead(pathData, tree, icon, isBinary) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
-            paths = fullPath.split('/'),
+            paths = pathData.path.split('/'),
             splitPathLength = paths.length,
-            dataPath = [],
+            pathHasOneSegment = (splitPathLength === 1),
+            dataPathSegments = [],
+            dataPath = '',
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
-        for (var pathIndex in paths) {
-            var index = parseInt(pathIndex),
-                isFirstOrOnly = index === 0 || splitPathLength === 1,
-                isLastOrOnly = (splitPathLength - 1) === index || splitPathLength === 1;
+        for (var i = 0; i < splitPathLength; ++i) {
+            var isFirstOrOnly = i === 0 || pathHasOneSegment,
+                isLastOrOnly = i === (splitPathLength - 1) || pathHasOneSegment;
 
-            dataPath.push(paths[pathIndex]);
+            dataPathSegments.push(paths[i]);
+            dataPath = dataPathSegments.join('/');
 
             pathLines += nunjucks.render('path_line.html', {
-                'data_path': dataPath.join('/'),
-                'display_path': paths[pathIndex],
-                'url': pathRoot + dataPath.join('/'),
+                'data_path': dataPath,
+                'display_path': pathData.highlit_path_segs[i],
+                'url': pathRoot + dataPath,
                 'is_first_or_only': isFirstOrOnly,
                 'is_dir': !isLastOrOnly,
                 'is_binary': isBinary
@@ -293,7 +298,10 @@ $(function() {
 
             for (var result in results) {
                 var icon = results[result].icon;
-                var resultHead = buildResultHead(results[result].path, data.tree, icon, results[result].is_binary);
+                var resultHead = buildResultHead(results[result].path_data,
+                                                 data.tree,
+                                                 icon,
+                                                 results[result].is_binary);
                 results[result].iconClass = resultHead[0];
                 results[result].pathLine = resultHead[1];
             }

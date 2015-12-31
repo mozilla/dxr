@@ -172,10 +172,10 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         count_and_results = query.results(offset, limit)
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
-                    'path': path,
+                    'path_data': path_data,
                     'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
                     'is_binary': is_binary}
-                   for icon, path, lines, is_binary in count_and_results['results']]
+                   for icon, path_data, lines, is_binary in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
