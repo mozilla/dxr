@@ -104,7 +104,7 @@ except ImportError:
 
     DownloadProgressBar = DownloadProgressSpinner = NullProgressBar
 
-__version__ = 2, 5, 0
+__version__ = 3, 1, 0
 
 try:
     from pip.index import FormatControl  # noqa
@@ -362,9 +362,11 @@ def package_finder(argv):
     # Carry over PackageFinder kwargs that have [about] the same names as
     # options attr names:
     possible_options = [
-        'find_links', FORMAT_CONTROL_ARG, 'allow_external', 'allow_unverified',
-        'allow_all_external', ('allow_all_prereleases', 'pre'),
-        'process_dependency_links']
+        'find_links',
+        FORMAT_CONTROL_ARG,
+        ('allow_all_prereleases', 'pre'),
+        'process_dependency_links'
+    ]
     kwargs = {}
     for option in possible_options:
         kw, attr = option if isinstance(option, tuple) else (option, option)
@@ -902,14 +904,21 @@ def peep_port(paths):
         print('Please specify one or more requirements files so I have '
               'something to port.\n')
         return COMMAND_LINE_ERROR
+
+    comes_from = None
     for req in chain.from_iterable(
             _parse_requirements(path, package_finder(argv)) for path in paths):
+        req_path, req_line = path_and_line(req)
         hashes = [hexlify(urlsafe_b64decode((hash + '=').encode('ascii'))).decode('ascii')
-                  for hash in hashes_above(*path_and_line(req))]
+                  for hash in hashes_above(req_path, req_line)]
+        if req_path != comes_from:
+            print()
+            print('# from %s' % req_path)
+            print()
+            comes_from = req_path
+
         if not hashes:
             print(req.req)
-        elif len(hashes) == 1:
-            print('%s --hash=sha256:%s' % (req.req, hashes[0]))
         else:
             print('%s' % req.req, end='')
             for hash in hashes:
