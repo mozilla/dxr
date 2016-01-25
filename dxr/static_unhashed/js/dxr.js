@@ -282,9 +282,11 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
-            contentContainer
-                .empty()
-                .append(nunjucks.render('results_container.html', data));
+            if (!append) {
+                contentContainer
+                    .empty()
+                    .append(nunjucks.render('results_container.html', data));
+            }
         } else {
             var results = data.results;
             resultsLineCount = countLines(results);
