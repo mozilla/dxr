@@ -7,7 +7,7 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$$VIRTUAL_ENV/bin/pip install nose
-	$$VIRTUAL_ENV/bin/nosetests -v
+	$$VIRTUAL_ENV/bin/nosetests -v --nologcapture
 
 clean: static_clean
 	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
