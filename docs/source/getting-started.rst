@@ -11,7 +11,8 @@ Getting Started
 The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
-2. If it's C or C++, tell DXR how to build it.
+2. If it a language analyzed at build time (like C++ or Rust), tell DXR how to
+   build it.
 3. Run :program:`dxr index` to index your code.
 4. Run :program:`dxr serve` to present a web-based search interface.
 
@@ -25,9 +26,9 @@ Configuration
 =============
 
 Before DXR can index your code, it needs to know where it is and, if you want
-to be able to do structural queries (like find-all-the-callers) for C or C++,
-how to kick off a build. (Analysis of more dynamic languages like Python does
-not require a build step.) If you have a simple build process powered by
+to be able to do structural queries (like find-all-the-callers) for C, C++, or
+Rust, how to kick off a build. (Analysis of more dynamic languages like Python
+does not require a build step.) If you have a simple build process powered by
 :command:`make`, a configuration like this might suffice. Place the following
 in a file called :file:`dxr.config`. The location of the file doesn't matter,
 but the usual place is adjacent to your source directory.
@@ -38,11 +39,11 @@ but the usual place is adjacent to your source directory.
 
    Be sure to replace the placeholder paths in the above config.  You'll need to
    move your code to be indexed into the VM, either by downloading it from
-   within the VM, or by copying it in through your DXR repository folder, where
-   it will be visible from within the VM in the shared ``~/dxr`` folder.  It's
-   possible to index your code from a folder within ``~/dxr``, but for
-   performance and sanity we recommend keeping your personal code to be indexed
-   outside of ``~/dxr``.
+   within the VM, or by moving it into your DXR repository folder, where
+   it will be visible from within the VM in the shared ``~/dxr`` folder. It's
+   possible to index your code from a folder within ``~/dxr``, but, if you are
+   using a non-Linux host machine, moving it to :file:`/code` will give you
+   much faster IO by taking VirtualBox's shared-folder machinery out of the mix.
 
 By building your project with clang and under the control of
 :program:`dxr index`, DXR gets a chance to interpose a custom compiler
