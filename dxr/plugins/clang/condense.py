@@ -23,7 +23,6 @@ from os.path import isfile, join
 from collections import defaultdict
 
 db = defaultdict(list)
-ii = 0
 
 class UselessLine(Exception):
     """A CSV line isn't suitable for getting anything useful out of."""
@@ -349,9 +348,7 @@ def condense_file(csv_folder, file_path, overrides, overriddens, parents, childr
                       'ref': process_maybe_function_for_override,
                       'decldef': process_maybe_function_for_override,
                       'type': partial(process_maybe_impl, parents, children)}
-    global ii
-    ii = ii + 1
-    print "Processing file %d: %s" % (ii, file_path)
+
     return condense(lines_from_csvs_with_path_digest(csv_folder, sha1(file_path).hexdigest()),
                     dispatch_table)
 
