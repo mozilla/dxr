@@ -23,7 +23,7 @@ from os.path import isfile, join
 from collections import defaultdict
 
 db = defaultdict(list)
-csvfiles = None
+ii = 0
 
 class UselessLine(Exception):
     """A CSV line isn't suitable for getting anything useful out of."""
@@ -310,7 +310,7 @@ def lines_from_csvs_with_path_digest(folder, path_digest):
             for line in csv.reader(file):
                 yield line
 
-    # Replace glob with creation of a dict containing all paths
+    # List of paths for this path_digest, obtained from dict 'db'
     paths = []
     for f in db[path_digest]:
         paths.append(join(folder, f))
@@ -349,7 +349,9 @@ def condense_file(csv_folder, file_path, overrides, overriddens, parents, childr
                       'ref': process_maybe_function_for_override,
                       'decldef': process_maybe_function_for_override,
                       'type': partial(process_maybe_impl, parents, children)}
-
+    global ii
+    ii = ii + 1
+    print "Processing file %d: %s" % (ii, file_path)
     return condense(lines_from_csvs_with_path_digest(csv_folder, sha1(file_path).hexdigest()),
                     dispatch_table)
 
@@ -374,13 +376,13 @@ def condense_global(csv_folder):
     children = {}
 
     # create a list of csvfiles then populate dict 'db' with a list of csv's for each filepath digest
-    global csvfiles
-    if not csvfiles:
-        csvtest = re.compile(".*\.csv$")
-        csvfiles = [f for f in listdir(csv_folder) if csvtest.match(join(csv_folder, f))]
-        for file in csvfiles:
-            seg = file.split(".")
-            db[seg[0]].append(file)
+    csvfiles = None
+    db.clear()
+    csvtest = re.compile(".*\.csv$")
+    csvfiles = [f for f in listdir(csv_folder) if csvtest.match(join(csv_folder, f))]
+    for file in csvfiles:
+        seg = file.split(".")
+        db[seg[0]].append(file)
 
     # Load from all the CSVs only the impl lines and {function lines
     # containing overriddenname}. Ignore the direct return value and collect
