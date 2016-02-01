@@ -49,7 +49,7 @@ Feel free to adjust the resource allocation numbers above as you see fit.
 
         make docker_stop
 
-Now you're read to fire up DXR's Docker containers, one to run elasticsearch
+Now you're ready to fire up DXR's Docker containers, one to run elasticsearch
 and the other to interact with you, index code, and serve web requests::
 
     make shell
@@ -58,4 +58,5 @@ This drops you at a shell prompt in the interactive container. Now you can
 build DXR and run the tests to make sure it works. Type this at the prompt
 *within the container*::
 
-   make test
+    # Within the docker container...
+    make test
