@@ -9,7 +9,7 @@ from dxr.plugins.rust.menu import (
     jump_to_alias_definition_menu_item, jump_to_crate_menu_item, find_references_menu_item,
     std_lib_links_menu, jump_to_module_declaration_menu_item, jump_to_type_declaration_menu_item,
     jump_to_variable_declaration_menu_item, jump_to_function_declaration_menu_item,
-    trait_impl_menu_item)
+    trait_impl_menu_item, jump_to_macro_definition_menu_item)
 
 
 def trim_dict(dictionary, keys):
@@ -124,6 +124,29 @@ class FunctionRefRef(_RustRef):
             menu = generic_function_menu(fn_decl['qualname'], self.tree)
             menu.insert(0, jump_to_target_from_decl(jump_to_trait_method_menu_item, self.tree, fn_decl))
         return menu
+
+
+class MacroRef(_RustRef):
+    def prepare_menu_data(self, tree_index, datum):
+        self.hover = datum['qualname']
+        return trim_dict(datum, ['qualname'])
+
+    def menu_items(self):
+        return [find_references_menu_item(self.tree, self.menu_data["qualname"], "macro-ref", "macro")]
+
+class MacroRefRef(_RustRef):
+    def prepare_menu_data(self, tree_index, datum):
+        if datum['qualname'] and datum['qualname'] in tree_index.data.macros:
+            self.hover = datum['qualname']
+            mac = tree_index.data.macros[datum['qualname']]
+            return trim_dict(mac, ['file_name', 'file_line', 'qualname'])
+
+    def menu_items(self):
+        if self.menu_data:
+            menu = [jump_to_target_from_decl(jump_to_macro_definition_menu_item, self.tree, self.menu_data)]
+            menu.append(find_references_menu_item(self.tree, self.menu_data["qualname"], "macro-ref", "macro"))
+            return menu
+        return []
 
 
 class VariableRef(_KeysFromDatum):

@@ -121,6 +121,7 @@ jump_to_crate_menu_item = partial(jump_to_target_menu_item, target_name='crate')
 jump_to_type_declaration_menu_item = partial(jump_to_target_menu_item, target_name='type declaration')
 jump_to_variable_declaration_menu_item = partial(jump_to_target_menu_item, target_name='variable declaration')
 jump_to_function_declaration_menu_item = partial(jump_to_target_menu_item, target_name='function declaration')
+jump_to_macro_definition_menu_item = partial(jump_to_target_menu_item, target_name='macro definition')
 
 
 def trait_impl_menu_item(tree_config, qualname, count):

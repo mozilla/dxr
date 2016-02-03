@@ -70,6 +70,8 @@ class FileToIndex(indexers.FileToIndex):
     def refs(self):
         classes_and_tables = [(refs.FunctionRef, 'functions'),
                               (refs.FunctionRefRef, 'function_refs'),
+                              (refs.MacroRef, "macros"),
+                              (refs.MacroRefRef, "macro_refs"),
                               (refs.VariableRef, 'variables'),
                               (refs.VariableRefRef, 'variable_refs'),
                               (refs.TypeRef, 'types'),
@@ -105,6 +107,8 @@ class FileToIndex(indexers.FileToIndex):
         return iterable_per_line(with_start_and_end(split_into_lines(chain(
             self.file_needles('function', 'functions'),
             self.file_needles('function_ref', 'function_refs'),
+            self.file_needles('macro', 'macros'),
+            self.file_needles('macro_ref', 'macro_refs'),
             self.file_needles('var', 'variables'),
             self.file_needles('var_ref', 'variable_refs'),
             self.file_needles('type', 'types'),
@@ -262,6 +266,8 @@ class TreeData:
         self.variable_refs = []
         self.functions = {}
         self.function_refs = []
+        self.macros = {}
+        self.macro_refs = []
         self.types = {}
         self.type_refs = []
         self.impl_defs = {}
@@ -402,7 +408,6 @@ class TreeToIndex(indexers.TreeToIndex):
 
         # We need to do this once per crate whilst the current crate is still current
         self.generate_scopes()
-        self.std_hack()
 
     def process_csv(self, file_name, header_only):
         try:
@@ -630,30 +635,6 @@ class TreeToIndex(indexers.TreeToIndex):
 
         self.mod_parents = {}
 
-    def std_hack(self):
-        # This is nasty - Rust implicitly includes the standard library,
-        # crate `std`, but without generating an `extern crate` item, so we need
-        # to do that. However, it is possible the project includes some other crate
-        # called `std` (by building without the standard lib, we can't tell from 
-        # the indexing data which is the case), so we need to check in case there
-        # is one already.
-        # We probably wouldn't need this if we dealt with generated code properly
-        # in the compiler indexing.
-        if 'std' not in self.data.index('module_aliases', 'name').keys():
-            id = next_id()
-            scopeid = self.find_id_cur('0')
-            args = {
-                'name': 'std',
-                'location': 'std',
-                'id': id,
-                'scopeid': scopeid,
-                # Jesus, this is fragile
-                'crate': '1',
-                'qualname': str(scopeid) + '$std',
-                'refid': self.crate_map[1][1]['id']
-            }
-            self.data.module_aliases[id] = args
-
 
     def closure(self, input):
         """ Compute the (non-refexive) transitive closure of a list."""
@@ -857,6 +838,11 @@ def process_function(args, tree):
     process_function_impl(args, tree)
 
 
+def process_macro(args, tree):
+    tree.data.macros[args['qualname']] = args
+    tree.add_to_lines(args, ('macros', args))
+
+
 def process_method_decl(args, tree):
     process_function_impl(args, tree)
 
@@ -907,6 +893,13 @@ def process_fn_call(args, tree):
     tree.fixup_qualname(args)
     tree.data.function_refs.append(args)
     tree.add_to_lines(args, ('function_refs', args))
+
+
+def process_macro_use(args, tree):
+    # Need to insert a name field for use in the line needle
+    args['name'] = args['callee_name']
+    tree.data.macro_refs.append(args)
+    tree.add_to_lines(args, ('macro_refs', args))
 
 
 def process_var_ref(args, tree):
@@ -1054,6 +1047,8 @@ mappings = {
         'properties': {
             'rust_function': QUALIFIED_LINE_NEEDLE,
             'rust_function_ref': QUALIFIED_LINE_NEEDLE,
+            'rust_macro': QUALIFIED_LINE_NEEDLE,
+            'rust_macro_ref': QUALIFIED_LINE_NEEDLE,
             'rust_var': QUALIFIED_LINE_NEEDLE,
             'rust_var_ref': QUALIFIED_LINE_NEEDLE,
             'rust_type': QUALIFIED_LINE_NEEDLE,

@@ -15,6 +15,16 @@ class FunctionRefFilter(_QualifiedNameFilter):
     is_reference = True
     description = 'Function or method references'
 
+class MacroFilter(_QualifiedNameFilter):
+    name = 'macro'
+    is_identifier = True
+    description = Markup('Macro definition: <code>macro rules! foo</code>')
+
+class MacroRefFilter(_QualifiedNameFilter):
+    name = 'macro-ref'
+    is_reference = True
+    description = Markup('Macro callers: <code>foo!</code>')
+
 class CallersFilter(_QualifiedNameFilter):
     name = 'callers'
     is_reference = True
