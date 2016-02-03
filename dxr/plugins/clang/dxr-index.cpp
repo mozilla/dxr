@@ -1271,11 +1271,9 @@ protected:
 
     // The build output directory.
     const char *env = getenv("DXR_CXX_CLANG_OBJECT_FOLDER");
-    std::string output;
-    if (env)
-      output = env;
-    else
-      output = abs_src;
+    std::string output = env ? env : abs_src;
+    free(abs_src);
+
     char *abs_output = realpath(output.c_str(), nullptr);
     if (!abs_output) {
       DiagnosticsEngine &D = CI.getDiagnostics();
@@ -1287,6 +1285,7 @@ protected:
     output = abs_output;
     output += "/";
     FileInfo::output = output;
+    free(abs_output);
 
     // The temp directory for this plugin's output.
     const char *tmp = getenv("DXR_CXX_CLANG_TEMP_FOLDER");
@@ -1306,9 +1305,6 @@ protected:
     tmpdir = abs_tmpdir;
     tmpdir += "/";
     IndexConsumer::setTmpDir(tmpdir);
-
-    free(abs_src);
-    free(abs_output);
     free(abs_tmpdir);
 
     return true;
