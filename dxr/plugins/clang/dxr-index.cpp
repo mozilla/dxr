@@ -1142,8 +1142,7 @@ public:
     PresumedLoc presumedHashLoc = sm.getPresumedLoc(hashLoc);
     const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
     const FileInfoPtr &target = getFileInfo(file->getName());
-    SourceLocation targetBegin = filenameRange.getBegin();
-    SourceLocation targetEnd = filenameRange.getEnd();
+    SourceLocation targetBegin, targetEnd;
 
     if (!interestingLocation(hashLoc) ||
         filenameRange.isInvalid() ||
@@ -1158,8 +1157,8 @@ public:
 
         // TODO: Come up with some kind of reasonable extent for macro-based
         // includes, like #include FOO_MACRO.
-        targetBegin.isMacroID() ||
-        targetEnd.isMacroID() ||
+        (targetBegin = filenameRange.getBegin()).isMacroID() ||
+        (targetEnd = filenameRange.getEnd()).isMacroID() ||
 
         // TODO: Support generated files once we run the trigram indexer over
         // them. For now, we skip them.
