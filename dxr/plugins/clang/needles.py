@@ -123,27 +123,36 @@ def macro_needles(condensed):
             condensed['macro'])
 
 
-def _nonunique_needles_from_graph(graph, root_qualname):
+def _walk_graph(graph, root_qualname, seen):
     """Yield (qualname, name) pairs gleaned from recursively descending a
-    graph, possibly with repeats.
+    graph, without any repeats.
 
-    It is possible, while traversing the graph, to come up with duplicates:
-    for instance, from multiple inheritance. This won't be a problem for ES,
-    since duplicates will be merged in the term index. But it makes the
+    It is possible, while traversing the graph, to come up with duplicates: for
+    instance, from diamond-shaped inheritance patterns. This isn't a problem
+    for ES, since duplicates will be merged in the term index. But it makes the
     highlighter emit icky empty tag pairs.
+
+    We also cut off cycles before we get back to the original ``root_qualname``.
+
+    :arg seen: The set of qualnames traversed, so we can avoid cycles and
+        dupes. Cycles shouldn't happen, but the clang compiler plugin is buggy,
+        so sometimes they do.
 
     """
     direct_dests = graph.get(root_qualname, [])
-    return chain(
-        # Direct destinations:
-        ((dest_qualname, dest_name)
-         for dest_qualname, dest_name in direct_dests),
+    for dest_qualname, dest_name in direct_dests:
+        if dest_qualname not in seen:  # Dodge duplicates and cycles.
+            seen.add(dest_qualname)
 
-        # Indirect destinations. For instance, if something overrides my
-        # subclass's override, it overrides me as well.
-        chain.from_iterable(
-            _nonunique_needles_from_graph(graph, dest_qualname)
-            for dest_qualname, dest_name in direct_dests))
+            # Direct destinations:
+            yield dest_qualname, dest_name
+
+            # Indirect destinations. For instance, if something overrides my
+            # subclass's override, it overrides me as well. Flatten this in
+            # place to avoid deeply nested chain() calls that lead to stack
+            # overflows, e.g. bug 1246700.
+            for x in _walk_graph(graph, dest_qualname, seen):
+                yield x
 
 
 def needles_from_graph(graph, root_qualname, method_span, needle_name):
@@ -161,10 +170,10 @@ def needles_from_graph(graph, root_qualname, method_span, needle_name):
     :arg needle_name: The key to emit for every needle (the same for each)
 
     """
-    uniques = set(_nonunique_needles_from_graph(graph, root_qualname))
+    pairs = _walk_graph(graph, root_qualname, set([root_qualname]))
     return ((needle_name,
-            {'qualname': qualname, 'name': name},
-            method_span) for qualname, name in uniques)
+             {'qualname': qualname, 'name': name},
+             method_span) for qualname, name in pairs)
 
 
 def overrides_needles(condensed, overrides):
