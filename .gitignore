@@ -8,6 +8,7 @@ dxr-logs-*
 dxr-temp-*
 **/tests/*/code/code
 **/tests/*/code2/code
+/dxr/plugins/rust/tests/test_cargo/code/Cargo.lock
 /dxr/plugins/rust/tests/test_smoke/code/libkrate2.rlib
 /.noseids
 /build
