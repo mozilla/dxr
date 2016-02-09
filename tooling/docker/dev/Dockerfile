@@ -30,8 +30,10 @@ RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo -
 VOLUME /home/dxr/dxr
 USER dxr
 
-# Activate a virtualenv. make will make it later.
-ENV VIRTUAL_ENV=/venv PATH=/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Activate a virtualenv. make will make it later. Also, set SHELL so mach
+# doesn't complain while building Firefox. Other things probably expect it as
+# well.
+ENV VIRTUAL_ENV=/venv PATH=/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin SHELL=/bin/bash
 
 WORKDIR /home/dxr/dxr
 
