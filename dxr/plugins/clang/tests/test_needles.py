@@ -1,6 +1,19 @@
 from nose.tools import eq_
 
-from dxr.plugins.clang.needles import _walk_graph
+from dxr.indexers import Extent, Position, FuncSig
+from dxr.plugins.clang.needles import _walk_graph, sig_needles
+
+
+def test_sig_needles():
+    dummy_extent = Extent(start=Position(0, 0), end=Position(0, 0))
+    fixture = {
+        'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
+                      'span': dummy_extent}],
+        'variable': [{'type': 'a',
+                      'span': dummy_extent}],
+    }
+    eq_(list(sig_needles(fixture)),
+        [(('c-sig', '(int**, int, int) -> int**'), dummy_extent)])
 
 
 def test_graph_walking_cycles():

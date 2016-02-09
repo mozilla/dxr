@@ -10,12 +10,10 @@ from StringIO import StringIO
 
 from nose.tools import eq_
 
-from dxr.indexers import Extent, Position, FuncSig
+from dxr.indexers import Extent, Position
 from dxr.plugins.clang.condense import condense, process_call, process_function
-from dxr.plugins.clang.needles import sig_needles
 
 
-DEFAULT_EXTENT = Extent(start=Position(0, 0), end=Position(0, 0))
 DISPATCH_TABLE = {'call': process_call,
                   'function': process_function}
 
@@ -27,17 +25,6 @@ def condense_csv(csv_str):
 
 def test_smoke_test_csv():
     condense_csv('')
-
-
-def test_sig_needles():
-    fixture = {
-        'function': [{'type': FuncSig(('int**', 'int', 'int'), 'int**'),
-                      'span': DEFAULT_EXTENT}],
-        'variable': [{'type': 'a',
-                      'span': DEFAULT_EXTENT}],
-    }
-    eq_(list(sig_needles(fixture)),
-        [(('c-sig', '(int**, int, int) -> int**'), DEFAULT_EXTENT)])
 
 
 def test_duplicate_collapsing():
