@@ -1288,11 +1288,7 @@ protected:
 
     // The temp directory for this plugin's output.
     const char *tmp = getenv("DXR_CXX_CLANG_TEMP_FOLDER");
-    std::string tmpdir;
-    if (tmp)
-      tmpdir = tmp;
-    else
-      tmpdir = output;
+    std::string tmpdir = tmp ? tmp : output;
     char *abs_tmpdir = realpath(tmpdir.c_str(), nullptr);
     if (!abs_tmpdir) {
       DiagnosticsEngine &D = CI.getDiagnostics();
