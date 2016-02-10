@@ -69,7 +69,7 @@ docker_es:
 
 # TODO: Make this work.
 docker_machine:
-	#docker-machine create --driver virtualbox --virtualbox-disk-size 50000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
+	#docker-machine create --driver virtualbox --virtualbox-disk-size 80000 --virtualbox-cpu-count 4 --virtualbox-memory 256 default
 	#or... XHYVE_CPU_COUNT=4 XHYVE_MEMORY_SIZE=4000 XHYVE_EXPERIMENTAL_NFS_SHARE=true docker-machine create --driver xhyve xhyve
 	#docker-machine start default
 	#eval "$(docker-machine env default)"

@@ -27,6 +27,7 @@ RUN echo "root:docker" | chpasswd
 RUN apt-get -q -y install graphviz
 
 RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid 1000 dxr
+RUN echo "dxr:docker" | chpasswd
 VOLUME /home/dxr/dxr
 USER dxr
 

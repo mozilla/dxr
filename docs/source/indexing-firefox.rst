@@ -44,6 +44,7 @@ Configure The Source Tree
    :file:`/code/mozilla-central/mozconfig`::
 
     ac_add_options --enable-debug
+    ac_add_options --disable-optimize
 
 3. Get it ready to build::
 
