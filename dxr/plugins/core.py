@@ -296,12 +296,19 @@ class PathFilter(Filter):
                          '</code>, <code>?</code>, and <code>[...]</code> act '
                          'as shell wildcards.')
 
+    def __init__(self, term, enabled_plugins):
+        super(PathFilter, self).__init__(term, enabled_plugins)
+        python_regex = glob_to_regex(term['arg'])
+        self._parsed_regex = regex_grammar.parse(python_regex)
+        self._compiled_regex = (
+                re.compile(python_regex,
+                           flags=0 if self._term['case_sensitive'] else re.I))
+
     @negatable
     def filter(self):
-        glob = self._term['arg']
         try:
             return es_regex_filter(
-                regex_grammar.parse(glob_to_regex(glob)),
+                self._parsed_regex,
                 'path',
                 is_case_sensitive=self._term['case_sensitive'])
         except NoTrigrams:
@@ -309,10 +316,8 @@ class PathFilter(Filter):
                           'for speed.')
 
     def highlight_path(self, result):
-        search_term = self._term['arg']
-        text_len = len(search_term)
-        return ((i, i + text_len) for i in _find_iter(result['path'][0],
-                                                      search_term))
+        return (m.span() for m in
+                self._compiled_regex.finditer(result['path'][0]))
 
 
 class ExtFilter(Filter):

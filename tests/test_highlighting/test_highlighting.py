@@ -1,6 +1,6 @@
 from dxr.testing import DxrInstanceTestCase
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 class ResultsHighlightingTests(DxrInstanceTestCase):
     """Tests highlighting in search results"""
@@ -47,14 +47,15 @@ class ResultsHighlightingTests(DxrInstanceTestCase):
         self._found_highlit_path_eq("path:empty",
                                     ["abc", "def", "dir_not_<b>empty</b>"])
 
-    @raises(AssertionError) # remove this line when fixed
     def test_highlighting_path_wildcard_matches(self):
         """Test that path queries containing wildcards have their results
         properly highlit
 
         """
-        self._found_highlit_path_eq("path:abc*.abc",
-                                    ["<b>abc</b>", "<b>abcabc.abc</b>"])
+        self._found_highlit_path_eq("path:c*.abc",
+                                    ["ab<b>c</b>", "<b>abcabc.abc</b>"])
+        self._found_highlit_path_eq("path:abc[/.]a?",
+                                    ["<b>abc</b>", "<b>ab</b>c<b>abc.ab</b>c"])
 
     def test_extension_highlighting(self):
         """Test that matching extensions (and nothing else) are highlit in
