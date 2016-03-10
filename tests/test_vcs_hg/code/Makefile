@@ -1,5 +1,7 @@
+REPOS=$(wildcard */)
+
 all:
-	@tar -xf hg.tar
+	@$(foreach REPO, $(REPOS), cd $(REPO) && tar -xf hg.tar && cd ..;)
 
 clean:
-	@rm -rf .hg
+	@$(foreach REPO, $(REPOS), cd $(REPO) && rm -rf .hg && cd ..;)

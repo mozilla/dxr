@@ -1,0 +1,2 @@
+Make sure our VCS processing doesn't crash if there's a git repo that has no
+remote.
