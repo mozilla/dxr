@@ -244,7 +244,10 @@ $(function() {
     function querySoon() {
         clearTimeout(waiter);
         clearTimeout(historyWaiter);
-        waiter = setTimeout(doQuery, timeouts.search);
+        function doQueryPushHistory() {
+            doQuery(false, '', false, true);
+        }
+        waiter = setTimeout(doQueryPushHistory, timeouts.search);
     }
 
     /**
@@ -260,7 +263,7 @@ $(function() {
      */
     function queryNow(redirect) {
         clearTimeout(waiter);
-        doQuery(redirect);
+        doQuery(redirect, '', false, true);
     }
 
     /**
@@ -335,19 +338,21 @@ $(function() {
     /**
      * Queries and populates the results templates with the returned data.
      *
-     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.  Default is false.
      * @param {string} [queryString] - The url to which to send the request. If left out,
      * queryString will be constructed from the contents of the query field.
-     * @param {bool} [appendResults] - Whether to append new results to the current list,
-     * otherwise replace.
+     * @param {bool} [appendResults] - Append new results to the current list if true,
+     * otherwise replace.  Default is false.
+     * @param {bool} [addToHistory] - Whether to add this query to the browser history.  Default is false.
      */
-    function doQuery(redirect, queryString, appendResults) {
+    function doQuery(redirect, queryString, appendResults, addToHistory) {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber, limit, match, lineHeight;
 
-        redirect = redirect || false;
         // Turn into a boolean if it was undefined.
+        redirect = !!redirect;
         appendResults = !!appendResults;
+        addToHistory = !!addToHistory;
         if (queryString) {
             // Normally there will be no explicit limit set in this case, but
             // there's nothing stopping a user from setting it by hand in the
@@ -403,17 +408,19 @@ $(function() {
                 if (myRequestNumber > displayedRequestNumber) {
                     displayedRequestNumber = myRequestNumber;
                     populateResults(data, appendResults);
-                    var pushHistory = function () {
-                        // Strip off offset= and limit= when updating.
-                        var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
-                        history.pushState({}, '', displayURL);
-                    };
-                    if (redirect)
-                        // Then the enter key was pressed and we want to update history state now.
-                        pushHistory();
-                    else if (!appendResults)
-                        // Update the history state if we're not appending: this is a new search.
-                        historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    if (addToHistory) {
+                        var pushHistory = function () {
+                            // Strip off offset= and limit= when updating.
+                            var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
+                            history.pushState({}, '', displayURL);
+                        };
+                        if (redirect)
+                            // Then the enter key was pressed and we want to update history state now.
+                            pushHistory();
+                        else if (!appendResults)
+                            // Update the history state if we're not appending: this is a new search.
+                            historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    }
                     if (!appendResults) {
                         previousDataLimit = limit;
                         dataOffset = 0;
