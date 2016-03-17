@@ -60,7 +60,9 @@ $(function() {
 
     // We also need to cater for the above scenario when a user clicks on in page links.
     window.onhashchange = function() {
-        scrollIntoView(window.location.hash.substr(1));
+        if (window.location.hash) {
+            scrollIntoView(window.location.hash.substr(1));
+        }
     };
 
     /**
@@ -140,7 +142,8 @@ $(function() {
         resultsLineCount = 0,
         dataOffset = 0,
         previousDataLimit = 0,
-        defaultDataLimit = 100;
+        defaultDataLimit = 100,
+        lastURLWasSearch = false;  // Remember if the previous history URL was for a search (for popState).
 
     // Has the user been redirected to a direct result?
     var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
@@ -419,6 +422,7 @@ $(function() {
                                                          replace(/([&?])limit=\d+/, dropAmp).
                                                          replace('?&', '?');
                             history.pushState({}, '', displayURL);
+                            lastURLWasSearch = true;
                         };
                         if (redirect)
                             // Then the enter key was pressed and we want to update history state now.
@@ -536,19 +540,20 @@ $(function() {
     // That means that if we naively set onpopstate, we would get into an
     // infinite loop of reloading whenever onpopstate is triggered. Therefore,
     // we have to only add our onpopstate handler once the page has loaded.
-    window.onload = function() {
+    window.addEventListener('load', function() {
         setTimeout(function() {
-            window.onpopstate = popStateHandler;
+            window.addEventListener('popstate', popStateHandler);
         }, 0);
-    };
+    });
 
     // Reload the page when we go back or forward.
     function popStateHandler(event) {
-        // Check for event state first to avoid nasty complete page reloads on #anchors:
-         if (event.state != null) {
+        if (event.state ||  // If it's a search (we only push state on a search), or...
+            (!window.location.search && lastURLWasSearch)) {  // if we switched from search to file view:
             window.onpopstate = null;
             window.location.reload();
-         }
+        }
+        lastURLWasSearch = window.location.search ? true : false;
     }
 
     /**
@@ -577,6 +582,9 @@ $(function() {
             caseSensitiveBox.prop('checked', urlIsCaseSensitive);
             localStorage.setItem('caseSensitive', urlIsCaseSensitive);
             doQuery(false, window.location.href);
+            lastURLWasSearch = true;
+        } else {
+            lastURLWasSearch = false;
         }
     });
 });
