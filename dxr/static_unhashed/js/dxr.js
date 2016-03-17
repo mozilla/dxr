@@ -411,7 +411,13 @@ $(function() {
                     if (addToHistory) {
                         var pushHistory = function () {
                             // Strip off offset= and limit= when updating.
-                            var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
+                            function dropAmp(fullMatch, ampOrQuestion) {
+                                // Drop a leading ampersand, keep a leading question mark.
+                                return (ampOrQuestion === '?') ? '?' : '';
+                            }
+                            var displayURL = queryString.replace(/([&?])offset=\d+/, dropAmp).
+                                                         replace(/([&?])limit=\d+/, dropAmp).
+                                                         replace('?&', '?');
                             history.pushState({}, '', displayURL);
                         };
                         if (redirect)
