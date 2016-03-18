@@ -466,14 +466,15 @@ class FileToIndex(dxr.indexers.FileToIndex):
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
                                                        path=self.path))])
+        else:
+            yield 5, 'Untracked file', []
+
         if is_textual_image(self.path):
             yield (4,
                    'Image',
                    [('svgview', 'View', url_for('.raw',
                                                 tree=self.tree.name,
                                                 path=self.path))])
-        else:
-            yield 5, 'Untracked file', []
 
     def is_interesting(self):
         """Core plugin puts all files in the search index."""
