@@ -164,11 +164,17 @@ $(function() {
         }
     });
 
-    // Remove the menu when a user clicks outside it.
-    window.addEventListener('mousedown', function() {
+    function removeContextMenu() {
         toggleSymbolHighlights();
         $('#context-menu').remove();
-    }, false);
+    }
+
+    // Remove the menu when a user clicks outside it, or when the page is loaded
+    // via backward and forward history moves to this page, or via reload.
+    $(window).on('mousedown pageshow', removeContextMenu);
+
+    // Remove the menu when a user clicks on one of its links.
+    fileContainer.on('click', '#context-menu a', removeContextMenu);
 
     onEsc(function() {
         $('#context-menu').remove();
