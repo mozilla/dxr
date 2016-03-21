@@ -404,6 +404,7 @@ $(function() {
                 // Check whether to redirect to a direct hit.
                 if (data.redirect) {
                     window.location.href = data.redirect;
+                    lastURLWasSearch = false;
                     return;
                 }
                 data.query = query;
@@ -533,6 +534,10 @@ $(function() {
         $(this).text(formatDate($(this).data('datetime')));
     });
 
+    function locationIsSearch() {
+        return /search$/.test(window.location.pathname) && window.location.search;
+    }
+
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
 
@@ -549,11 +554,11 @@ $(function() {
     // Reload the page when we go back or forward.
     function popStateHandler(event) {
         if (event.state ||  // If it's a search (we only push state on a search), or...
-            (!window.location.search && lastURLWasSearch)) {  // if we switched from search to file view:
+            (!locationIsSearch() && lastURLWasSearch)) {  // if we switched from search to file view:
             window.onpopstate = null;
             window.location.reload();
         }
-        lastURLWasSearch = window.location.search ? true : false;
+        lastURLWasSearch = locationIsSearch();
     }
 
     /**
@@ -575,7 +580,7 @@ $(function() {
     // If on load of the search endpoint we have a query string then we need to
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
-        if (/search$/.test(window.location.pathname) && window.location.search) {
+        if (locationIsSearch()) {
             // Set case-sensitive checkbox according to the URL, and make sure
             // the localstorage mirrors it.
             var urlIsCaseSensitive = caseFromUrl() === true;
