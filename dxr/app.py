@@ -166,6 +166,16 @@ def _search_json(query, tree, query_text, offset, limit, config):
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
     try:
         count_and_results = query.results(offset, limit)
+        # If we're asked to redirect and there's a single result, redirect to the result.
+        if (request.values.get('redirect') == 'true' and
+            count_and_results['result_count'] == 1):
+            _, path, [(line, _)] = count_and_results['results'].next()
+            params = {
+                'tree': tree,
+                'path': path,
+                'from_q': query_text
+            }
+            return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,

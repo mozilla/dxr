@@ -136,7 +136,7 @@ $(function() {
         lastURLWasSearch = false;  // Remember if the previous history URL was for a search (for popState).
 
     // Has the user been redirected to a direct result?
-    var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
+    var fromQuery = /[?&]from=([^&]+)/.exec(location.search);
     if (fromQuery !== null) {
         // Offer the user the option to see all the results instead.
         var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>';
@@ -144,6 +144,11 @@ $(function() {
         var searchUrl = constants.data('search') + '?q=' + fromQuery[1];
         queryField.val(decodeURIComponent(fromQuery[1]));
         showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
+    } else {
+        var from_qQuery = /[?&]from_q=([^&]+)/.exec(location.search);
+        if (from_qQuery !== null) {
+            queryField.val(decodeURIComponent(from_qQuery[1].replace('+', ' ')));
+        }
     }
 
     $(window).scroll(function() {
