@@ -2,6 +2,8 @@
 
 from os.path import basename
 
+from flask import url_for
+
 from dxr.app import DXR_BLUEPRINT
 from dxr.lines import Ref
 from dxr.utils import browse_file_url, search_url
@@ -200,6 +202,33 @@ class NamespaceAliasRef(_QualnameRef):
 
 class FunctionRef(_RefWithDefinition):
     """Ref for function definitions or references"""
+
+    def menu_items(self):
+        """Return a jump-to-definition menu item along with whatever others
+        _more_menu_items() returns.
+
+        """
+        path = self.menu_data[0]
+        if path is None:
+            menu = []
+        else:
+            # We get here when the defloc lies inside the source tree, but for
+            # function refs the defloc can be wrong: defloc may point to the
+            # function declaration instead of the definition if the definition
+            # lies outside the translation unit of the ref.  That means the
+            # query below will return 0 results if the defloc is inside and the
+            # actual def is outside the source tree, and conversely this menu
+            # won't be displayed (even though it should be) if the defloc is
+            # outside and the actual def is inside the source tree.
+            menu = [{'html': "Jump to definition",
+                     'title': "Jump to definition",
+                     'href': url_for('.search', tree=self.tree.name,
+                                     q='+function:"' + self.menu_data[2] + '"',
+                                     redirect='true',
+                                     no_from='true'),
+                     'icon': 'jump'}]
+        menu.extend(self._more_menu_items(self.menu_data[2:]))
+        return menu
 
     @classmethod
     def _condensed_menu_data(cls, tree, prop):

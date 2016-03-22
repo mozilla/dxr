@@ -173,8 +173,9 @@ def _search_json(query, tree, query_text, offset, limit, config):
             params = {
                 'tree': tree,
                 'path': path,
-                'from_q': query_text
             }
+            if request.values.get('no_from') != 'true':
+                params['from_q'] = query_text
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
