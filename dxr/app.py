@@ -169,7 +169,8 @@ def _search_json(query, tree, query_text, offset, limit, config):
         # If we're asked to redirect and there's a single result, redirect to the result.
         if (request.values.get('redirect') == 'true' and
             count_and_results['result_count'] == 1):
-            _, path, [(line, _)] = count_and_results['results'].next()
+            _, path, line = next(count_and_results['results'])
+            line = line[0][0] if line else None
             params = {
                 'tree': tree,
                 'path': path,
