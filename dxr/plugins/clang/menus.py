@@ -200,60 +200,57 @@ class NamespaceAliasRef(_QualnameRef):
                'icon': 'reference'}
 
 
-class FunctionRef(_RefWithDefinition):
+class FunctionRef(_ClangRef):
     """Ref for function definitions or references"""
 
-    def menu_items(self):
-        """Return a jump-to-definition menu item along with whatever others
-        _more_menu_items() returns.
+    @classmethod
+    def from_condensed(cls, tree, prop):
+        # We ignore the def location clang gives us since it can be wrong, but
+        # its existence means this ref isn't itself a def.
+        search_for_def = prop.get('defloc') is not None
+        return cls(tree,
+                   (search_for_def, prop['qualname'],
+                    'has_overriddens' in prop, 'has_overrides' in prop),
+                   qualname=prop['qualname'])
 
-        """
-        path = self.menu_data[0]
-        if path is None:
-            menu = []
-        else:
-            # We get here when the defloc lies inside the source tree, but for
-            # function refs the defloc can be wrong: defloc may point to the
-            # function declaration instead of the definition if the definition
-            # lies outside the translation unit of the ref.  That means the
-            # query below will return 0 results if the defloc is inside and the
-            # actual def is outside the source tree, and conversely this menu
-            # won't be displayed (even though it should be) if the defloc is
-            # outside and the actual def is inside the source tree.
+    def menu_items(self):
+        search_for_def, qualname = self.menu_data[:2]
+        if search_for_def:
             menu = [{'html': "Jump to definition",
                      'title': "Jump to definition",
                      'href': url_for('.search', tree=self.tree.name,
-                                     q='+function:"' + self.menu_data[2] + '"',
+                                     q="+function:%s" % quote(qualname),
                                      redirect='true',
                                      no_from='true'),
                      'icon': 'jump'}]
-        menu.extend(self._more_menu_items(self.menu_data[2:]))
+        else:
+            menu = []
+        menu.extend(self._more_menu_items())
         return menu
 
-    @classmethod
-    def _condensed_menu_data(cls, tree, prop):
-        return prop['qualname'], 'has_overriddens' in prop, 'has_overrides' in prop
-
-    def _more_menu_items(self, (qualname, has_overriddens, has_overrides)):
+    def _more_menu_items(self):
+        qualname, has_overriddens, has_overrides = self.menu_data[1:]
+        qualname = quote(qualname)
+        tree = self.tree.name
         yield {'html': "Find declarations",
                'title': "Find declarations of this function",
-               'href': search_url(self.tree.name, "+function-decl:%s" % quote(qualname)),
+               'href': search_url(tree, "+function-decl:%s" % qualname),
                'icon': 'reference'}
         yield {'html': "Find callers",
                'title': "Find functions that call this function",
-               'href': search_url(self.tree.name, "+callers:%s" % quote(qualname)),
+               'href': search_url(tree, "+callers:%s" % qualname),
                'icon': 'method'}
         yield {'html': "Find references",
                'title': "Find references to this function",
-               'href': search_url(self.tree.name, "+function-ref:%s" % quote(qualname)),
+               'href': search_url(tree, "+function-ref:%s" % qualname),
                'icon': 'reference'}
         if has_overriddens:
             yield {'html': "Find overridden",
                    'title': "Find functions that this function overrides",
-                   'href': search_url(self.tree.name, "+overridden:%s" % quote(qualname)),
+                   'href': search_url(tree, "+overridden:%s" % qualname),
                    'icon': 'method'}
         if has_overrides:
             yield {'html': "Find overrides",
                    'title': "Find overrides of this function",
-                   'href': search_url(self.tree.name, "+overrides:%s" % quote(qualname)),
+                   'href': search_url(tree, "+overrides:%s" % qualname),
                    'icon': 'method'}
