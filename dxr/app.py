@@ -149,8 +149,23 @@ def search(tree):
 
 def _search_json(query, tree, query_text, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
-    then return {redirect: hit location}.If that doesn't work, fall back to a normal search
-    and return the results as JSON."""
+    then return {redirect: hit location}. If that doesn't work, fall back to a normal
+    search, and if that yields a single result then return {redirect: hit location},
+    otherwise return the results as JSON.
+
+    There are several querystring parameters controlling the behavior of jumping to
+    results now:
+        * 'from=query' indicates a direct_result result and comes with a bubble giving the
+          option to switch to all results instead.
+        * 'from_q=query' indicates a unique search result and comes with a bubble
+          indicating as much.
+    We only redirect to a direct/unique result if the original query contained a
+    'redirect=true' parameter, which the user can elicit by hitting enter on the query
+    input.  In addition, the info bubble and the from_q parameters normally associated with
+    a unique search result can be silenced by including a 'no_from=true' parameter in the
+    initial query string (that's so we can use a query to load a page without letting
+    on that the result came from a query).
+        """
 
     # If we're asked to redirect and have a direct hit, then return the url to that.
     if request.values.get('redirect') == 'true':
