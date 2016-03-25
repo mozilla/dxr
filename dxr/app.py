@@ -510,7 +510,10 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
                            doc.get('annotations', []) + skim_annotations)
                           for doc, tags_in_line, offset, skim_annotations
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
-                'sections': sidebar_links(links + skim_links)}))
+                'sections': sidebar_links(links + skim_links),
+                'query': request.args.get('from') or request.args.get('from_q') or '',
+                'bubble': ('direct' if request.args.get('from') else
+                           'single' if request.args.get('from_q') else None)}))
 
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
