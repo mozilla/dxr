@@ -144,20 +144,33 @@ class MacroRefTitleTests(CSingleFileTestCase):
     source = r"""
 #define SD \
  int s;\
- int d;
+ int d
 
-SD //
+SD;
+
+#define ADD(x, y)  ((x) + (y))
+
+int c = ADD(0, 0);
         """ + MINIMAL_MAIN
 
     def test_macro_titles(self):
         """Test that a ref to a macro gets a title tooltip containing the
         definition of the macro, and that the macro def doesn't get a title.
-        Also make sure the macro tooltip skips the macro's leading whitespace
-        up to and including an initial backslash newline.
+
+        Also make sure the macro tooltip for a macro without args skips the
+        macro's leading whitespace up to and including an initial backslash
+        newline.
 
         """
         markup = self.source_page('main.cpp')
-        # The SD ref link is followed by the '<' of the comment markup.
-        ok_('title=" int s;\\\n int d;">SD</a> <' in markup, msg=markup)
-        # The SD def shouldn't get a title.
+        # Check that the SD ref gets a title.  Also since SD has no arguments,
+        # we skip whitespace up to and including the initial backslash newline.
+        ok_('title=" int s;\\\n int d">SD</a>;' in markup, msg=markup)
+        # The SD def doesn't get a title.
         ok_('title=" int s;\\\n int d;">SD</a> \\' not in markup)
+
+    def test_macro_title_args(self):
+        """Test that a macro with args gets the args included in the tooltip."""
+        markup = self.source_page('main.cpp')
+        # We include everything starting from the opening '(' of the arguments.
+        ok_('title="(x, y)  ((x) + (y))">ADD</a>(0, 0);' in markup, msg=markup)
