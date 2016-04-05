@@ -1,5 +1,9 @@
 from os.path import splitext
 
+from funcy import ichunks
+from binaryornot.helpers import is_binary_string
+from chardet.universaldetector import UniversalDetector
+
 
 def icon(path):
     """Return the basename (no extension) of the icon file to use for a path."""
@@ -7,9 +11,33 @@ def icon(path):
     return ext_map.get(ext[1:], 'unknown')
 
 
-def is_text(data):
-    # Simple stupid test that apparently works rather well :)
-    return '\0' not in data
+def decode_data(data, encoding_guess):
+    """Given str data, return an (is_text, data) tuple, where data is returned
+    as unicode if we think it's text and were able to determine an encoding for
+    it."""
+    if not is_binary_string(data[:1024]):
+        try:
+            # Try our default encoding.
+            data = data.decode(encoding_guess)
+            return True, data
+        except UnicodeDecodeError:
+            # Fall back to chardet - chardet is really slow, which is why we
+            # don't just do chardet from the start.
+            detector = UniversalDetector()
+            for chunk in ichunks(80, data):
+                detector.feed(chunk)
+                if detector.done:
+                    break
+            detector.close()
+            if detector.result['encoding']:
+                try:
+                    data = data.decode(detector.result['encoding'])
+                    return True, data
+                except (UnicodeDecodeError, LookupError):
+                    # Either we couldn't decode or chardet gave us an encoding
+                    # that python doesn't recognize (yes, it can do that).
+                    pass  # Leave data as str.
+    return False, data
 
 
 def is_binary_image(path):

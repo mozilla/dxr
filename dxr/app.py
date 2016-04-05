@@ -24,7 +24,7 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
-from dxr.mime import icon, is_binary_image, is_text
+from dxr.mime import icon, is_binary_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
@@ -493,24 +493,17 @@ def rev(tree, revision, path):
     abs_path = join(tree_config.source_folder, path)
     contents = file_contents_at_rev(abs_path, revision)
     if contents is not None:
-        if is_text(contents):
-            try:
-                contents = contents.decode(tree_config.source_encoding)
-                is_binary = False
-            except UnicodeDecodeError:
-                # Undecodable text is treated as binary.
-                contents = ''
-                is_binary = True
-        else:  # binary
+        is_text, contents = decode_data(contents, tree_config.source_encoding)
+        if not is_text:
+            # Undecodable text is treated as binary.
             contents = ''
-            is_binary = True
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
                             [{'content': line} for line in contents.splitlines(True)],
                             {},
                             config,
-                            is_binary,
+                            not is_text,
                             contents=contents)
     else:
         raise NotFound
