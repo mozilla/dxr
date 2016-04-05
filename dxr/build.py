@@ -31,7 +31,7 @@ from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_w
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import is_text, icon
+from dxr.mime import decode_data, icon
 from dxr.query import filter_menu_items
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
@@ -369,17 +369,10 @@ def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex
 
     """
     # Read the binary contents of the file.
-    # If mime.is_text() says it's text, try to decode it using encoding_guess.
-    # If that works, return the resulting unicode.
-    # Otherwise, return the binary string.
     with open(path, 'rb') as source_file:
         contents = source_file.read()  # always str
-    if is_text(contents):
-        try:
-            contents = contents.decode(encoding_guess)
-        except UnicodeDecodeError:
-            pass  # Leave contents as str.
-    return contents
+    _, contents = decode_data(contents, encoding_guess)
+    return contents  # unicode if we were able to decode, str if not
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
