@@ -4,7 +4,7 @@ import subprocess
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
 from nose import SkipTest
-from nose.tools import ok_
+from nose.tools import ok_, eq_
 
 
 class MercurialTests(DxrInstanceTestCaseMakeFirst):
@@ -46,4 +46,4 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
         response = self.client().get('/code/source/Colon: name')
         ok_('/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon:%20name" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
         response = self.client().get('/code/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon: name')
-        ok_(response.status_code, 200)
+        eq_(response.status_code, 200)
