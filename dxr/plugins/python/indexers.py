@@ -176,7 +176,7 @@ class FileToIndex(FileToIndexBase):
     def __init__(self, path, contents, plugin_name, tree, tree_analysis):
         """
         :arg tree_analysis: TreeAnalysisResult object with the results
-        from the post-build analysis.
+            from the post-build analysis.
 
         """
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)

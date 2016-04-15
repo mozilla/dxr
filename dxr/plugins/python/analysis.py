@@ -21,14 +21,13 @@ class TreeAnalysis(object):
         """Analyze the given paths.
 
         :arg python_path: Absolute path to the root folder where Python
-        modules for the tree are stored.
-
+            modules for the tree are stored.
         :arg source_folder: Absolute path to the root folder storing all the
-        files in the tree. Used to generate relative paths when emitting
-        warnings.
-
+            files in the tree. Used to generate relative paths when emitting
+            warnings.
         :arg paths: Iterable containing tuples of the form (path, encoding)
-        for each file that should be analyzed.
+            for each file that should be analyzed.
+
         """
         self.python_path = python_path
         self.source_folder = source_folder
@@ -105,11 +104,11 @@ class TreeAnalysis(object):
         inherits from in their canonical form.
 
         :arg seen: The set of normalized base class names already known.  Python
-        doesn't permit actual inheritance cycles, but we don't currently
-        distinguish between a locally defined name and a name from the built-in
-        namespace, so something like
-        'class DeprecationWarning(DeprecationWarning)' (with no import needed
-        for the built-in DeprecationWarning) would lead to a cycle.
+            doesn't permit actual inheritance cycles, but we don't currently
+            distinguish between a locally defined name and a name from the
+            built-in namespace, so something like
+            'class DeprecationWarning(DeprecationWarning)' (with no import
+            needed for the built-in DeprecationWarning) would lead to a cycle.
 
         """
         for base in self.base_classes[absolute_class_name]:
@@ -126,11 +125,11 @@ class TreeAnalysis(object):
         class in their canonical form.
 
         :arg seen: The set of normalized base class names already known.  Python
-        doesn't permit actual inheritance cycles, but we don't currently
-        distinguish between a locally defined name and a name from the built-in
-        namespace, so something like
-        'class DeprecationWarning(DeprecationWarning)' (with no import needed
-        for the built-in DeprecationWarning) would lead to a cycle.
+            doesn't permit actual inheritance cycles, but we don't currently
+            distinguish between a locally defined name and a name from the
+            built-in namespace, so something like
+            'class DeprecationWarning(DeprecationWarning)' (with no import
+            needed for the built-in DeprecationWarning) would lead to a cycle.
 
         """
         for derived in self.derived_classes[absolute_class_name]:

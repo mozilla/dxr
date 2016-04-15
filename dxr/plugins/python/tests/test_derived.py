@@ -1,5 +1,5 @@
 from textwrap import dedent
-import nose.tools
+from nose.tools import raises
 
 from dxr.plugins.python.tests import PythonSingleFileTestCase
 
@@ -84,7 +84,7 @@ class NameCycleTests(PythonSingleFileTestCase):
             'class <b>Oops</b>(UserWarning):'
             ])
 
-    @nose.tools.raises(AssertionError)  # remove this line when fixed
+    @raises(AssertionError)  # remove this line when fixed
     def test_inheritance_name_cycle_lookup_looping(self):
         """Make sure we don't find the wrong name (local vs. built-in) on
         base: and derived: searches when we have an inheritance name cycle.
