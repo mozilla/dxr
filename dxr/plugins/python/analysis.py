@@ -21,14 +21,13 @@ class TreeAnalysis(object):
         """Analyze the given paths.
 
         :arg python_path: Absolute path to the root folder where Python
-        modules for the tree are stored.
-
+            modules for the tree are stored.
         :arg source_folder: Absolute path to the root folder storing all the
-        files in the tree. Used to generate relative paths when emitting
-        warnings.
-
+            files in the tree. Used to generate relative paths when emitting
+            warnings.
         :arg paths: Iterable containing tuples of the form (path, encoding)
-        for each file that should be analyzed.
+            for each file that should be analyzed.
+
         """
         self.python_path = python_path
         self.source_folder = source_folder
@@ -79,7 +78,7 @@ class TreeAnalysis(object):
         # Compute which functions override other functions.
         for class_name, functions in self.class_functions.iteritems():
             functions = set(functions)
-            base_classes = self.get_base_classes(class_name)
+            base_classes = self.get_base_classes(class_name, set([class_name]))
 
             # For each base class, find the union of functions within
             # the current class and functions in the base; those are
@@ -100,26 +99,46 @@ class TreeAnalysis(object):
             for overridden_function in overridden_functions:
                 self.overridden_functions[overridden_function].append(function)
 
-    def get_base_classes(self, absolute_class_name):
+    def get_base_classes(self, absolute_class_name, seen):
         """Return a list of all the classes that the given class
         inherits from in their canonical form.
+
+        :arg seen: The set of normalized base class names already known.  Python
+            doesn't permit actual inheritance cycles, but we don't currently
+            distinguish between a locally defined name and a name from the
+            built-in namespace, so something like
+            'class DeprecationWarning(DeprecationWarning)' (with no import
+            needed for the built-in DeprecationWarning) would lead to a cycle.
 
         """
         for base in self.base_classes[absolute_class_name]:
             base = self.normalize_name(base)
-            yield base
-            for base_parent in self.get_base_classes(base):
-                yield base_parent
+            if base not in seen:
+                seen.add(base)
 
-    def get_derived_classes(self, absolute_class_name):
+                yield base
+                for base_parent in self.get_base_classes(base, seen):
+                    yield base_parent
+
+    def get_derived_classes(self, absolute_class_name, seen):
         """Return a list of all the classes that derive from the given
         class in their canonical form.
 
+        :arg seen: The set of normalized base class names already known.  Python
+            doesn't permit actual inheritance cycles, but we don't currently
+            distinguish between a locally defined name and a name from the
+            built-in namespace, so something like
+            'class DeprecationWarning(DeprecationWarning)' (with no import
+            needed for the built-in DeprecationWarning) would lead to a cycle.
+
         """
         for derived in self.derived_classes[absolute_class_name]:
-            yield derived
-            for derived_child in self.get_derived_classes(derived):
-                yield derived_child
+            if derived not in seen:
+                seen.add(derived)
+
+                yield derived
+                for derived_child in self.get_derived_classes(derived, seen):
+                    yield derived_child
 
     def normalize_name(self, absolute_local_name):
         """Given a local name, figure out the actual module that the
