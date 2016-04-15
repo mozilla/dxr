@@ -114,13 +114,15 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
             # bases: filters.
             class_name = self.get_class_name(node)
 
-            bases = self.tree_analysis.get_base_classes(class_name)
+            bases = self.tree_analysis.get_base_classes(class_name,
+                                                        set([class_name]))
             for qualname in bases:
                 self.yield_needle(needle_type='py_derived',
                                   name=local_name(qualname), qualname=qualname,
                                   start=start, end=end)
 
-            derived_classes = self.tree_analysis.get_derived_classes(class_name)
+            derived_classes = self.tree_analysis.get_derived_classes(class_name,
+                                                                     set([class_name]))
             for qualname in derived_classes:
                 self.yield_needle(needle_type='py_bases',
                                   name=local_name(qualname), qualname=qualname,
