@@ -309,7 +309,9 @@ def _browse_folder(tree, path, config):
         filter={'folder': path},
         sort=[{'is_folder': 'desc'}, 'name'],
         size=10000,
-        exclude=['raw_data'])
+        include=['name', 'modified', 'size', 'link', 'path', 'is_binary',
+                 'is_folder'])
+
     if not files_and_folders:
         raise NotFound
 

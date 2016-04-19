@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext, islink, realpath
+from os.path import relpath, splitext, islink, realpath, basename
 import re
 
 from flask import url_for
@@ -21,11 +21,11 @@ from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
 from dxr.utils import glob_to_regex
 
-__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
-           'RegexpFilter', 'IdFilter', 'RefFilter']
+__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FileFilter',
+           'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
 
 
-PATH_MAPPING = {  # path/to/a/folder/filename.cpp
+PATH_SEGMENT_MAPPING = {  # some portion of a path/to/a/folder/filename.cpp string
     'type': 'string',
     'index': 'not_analyzed',  # support JS source fetching & sorting & browse() lookups
     'fields': {
@@ -56,7 +56,11 @@ mappings = {
         },
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
-            'path': PATH_MAPPING,
+            'path': PATH_SEGMENT_MAPPING,  # path/to/a/folder/filename.cpp
+
+            # Basename of path for fast lookup.
+            # FILE filters query this. It supports globbing via JS regex script.
+            'file_name': PATH_SEGMENT_MAPPING,  # filename.cpp
 
             'ext': EXT_MAPPING,
 
@@ -119,7 +123,8 @@ mappings = {
             'enabled': False
         },
         'properties': {
-            'path': PATH_MAPPING,
+            'path': PATH_SEGMENT_MAPPING,
+            'file_name': PATH_SEGMENT_MAPPING,
             'ext': EXT_MAPPING,
             # TODO: After the query language refresh, use match_phrase_prefix
             # queries on non-globbed paths, analyzing them with the path
@@ -308,6 +313,26 @@ class PathFilter(Filter):
             raise BadTerm('Path globs need at least 3 literal characters in a row '
                           'for speed.')
 
+class FilenameFilter(Filter):
+    """Substring filter for file names"""
+    name = 'file'
+    domain = FILE
+    description = Markup('File to search within. <code>*</code>, '
+                         '<code>?</code>, and <code>[...]</code> act '
+                         'as shell wildcards.')
+
+    @negatable
+    def filter(self):
+        glob = self._term['arg']
+        try:
+            return es_regex_filter(
+                regex_grammar.parse(glob_to_regex(glob)),
+                'file_name',
+                is_case_sensitive=self._term['case_sensitive'])
+        except NoTrigrams:
+            raise BadTerm('File globs need at least 3 literal characters in a '
+                          'row for speed.')
+
 
 class ExtFilter(Filter):
     """Case-sensitive filter for exact matching on file extensions"""
@@ -436,6 +461,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             # realpath will keep following symlinks until it gets to the 'real' thing.
             yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
+        yield 'file_name', basename(self.path)
         extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
