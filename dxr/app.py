@@ -269,12 +269,13 @@ def browse(tree, path=''):
             FILE,
             filter={'path': path},
             size=1,
-            include=['link', 'links'])
+            include=['link', 'links', 'is_binary'])
         if not files:
             raise NotFound
-        if 'link' in files[0]:
+        file_doc = files[0]
+        if 'link' in file_doc:
             # Then this path is a symlink, so redirect to the real thing.
-            return redirect(url_for('.browse', tree=tree, path=files[0]['link'][0]))
+            return redirect(url_for('.browse', tree=tree, path=file_doc['link'][0]))
 
         lines = filtered_query(
             frozen['es_alias'],
@@ -288,7 +289,9 @@ def browse(tree, path=''):
         for doc in lines:
             doc['content'] = doc['content'][0]
 
-        return _browse_file(tree, path, lines, files[0], config, frozen['generated_date'])
+        return _browse_file(tree, path, lines, file_doc, config,
+                            file_doc.get('is_binary', [False])[0],
+                            frozen['generated_date'])
 
 
 def _browse_folder(tree, path, config):
@@ -392,7 +395,8 @@ def _build_common_file_template(tree, path, date, config):
     }
 
 
-def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=None):
+def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
+                 date=None, contents=None):
     """Return a rendered page displaying a source file.
 
     :arg string tree: name of tree on which file is found
@@ -401,6 +405,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
         where the `content` field is dereferenced
     :arg file_doc: the FILE document as defined in core.py
     :arg config: TreeConfig object of this tree
+    :arg is_binary: Whether file is binary or not
     :arg date: a formatted string representing the generated date, default to now
     :arg string contents: the contents of the source file, defaults to joining
         the `content` field of all line_docs
@@ -427,7 +432,14 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
         return render_template(
             'image_file.html',
             **common)
-    else:  # We don't allow browsing binary files, so this must be a text file.
+    elif is_binary:
+        return render_template(
+            'text_file.html',
+            **merge(common, {
+                'lines': [],
+                'is_binary': True,
+                'sections': sidebar_links(links)}))
+    else:
         # We concretize the lines into a list because we iterate over it multiple times
         lines = [doc['content'] for doc in line_docs]
         if not contents:
@@ -466,7 +478,6 @@ def _browse_file(tree, path, line_docs, file_doc, config, date=None, contents=No
                            doc.get('annotations', []) + skim_annotations)
                           for doc, tags_in_line, offset, skim_annotations
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
-                'is_text': True,
                 'sections': sidebar_links(links + skim_links)}))
 
 
@@ -479,14 +490,25 @@ def rev(tree, revision, path):
     tree_config = config.trees[tree]
     abs_path = join(tree_config.source_folder, path)
     contents = file_contents_at_rev(abs_path, revision)
-    if contents is not None and is_text(contents):
-        contents = contents.decode(tree_config.source_encoding)
+    if contents is not None:
+        if is_text(contents):
+            try:
+                contents = contents.decode(tree_config.source_encoding)
+                is_binary = False
+            except UnicodeDecodeError:
+                # Undecodable text is treated as binary.
+                contents = ''
+                is_binary = True
+        else:  # binary
+            contents = ''
+            is_binary = True
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
                             [{'content': line} for line in contents.splitlines(True)],
                             {},
                             config,
+                            is_binary,
                             contents=contents)
     else:
         raise NotFound

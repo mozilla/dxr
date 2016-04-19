@@ -45,7 +45,12 @@ class BinaryFileTests(DxrInstanceTestCase):
 
     def test_some_bytes_not_searchable(self):
         """We want some_bytes to show on search page, but not be clickable."""
-        response = self.client().get('/code/search?q=path%3Asome_bytes&redirect=true')
+        response = self.client().get('/code/search?q=path%3Asome_bytes')
         ok_('some_bytes' in response.data)
         ok_('href="/code/source/some_bytes"' not in response.data)
 
+    def test_some_bytes_sourceable(self):
+        """Make sure some_bytes gets a /source/ page that shows "(binary
+        file)"."""
+        response = self.client().get('/code/source/some_bytes')
+        ok_('(binary file)' in response.data)
