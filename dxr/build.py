@@ -27,7 +27,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
 import dxr
 from dxr.app import make_app
 from dxr.config import FORMAT
-from dxr.es import UNINDEXED_STRING, TREE, create_index_and_wait
+from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
@@ -98,14 +98,8 @@ def deploy_tree(tree, es, index_name):
                             'enabled': False
                         },
                         'properties': {
-                            'name': {
-                                'type': 'string',
-                                'index': 'not_analyzed'
-                            },
-                            'format': {
-                                'type': 'string',
-                                'index': 'not_analyzed'
-                            },
+                            'name': UNANALYZED_STRING,
+                            'format': UNANALYZED_STRING,
                             # In case es_alias changes in the conf file:
                             'es_alias': UNINDEXED_STRING,
                             # Needed so new trees or edited descriptions can show

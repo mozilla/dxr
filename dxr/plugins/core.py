@@ -10,7 +10,8 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
+from dxr.es import (UNINDEXED_STRING, UNANALYZED_STRING, UNINDEXED_INT,
+                    UNINDEXED_LONG)
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -41,12 +42,6 @@ PATH_SEGMENT_MAPPING = {  # some portion of a path/to/a/folder/filename.cpp stri
 }
 
 
-EXT_MAPPING = {
-    'type': 'string',
-    'index': 'not_analyzed'
-}
-
-
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
@@ -62,24 +57,17 @@ mappings = {
             # FILE filters query this. It supports globbing via JS regex script.
             'file_name': PATH_SEGMENT_MAPPING,  # filename.cpp
 
-            'ext': EXT_MAPPING,
+            'ext': UNANALYZED_STRING,
 
-            'link': {  # the target path if this FILE is a symlink
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            # the target path if this FILE is a symlink
+            'link': UNANALYZED_STRING,
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
-            'folder': {  # path/to/a/folder
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            'folder': UNANALYZED_STRING,  # path/to/a/folder
 
-            'name': {  # filename.cpp or leaf_folder (for sorting and display)
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            # filename.cpp or leaf_folder (for sorting and display)
+            'name': UNANALYZED_STRING,
             'size': UNINDEXED_INT,  # bytes. not present for folders.
             'modified': {  # not present for folders
                 'type': 'date',
@@ -125,7 +113,7 @@ mappings = {
         'properties': {
             'path': PATH_SEGMENT_MAPPING,
             'file_name': PATH_SEGMENT_MAPPING,
-            'ext': EXT_MAPPING,
+            'ext': UNANALYZED_STRING,
             # TODO: After the query language refresh, use match_phrase_prefix
             # queries on non-globbed paths, analyzing them with the path
             # analyzer, for max perf. Perfect! Otherwise, fall back to trigram-
