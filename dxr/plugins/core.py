@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext, islink, realpath, basename
+from os.path import relpath, splitext, realpath, basename
 import re
 
 from flask import url_for
@@ -22,7 +22,7 @@ from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
 from dxr.utils import glob_to_regex
 
-__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FileFilter',
+__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter',
            'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
 
 
@@ -276,7 +276,26 @@ class TextFilter(Filter):
                            maybe_lower(self._term['arg'])))
 
 
-class PathFilter(Filter):
+class _PathSegmentFilterBase(Filter):
+    """A base class for a filter that matches a glob against a path segment."""
+    domain = FILE
+
+    def _regex_filter(self, path_seg_property_name, no_trigrams_error_text):
+        """Return an ES regex filter that matches this filter's glob against the
+        path segment at path_seg_property_name.
+
+        """
+        glob = self._term['arg']
+        try:
+            return es_regex_filter(
+                regex_grammar.parse(glob_to_regex(glob)),
+                path_seg_property_name,
+                is_case_sensitive=self._term['case_sensitive'])
+        except NoTrigrams:
+            raise BadTerm(no_trigrams_error_text)
+
+
+class PathFilter(_PathSegmentFilterBase):
     """Substring filter for paths
 
     Pre-ES parity dictates that this simply searches for paths that have the
@@ -284,42 +303,29 @@ class PathFilter(Filter):
 
     """
     name = 'path'
-    domain = FILE
     description = Markup('File or directory sub-path to search within. <code>*'
                          '</code>, <code>?</code>, and <code>[...]</code> act '
                          'as shell wildcards.')
 
     @negatable
     def filter(self):
-        glob = self._term['arg']
-        try:
-            return es_regex_filter(
-                regex_grammar.parse(glob_to_regex(glob)),
-                'path',
-                is_case_sensitive=self._term['case_sensitive'])
-        except NoTrigrams:
-            raise BadTerm('Path globs need at least 3 literal characters in a row '
-                          'for speed.')
+        return self._regex_filter('path',
+                                  'Path globs need at least 3 literal '
+                                  'characters in a row for speed.')
 
-class FilenameFilter(Filter):
+
+class FilenameFilter(_PathSegmentFilterBase):
     """Substring filter for file names"""
     name = 'file'
-    domain = FILE
     description = Markup('File to search within. <code>*</code>, '
-                         '<code>?</code>, and <code>[...]</code> act '
-                         'as shell wildcards.')
+                         '<code>?</code>, and <code>[...]</code> act as shell '
+                         'wildcards.')
 
     @negatable
     def filter(self):
-        glob = self._term['arg']
-        try:
-            return es_regex_filter(
-                regex_grammar.parse(glob_to_regex(glob)),
-                'file_name',
-                is_case_sensitive=self._term['case_sensitive'])
-        except NoTrigrams:
-            raise BadTerm('File globs need at least 3 literal characters in a '
-                          'row for speed.')
+        return self._regex_filter('file_name',
+                                  'File globs need at least 3 literal '
+                                  'characters in a row for speed.')
 
 
 class ExtFilter(Filter):
