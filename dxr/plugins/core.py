@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from itertools import chain
-from os.path import relpath, splitext, islink, realpath
+from os.path import relpath, splitext, realpath, basename
 import re
 
 from flask import url_for
@@ -10,7 +10,8 @@ from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
-from dxr.es import UNINDEXED_STRING, UNINDEXED_INT, UNINDEXED_LONG
+from dxr.es import (UNINDEXED_STRING, UNANALYZED_STRING, UNINDEXED_INT,
+                    UNINDEXED_LONG)
 from dxr.exceptions import BadTerm
 from dxr.filters import Filter, negatable, FILE, LINE
 import dxr.indexers
@@ -21,11 +22,11 @@ from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
 from dxr.utils import glob_to_regex
 
-__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'ExtFilter',
-           'RegexpFilter', 'IdFilter', 'RefFilter']
+__all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter',
+           'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
 
 
-PATH_MAPPING = {  # path/to/a/folder/filename.cpp
+PATH_SEGMENT_MAPPING = {  # some portion of a path/to/a/folder/filename.cpp string
     'type': 'string',
     'index': 'not_analyzed',  # support JS source fetching & sorting & browse() lookups
     'fields': {
@@ -41,12 +42,6 @@ PATH_MAPPING = {  # path/to/a/folder/filename.cpp
 }
 
 
-EXT_MAPPING = {
-    'type': 'string',
-    'index': 'not_analyzed'
-}
-
-
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
@@ -56,26 +51,23 @@ mappings = {
         },
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
-            'path': PATH_MAPPING,
+            'path': PATH_SEGMENT_MAPPING,  # path/to/a/folder/filename.cpp
 
-            'ext': EXT_MAPPING,
+            # Basename of path for fast lookup.
+            # FILE filters query this. It supports globbing via JS regex script.
+            'file_name': PATH_SEGMENT_MAPPING,  # filename.cpp
 
-            'link': {  # the target path if this FILE is a symlink
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            'ext': UNANALYZED_STRING,
+
+            # the target path if this FILE is a symlink
+            'link': UNANALYZED_STRING,
 
             # Folder listings query by folder and then display filename, size,
             # and mod date.
-            'folder': {  # path/to/a/folder
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            'folder': UNANALYZED_STRING,  # path/to/a/folder
 
-            'name': {  # filename.cpp or leaf_folder (for sorting and display)
-                'type': 'string',
-                'index': 'not_analyzed'
-            },
+            # filename.cpp or leaf_folder (for sorting and display)
+            'name': UNANALYZED_STRING,
             'size': UNINDEXED_INT,  # bytes. not present for folders.
             'modified': {  # not present for folders
                 'type': 'date',
@@ -119,8 +111,9 @@ mappings = {
             'enabled': False
         },
         'properties': {
-            'path': PATH_MAPPING,
-            'ext': EXT_MAPPING,
+            'path': PATH_SEGMENT_MAPPING,
+            'file_name': PATH_SEGMENT_MAPPING,
+            'ext': UNANALYZED_STRING,
             # TODO: After the query language refresh, use match_phrase_prefix
             # queries on non-globbed paths, analyzing them with the path
             # analyzer, for max perf. Perfect! Otherwise, fall back to trigram-
@@ -283,7 +276,26 @@ class TextFilter(Filter):
                            maybe_lower(self._term['arg'])))
 
 
-class PathFilter(Filter):
+class _PathSegmentFilterBase(Filter):
+    """A base class for a filter that matches a glob against a path segment."""
+    domain = FILE
+
+    def _regex_filter(self, path_seg_property_name, no_trigrams_error_text):
+        """Return an ES regex filter that matches this filter's glob against the
+        path segment at path_seg_property_name.
+
+        """
+        glob = self._term['arg']
+        try:
+            return es_regex_filter(
+                regex_grammar.parse(glob_to_regex(glob)),
+                path_seg_property_name,
+                is_case_sensitive=self._term['case_sensitive'])
+        except NoTrigrams:
+            raise BadTerm(no_trigrams_error_text)
+
+
+class PathFilter(_PathSegmentFilterBase):
     """Substring filter for paths
 
     Pre-ES parity dictates that this simply searches for paths that have the
@@ -291,22 +303,29 @@ class PathFilter(Filter):
 
     """
     name = 'path'
-    domain = FILE
     description = Markup('File or directory sub-path to search within. <code>*'
                          '</code>, <code>?</code>, and <code>[...]</code> act '
                          'as shell wildcards.')
 
     @negatable
     def filter(self):
-        glob = self._term['arg']
-        try:
-            return es_regex_filter(
-                regex_grammar.parse(glob_to_regex(glob)),
-                'path',
-                is_case_sensitive=self._term['case_sensitive'])
-        except NoTrigrams:
-            raise BadTerm('Path globs need at least 3 literal characters in a row '
-                          'for speed.')
+        return self._regex_filter('path',
+                                  'Path globs need at least 3 literal '
+                                  'characters in a row for speed.')
+
+
+class FilenameFilter(_PathSegmentFilterBase):
+    """Substring filter for file names"""
+    name = 'file'
+    description = Markup('File to search within. <code>*</code>, '
+                         '<code>?</code>, and <code>[...]</code> act as shell '
+                         'wildcards.')
+
+    @negatable
+    def filter(self):
+        return self._regex_filter('file_name',
+                                  'File globs need at least 3 literal '
+                                  'characters in a row for speed.')
 
 
 class ExtFilter(Filter):
@@ -436,6 +455,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             # realpath will keep following symlinks until it gets to the 'real' thing.
             yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
         yield 'path', self.path
+        yield 'file_name', basename(self.path)
         extension = splitext(self.path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
