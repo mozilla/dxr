@@ -256,6 +256,9 @@ public:
     }
 
     if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d)) {
+      // If you don't use the canonical decl you can get different param strings
+      // depending on which ref you're querying (which is bad).
+      fd = fd->getCanonicalDecl();
       // This is a function.  getQualifiedNameAsString will return a string
       // like "ANamespace::AFunction".  To this we append the list of parameters
       // so that we can distinguish correctly between
