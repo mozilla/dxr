@@ -139,7 +139,11 @@ private:
   std::ostream *out;
   std::map<std::string, FileInfoPtr> relmap;
   LangOptions &features;
+#if CLANG_AT_LEAST(3, 6)
+  std::unique_ptr<DiagnosticConsumer> inner;
+#else
   DiagnosticConsumer *inner;
+#endif
   static std::string tmpdir;  // Place to save all the csv files to
 
   const FileInfoPtr &getFileInfo(const std::string &filename) {
@@ -173,7 +177,11 @@ public:
 
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
+#if CLANG_AT_LEAST(3, 6)
+    ci.getPreprocessor().addPPCallbacks(std::unique_ptr<PPCallbacks>(new PreprocThunk(this)));
+#else
     ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
+#endif
   }
 
 #if CLANG_AT_LEAST(3, 3)
@@ -1241,9 +1249,15 @@ void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
 // Our plugin entry point.
 class DXRIndexAction : public PluginASTAction {
 protected:
+#if CLANG_AT_LEAST(3, 6)
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                 llvm::StringRef f) override {
+    return std::unique_ptr<ASTConsumer>(new IndexConsumer(CI));
+#else
   ASTConsumer *CreateASTConsumer(CompilerInstance &CI,
                                  llvm::StringRef f) override {
     return new IndexConsumer(CI);
+#endif
   }
 
   bool ParseArgs(const CompilerInstance &CI,
