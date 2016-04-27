@@ -141,6 +141,7 @@ private:
   LangOptions &features;
   DiagnosticConsumer *inner;
   static std::string tmpdir;  // Place to save all the csv files to
+  PrintingPolicy printPolicy;
 
   const FileInfoPtr &getFileInfo(const std::string &filename) {
     std::map<std::string, FileInfoPtr>::iterator it;
@@ -169,11 +170,19 @@ private:
   }
 public:
   IndexConsumer(CompilerInstance &ci)
-    : ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()) {
+    : ci(ci), sm(ci.getSourceManager()), features(ci.getLangOpts()),
+      printPolicy(features) {
 
     inner = ci.getDiagnostics().takeClient();
     ci.getDiagnostics().setClient(this, false);
     ci.getPreprocessor().addPPCallbacks(new PreprocThunk(this));
+    // We have a bool type, so print "bool" instead of "_Bool" when we print
+    // types.
+    printPolicy.Bool = true;
+    // Print just 'mytype' instead of 'class mytype' or 'enum mytype' etc.;
+    // the tag doesn't help us and probably makes it harder to craft
+    // handwritten queries.
+    printPolicy.SuppressTagKeyword = true;
   }
 
 #if CLANG_AT_LEAST(3, 3)
@@ -256,9 +265,6 @@ public:
     }
 
     if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d)) {
-      // If you don't use the canonical decl you can get different param strings
-      // depending on which ref you're querying (which is bad).
-      fd = fd->getCanonicalDecl();
       // This is a function.  getQualifiedNameAsString will return a string
       // like "ANamespace::AFunction".  To this we append the list of parameters
       // so that we can distinguish correctly between
@@ -266,13 +272,16 @@ public:
       //    and
       // void ANamespace::AFunction(float);
       ret += "(";
+      // Use the canonical decl - otherwise you can get different param strings
+      // depending on the location of your decl (which is bad).
+      fd = fd->getCanonicalDecl();
       const FunctionType *ft = fd->getType()->castAs<FunctionType>();
       if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft)) {
         unsigned num_params = fd->getNumParams();
         for (unsigned i = 0; i < num_params; ++i) {
           if (i)
             ret += ", ";
-          ret += fd->getParamDecl(i)->getType().getAsString();
+          ret += fd->getParamDecl(i)->getType().getAsString(printPolicy);
         }
 
         if (fpt->isVariadic()) {
@@ -494,15 +503,15 @@ public:
       std::string functionQualName = getQualifiedName(*d);
       recordValue("qualname", functionQualName);
 #if CLANG_AT_LEAST(3, 5)
-      recordValue("type", d->getCallResultType().getAsString());
+      recordValue("type", d->getCallResultType().getAsString(printPolicy));
 #else
-      recordValue("type", d->getResultType().getAsString());
+      recordValue("type", d->getResultType().getAsString(printPolicy));
 #endif
       std::string args("(");
       for (FunctionDecl::param_iterator it = d->param_begin();
           it != d->param_end(); it++) {
         args += ", ";
-        args += (*it)->getType().getAsString();
+        args += (*it)->getType().getAsString(printPolicy);
       }
       if (d->getNumParams() > 0)
         args.erase(1, 2);
@@ -618,7 +627,7 @@ public:
       recordValue("qualname", getQualifiedName(*d));
       recordValue("loc", locationToString(location));
       recordValue("locend", locationToString(afterToken(location)));
-      recordValue("type", d->getType().getAsString(), true);
+      recordValue("type", d->getType().getAsString(printPolicy), true);
       const std::string &value = getValueForValueDecl(d);
       if (!value.empty())
         recordValue("value", value, true);

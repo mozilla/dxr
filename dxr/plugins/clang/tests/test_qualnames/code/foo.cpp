@@ -8,3 +8,4 @@ void f_class(t_class ) {}
 void f_enum_class(const t_enum_class * const ) {}
 void f_template(t_template<fur> ) {}
 void sonic::f_typedef(streamOfInts ) {} // (This one has always worked.)
+void f_bool(bool ) {}

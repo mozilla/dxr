@@ -9,4 +9,5 @@ int main() {
   f_enum_class(&oversized_feature);
   f_template(t_template<fur>());
   f_typedef(streamOfInts());
+  f_bool(true);
 }

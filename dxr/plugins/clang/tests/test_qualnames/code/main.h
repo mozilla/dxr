@@ -20,3 +20,4 @@ void f_typedef(streamOfInts ); // (This one has always worked.)
 class fur {};
 } // namespace sonic
 void f_template(t_template<sonic::fur> );
+void f_bool(bool );

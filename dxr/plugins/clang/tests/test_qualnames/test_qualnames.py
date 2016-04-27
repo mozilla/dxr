@@ -70,3 +70,11 @@ class ConsistencyTests(DxrInstanceTestCase):
                              'sonic::f_typedef(streamOfInts)',
                              '<b>f_typedef(streamOfInts())</b>;',
                              11)
+
+    def test_bool_qualname_consistency(self):
+        """Test that we're using 'bool' instead of '_Bool' for all of our
+        bool parameter names."""
+        self._qualname_check('f_bool',
+                             'f_bool(bool)',
+                             '<b>f_bool(true)</b>;',
+                             12)
