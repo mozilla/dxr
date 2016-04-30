@@ -16,7 +16,7 @@ from uuid import uuid1
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
-from funcy import merge, chunks, first, suppress
+from funcy import merge, ichunks, first, suppress
 import jinja2
 from more_itertools import chunked
 from ordereddict import OrderedDict
@@ -600,9 +600,9 @@ def index_files(tree, tree_indexers, index, pool, es):
 
     def path_chunks(tree):
         """Return an iterable of worker-sized iterables of paths."""
-        return chunks(500, unignored(tree.source_folder,
-                                     tree.ignore_paths,
-                                     tree.ignore_filenames))
+        return ichunks(500, unignored(tree.source_folder,
+                                      tree.ignore_paths,
+                                      tree.ignore_filenames))
 
     index_folders(tree, index, es)
 
