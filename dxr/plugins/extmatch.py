@@ -17,6 +17,7 @@ from dxr.utils import browse_file_url
 # A tuple of extensions along with a title describing the type of extensions:
 _TitledExts = namedtuple('_TitledExts', ['exts', 'title'])
 
+
 class TreeToIndex(TreeToIndexBase):
     def __init__(self, plugin_name, tree, vcs_cache):
         super(TreeToIndex, self).__init__(plugin_name, tree, vcs_cache)
@@ -30,6 +31,7 @@ class TreeToIndex(TreeToIndexBase):
                            self.plugin_name,
                            self.tree,
                            (self.header_exts, self.impl_exts))
+
 
 class FileToIndex(FileToIndexBase):
     def __init__(self, path, contents, plugin_name, tree, ext_pairings):
@@ -47,7 +49,7 @@ class FileToIndex(FileToIndexBase):
                 return self.ext_pairings[0]
             return _TitledExts((), '')
 
-        def is_unignored(path):
+        def is_indexed(path):
             if any(fnmatchcase(basename(path), e)
                        for e in self.tree.ignore_filenames):
                 return False
@@ -61,7 +63,7 @@ class FileToIndex(FileToIndexBase):
         for dual_ext in dual_exts.exts:
             dual_path = path_no_ext + dual_ext
             if (isfile(join(self.tree.source_folder, dual_path)) and
-                is_unignored(dual_path)):
+                is_indexed(dual_path)):
                 yield (4,
                        dual_exts.title,
                        [(icon(dual_path), basename(dual_path),
