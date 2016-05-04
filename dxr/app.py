@@ -173,9 +173,8 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
-                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
-                    'is_binary': is_binary}
-                   for icon, path, lines, is_binary in count_and_results['results']]
+                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
+                   for icon, path, lines in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
@@ -341,8 +340,7 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(f['modified']) if 'modified' in f else None,
              f.get('size'),
-             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]),
-             f.get('is_binary', [False])[0])
+             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
 
 
@@ -372,7 +370,7 @@ def skim_file(skimmers, num_lines):
     return links, refses, regionses, annotations_by_line
 
 
-def _build_common_file_template(tree, path, date, config):
+def _build_common_file_template(tree, path, is_binary, date, config):
     """Return a dictionary of the common required file template parameters.
     """
     return {
@@ -391,7 +389,7 @@ def _build_common_file_template(tree, path, date, config):
         # File template variables
         'paths_and_names': _linked_pathname(path, tree),
         'icon_url': url_for('.static',
-                            filename='icons/mimetypes/%s.png' % icon(path)),
+                            filename='icons/mimetypes/%s.png' % icon(path, is_binary)),
         'path': path,
         'name': basename(path)
     }
@@ -428,7 +426,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
         # time would always be used.
         date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
-    common = _build_common_file_template(tree, path, date, config)
+    common = _build_common_file_template(tree, path, is_binary, date, config)
     links = file_doc.get('links', [])
     if is_binary_image(path):
         return render_template(
@@ -573,7 +571,7 @@ def _icon_class_name(file_doc):
     """Return a string for the CSS class of the icon for file document."""
     if file_doc['is_folder']:
         return 'folder'
-    class_name = icon(file_doc['name'])
+    class_name = icon(file_doc['name'], file_doc.get('is_binary', [False])[0])
     # for small images, we can turn the image into icon via javascript
     # if bigger than the cutoff, we mark it as too big and don't do this
     if file_doc['size'] > current_app.dxr_config.max_thumbnail_size:
