@@ -379,14 +379,7 @@ def skim_file(skimmers, num_lines):
             refses.append(skimmer.refs())
             regionses.append(skimmer.regions())
             append_by_line(annotations_by_line, skimmer.annotations_by_line())
-    links = [{'order': order,
-              'heading': heading,
-              'items': [{'icon': icon,
-                         'title': title,
-                         'href': href}
-                        for icon, title, href in items]}
-             for order, heading, items in
-             chain.from_iterable(linkses)]
+    links = dictify_links(chain.from_iterable(linkses))
     return links, refses, regionses, annotations_by_line
 
 
@@ -416,7 +409,7 @@ def _build_common_file_template(tree, path, is_binary, date, config):
 
 
 def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
-                 date=None, contents=None, binary_image_rev=None):
+                 date=None, contents=None, image_rev=None):
     """Return a rendered page displaying a source file.
 
     :arg string tree: name of tree on which file is found
@@ -429,8 +422,8 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
     :arg date: a formatted string representing the generated date, default to now
     :arg string contents: the contents of the source file, defaults to joining
         the `content` field of all line_docs
-    :arg binary_image_rev: the revision number if we're browsing a binary image
-        at a particular revision
+    :arg image_rev: revision number of a textual or binary image, for images
+        displayed at a certain rev
     """
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
@@ -455,7 +448,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
             'image_file.html',
             **merge(common, {
                 'sections': sidebar_links(links),
-                'revision': binary_image_rev}))
+                'revision': image_rev}))
     elif is_binary:
         return render_template(
             'text_file.html',
@@ -472,6 +465,15 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
             contents = ''.join(lines)
         offsets = cumulative_sum(imap(len, lines))
         tree_config = config.trees[tree]
+        if is_textual_image(path) and image_rev:
+            # Add a link to view textual images on revs:
+            links.extend(dictify_links([
+                (4,
+                 'Image',
+                 [('svgview', 'View', url_for('.raw_rev',
+                                              tree=tree_config.name,
+                                              path=path,
+                                              revision=image_rev))])]))
         # Construct skimmer objects for all enabled plugins that define a
         # file_to_skim class.
         skimmers = [plugin.file_to_skim(path,
@@ -515,15 +517,18 @@ def rev(tree, revision, path):
     abs_path = join(tree_config.source_folder, path)
     contents = file_contents_at_rev(abs_path, revision)
     if contents is not None:
+        image_rev = None
         if is_binary_image(path):
             is_text = False
             contents = ''
-            binary_image_rev = revision
+            image_rev = revision
         else:
             is_text, contents = decode_data(contents, tree_config.source_encoding)
             if not is_text:
                 contents = ''
-            binary_image_rev = None
+            elif is_textual_image(path):
+                image_rev = revision
+
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
@@ -532,7 +537,7 @@ def rev(tree, revision, path):
                             config,
                             not is_text,
                             contents=contents,
-                            binary_image_rev=binary_image_rev)
+                            image_rev=image_rev)
     else:
         raise NotFound
 
@@ -623,3 +628,14 @@ def _request_wants_json():
     return (best == 'application/json' and
             request.accept_mimetypes[best] >
                     request.accept_mimetypes['text/html'])
+
+
+def dictify_links(links):
+    """Return a chain of order, heading, items links as a list of dicts."""
+    return [{'order': order,
+             'heading': heading,
+             'items': [{'icon': icon,
+                        'title': title,
+                        'href': href}
+                       for icon, title, href in items]}
+            for order, heading, items in links]

@@ -2,7 +2,7 @@ from nose.tools import ok_, eq_
 
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
-LATEST_REVISION = "dc3f18e9e05fdd5ba11f472c8115dc8ddc6ca25c"
+LATEST_REVISION = "9a943d9f121733d0beff4b04331747750f40614a"
 OLDER_REVISION = "cb339834998124cb8165aa35ed4635c51b6ac5c2"
 
 class GitTests(DxrInstanceTestCaseMakeFirst):
@@ -51,6 +51,13 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         response = self.client().get('/code/rev/%s/rev_circle.jpg' % LATEST_REVISION)
         ok_('src="/code/raw-rev/%s/rev_circle.jpg"' % LATEST_REVISION in response.data)
         response = self.client().get('/code/raw-rev/%s/rev_circle.jpg' % LATEST_REVISION)
+        eq_(response.status_code, 200)
+
+    def test_textual_image_permalink(self):
+        """Make sure we display an image link for textual image permalinks."""
+        response = self.client().get('/code/rev/%s/rev_circle.svg' % LATEST_REVISION)
+        ok_('href="/code/raw-rev/%s/rev_circle.svg"' % LATEST_REVISION in response.data)
+        response = self.client().get('/code/raw-rev/%s/rev_circle.svg' % LATEST_REVISION)
         eq_(response.status_code, 200)
 
     def test_deep_permalink(self):
