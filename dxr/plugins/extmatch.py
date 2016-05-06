@@ -14,15 +14,16 @@ from dxr.indexers import (FileToIndex as FileToIndexBase,
 from dxr.mime import icon
 from dxr.utils import browse_file_url
 
-# A tuple of extensions along with a title describing the type of extensions:
+
+# A list of extensions along with a title describing the type of extensions:
 _TitledExts = namedtuple('_TitledExts', ['exts', 'title'])
 
 
 class TreeToIndex(TreeToIndexBase):
     def __init__(self, plugin_name, tree, vcs_cache):
         super(TreeToIndex, self).__init__(plugin_name, tree, vcs_cache)
-        self.header_exts = _TitledExts(('.h', '.hpp', '.hxx'), 'Header')
-        self.impl_exts = _TitledExts(('.cpp', '.c', '.cc', '.cxx', '.mm'),
+        self.header_exts = _TitledExts(['.h', '.hxx', '.hpp'], 'Header')
+        self.impl_exts = _TitledExts(['.cpp', '.c', '.cc', '.cxx', '.mm'],
                                      'Implementation')
 
     def file_to_index(self, path, contents):
