@@ -343,22 +343,6 @@ def ensure_folder(folder, clean=False):
         makedirs(folder)
 
 
-def _unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
-    """Yield the folders from ``folders`` which are not ignored by the given
-    patterns and paths.
-
-    :arg source_path: Relative path to the source directory
-    :arg ignore_filenames: Filename-based globs to be ignored
-    :arg ignore_paths: Path-based globs to be ignored
-
-    """
-    for folder in folders:
-        if not any(fnmatchcase(folder, p) for p in ignore_filenames):
-            folder_path = '/' + join(source_path, folder).replace(os.sep, '/') + '/'
-            if not any(fnmatchcase(folder_path, p) for p in ignore_paths):
-                yield folder
-
-
 def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
     """Return the unicode contents of a file if we can figure out a decoding.
     Otherwise, return the contents as a string.
@@ -375,6 +359,70 @@ def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex
     return contents  # unicode if we were able to decode, str if not
 
 
+def unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
+    """Yield the folders from ``folders`` which are not ignored by the given
+    patterns and paths.
+
+    :arg source_path: Relative path to the source directory containing folders
+    :arg ignore_filenames: Filename-based globs to be ignored
+    :arg ignore_paths: Path-based globs to be ignored
+
+    """
+    for folder in folders:
+        if not any(fnmatchcase(folder, p) for p in ignore_filenames):
+            folder_path = '/' + join(source_path, folder).replace(os.sep, '/') + '/'
+            if not any(fnmatchcase(folder_path, p) for p in ignore_paths):
+                yield folder
+
+
+def unignored_files(files, source_path, ignore_filenames, ignore_paths):
+    """Yield the files from ``files`` which are not ignored by the given
+    patterns and paths.
+
+    :arg source_path: Relative path to the source directory containing files
+    :arg ignore_filenames: Filename-based globs to be ignored
+    :arg ignore_paths: Path-based globs to be ignored
+
+    """
+    for f in files:
+        if file_is_indexed(f, source_path, ignore_filenames, ignore_paths):
+            yield f
+
+
+def file_is_indexed(f, source_path, ignore_filenames, ignore_paths):
+    """Return True if file ``f`` is not ignored by the given patterns and paths.
+
+    :arg source_path: Relative path to the source directory containing file
+    :arg ignore_filenames: Filename-based globs to be ignored
+    :arg ignore_paths: Path-based globs to be ignored
+
+    """
+    # Ignore file if it matches an ignore pattern
+    if any(fnmatchcase(f, e) for e in ignore_filenames):
+        return False  # Ignore the file.
+
+    path = join(source_path, f)
+
+    # Ignore file if its path (relative to the root) matches an ignore path.
+    if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
+        return False  # Ignore the file.
+
+    return True  # This file is indexed.
+
+
+def path_is_indexed(path, ignore_filenames, ignore_paths):
+    """Return True if the file at ``path`` is not ignored by the given patterns
+    and paths.
+
+    :arg path: A file path relative to the root of a tree
+    :arg ignore_filenames: Filename-based globs to be ignored
+    :arg ignore_paths: Path-based globs to be ignored
+
+    """
+    source_path, f = split(path)
+    return file_is_indexed(f, source_path, ignore_filenames, ignore_paths)
+
+
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
     """Return an iterable of absolute paths to unignored source tree files or
     the folders that contain them.
@@ -388,7 +436,6 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
     def raise_(exc):
         raise exc
 
-    # TODO: Expose a lot of pieces of this as routines plugins can call.
     for root, folders, files in os.walk(folder, topdown=True, onerror=raise_):
         # Find relative path
         rel_path = relpath(root, folder)
@@ -396,23 +443,13 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
             rel_path = ''
 
         if not want_folders:
-            for f in files:
-                # Ignore file if it matches an ignore pattern
-                if any(fnmatchcase(f, e) for e in ignore_filenames):
-                    continue  # Ignore the file.
-
-                path = join(rel_path, f)
-
-                # Ignore file if its path (relative to the root) matches an
-                # ignore path.
-                if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
-                    continue  # Ignore the file.
-
+            for f in unignored_files(files, rel_path,
+                                     ignore_filenames, ignore_paths):
                 yield join(root, f)
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
-        folders[:] = _unignored_folders(
+        folders[:] = unignored_folders(
             folders, rel_path, ignore_filenames, ignore_paths)
         if want_folders:
             for f in folders:
