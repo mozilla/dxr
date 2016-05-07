@@ -282,6 +282,7 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
+            resultsLineCount = 0;
             if (!append) {
                 contentContainer
                     .empty()
@@ -418,8 +419,12 @@ $(function() {
                         previousDataLimit = limit;
                         dataOffset = 0;
                     }
-                    // Start the scroll pos poller.
-                    pollScrollPosition();
+                    // If there were no results this time then we shouldn't turn
+                    // infinite scroll (back) on (otherwise if the number of
+                    // results exactly equals the limit we can end up sending a
+                    // query returning 0 results everytime we scroll).
+                    if (resultsLineCount)
+                        pollScrollPosition();
                 }
 
                 oneFewerRequest();
