@@ -229,6 +229,7 @@ class Perforce(Vcs):
         have = self._p4run(['have'])
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
         self.upstream = upstream
+        self.revision = self._p4run(['changes', '-m1', '#have'])[0]['change']
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
@@ -242,7 +243,7 @@ class Perforce(Vcs):
         ret = []
         env = os.environ
         env["PWD"] = self.root
-        proc = subprocess.Popen(['p4', '-G'] + args,
+        proc = subprocess.Popen([self.command, '-G'] + args,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 cwd=self.root,
@@ -280,6 +281,17 @@ class Perforce(Vcs):
     def display_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
+
+    @classmethod
+    def get_contents(cls, path, revision, stderr=None):
+        directory, filename = split(path)
+        env = os.environ
+        env["PWD"] = directory
+        return subprocess.check_output([cls.command,
+                                        'print',
+                                        '-q',
+                                        filename + '@' + revision],
+                                       cwd=directory, env=env, stderr=stderr)
 
 
 every_vcs = [Mercurial, Git, Perforce]
@@ -326,7 +338,7 @@ def file_contents_at_rev(abspath, revision):
     """Attempt to return the contents of a file at a specific revision."""
 
     with open(os.devnull, 'w') as devnull:
-        for cls in [Mercurial, Git]:
+        for cls in every_vcs:
             try:
                 return cls.get_contents(abspath, revision, stderr=devnull)
             except subprocess.CalledProcessError:
