@@ -114,7 +114,7 @@ class VisitorTests(TestCase):
             [{'arg': 'Snork',
               'name': 'type',
               'not': False,
-              'case_sensitive': False,
+              'case_sensitive': True,
               'qualified': True}])
 
     def test_unclosed_quotes(self):

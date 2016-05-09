@@ -27,6 +27,3 @@ input[type="text"] {
     padding-right: 8rem;
     transition: padding-right .2s;
 }
-.checkbox_case {
-    margin: .5em;
-}
