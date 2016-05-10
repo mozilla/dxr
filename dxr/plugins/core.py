@@ -361,20 +361,6 @@ class FilenameFilter(_PathSegmentFilterBase):
                                   'File globs need at least 3 literal '
                                   'characters in a row for speed.')
 
-    def highlight_path(self, result):
-        path = result['path'][0]
-        term = self._term['arg']
-        if not self._term['case_sensitive']:
-            path = path.lower()
-            term = term.lower()
-        start = 0
-        while True:
-            start = path.find(term, start)
-            if start == -1:
-                break
-            yield start, start + len(term)
-            start += len(term)
-
 
 class ExtFilter(Filter):
     """Case-sensitive filter for exact matching on file extensions"""

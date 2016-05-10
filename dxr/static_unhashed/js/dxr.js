@@ -95,32 +95,31 @@ $(function() {
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
      *
-     * @param {Array} paths - Array of highlighted fragments of the currently displayed file path.
+     * @param {string} fullPath - The full path of the currently displayed file.
      * @param {string} tree - The tree which was searched and in which this file can be found.
      * @param {string} icon - The icon string returned in the JSON payload.
-     * @param {boolean} isBinary - Whether the result is for a binary file.
      */
-    function buildResultHead(paths, tree, icon, isBinary) {
+    function buildResultHead(fullPath, tree, icon) {
         var pathLines = '',
             pathRoot = '/' + tree + '/source/',
+            paths = fullPath.split('/'),
             splitPathLength = paths.length,
             dataPath = [],
             iconClass = icon.substring(icon.indexOf('/') + 1);
 
-        for (var pathIndex = 0; pathIndex < paths.length; pathIndex++) {
-            var isFirstOrOnly = pathIndex === 0 || splitPathLength === 1,
-                isLastOrOnly = (splitPathLength - 1) === pathIndex || splitPathLength === 1;
+        for (var pathIndex in paths) {
+            var index = parseInt(pathIndex),
+                isFirstOrOnly = index === 0 || splitPathLength === 1,
+                isLastOrOnly = (splitPathLength - 1) === index || splitPathLength === 1;
 
-            // Strip the highlighting when building the data path.
-            dataPath.push(paths[pathIndex].replace(/<\/?b>/g, ""));
+            dataPath.push(paths[pathIndex]);
 
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
-                'is_dir': !isLastOrOnly,
-                'is_binary': isBinary
+                'is_dir': !isLastOrOnly
             });
         }
 
@@ -282,6 +281,7 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length && !data.promoted.length) {
+            resultsLineCount = 0;
             if (!append) {
                 contentContainer
                     .empty()
@@ -292,9 +292,7 @@ $(function() {
             [data.results, data.promoted].forEach(function(results) {
                 for (var i = 0; i < results.length; i++) {
                     var icon = results[i].icon;
-                    var resultHead = buildResultHead(results[i].path, data.tree, icon, results[i].is_binary);
-                    // After we build the result head, join up the path so we can set it as an href.
-                    results[i].path = results[i].path.join('/');
+                    var resultHead = buildResultHead(results[i].path, data.tree, icon);
                     results[i].iconClass = resultHead[0];
                     results[i].pathLine = resultHead[1];
                 }
@@ -345,14 +343,22 @@ $(function() {
      */
     function doQuery(redirect, queryString, appendResults) {
         query = $.trim(queryField.val());
-        var myRequestNumber = nextRequestNumber,
-            lineHeight = parseInt(contentContainer.css('line-height'), 10),
-            limit = Math.floor((window.innerHeight / lineHeight) + 25);
+        var myRequestNumber = nextRequestNumber, limit, match, lineHeight;
 
         redirect = redirect || false;
         // Turn into a boolean if it was undefined.
         appendResults = !!appendResults;
-        queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
+        if (queryString) {
+            // Normally there will be no explicit limit set in this case, but
+            // there's nothing stopping a user from setting it by hand in the
+            // url, so I guess we should check:
+            match = /[?&]limit=([0-9]+)/.exec(queryString);
+            limit = match ? match[1] : defaultDataLimit;
+        } else {
+            lineHeight = parseInt(contentContainer.css('line-height'), 10);
+            limit = Math.floor((window.innerHeight / lineHeight) + 25);
+            queryString = buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
+        }
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
                 $('#search-box').addClass('in-progress');
@@ -408,15 +414,18 @@ $(function() {
                     else if (!appendResults)
                         // Update the history state if we're not appending: this is a new search.
                         historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    if (!appendResults) {
+                        previousDataLimit = limit;
+                        dataOffset = 0;
+                    }
+                    // If there were no results this time then we shouldn't turn
+                    // infinite scroll (back) on (otherwise if the number of
+                    // results exactly equals the limit we can end up sending a
+                    // query returning 0 results everytime we scroll).
+                    if (resultsLineCount)
+                        pollScrollPosition();
                 }
 
-                if (!appendResults) {
-                    previousDataLimit = limit;
-                    dataOffset = 0;
-                }
-
-                // Start the scroll pos poller.
-                pollScrollPosition();
                 oneFewerRequest();
             }
         })

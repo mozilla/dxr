@@ -43,14 +43,13 @@ class BasicTests(DxrInstanceTestCase):
         results = self.search_results(
             'path:makefile -CODE', is_case_sensitive=False)
         eq_(results,
-            [{"path": ["makefile"],
+            [{"path": "makefile",
               "lines": [
                 {"line_number": 3,
                   "line": "$(CXX) -o $@ $^"},
                 {"line_number": 4,
                   "line": "clean:"}],
-              "icon": "unknown",
-              "is_binary": False}])
+              "icon": "unknown"}])
 
     def test_case_insensitive_extents(self):
         """Test case-insensitive free-text searching with extents.
@@ -73,10 +72,9 @@ class BasicTests(DxrInstanceTestCase):
 
         """
         eq_(self.search_results('path:makefile'),
-            [{"path": ["makefile"],
+            [{"path": "makefile",
               "lines": [],
-              "icon": "unknown",
-              "is_binary": False}])
+              "icon": "unknown"}])
 
     def test_filter_punting(self):
         """Make sure filters can opt out of filtration--in this case, due to

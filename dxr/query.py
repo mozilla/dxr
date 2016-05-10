@@ -98,7 +98,7 @@ class Query(object):
         # Group lines into files:
         for path, lines in groupby(results, lambda r: r['path'][0]):
             lines = list(lines)
-            highlit_path = highlight_path(
+            highlit_path = highlight(
                 path,
                 chain.from_iterable((h(lines[0]) for h in
                                      path_highlighters)))
@@ -109,18 +109,17 @@ class Query(object):
                      highlight(line['content'][0].rstrip('\n\r'),
                                chain.from_iterable(h(line) for h in
                                                    content_highlighters)))
-                    for line in lines],
-                   False)
+                    for line in lines])
 
     def _file_query_results(self, results, path_highlighters):
         """Return an iterable of results of a FILE-domain query."""
         for file in results:
-            yield ('folder' if file['is_folder'] else icon(file['path'][0]),
-                   highlight_path(file['path'][0],
+            yield ('folder' if file['is_folder']
+                            else icon(file['path'][0], file.get('is_binary', False)),
+                   highlight(file['path'][0],
                              chain.from_iterable(
                                  h(file) for h in path_highlighters)),
-                   [],
-                   file.get('is_binary', False))
+                   [])
 
     def results(self, offset=0, limit=100):
         """Return a tuple of (total number of results, search results),
@@ -129,7 +128,6 @@ class Query(object):
              [(icon,
               path within tree,
               [(line_number, highlighted_line_of_code), ...],
-              whether it is binary),
              ...]
 
         """
@@ -443,24 +441,6 @@ def filter_menu_items(plugins):
     return (dict(name=name, description=filter.description)
             for name, filter in sorted_filters_by_name
             if filter.description)
-
-
-def highlight_path(path, extents):
-    """Return list of path fragments with <b> tags around highlighted extents.
-
-    :arg path: the path to highlight as a single string
-    :arg extents: iterable of unsorted, possibly overlapping (start, end) offset tuples
-
-    """
-    highlighted_content = highlight(path, extents)
-    # Split on slash, except the slash in </b>.
-    highlighted_fragments = []
-    for possibly_fragment in highlighted_content.split('/'):
-        if possibly_fragment.startswith('b>'):
-            highlighted_fragments[-1] += '/' + possibly_fragment
-        else:
-            highlighted_fragments.append(possibly_fragment)
-    return highlighted_fragments
 
 
 def highlight(content, extents):

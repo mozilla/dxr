@@ -5,10 +5,13 @@ from binaryornot.helpers import is_binary_string
 from chardet.universaldetector import UniversalDetector
 
 
-def icon(path):
+def icon(path, is_binary=False):
     """Return the basename (no extension) of the icon file to use for a path."""
     root, ext = splitext(path)
-    return ext_map.get(ext[1:], 'unknown')
+    class_name = ext_map.get(ext[1:], 'unknown')
+    if is_binary and class_name != 'image':
+        return 'binary'
+    return class_name
 
 
 def decode_data(data, encoding_guess):
