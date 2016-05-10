@@ -156,7 +156,7 @@ tr.binary_row > td {
     padding-top: .5em;
     padding-bottom: .5em;
 }
-tr.binary_row {
+.binary_row {
     opacity: 0.6;
 }
 .highlighted,
@@ -174,11 +174,8 @@ td pre code {
     position: relative;
     float: left;
     clear: none;
-    padding: 0 0 0 1em;
-    float: left;
     margin: 0;
     padding: 0;
-    position: relative;
 }
 code a {
     cursor: pointer;
@@ -198,11 +195,49 @@ mark {
     background-color: transparent;
 }
 
+/* promoted stuff, on the right */
+.promoted-container {
+    float: right;
+    border: 1px solid #a0a0a0;
+    border-radius: 4px;
+    padding: 1.5em 2em;
+}
+.promoted-see-more {
+    margin: 0 0 1rem;
+}
+.promoted-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+.promoted-result {
+    margin-left: 5px;
+    display: inline;
+}
+.promoted-row {
+    margin-top: .4rem
+}
+.promoted-line.left-column {
+    display: inline;
+    width: 6ex;
+}
+.promoted-text {
+    padding: .1rem .5rem;
+}
+
 /* results */
+.results-container {
+}
 
 .results tr:hover,
 .file tr:hover {
     background: none;
+}
+.results {
+    width: auto;
+}
+.results + .results {
+    margin-top: 1em;
 }
 .results tr,
 .file tr {
@@ -214,6 +249,14 @@ mark {
     text-align: right;
     color: #aaa;
     width: 6ex;
+    vertical-align: top;
+}
+.results .right-column {
+    word-break: break-all;
+}
+/* cannot underline block-display nodes. */
+.results .right-column a:hover {
+    background-color: #fffdae;
 }
 .results td {
     padding: .1rem .5rem;
@@ -228,7 +271,11 @@ mark {
     padding: 0 .5rem;
 }
 .results code {
-    white-space: pre;
+    white-space: pre-wrap;
+    /* force display on one line */
+    display: inline-block;
+    max-height: 1.2em;
+    overflow: hidden;
 }
 .result-head td
 {
@@ -345,9 +392,14 @@ mark {
 .content {
     margin-top: 55px;
     padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
 }
 .path-separator {
     margin: 0 .2rem;
+}
+.breadcrumbs-container {
+    display: flex;
 }
 .breadcrumbs,
 .top-of-tree {
@@ -355,6 +407,7 @@ mark {
     margin: 0;
     padding: .5rem 0 1rem 0;
     text-align: left;
+    flex-grow: 1;
 }
 
 /* Header help icon */
@@ -415,6 +468,10 @@ mark {
 .breadcrumbs a:visited,
 .bubble a:link,
 .bubble a:visited,
+.promoted-path a:link,
+.promoted-path a:visited,
+.promoted-see-more a:link,
+.promoted-see-more a:visited,
 .result-head a:link,
 .result-head a:visited {
     color: #0095dd;

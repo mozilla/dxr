@@ -1,6 +1,7 @@
 """Base classes and convenience functions for writing filters"""
 
 from functools import wraps
+from itertools import chain
 from funcy import identity
 
 from dxr.utils import is_in
@@ -70,6 +71,18 @@ class Filter(object):
         """
         self._term = term
         self._enabled_plugins = enabled_plugins
+
+    def __str__(self):
+        """Return a string representation of this Filter as it appeared in the
+        query string, defaulting to name:term. Override this method for Filters
+        whose string representation does not match this format.
+        """
+
+        # If the term has spaces, then surround with double quotes and escape internal quotes.
+        if ' ' in self._term['arg']:
+            return '%s:"%s"' % (self.name, self._term['arg'].replace('"', r'\"'))
+        else:
+            return '%s:%s' % (self.name, self._term['arg'])
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
@@ -244,3 +257,14 @@ class QualifiedNameFilterBase(NameFilterBase):
         return ((not self._term['qualified'] and
                  super(QualifiedNameFilterBase, self)._should_be_highlit(entity))
                 or is_in(self._term['arg'], entity['qualname']))
+
+
+def some_filters(plugins, condition):
+    """Return a list of filters of the given plugins for which
+    condition(filter) is True.
+
+    :arg plugins: An iterable of plugins
+    :arg condition: A function which takes a filter and returns True or False
+
+    """
+    return filter(condition, chain.from_iterable(p.filters for p in plugins))

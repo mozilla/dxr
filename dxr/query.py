@@ -1,10 +1,12 @@
 import cgi
 from itertools import chain, groupby
 from operator import itemgetter
+
 import re
 
 from parsimonious import Grammar, NodeVisitor
 
+from dxr.plugins.core import PathFilter
 from dxr.filters import LINE, FILE
 from dxr.mime import icon
 from dxr.utils import append_update, cached
@@ -29,6 +31,36 @@ def direct_searchers(plugins):
     return [searcher for searcher, _ in sortables]
 
 
+def _make_es_query(filters, is_line_query):
+    """Construct an ES query from nested list of filters by applying OR to each
+    inner list of filters and AND between lists of filter.
+
+    """
+    # An ORed-together ball for each term's filters, omitting filters that
+    # punt by returning {} and ors that contain nothing but punts:
+    ors = filter(None, [filter(None, (f.filter() for f in term))
+                        for term in filters])
+    ors = [{'or': x} for x in ors]
+    if not is_line_query:
+        ors.append({'not': {'exists': {'field': 'link'}}})
+
+    if ors:
+        return {
+            'filtered': {
+                'query': {
+                    'match_all': {}
+                },
+                'filter': {
+                    'and': ors
+                }
+            }
+        }
+    else:
+        return {
+            'match_all': {}
+        }
+
+
 class Query(object):
     """Query object, constructor will parse any search query"""
 
@@ -39,19 +71,24 @@ class Query(object):
 
         # A list of dicts describing query terms:
         grammar = query_grammar(self.enabled_plugins)
-        self.terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
+        self._terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
 
-    def single_term(self):
+        enabled_filters_by_name = filters_by_name(self.enabled_plugins)
+        # A list of lists, each inner list representing the filters of the name
+        # of the parallel term. We OR the elements of the inner lists and then
+        # AND those OR balls together.
+        self._filters = [[f(term, self.enabled_plugins) for f in
+                          enabled_filters_by_name[term['name']]] for term in self._terms]
+
+    def single_text_term(self):
         """Return the single, non-negated textual term in the query.
 
-        If there is more than one term in the query or if the single term is a
-        non-textual one, return None.
+        If there is not exactly one such term, return None.
 
         """
-        if len(self.terms) == 1:
-            term = self.terms[0]
-            if term['name'] == 'text' and not term['not']:
-                return term
+        text_terms = [term for term in self._terms if term['name'] == 'text' and not term['not']]
+        if len(text_terms) == 1:
+            return text_terms[0]
 
     def _line_query_results(self, filters, results, path_highlighters):
         """Return an iterable of results of a LINE-domain query."""
@@ -61,7 +98,7 @@ class Query(object):
         # Group lines into files:
         for path, lines in groupby(results, lambda r: r['path'][0]):
             lines = list(lines)
-            highlit_path = highlight(
+            highlit_path = highlight_path(
                 path,
                 chain.from_iterable((h(lines[0]) for h in
                                      path_highlighters)))
@@ -78,23 +115,22 @@ class Query(object):
     def _file_query_results(self, results, path_highlighters):
         """Return an iterable of results of a FILE-domain query."""
         for file in results:
-            yield (icon(file['path'][0]),
-                   highlight(file['path'][0],
+            yield ('folder' if file['is_folder'] else icon(file['path'][0]),
+                   highlight_path(file['path'][0],
                              chain.from_iterable(
                                  h(file) for h in path_highlighters)),
                    [],
                    file.get('is_binary', False))
 
     def results(self, offset=0, limit=100):
-        """Return a count of search results and, as an iterable, the results
-        themselves::
+        """Return a tuple of (total number of results, search results),
+        where results have the form:
 
-            {'result_count': 12,
-             'results': [(icon,
-                          path within tree,
-                          [(line_number, highlighted_line_of_code), ...],
-                          whether it is binary),
-                         ...]}
+             [(icon,
+              path within tree,
+              [(line_number, highlighted_line_of_code), ...],
+              whether it is binary),
+             ...]
 
         """
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
@@ -103,15 +139,14 @@ class Query(object):
             """Return an iterable of lists of ES filters for each term, filtered on
             predicate(Filter)."""
 
-            return ([f(term, self.enabled_plugins) for f in enabled_filters_by_name[term['name']]
-                     if predicate(f)] for term in self.terms)
+            return (filter(predicate, term_filters) for term_filters in self._filters)
 
         def group_filters_by_name(predicate):
-            """Return an iterable of a list of ES filters for each unique filter name, filtered on
-            predicate(Filter)."""
+            """Return an iterable of a list of ES filters for each unique
+            filter name, filtered on predicate(Filter)."""
 
             d = {}
-            for term in self.terms:
+            for term in self._terms:
                 for f in enabled_filters_by_name[term['name']]:
                     if predicate(f):
                         d.setdefault(term['name'], []).append(f(term, self.enabled_plugins))
@@ -130,52 +165,39 @@ class Query(object):
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
 
-        # An ORed-together ball for each term's filters, omitting filters that
-        # punt by returning {} and ors that contain nothing but punts:
-        ors = filter(None, [filter(None, (f.filter() for f in term))
-                            for term in filters])
-        ors = [{'or': x} for x in ors]
+        return self._do_search_and_highlight(_make_es_query(filters, is_line_query),
+                                             filters, is_line_query,
+                                             offset, limit)
 
-        if not is_line_query:
-            # Don't show folders yet in search results. I don't think the JS
-            # is able to handle them.
-            ors.append({'term': {'is_folder': False}})
-            # Filter out all FILE docs who are links.
-            ors.append({'not': {'exists': {'field': 'link'}}})
+    # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
 
-        if ors:
-            query = {
-                'filtered': {
-                    'query': {
-                        'match_all': {}
-                    },
-                    'filter': {
-                        'and': ors
-                    }
-                }
+    def promoted_paths(self, term, promote_limit=5):
+        """Return a tuple (total number of path results, promoted paths, querystring),
+        where the number of promoted paths is no more than promote_limit."""
+
+        # Filter out the FILE domain filters, and add our own path filter at the end.
+        file_filters = [[f for f in named_filters if f.domain == FILE] for named_filters in
+                        self._filters] + [[PathFilter(term, self.enabled_plugins)]]
+        filtered_query = _make_es_query(file_filters, False)
+        path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
+        # We add a second query that boosts exact path segment matches.
+        match_field = 'path.segments' if self.is_case_sensitive else 'path.segments_lower'
+        exact_query = {
+            'filtered': {
+                'query': {'constant_score': {'query': {'match': {match_field: term['arg']}},
+                                             'boost': 2.0}},
+                # Borrow the same filters the path query uses.
+                'filter': filtered_query['filtered']['filter']
             }
-        else:
-            query = {
-                'match_all': {}
+        }
+        query = {
+            'dis_max': {
+                'queries': [path_query, exact_query]
             }
-
-        results = self.es_search(
-            {'query': query,
-             'sort': ['path', 'number'] if is_line_query else ['path'],
-             'from': offset,
-             'size': limit},
-            doc_type=LINE if is_line_query else FILE)['hits']
-        result_count = results['total']
-        results = [r['_source'] for r in results['hits']]
-
-        path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
-                             if hasattr(f, 'highlight_path')]
-        return {'result_count': result_count,
-                'results': self._line_query_results(filters, results, path_highlighters)
-                           if is_line_query
-                           else self._file_query_results(results, path_highlighters)}
-
-        # Test: If var-ref (or any structural query) returns 2 refs on one line, they should both get highlit.
+        }
+        # We ask not to sort by path and line, to use score ranking instead.
+        result_count, results = self._do_search_and_highlight(query, file_filters, False, 0, promote_limit, False)
+        return result_count, results, ' '.join((str(f) for f in chain.from_iterable(file_filters)))
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -185,8 +207,8 @@ class Query(object):
         rather than any specific line. If no result is found, return just None.
 
         """
-        term = self.single_term()
-        if not term:
+        term = self.single_text_term()
+        if not term or len(self._terms) > 1:
             return None
 
         for searcher in direct_searchers(self.enabled_plugins):
@@ -213,6 +235,43 @@ class Query(object):
                 elif len(results) > 1:
                     return None
 
+    def _do_search_and_highlight(self, query, filters, is_line_query, offset, limit,
+                                 alphabetize=True):
+        """Perform a query using self.es_search and highlight the results,
+        returning a tuple (total count of results, list of results)
+
+        :arg query: valid ES query
+        :arg filters: nested list of filters
+        :arg is_line_query: whether to query lines (otherwise query files)
+        :arg offset: return results starting from this number
+        :arg limit: maximum number of results to return
+        :arg alphabetize: whether to alphabetize the results alphabetically by path and
+        numerically by line
+
+        """
+        # Decide on the sort mode: either alphanumerically or by score.
+        if alphabetize:
+            sort_mode = ['path', 'number'] if is_line_query else ['path']
+        else:
+            sort_mode = ['_score']
+        results = self.es_search(
+            {'query': query,
+             'sort': sort_mode,
+             'from': offset,
+             'size': limit},
+            doc_type=LINE if is_line_query else FILE)['hits']
+        result_count = results['total']
+        results = [r['_source'] for r in results['hits']]
+
+        path_highlighters = [f.highlight_path for f in chain.from_iterable(filters)
+                             if hasattr(f, 'highlight_path')]
+
+        if is_line_query:
+            results = self._line_query_results(filters, results, path_highlighters)
+        else:
+            results = self._file_query_results(results, path_highlighters)
+
+        return result_count, results
 
 @cached
 def query_grammar(plugins):
@@ -322,7 +381,7 @@ class QueryVisitor(NodeVisitor):
         return term_dict
 
     def visit_text(self, text, ((some_text,), _)):
-        """Create the dictionary that lives in Query.terms. Return it with a
+        """Create the dictionary that lives in Query._terms. Return it with a
         filter name of 'text', indicating that this is a bare or quoted run of
         text. If it is actually an argument to a filter,
         ``visit_filtered_term`` will overrule us later.
@@ -350,16 +409,6 @@ class QueryVisitor(NodeVisitor):
 
         """
         return visited_children or node
-
-
-def some_filters(plugins, condition):
-    """Return a list of filters of the given plugins for which condition(filter) is True.
-
-    :arg plugins: An iterable of plugins
-    :arg condition: A function which takes a filter and returns True or False
-
-    """
-    return filter(condition, chain.from_iterable(p.filters for p in plugins))
 
 
 @cached
@@ -394,6 +443,24 @@ def filter_menu_items(plugins):
     return (dict(name=name, description=filter.description)
             for name, filter in sorted_filters_by_name
             if filter.description)
+
+
+def highlight_path(path, extents):
+    """Return list of path fragments with <b> tags around highlighted extents.
+
+    :arg path: the path to highlight as a single string
+    :arg extents: iterable of unsorted, possibly overlapping (start, end) offset tuples
+
+    """
+    highlighted_content = highlight(path, extents)
+    # Split on slash, except the slash in </b>.
+    highlighted_fragments = []
+    for possibly_fragment in highlighted_content.split('/'):
+        if possibly_fragment.startswith('b>'):
+            highlighted_fragments[-1] += '/' + possibly_fragment
+        else:
+            highlighted_fragments.append(possibly_fragment)
+    return highlighted_fragments
 
 
 def highlight(content, extents):

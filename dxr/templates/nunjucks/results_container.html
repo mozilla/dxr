@@ -1,15 +1,25 @@
 {% from "results.html" import results_list -%}
 {% from "results_header.html" import results_header -%}
+{% from "promoted.html" import promoted_list, promoted_header -%}
+{% from "switch_tree.html" import tree_menu -%}
 
-{{ results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) }}
+{{ tree_menu(tree_tuples, tree) }}
 
-{% if results|length > 0 %}
-  <table class="results">
-    <caption class="visually-hidden">Query matches</caption>
-    <thead class="visually-hidden">
-      <th scope="col">Line</th>
-      <th scope="col">Code Snippet</th>
-    </thead>
-    {{ results_list(results, www_root, tree) }}
-  </table>
-{% endif %}
+
+<div class="results-row">
+
+  {% if promoted|length > 0 %}
+    <div class="promoted-container">
+      {{ promoted_header(promoted_query, promoted_count, promoted_count, top_of_tree, tree) }}
+      {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
+    </div>
+  {% endif %}
+
+  {% if results|length > 0 %}
+    <div class="results-container">
+      {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
+      {{ results_list(results, www_root, tree) }}
+    </div>
+  {% endif %}
+
+</div>

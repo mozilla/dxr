@@ -1,24 +1,20 @@
 from cStringIO import StringIO
 from datetime import datetime
 from functools import partial
-from itertools import chain, imap, izip
+from itertools import chain, izip
 from logging import StreamHandler
-import os
-from os import chdir
-from os.path import join, basename, split, dirname, relpath
-from sys import stderr
-from time import time
 from mimetypes import guess_type
-from urllib import quote_plus
+import os
+from os.path import join, basename, split, dirname
+from sys import stderr
 
-from flask import (Blueprint, Flask, send_from_directory, current_app,
+from flask import (Blueprint, Flask, current_app,
                    send_file, request, redirect, jsonify, render_template,
                    url_for)
 from funcy import merge, imap
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
-from dxr.config import Config
 from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
@@ -28,8 +24,10 @@ from dxr.mime import icon, is_binary_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_update, append_by_line, cumulative_sum)
+                       format_number, append_by_line, cumulative_sum)
 from dxr.vcs import file_contents_at_rev
+
+
 
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
@@ -145,14 +143,24 @@ def search(tree):
                   is_case_sensitive=is_case_sensitive)
 
     # Fire off one of the two search routines:
-    searcher = _search_json if _request_wants_json() else _search_html
-    return searcher(query, tree, query_text, is_case_sensitive, offset, limit, config)
+    if _request_wants_json():
+        return _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config)
+    else:
+        return _search_html(tree, query_text, is_case_sensitive, config)
 
 
 def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
     then return {redirect: hit location}.If that doesn't work, fall back to a normal search
     and return the results as JSON."""
+
+    # Convert to dicts for ease of manipulation in JS:
+    def results_to_json(es_results):
+        return [{'icon': line_icon,
+                 'path': path,
+                 'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
+                 'is_binary': is_binary}
+                for line_icon, path, lines, is_binary in es_results]
 
     # If we're asked to redirect and have a direct hit, then return the url to that.
     if request.values.get('redirect') == 'true':
@@ -168,27 +176,38 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
             if is_case_sensitive:
                 params['case'] = 'true'
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
+
     try:
-        count_and_results = query.results(offset, limit)
-        # Convert to dicts for ease of manipulation in JS:
-        results = [{'icon': icon,
-                    'path': path,
-                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
-                    'is_binary': is_binary}
-                   for icon, path, lines, is_binary in count_and_results['results']]
+        # Pull up all the non-negated text terms.
+        single_term = query.single_text_term()
+        count, results = query.results(offset, limit)
+        promoted_count, promoted, promoted_query = 0, [], ""
+        if offset == 0 and single_term:
+            # Now we pull out the single line term and pass into promoted paths.
+            try:
+                promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
+                promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
+                                         redirect='false')
+            except BadTerm:
+                # If we get BadTerm here, just return no promoted results rather than bailing
+                # out of the whole query.
+                pass
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
     return jsonify({
         'www_root': config.www_root,
         'tree': tree,
-        'results': results,
-        'result_count': count_and_results['result_count'],
-        'result_count_formatted': format_number(count_and_results['result_count']),
+        'results': results_to_json(results),
+        'promoted': results_to_json(promoted),
+        'result_count': count,
+        'promoted_count': format_number(promoted_count),
+        'result_count_formatted': format_number(count),
+        'promoted_query': promoted_query,
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
 
 
-def _search_html(query, tree, query_text, is_case_sensitive, offset, limit, config):
+def _search_html(tree, query_text, is_case_sensitive, config):
     """Return the rendered template for search.html.
 
     """

@@ -1,10 +1,13 @@
 {%- if not is_first_or_only -%}
-<span class="path-separator">/</span>
+    <span class="path-separator">/</span>
 {%- endif -%}
 {%- if not is_binary or is_dir -%}
-<a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
+    <a href="{{ url }}" {%- if is_dir %} data-path="{{ data_path }}" {% endif %}>
 {%- endif -%}
-    {{ display_path }}
+{# Remark: it is possible for <b> tags to be unbalanced within fragments if it opens in one
+   fragment and closes in another, but we avoid any issue by showing the entire path as a
+   series of inline-level tags. #}
+{{ display_path|safe }}
 {%- if not is_binary or is_dir -%}
-</a>
+    </a>
 {%- endif -%}

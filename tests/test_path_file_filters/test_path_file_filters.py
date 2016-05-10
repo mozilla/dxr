@@ -10,7 +10,7 @@ class PathAndFileFilterTests(DxrInstanceTestCase):
         """Check that a 'path:' result includes both file and folder matches."""
         self.found_files_eq('path:fish', ['fish1', 'fishy_folder/fish2',
                                           'fishy_folder/gill', 'folder/fish3',
-                                          'folder/fish4'])
+                                          'folder/fish4', 'fishy_folder'])
 
     def test_basic_file_results(self):
         """Check that a 'file:' result includes only file matches."""
@@ -38,6 +38,6 @@ class PathAndFileFilterTests(DxrInstanceTestCase):
         # 'path:' and 'file:' currently have the same underlying wildcard
         # support, so we're spreading out the basic wildcard testing over both.
         self.found_files_eq('path:fish?_fo*er',
-                            ['fishy_folder/fish2', 'fishy_folder/gill'])
+                            ['fishy_folder/fish2', 'fishy_folder/gill', 'fishy_folder'])
 
         self.found_files_eq('file:fish[14]', ['fish1', 'folder/fish4'])

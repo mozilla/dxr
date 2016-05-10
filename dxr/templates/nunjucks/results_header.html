@@ -5,5 +5,4 @@
     {{ result_count_formatted }} {{ 'result' if result_count == 1 else 'results' }} from the <a href="{{ top_of_tree }}">{{ tree }}</a> tree{% if result_count > 0 %}:{% endif %}
   </p>
 
-  {{ tree_menu(tree_tuples, tree) }}
 {%- endmacro -%}

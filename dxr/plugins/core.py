@@ -1,22 +1,22 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 from base64 import b64encode
+from copy import deepcopy
 from itertools import chain
 from os.path import relpath, splitext, realpath, basename
 import re
 
 from flask import url_for
-from funcy import identity
+from funcy import identity, merge
 from jinja2 import Markup
 from parsimonious import ParseError
 
 from dxr.es import (UNINDEXED_STRING, UNANALYZED_STRING, UNINDEXED_INT,
                     UNINDEXED_LONG)
 from dxr.exceptions import BadTerm
-from dxr.filters import Filter, negatable, FILE, LINE
+from dxr.filters import Filter, negatable, FILE, LINE, some_filters
 import dxr.indexers
 from dxr.mime import is_binary_image, is_textual_image
-from dxr.query import some_filters
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
@@ -42,6 +42,21 @@ PATH_SEGMENT_MAPPING = {  # some portion of a path/to/a/folder/filename.cpp stri
 }
 
 
+# Add segments field to path map for FILE docs so we can find exact matches on path segments,
+# which we use in path promotion.
+FILE_PATH_MAPPING = deepcopy(PATH_SEGMENT_MAPPING)
+FILE_PATH_MAPPING['fields'].update(
+    {'segments': {'type': 'string', 'analyzer': 'path_analyzer'},
+     'segments_lower': {'type': 'string',
+                        'analyzer': 'path_analyzer_lower'}})
+
+
+EXT_MAPPING = {
+    'type': 'string',
+    'index': 'not_analyzed'
+}
+
+
 mappings = {
     # We also insert entries here for folders. This gives us folders in dir
     # listings and the ability to find matches in folder pathnames.
@@ -51,13 +66,13 @@ mappings = {
         },
         'properties': {
             # FILE filters query this. It supports globbing via JS regex script.
-            'path': PATH_SEGMENT_MAPPING,  # path/to/a/folder/filename.cpp
 
             # Basename of path for fast lookup.
             # FILE filters query this. It supports globbing via JS regex script.
             'file_name': PATH_SEGMENT_MAPPING,  # filename.cpp
 
             'ext': UNANALYZED_STRING,
+            'path': FILE_PATH_MAPPING,
 
             # the target path if this FILE is a symlink
             'link': UNANALYZED_STRING,
@@ -212,6 +227,15 @@ analyzers = {
             'type': 'custom',
             'filter': ['lowercase'],
             'tokenizer': 'keyword'
+        },
+        'path_analyzer_lower': {
+            'type': 'custom',
+            'filter': ['lowercase'],
+            'tokenizer': 'path_tokenizer'
+        },
+        'path_analyzer': {
+            'type': 'custom',
+            'tokenizer': 'path_tokenizer'
         }
     },
     'tokenizer': {
@@ -220,6 +244,10 @@ analyzers = {
             'min_gram': NGRAM_LENGTH,
             'max_gram': NGRAM_LENGTH
             # Keeps all kinds of chars by default.
+        },
+        'path_tokenizer': {
+            'type': 'pattern',
+            'pattern': '/'
         }
     }
 }
@@ -275,6 +303,12 @@ class TextFilter(Filter):
                 _find_iter(maybe_lower(result['content'][0]),
                            maybe_lower(self._term['arg'])))
 
+    def __str__(self):
+        if ' ' in self._term['arg']:
+            return '"%s"' % self._term['arg'].replace('"', r'\"')
+        else:
+            return self._term['arg']
+
 
 class _PathSegmentFilterBase(Filter):
     """A base class for a filter that matches a glob against a path segment."""
@@ -326,6 +360,20 @@ class FilenameFilter(_PathSegmentFilterBase):
         return self._regex_filter('file_name',
                                   'File globs need at least 3 literal '
                                   'characters in a row for speed.')
+
+    def highlight_path(self, result):
+        path = result['path'][0]
+        term = self._term['arg']
+        if not self._term['case_sensitive']:
+            path = path.lower()
+            term = term.lower()
+        start = 0
+        while True:
+            start = path.find(term, start)
+            if start == -1:
+                break
+            yield start, start + len(term)
+            start += len(term)
 
 
 class ExtFilter(Filter):
