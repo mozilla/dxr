@@ -100,6 +100,12 @@ a.type {
 /* End of Panel only icons */
 
 /* MimeType Icons */
+.icon-container.folder {
+    background: transparent url('/static/icons/mimetypes/folder.png');
+}
+.promoted-icon.folder {
+    background: transparent url('/static/icons/mimetypes/folder.png');
+}
 .build {
     background-image: url('/static/icons/mimetypes/build.png');
 }

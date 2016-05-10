@@ -201,6 +201,7 @@ mark {
     border: 1px solid #a0a0a0;
     border-radius: 4px;
     padding: 1.5em 2em;
+    max-width: 33%;
 }
 .promoted-see-more {
     margin: 0 0 1rem;
@@ -235,9 +236,6 @@ mark {
 }
 .results {
     width: auto;
-}
-.results + .results {
-    margin-top: 1em;
 }
 .results tr,
 .file tr {

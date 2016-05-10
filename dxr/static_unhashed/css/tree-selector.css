@@ -9,14 +9,12 @@
 
 .tree-selector {
     display: inline-block;
-    position: relative;
+    float: right;
     width: auto;
     text-align: right;
 }
 .select-options {
     display: none;
-    position: absolute;
-    right: 0;
 }
 .ts-select-trigger {
     background-color: #fff;

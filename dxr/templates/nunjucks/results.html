@@ -2,15 +2,26 @@
 
 {% macro results_list(results, www_root, tree) -%}
   {% for result in results %}
-    <div class="result" data-path="{{ result.path }}">
-      <div class="result-left-column">
-        <div class="{{result.iconClass}} icon-container"></div>
-      </div>
-      <div class="result-right-column">
-        {{ result.pathLine|safe }}
-      </div>
-    {{ result_lines(result, www_root, tree) }}
-    </div>
+    <table class="results">
+      <caption class="visually-hidden">Query matches</caption>
+      <thead class="visually-hidden">
+        <tr>
+          <th scope="col">Line</th>
+          <th scope="col">Code Snippet</th>
+        </tr>
+      </thead>
+      <tbody class="result" data-path="{{ result.path }}">
+      <tr class="result-head {% if result.is_binary %} binary_row {% endif %}">
+        <td class="left-column">
+          <div class="{{result.iconClass}} icon-container"></div>
+        </td>
+        <td>
+          {{ result.pathLine|safe }}
+        </td>
+      </tr>
+      {{ result_lines(result, www_root, tree) }}
+      </tbody>
+    </table>
   {% endfor %}
 {%- endmacro %}
 

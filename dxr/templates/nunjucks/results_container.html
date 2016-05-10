@@ -3,9 +3,6 @@
 {% from "promoted.html" import promoted_list, promoted_header -%}
 {% from "switch_tree.html" import tree_menu -%}
 
-{{ tree_menu(tree_tuples, tree) }}
-
-
 <div class="results-row">
 
   {% if promoted|length > 0 %}
@@ -18,6 +15,7 @@
   {% if results|length > 0 %}
     <div class="results-container">
       {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
+      {{ tree_menu(tree_tuples, tree) }}
       {{ results_list(results, www_root, tree) }}
     </div>
   {% endif %}
