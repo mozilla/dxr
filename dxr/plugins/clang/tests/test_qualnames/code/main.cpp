@@ -1,4 +1,4 @@
-#include "main.h"
+#include "foo.h"
 
 using namespace bear;
 using namespace sonic;
