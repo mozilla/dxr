@@ -282,6 +282,7 @@ $(function() {
 
         // If no data is returned, inform the user.
         if (!data.results.length) {
+            resultsLineCount = 0;
             if (!append) {
                 contentContainer
                     .empty()
@@ -343,14 +344,22 @@ $(function() {
      */
     function doQuery(redirect, queryString, appendResults) {
         query = $.trim(queryField.val());
-        var myRequestNumber = nextRequestNumber,
-            lineHeight = parseInt(contentContainer.css('line-height'), 10),
-            limit = Math.floor((window.innerHeight / lineHeight) + 25);
+        var myRequestNumber = nextRequestNumber, limit, match, lineHeight;
 
         redirect = redirect || false;
         // Turn into a boolean if it was undefined.
         appendResults = !!appendResults;
-        queryString = queryString || buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
+        if (queryString) {
+            // Normally there will be no explicit limit set in this case, but
+            // there's nothing stopping a user from setting it by hand in the
+            // url, so I guess we should check:
+            match = /[?&]limit=([0-9]+)/.exec(queryString);
+            limit = match ? match[1] : defaultDataLimit;
+        } else {
+            lineHeight = parseInt(contentContainer.css('line-height'), 10);
+            limit = Math.floor((window.innerHeight / lineHeight) + 25);
+            queryString = buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
+        }
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
                 $('#search-box').addClass('in-progress');
@@ -406,15 +415,18 @@ $(function() {
                     else if (!appendResults)
                         // Update the history state if we're not appending: this is a new search.
                         historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    if (!appendResults) {
+                        previousDataLimit = limit;
+                        dataOffset = 0;
+                    }
+                    // If there were no results this time then we shouldn't turn
+                    // infinite scroll (back) on (otherwise if the number of
+                    // results exactly equals the limit we can end up sending a
+                    // query returning 0 results everytime we scroll).
+                    if (resultsLineCount)
+                        pollScrollPosition();
                 }
 
-                if (!appendResults) {
-                    previousDataLimit = limit;
-                    dataOffset = 0;
-                }
-
-                // Start the scroll pos poller.
-                pollScrollPosition();
                 oneFewerRequest();
             }
         })
