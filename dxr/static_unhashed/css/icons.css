@@ -100,12 +100,18 @@ a.type {
 /* End of Panel only icons */
 
 /* MimeType Icons */
+/* Not one of the original mimetypes (copied from icons/raw.png), but used for
+   binary files with an otherwise unknown mimetype, mostly to make it easy to
+   recognize binaries in /browse/ and search results. */
+.binary {
+    background-image: url('/static/icons/mimetypes/binary.png');
+}
 .build {
     background-image: url('/static/icons/mimetypes/build.png');
 }
 /* The .c class is used in files for comments. This definition is there just to prevent overriding. */
 .icon-container.c,
-.icon.c { 
+.icon.c {
     background-image: url('/static/icons/mimetypes/c.png');
 }
 .conf {

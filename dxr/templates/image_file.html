@@ -7,5 +7,9 @@
 
 {% block content %}
   {{ super() }}
-  <img src="{{ url_for('.raw', tree=tree, path=path) }}" id="image_file">
+  {% if revision %}
+    <img src="{{ url_for('.raw_rev', tree=tree, path=path, revision=revision) }}" id="image_file">
+  {% else %}
+    <img src="{{ url_for('.raw', tree=tree, path=path) }}" id="image_file">
+  {% endif %}
 {% endblock %}

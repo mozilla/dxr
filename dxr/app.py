@@ -24,7 +24,7 @@ from dxr.es import (filtered_query, frozen_config, frozen_configs,
 from dxr.exceptions import BadTerm
 from dxr.filters import FILE, LINE
 from dxr.lines import html_line, tags_per_line, finished_tags, Ref, Region
-from dxr.mime import icon, is_binary_image, decode_data
+from dxr.mime import icon, is_binary_image, is_textual_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
@@ -173,9 +173,8 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
-                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines],
-                    'is_binary': is_binary}
-                   for icon, path, lines, is_binary in count_and_results['results']]
+                    'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
+                   for icon, path, lines in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 
@@ -228,6 +227,9 @@ def _tree_tuples(query_text, is_case_sensitive):
 @dxr_blueprint.route('/<tree>/raw/<path:path>')
 def raw(tree, path):
     """Send raw data at path from tree, for binary things like images."""
+    if not is_binary_image(path) and not is_textual_image(path):
+        raise NotFound
+
     query = {
         'filter': {
             'term': {
@@ -246,6 +248,23 @@ def raw(tree, path):
     except IndexError: # couldn't find the image
         raise NotFound
     data_file = StringIO(data.decode('base64'))
+    return send_file(data_file, mimetype=guess_type(path)[0])
+
+
+@dxr_blueprint.route('/<tree>/raw-rev/<revision>/<path:path>')
+def raw_rev(tree, revision, path):
+    """Send raw data at path from tree at the given revision, for binary things
+    like images."""
+    if not is_binary_image(path) and not is_textual_image(path):
+        raise NotFound
+
+    config = current_app.dxr_config
+    tree_config = config.trees[tree]
+    abs_path = join(tree_config.source_folder, path)
+    data = file_contents_at_rev(abs_path, revision)
+    if data is None:
+        raise NotFound
+    data_file = StringIO(data)
     return send_file(data_file, mimetype=guess_type(path)[0])
 
 
@@ -341,8 +360,7 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(f['modified']) if 'modified' in f else None,
              f.get('size'),
-             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]),
-             f.get('is_binary', [False])[0])
+             url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
 
 
@@ -361,18 +379,11 @@ def skim_file(skimmers, num_lines):
             refses.append(skimmer.refs())
             regionses.append(skimmer.regions())
             append_by_line(annotations_by_line, skimmer.annotations_by_line())
-    links = [{'order': order,
-              'heading': heading,
-              'items': [{'icon': icon,
-                         'title': title,
-                         'href': href}
-                        for icon, title, href in items]}
-             for order, heading, items in
-             chain.from_iterable(linkses)]
+    links = dictify_links(chain.from_iterable(linkses))
     return links, refses, regionses, annotations_by_line
 
 
-def _build_common_file_template(tree, path, date, config):
+def _build_common_file_template(tree, path, is_binary, date, config):
     """Return a dictionary of the common required file template parameters.
     """
     return {
@@ -391,14 +402,14 @@ def _build_common_file_template(tree, path, date, config):
         # File template variables
         'paths_and_names': _linked_pathname(path, tree),
         'icon_url': url_for('.static',
-                            filename='icons/mimetypes/%s.png' % icon(path)),
+                            filename='icons/mimetypes/%s.png' % icon(path, is_binary)),
         'path': path,
         'name': basename(path)
     }
 
 
 def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
-                 date=None, contents=None):
+                 date=None, contents=None, image_rev=None):
     """Return a rendered page displaying a source file.
 
     :arg string tree: name of tree on which file is found
@@ -411,6 +422,8 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
     :arg date: a formatted string representing the generated date, default to now
     :arg string contents: the contents of the source file, defaults to joining
         the `content` field of all line_docs
+    :arg image_rev: revision number of a textual or binary image, for images
+        displayed at a certain rev
     """
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
@@ -428,12 +441,14 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
         # time would always be used.
         date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
-    common = _build_common_file_template(tree, path, date, config)
+    common = _build_common_file_template(tree, path, is_binary, date, config)
     links = file_doc.get('links', [])
     if is_binary_image(path):
         return render_template(
             'image_file.html',
-            **common)
+            **merge(common, {
+                'sections': sidebar_links(links),
+                'revision': image_rev}))
     elif is_binary:
         return render_template(
             'text_file.html',
@@ -450,6 +465,15 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
             contents = ''.join(lines)
         offsets = cumulative_sum(imap(len, lines))
         tree_config = config.trees[tree]
+        if is_textual_image(path) and image_rev:
+            # Add a link to view textual images on revs:
+            links.extend(dictify_links([
+                (4,
+                 'Image',
+                 [('svgview', 'View', url_for('.raw_rev',
+                                              tree=tree_config.name,
+                                              path=path,
+                                              revision=image_rev))])]))
         # Construct skimmer objects for all enabled plugins that define a
         # file_to_skim class.
         skimmers = [plugin.file_to_skim(path,
@@ -493,10 +517,18 @@ def rev(tree, revision, path):
     abs_path = join(tree_config.source_folder, path)
     contents = file_contents_at_rev(abs_path, revision)
     if contents is not None:
-        is_text, contents = decode_data(contents, tree_config.source_encoding)
-        if not is_text:
-            # Undecodable text is treated as binary.
+        image_rev = None
+        if is_binary_image(path):
+            is_text = False
             contents = ''
+            image_rev = revision
+        else:
+            is_text, contents = decode_data(contents, tree_config.source_encoding)
+            if not is_text:
+                contents = ''
+            elif is_textual_image(path):
+                image_rev = revision
+
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
@@ -504,7 +536,8 @@ def rev(tree, revision, path):
                             {},
                             config,
                             not is_text,
-                            contents=contents)
+                            contents=contents,
+                            image_rev=image_rev)
     else:
         raise NotFound
 
@@ -573,7 +606,7 @@ def _icon_class_name(file_doc):
     """Return a string for the CSS class of the icon for file document."""
     if file_doc['is_folder']:
         return 'folder'
-    class_name = icon(file_doc['name'])
+    class_name = icon(file_doc['name'], file_doc.get('is_binary', [False])[0])
     # for small images, we can turn the image into icon via javascript
     # if bigger than the cutoff, we mark it as too big and don't do this
     if file_doc['size'] > current_app.dxr_config.max_thumbnail_size:
@@ -595,3 +628,14 @@ def _request_wants_json():
     return (best == 'application/json' and
             request.accept_mimetypes[best] >
                     request.accept_mimetypes['text/html'])
+
+
+def dictify_links(links):
+    """Return a chain of order, heading, items links as a list of dicts."""
+    return [{'order': order,
+             'heading': heading,
+             'items': [{'icon': icon,
+                        'title': title,
+                        'href': href}
+                       for icon, title, href in items]}
+            for order, heading, items in links]
