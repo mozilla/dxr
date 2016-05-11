@@ -6,8 +6,8 @@
 all: static plugins requirements .dxr_installed
 
 test: all
-	$$VIRTUAL_ENV/bin/pip install nose
-	$$VIRTUAL_ENV/bin/nosetests -v --nologcapture
+	$(VIRTUAL_ENV)/bin/pip install nose
+	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
 
 clean: static_clean
 	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
@@ -29,12 +29,12 @@ static_clean:
 static: dxr/static_manifest
 
 docs: requirements .dxr_installed
-	$$VIRTUAL_ENV/bin/pip install Sphinx==1.3.1
+	$(VIRTUAL_ENV)/bin/pip install Sphinx==1.3.1
 	$(MAKE) -C docs html
 
 # Install dev conveniences:
 dev:
-	$$VIRTUAL_ENV/bin/pip install pdbpp nose-progressive
+	$(VIRTUAL_ENV)/bin/pip install pdbpp nose-progressive
 
 
 ## Conveniences to run from your host machine if running DXR in Docker:
@@ -86,9 +86,9 @@ $(VIRTUAL_ENV)/bin/activate:
 # environment.
 .dxr_installed: $(VIRTUAL_ENV)/bin/activate setup.py
 ifeq ($(DXR_PROD),1)
-	$$VIRTUAL_ENV/bin/pip install --no-deps .
+	$(VIRTUAL_ENV)/bin/pip install --no-deps .
 else
-	$$VIRTUAL_ENV/bin/pip install --no-deps -e .
+	$(VIRTUAL_ENV)/bin/pip install --no-deps -e .
 endif
 	touch $@
 
@@ -111,7 +111,7 @@ dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 
 # Install requirements in current virtualenv:
 .peep_installed: requirements.txt
-	$$VIRTUAL_ENV/bin/python tooling/peep.py install -r requirements.txt
+	$(VIRTUAL_ENV)/bin/python tooling/peep.py install -r requirements.txt
 	touch $@
 
 # Static-file cachebusting:
