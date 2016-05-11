@@ -54,7 +54,7 @@ except ImportError:
     from urllib.parse import urlparse  # 3.4
 # TODO: Probably use six to make urllib stuff work across 2/3.
 
-from pkg_resources import require, VersionConflict, DistributionNotFound
+from pkg_resources import require, VersionConflict, DistributionNotFound, safe_name
 
 # We don't admit our dependency on pip in setup.py, lest a naive user simply
 # say `pip install peep.tar.gz` and thus pull down an untrusted copy of pip
@@ -86,6 +86,7 @@ except ImportError:
         from pip.util import url_to_path  # 0.7.0
     except ImportError:
         from pip.util import url_to_filename as url_to_path  # 0.6.2
+from pip.exceptions import InstallationError
 from pip.index import PackageFinder, Link
 try:
     from pip.log import logger
@@ -104,7 +105,7 @@ except ImportError:
 
     DownloadProgressBar = DownloadProgressSpinner = NullProgressBar
 
-__version__ = 3, 1, 0
+__version__ = 3, 1, 2
 
 try:
     from pip.index import FormatControl  # noqa
@@ -122,6 +123,7 @@ ITS_FINE_ITS_FINE = 0
 SOMETHING_WENT_WRONG = 1
 # "Traditional" for command-line errors according to optparse docs:
 COMMAND_LINE_ERROR = 2
+UNHANDLED_EXCEPTION = 3
 
 ARCHIVE_EXTENSIONS = ('.tar.bz2', '.tar.gz', '.tgz', '.tar', '.zip')
 
@@ -663,6 +665,9 @@ class DownloadedReq(object):
         name = getattr(self._req.req, 'project_name', '')
         if name:
             return name
+        name = getattr(self._req.req, 'name', '')
+        if name:
+            return safe_name(name)
         raise ValueError('Requirement has no project_name.')
 
     def _name(self):
@@ -884,7 +889,7 @@ def peep_install(argv):
             first_every_last(buckets[SatisfiedReq], *printers)
 
         return ITS_FINE_ITS_FINE
-    except (UnsupportedRequirementError, DownloadError) as exc:
+    except (UnsupportedRequirementError, InstallationError, DownloadError) as exc:
         out(str(exc))
         return SOMETHING_WENT_WRONG
     finally:
@@ -920,7 +925,7 @@ def peep_port(paths):
         if not hashes:
             print(req.req)
         else:
-            print('%s' % req.req, end='')
+            print('%s' % (req.link if getattr(req, 'link', None) else req.req), end='')
             for hash in hashes:
                 print(' \\')
                 print('    --hash=sha256:%s' % hash, end='')
@@ -965,4 +970,4 @@ if __name__ == '__main__':
         exit(main())
     except Exception:
         exception_handler(*sys.exc_info())
-        exit(SOMETHING_WENT_WRONG)
+        exit(UNHANDLED_EXCEPTION)
