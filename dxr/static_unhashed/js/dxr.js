@@ -381,7 +381,8 @@ $(function() {
             }
         }
 
-        clearTimeout(historyWaiter);
+        if (!appendResults)
+            clearTimeout(historyWaiter);
 
         if (query.length === 0) {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
@@ -580,16 +581,14 @@ $(function() {
     // If on load of the search endpoint we have a query string then we need to
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
-        if (locationIsSearch()) {
+        lastURLWasSearch = locationIsSearch();
+        if (lastURLWasSearch) {
             // Set case-sensitive checkbox according to the URL, and make sure
             // the localstorage mirrors it.
             var urlIsCaseSensitive = caseFromUrl() === true;
             caseSensitiveBox.prop('checked', urlIsCaseSensitive);
             localStorage.setItem('caseSensitive', urlIsCaseSensitive);
             doQuery(false, window.location.href);
-            lastURLWasSearch = true;
-        } else {
-            lastURLWasSearch = false;
         }
     });
 });
