@@ -249,9 +249,32 @@ public:
   }
 
   // Return the location right after the token at `loc` finishes.
-  SourceLocation afterToken(SourceLocation loc) {
+  SourceLocation afterToken(SourceLocation loc, const std::string& tokenHint = "") {
+    // TODO: Would it be safe to just change this function to be
+    //    return loc.getLocWithOffset(tokenHint.size());
+    // in the cases where we already know the full name in the caller?
+    // In the meantime we're only using tokenHint for its first character: the
+    // lexer treats '~' as a token in some cases and not in others (due to the
+    // ambiguity between whether '~X();' means destructor decl or one's
+    // complement on the return of a function), so we help things along by just
+    // always starting one after the '~'.
+    if (tokenHint.size() > 1 && tokenHint[0] == '~')
+      loc = loc.getLocWithOffset(1);
     // TODO: Perhaps, at callers, pass me begin if !end.isValid().
     return Lexer::getLocForEndOfToken(loc, 0, sm, features);
+  }
+
+  // Record the correct "locend" for name (when name is the name of a destructor
+  // it works around some inconsistencies).
+  void recordLocEndForName(const std::string& name,
+                           SourceLocation beginLoc, SourceLocation endLoc) {
+    // Some versions (or settings or whatever) of clang consider '~MyClass' to
+    // be two tokens, others just one, so we just always let afterToken take
+    // care of the '~' when there is one.
+    if (name.size() > 1 && name[0] == '~')
+      recordValue("locend", locationToString(afterToken(beginLoc, name)));
+    else
+      recordValue("locend", locationToString(afterToken(endLoc)));
   }
 
   // This is a wrapper around NamedDecl::getQualifiedNameAsString.
@@ -397,10 +420,12 @@ public:
 
     beginRecord("decldef", decl->getLocation());  // Assuming this is an
                                                   // expansion location.
-    recordValue("name", decl->getNameAsString());
+    std::string name = decl->getNameAsString();
+    recordValue("name", name);
     recordValue("qualname", getQualifiedName(*def));
     recordValue("loc", locationToString(decl->getLocation()));
-    recordValue("locend", locationToString(afterToken(decl->getLocation())));
+    recordValue("locend",
+                locationToString(afterToken(decl->getLocation(), name)));
     recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
       recordValue("kind", kind);
@@ -524,8 +549,9 @@ public:
         args.erase(1, 2);
       args += ")";
       recordValue("args", args);
-      recordValue("loc", locationToString(d->getNameInfo().getBeginLoc()));
-      recordValue("locend", locationToString(afterToken(d->getNameInfo().getEndLoc())));
+      SourceLocation beginLoc = d->getNameInfo().getBeginLoc();
+      recordValue("loc", locationToString(beginLoc));
+      recordLocEndForName(functionName, beginLoc, d->getNameInfo().getEndLoc());
       printScope(d);
       *out << std::endl;
 
@@ -794,13 +820,14 @@ public:
     if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
       return;
     SourceLocation nonMacroRefLoc = escapeMacros(refLoc);
+    std::string name = d->getNameAsString();
     beginRecord("ref", nonMacroRefLoc);
     recordValue("defloc", locationToString(d->getLocation()));
     recordValue("loc", locationToString(nonMacroRefLoc));
-    recordValue("locend", locationToString(afterToken(escapeMacros(end))));
+    recordLocEndForName(name, nonMacroRefLoc, escapeMacros(end));
     if (kind)
       recordValue("kind", kind);
-    recordValue("name", d->getNameAsString());
+    recordValue("name", name);
     recordValue("qualname", getQualifiedName(*d));
     *out << std::endl;
   }

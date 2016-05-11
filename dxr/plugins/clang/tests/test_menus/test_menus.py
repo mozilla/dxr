@@ -283,3 +283,28 @@ class MenuTests(DxrInstanceTestCase):
                 'pVirtualFunc',
                 {'html': 'Find overridden',
                  'href': '/code/search?q=%2Boverridden%3ADerivedClass%3A%3ApVirtualFunc%28%29'})
+
+    def test_destructor_declaration(self):
+        """Make sure we link the full destructor name and not just the '~' on a
+        destructor declaration, which can be easily confused for one's
+        complement on the result of a function call."""
+        menu_on(self.source_page('BaseTypes.h'),
+                '~Z',
+                {'html': 'Find declarations',
+                 'href': '/code/search?q=%2Bfunction-decl%3AZ%3A%3A%7EZ%28%29'})
+
+    def test_destructor_def(self):
+        """Make sure we link the full destructor name and not just the '~' on a
+        destructor def."""
+        menu_on(self.source_page('BaseTypes.h'),
+                '~BaseClass',
+                {'html': 'Find callers',
+                 'href': '/code/search?q=%2Bcallers%3ABaseClass%3A%3A%7EBaseClass%28%29'})
+
+    def test_destructor_call(self):
+        """Make sure we link the full destructor name and not just the '~' on a
+        destructor call."""
+        menu_on(self.source_page('main.cpp'),
+                '~Z',
+                {'html': 'Find references',
+                 'href': '/code/search?q=%2Bfunction-ref%3AZ%3A%3A%7EZ%28%29'})
