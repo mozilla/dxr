@@ -60,7 +60,9 @@ $(function() {
 
     // We also need to cater for the above scenario when a user clicks on in page links.
     window.onhashchange = function() {
-        scrollIntoView(window.location.hash.substr(1));
+        if (window.location.hash) {
+            scrollIntoView(window.location.hash.substr(1));
+        }
     };
 
     /**
@@ -140,7 +142,8 @@ $(function() {
         resultsLineCount = 0,
         dataOffset = 0,
         previousDataLimit = 0,
-        defaultDataLimit = 100;
+        defaultDataLimit = 100,
+        lastURLWasSearch = false;  // Remember if the previous history URL was for a search (for popState).
 
     // Has the user been redirected to a direct result?
     var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
@@ -244,7 +247,10 @@ $(function() {
     function querySoon() {
         clearTimeout(waiter);
         clearTimeout(historyWaiter);
-        waiter = setTimeout(doQuery, timeouts.search);
+        function doQueryPushHistory() {
+            doQuery(false, '', false, true);
+        }
+        waiter = setTimeout(doQueryPushHistory, timeouts.search);
     }
 
     /**
@@ -260,7 +266,7 @@ $(function() {
      */
     function queryNow(redirect) {
         clearTimeout(waiter);
-        doQuery(redirect);
+        doQuery(redirect, '', false, true);
     }
 
     /**
@@ -335,19 +341,21 @@ $(function() {
     /**
      * Queries and populates the results templates with the returned data.
      *
-     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.  Default is false.
      * @param {string} [queryString] - The url to which to send the request. If left out,
      * queryString will be constructed from the contents of the query field.
-     * @param {bool} [appendResults] - Whether to append new results to the current list,
-     * otherwise replace.
+     * @param {bool} [appendResults] - Append new results to the current list if true,
+     * otherwise replace.  Default is false.
+     * @param {bool} [addToHistory] - Whether to add this query to the browser history.  Default is false.
      */
-    function doQuery(redirect, queryString, appendResults) {
+    function doQuery(redirect, queryString, appendResults, addToHistory) {
         query = $.trim(queryField.val());
         var myRequestNumber = nextRequestNumber, limit, match, lineHeight;
 
-        redirect = redirect || false;
         // Turn into a boolean if it was undefined.
+        redirect = !!redirect;
         appendResults = !!appendResults;
+        addToHistory = !!addToHistory;
         if (queryString) {
             // Normally there will be no explicit limit set in this case, but
             // there's nothing stopping a user from setting it by hand in the
@@ -373,7 +381,8 @@ $(function() {
             }
         }
 
-        clearTimeout(historyWaiter);
+        if (!appendResults)
+            clearTimeout(historyWaiter);
 
         if (query.length === 0) {
             hideBubble();  // Don't complain when I delete what I typed. You didn't complain when it was empty before I typed anything.
@@ -396,6 +405,7 @@ $(function() {
                 // Check whether to redirect to a direct hit.
                 if (data.redirect) {
                     window.location.href = data.redirect;
+                    lastURLWasSearch = false;
                     return;
                 }
                 data.query = query;
@@ -403,17 +413,26 @@ $(function() {
                 if (myRequestNumber > displayedRequestNumber) {
                     displayedRequestNumber = myRequestNumber;
                     populateResults(data, appendResults);
-                    var pushHistory = function () {
-                        // Strip off offset= and limit= when updating.
-                        var displayURL = queryString.replace(/[&?]offset=\d+/, '').replace(/[&?]limit=\d+/, '');
-                        history.pushState({}, '', displayURL);
-                    };
-                    if (redirect)
-                        // Then the enter key was pressed and we want to update history state now.
-                        pushHistory();
-                    else if (!appendResults)
-                        // Update the history state if we're not appending: this is a new search.
-                        historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    if (addToHistory) {
+                        var pushHistory = function () {
+                            // Strip off offset= and limit= when updating.
+                            function dropAmp(fullMatch, ampOrQuestion) {
+                                // Drop a leading ampersand, keep a leading question mark.
+                                return (ampOrQuestion === '?') ? '?' : '';
+                            }
+                            var displayURL = queryString.replace(/([&?])offset=\d+/, dropAmp).
+                                                         replace(/([&?])limit=\d+/, dropAmp).
+                                                         replace('?&', '?');
+                            history.pushState({}, '', displayURL);
+                            lastURLWasSearch = true;
+                        };
+                        if (redirect)
+                            // Then the enter key was pressed and we want to update history state now.
+                            pushHistory();
+                        else if (!appendResults)
+                            // Update the history state if we're not appending: this is a new search.
+                            historyWaiter = setTimeout(pushHistory, timeouts.history);
+                    }
                     if (!appendResults) {
                         previousDataLimit = limit;
                         dataOffset = 0;
@@ -516,6 +535,10 @@ $(function() {
         $(this).text(formatDate($(this).data('datetime')));
     });
 
+    function locationIsSearch() {
+        return /search$/.test(window.location.pathname) && window.location.search;
+    }
+
     // Expose the DXR Object to the global object.
     window.dxr = dxr;
 
@@ -523,19 +546,20 @@ $(function() {
     // That means that if we naively set onpopstate, we would get into an
     // infinite loop of reloading whenever onpopstate is triggered. Therefore,
     // we have to only add our onpopstate handler once the page has loaded.
-    window.onload = function() {
+    window.addEventListener('load', function() {
         setTimeout(function() {
-            window.onpopstate = popStateHandler;
+            window.addEventListener('popstate', popStateHandler);
         }, 0);
-    };
+    });
 
     // Reload the page when we go back or forward.
     function popStateHandler(event) {
-        // Check for event state first to avoid nasty complete page reloads on #anchors:
-         if (event.state != null) {
+        if (event.state ||  // If it's a search (we only push state on a search), or...
+            (!locationIsSearch() && lastURLWasSearch)) {  // if we switched from search to file view:
             window.onpopstate = null;
             window.location.reload();
-         }
+        }
+        lastURLWasSearch = locationIsSearch();
     }
 
     /**
@@ -557,7 +581,8 @@ $(function() {
     // If on load of the search endpoint we have a query string then we need to
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
-        if (/search$/.test(window.location.pathname) && window.location.search) {
+        lastURLWasSearch = locationIsSearch();
+        if (lastURLWasSearch) {
             // Set case-sensitive checkbox according to the URL, and make sure
             // the localstorage mirrors it.
             var urlIsCaseSensitive = caseFromUrl() === true;
