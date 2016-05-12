@@ -21,5 +21,3 @@ update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /us
 update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
 # And we might as well make a clang link so we can compile mozilla-central:
 update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
-# Homogenize names with RHEL. Perhaps not useful anymore.
-ln -sf /usr/bin/nodejs /usr/local/bin/node

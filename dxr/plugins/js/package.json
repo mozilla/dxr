@@ -1,0 +1,13 @@
+{
+  "name": "js_esprima",
+  "description": "esprima-based javascript plugin for DXR",
+  "author": "Mozilla",
+  "version": "1.0.0",
+  "engine": "node >= 0.8.x",
+  "license": "MIT",
+  "dependencies": {
+    "esprima": "^2.7.2",
+    "minimatch": "^3.0.0",
+    "walk": "^2.3.9"
+  }
+}

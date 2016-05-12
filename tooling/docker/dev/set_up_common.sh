@@ -4,3 +4,7 @@
 
 # Install Rust.
 curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=2016-01-25 --yes
+# Install newer node.
+apt-get remove -y nodejs
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
+apt-get install -y nodejs

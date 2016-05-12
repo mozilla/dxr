@@ -26,6 +26,7 @@ setup(
                                   'omniglot = dxr.plugins.omniglot',
                                   'rust = dxr.plugins.rust:plugin',
                                   'xpidl = dxr.plugins.xpidl:plugin',
+                                  'js = dxr.plugins.js:plugin',
                                   'pygmentize = dxr.plugins.pygmentize',
                                   'extmatch = dxr.plugins.extmatch'],
                   'console_scripts': ['dxr = dxr.cli:main']},
