@@ -73,3 +73,15 @@ function hideOptionsAndHelp() {
     $('.select-options, .sf-select-options').hide();
     hideHelp();
 }
+
+/**
+ * Return the extension of the given path, or '' if no extension exists.
+ */
+function extension(path) {
+    var file = path.substring(path.lastIndexOf('/') + 1),
+        lastDotPos = file.lastIndexOf('.');
+    if (lastDotPos === -1) {
+        return '';
+    }
+    return file.substring(lastDotPos + 1);
+}

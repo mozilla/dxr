@@ -6,7 +6,16 @@ $(function() {
     // Get the file content container
     var fileContainer = $('#file'),
         queryField = $('#query'),
-        contentContainer = $('#content');
+        contentContainer = $('#content'),
+        nonWordCharRE = /[^A-Z0-9_]/i;
+
+    if (['cpp', 'cc', 'cxx', 'h', 'hxx', 'hpp'].indexOf(
+          extension(window.location.pathname).toLowerCase()) > -1) {
+        // C++ files should include '~' as a valid name character.  (This
+        // doesn't cause us to accidentally scoop up '~' operators because those
+        // '~'s aren't in the same html node as the thing they operate on).
+        nonWordCharRE = /[^A-Z0-9_~]/i;
+    }
 
     /**
      * Highlight, or remove highlighting from, all symbols with the same class
@@ -114,8 +123,8 @@ $(function() {
             var offset = selection.focusOffset,
                 node = selection.anchorNode,
                 selectedTxtString = node.nodeValue,
-                startIndex = selectedTxtString.regexLastIndexOf(/[^A-Z0-9_]/i, offset) + 1,
-                endIndex = selectedTxtString.regexIndexOf(/[^A-Z0-9_]/i, offset),
+                startIndex = selectedTxtString.regexLastIndexOf(nonWordCharRE, offset) + 1,
+                endIndex = selectedTxtString.regexIndexOf(nonWordCharRE, offset),
                 word = '';
 
             // If the regex did not find a start index, start from index 0
