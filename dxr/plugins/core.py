@@ -414,7 +414,9 @@ class IdFilter(FilterAggregator):
     name = 'id'
     domain = LINE
     description = Markup('Definition of an identifier: '
-                         '<code>id:someFunction</code> <code>id:SomeClass</code>')
+                         '<code>id:someFunction</code> <code>id:SomeClass</code> '
+                         '<code>id:@function</code> '
+                         '(@ forces case-sensitive search, otherwise automatic)')
 
     def __init__(self, term, enabled_plugins):
         super(IdFilter, self).__init__(term, enabled_plugins, lambda f: f.is_identifier)
