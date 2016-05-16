@@ -24,6 +24,27 @@
   </div>
 
   {{ tree_menu(tree_tuples, tree) }}
+
+  {% if sections %}
+    <div class="panel">
+      <button id="panel-toggle">
+        <span class="navpanel-icon expanded" aria-hidden="false"></span>
+        Navigation
+      </button>
+      <section id="panel-content" aria-expanded="true" aria-hidden="false">
+        {% for section in sections %}
+          <h4>{{ section.heading }}</h4>
+          <ul>
+            {% for item in section['items'] %}
+              <li>
+                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon">{{ item.title }}</a>
+              </li>
+            {%- endfor %}
+          </ul>
+        {% endfor %}
+      </section>
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block site_js %}

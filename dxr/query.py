@@ -71,18 +71,16 @@ class Query(object):
                      highlight(line['content'][0].rstrip('\n\r'),
                                chain.from_iterable(h(line) for h in
                                                    content_highlighters)))
-                    for line in lines],
-                   False)
+                    for line in lines])
 
     def _file_query_results(self, results, path_highlighters):
         """Return an iterable of results of a FILE-domain query."""
         for file in results:
-            yield (icon(file['path'][0]),
+            yield (icon(file['path'][0], file.get('is_binary', False)),
                    highlight(file['path'][0],
                              chain.from_iterable(
                                  h(file) for h in path_highlighters)),
-                   [],
-                   file.get('is_binary', False))
+                   [])
 
     def results(self, offset=0, limit=100):
         """Return a count of search results and, as an iterable, the results
@@ -91,8 +89,7 @@ class Query(object):
             {'result_count': 12,
              'results': [(icon,
                           path within tree,
-                          [(line_number, highlighted_line_of_code), ...],
-                          whether it is binary),
+                          [(line_number, highlighted_line_of_code), ...]),
                          ...]}
 
         """

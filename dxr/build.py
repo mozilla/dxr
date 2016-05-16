@@ -25,7 +25,7 @@ from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
                              ConnectionError)
 
 import dxr
-from dxr.app import make_app
+from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
@@ -493,14 +493,7 @@ def index_file(tree, tree_indexers, path, es, index):
 
                     # And these, which all get mashed into arrays:
                     **needles)
-        links = [{'order': order,
-                    'heading': heading,
-                    'items': [{'icon': icon,
-                                'title': title,
-                                'href': href}
-                            for icon, title, href in items]}
-                    for order, heading, items in
-                    chain.from_iterable(linkses)]
+        links = dictify_links(chain.from_iterable(linkses))
         if links:
             doc['links'] = links
         yield es.index_op(doc, doc_type=FILE)

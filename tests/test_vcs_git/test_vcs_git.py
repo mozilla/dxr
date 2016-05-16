@@ -2,7 +2,7 @@ from nose.tools import ok_, eq_
 
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
-LATEST_REVISION = "d3c6c4da4b963aa9f34f48f5ded43ab573b2876c"
+LATEST_REVISION = "9a943d9f121733d0beff4b04331747750f40614a"
 OLDER_REVISION = "cb339834998124cb8165aa35ed4635c51b6ac5c2"
 
 class GitTests(DxrInstanceTestCaseMakeFirst):
@@ -45,6 +45,20 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         ok_('/rev/%s/binary_file" title="Permalink" class="permalink icon">Permalink</a>' % LATEST_REVISION in response.data)
         response = self.client().get('/code/rev/%s/binary_file' % LATEST_REVISION)
         ok_('(binary file)' in response.data)
+
+    def test_binary_image_permalink(self):
+        """Make sure we display a binary image in its permalink."""
+        response = self.client().get('/code/rev/%s/rev_circle.jpg' % LATEST_REVISION)
+        ok_('src="/code/raw-rev/%s/rev_circle.jpg"' % LATEST_REVISION in response.data)
+        response = self.client().get('/code/raw-rev/%s/rev_circle.jpg' % LATEST_REVISION)
+        eq_(response.status_code, 200)
+
+    def test_textual_image_permalink(self):
+        """Make sure we display an image link for textual image permalinks."""
+        response = self.client().get('/code/rev/%s/rev_circle.svg' % LATEST_REVISION)
+        ok_('href="/code/raw-rev/%s/rev_circle.svg"' % LATEST_REVISION in response.data)
+        response = self.client().get('/code/raw-rev/%s/rev_circle.svg' % LATEST_REVISION)
+        eq_(response.status_code, 200)
 
     def test_deep_permalink(self):
         """Make sure the permalink link exists and goes to the right place for files not in the

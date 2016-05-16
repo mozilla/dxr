@@ -22,6 +22,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.vcs = vcs
 
+    def is_interesting(self):
+        return not self.is_link()
+
     def links(self):
         def items():
             yield 'log', "Log", self.vcs.generate_log(vcs_relative_path)
