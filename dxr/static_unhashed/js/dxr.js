@@ -2,7 +2,6 @@
 /* globals nunjucks: true, $ */
 
 var htmlEscape;
-
 $(function() {
     'use strict';
 
@@ -13,6 +12,7 @@ $(function() {
     dxr.wwwRoot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.searchUrl = constants.data('search');
+    dxr.linesUrl = constants.data('lines');
     dxr.tree = constants.data('tree');
 
     var timeouts = {};
@@ -234,6 +234,131 @@ $(function() {
     }
 
     /**
+     * Add click listeners to the context buttons to load more contexts.
+     */
+    function withContextListeners(renderedResults) {
+        const toJquery = $(renderedResults);
+        // AJAX query as context lines after given row if after is true,
+        // otherwise before given row.
+        function getContextLines(row, query, after) {
+            $.ajax({
+                dataType: "json",
+                url: query,
+                success: function(data) {
+                    if (data.lines.length > 0) {
+                        const result = nunjucks.render('context_lines.html', {
+                            www_root: dxr.wwwRoot,
+                            tree: dxr.tree,
+                            result: data
+                        });
+                        if (after) {
+                            row.after(withContextListeners(result));
+                        } else {
+                            row.before(withContextListeners(result));
+                        }
+                        // Call cleanup after adding to remove unnecessary
+                        // buttons and duplicated result rows.
+                        cleanupResults(row.parent());
+                    }
+                }
+            });
+        }
+
+        // Before attaching the listeners call cleanup, since that may change
+        // or remove buttons.
+        toJquery.find(".result").each(function() {
+            cleanupResults($(this));
+        });
+        // Attach event listeners to each of the context spans, given by
+        // {klass, start offset, end offset}
+        [{klass: ".ctx_full", start: -3, end: 3, after: true},
+         {klass: ".ctx_up", start: -4, end: -1, after: false},
+         {klass: ".ctx_down", start: 1, end: 4, after: true}].forEach(
+                function(ctx) {
+                    const c = ctx;
+                    $(c.klass, toJquery).on('click', function() {
+                        const $this = $(this),
+                              path = $this.parents('.result').data('path'),
+                              line = parseInt($this.parents(".result_line").data('line')),
+                              queryString = (dxr.linesUrl + '?' +
+                                             $.param({path, start: line + c.start, end: line + c.end}));
+                        getContextLines($this.parents(".result_line"), queryString, c.after);
+                    });
+                });
+        return toJquery;
+    }
+
+    /**
+     * Visit the result lines in result and remove duplicated lines and redundant context buttons.
+     */
+    function cleanupResults(result) {
+        // Construct {line: {contextEl, resultEl}}
+        const lineMap = {};
+        // Visit the lines and remove duplicates.
+        result.children('.result_line').each(function() {
+            const $this = $(this);
+            const line = parseInt($this.data("line"));
+            lineMap[line] = lineMap[line] || {};
+            if (this.classList.contains("ctx_row")) {
+                if (lineMap[line].contextEl) {
+                    // Then this is duplicate, remove it.
+                    $this.remove();
+                } else {
+                    lineMap[line].contextEl = this;
+                }
+            } else {
+                if (lineMap[line].resultEl) {
+                    // Then this is duplicate, remove it.
+                    $this.remove();
+                } else {
+                    lineMap[line].resultEl = this;
+                }
+            }
+        });
+        // Now go through and fix some things.
+        for (let line in lineMap) {
+            if (!lineMap.hasOwnProperty(line)) continue;
+            // If some line has both context and result, then replace context line by result line.
+            // But since result strips trailing whitespace where context has it,
+            // we must bring that from the context line.
+            if (lineMap[line].contextEl && lineMap[line].resultEl) {
+                const text = lineMap[line].contextEl.querySelector("code").textContent;
+                const resultCode = lineMap[line].resultEl.querySelector("code");
+                let spaces = "";
+                for (let i = 0; i < text.length && /\s/.test(text[i]); i++) {
+                    spaces += text[i];
+                }
+                resultCode.innerHTML = spaces + resultCode.innerHTML;
+                $(lineMap[line].contextEl).replaceWith(lineMap[line].resultEl);
+            }
+            const lineNode = lineMap[line].resultEl || lineMap[line].contextEl,
+                  ctxSpan = lineNode.querySelector(".leftmost-column > span");
+            line = parseInt(line);
+            // If previous line exists, remove ctx_up. If below line exists, remove ctx_down.
+            // If surrounded, remove ctx_full.
+            if (ctxSpan && ((lineMap[line - 1] && ctxSpan.classList.contains("ctx_up")) ||
+                        (lineMap[line + 1] && ctxSpan.classList.contains("ctx_down")) ||
+                        (lineMap[line + 1] && lineMap[line - 1] &&
+                         ctxSpan.classList.contains("ctx_full")))) {
+                $(ctxSpan).remove();
+            }
+            // But if it's a ctx_full and either top or bottom exists, convert it to an arrow.
+            if (ctxSpan && ctxSpan.classList.contains("ctx_full")) {
+                if (lineMap[line + 1]) {
+                    ctxSpan.classList.add("ctx_up");
+                    ctxSpan.classList.remove("ctx_full");
+                    ctxSpan.textContent = "△";
+                } else if (lineMap[line - 1]) {
+                    ctxSpan.classList.add("ctx_down");
+                    ctxSpan.classList.remove("ctx_full");
+                    ctxSpan.textContent = "▽";
+                }
+            }
+        }
+    }
+
+
+    /**
      * Populates the results template.
      * @param {object} data - The data returned from the query
      * @param {bool} append - Should the content be appended or overwrite
@@ -268,9 +393,8 @@ $(function() {
             }
 
             if (!append) {
-                contentContainer
-                    .empty()
-                    .append(nunjucks.render('results_container.html', data));
+                var renderedData = nunjucks.render('results_container.html', data);
+                contentContainer.empty().append(withContextListeners(renderedData));
             } else {
                 var resultsList = contentContainer.find('.results');
 
@@ -282,16 +406,18 @@ $(function() {
                     '.result[data-path="' + firstResult.path + '"]');
                 if (domFirstResult.length) {
                     data.results = data.results.splice(1);
-                    domFirstResult.append(nunjucks.render('result_lines.html', {
+                    var renderedLines = nunjucks.render('result_lines.html', {
                         www_root: dxr.wwwRoot,
                         tree: dxr.tree,
                         result: firstResult
-                    }));
+                    });
+                    domFirstResult.append(withContextListeners(renderedLines));
                 }
 
                 // Don't render if there was only the first result and it was rendered.
                 if (data.results.length) {
-                    resultsList.append(nunjucks.render('results.html', data));
+                    var renderedData = nunjucks.render('results.html', data);
+                    resultsList.append(withContextListeners(renderedData));
                 }
             }
         }
@@ -514,7 +640,6 @@ $(function() {
         var bg_src = href.replace('source', 'raw');
         anchorElement.style.backgroundImage = 'url(' + bg_src + ')';
     }
-
     window.addEventListener('load', function() {
         $(".image").not('.too_fat').each(function() {
             setBackgroundImageFromLink(this);

@@ -282,6 +282,37 @@ def raw_rev(tree, revision, path):
     return send_file(data_file, mimetype=guess_type(path)[0])
 
 
+@dxr_blueprint.route('/<tree>/lines/')
+def lines(tree):
+    """Return lines start:end of path in tree, where start, end, path are URL params.
+    """
+    req = request.values
+    path = req.get('path', '')
+    from_line = max(0, int(req.get('start', '')))
+    to_line = int(req.get('end', ''))
+    ctx_found = []
+    possible_hits = current_app.es.search(
+            {
+                'filter': {
+                    'and': [
+                        {'term': {'path': path}},
+                        {'range': {'number': {'gte': from_line, 'lte': to_line}}}
+                        ]
+                    },
+                '_source': {'include': ['content']},
+                'sort': ['number']
+            },
+            size=max(0, to_line - from_line + 1), # keep it non-negative
+            doc_type=LINE,
+            index=es_alias_or_not_found(tree))
+    if 'hits' in possible_hits and len(possible_hits['hits']['hits']) > 0:
+        for hit in possible_hits['hits']['hits']:
+            ctx_found.append({'line_number': hit['sort'][0],
+                              'line': hit['_source']['content'][0]})
+
+    return jsonify({'lines': ctx_found, 'path': path})
+
+
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
