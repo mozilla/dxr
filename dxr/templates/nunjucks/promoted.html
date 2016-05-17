@@ -25,14 +25,14 @@
   {% endfor %}
 {%- endmacro %}
 
-{%- macro promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) -%}
-  <p class="promoted-see-more">
+{%- macro promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree, num_trees) -%}
+  <p class="promoted-see-more {% if num_trees > 1 %} with-room-for-switch {% endif %}">
     {% if promoted_count == 0 %}
       Found 0 path results
     {% elif promoted_count == 1 %}
       Found 1 path result:
     {% else %}
-      <a href="{{ promoted_query }}">View all {{ promoted_count_formatted }} path results</a>:
+      Showing first few of <a href="{{ promoted_query }}">{{ promoted_count_formatted }} path results</a>:
     {% endif %}
   </p>
 {%- endmacro -%}

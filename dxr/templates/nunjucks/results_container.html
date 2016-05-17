@@ -7,13 +7,17 @@
 
   {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
 
-  <div class="promoted-container">
+  {% if has_promoted_results %}
+    <div class="promoted-container">
+      {{ tree_menu(tree_tuples, tree) }}
+      {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree, tree_tuples|length) }}
+      {% if promoted|length > 0 %}
+        {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
+      {% endif %}
+    </div>
+  {% else %}
     {{ tree_menu(tree_tuples, tree) }}
-    {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) }}
-    {% if promoted|length > 0 %}
-      {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
-    {% endif %}
-  </div>
+  {% endif %}
 
   {% if results|length > 0 %}
     <div class="results-container">

@@ -1,7 +1,6 @@
 import cgi
 from itertools import chain, groupby
 from operator import itemgetter
-
 import re
 
 from parsimonious import Grammar, NodeVisitor

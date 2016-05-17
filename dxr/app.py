@@ -176,6 +176,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
                 params['case'] = 'true'
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
 
+    has_promoted_results = False
     try:
         # Pull up all the non-negated text terms.
         single_term = query.single_text_term()
@@ -184,6 +185,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         if offset == 0 and single_term:
             # Now we pull out the single line term and pass into promoted paths.
             try:
+                has_promoted_results = True
                 promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
                 promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
                                          redirect='false')
@@ -200,6 +202,7 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'results': results_to_json(results),
         'promoted': results_to_json(promoted),
         'result_count': count,
+        'has_promoted_results': has_promoted_results,
         'promoted_count': promoted_count,
         'promoted_count_formatted': format_number(promoted_count),
         'result_count_formatted': format_number(count),
