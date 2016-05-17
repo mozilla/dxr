@@ -259,6 +259,7 @@ public:
   // which would otherwise be ambiguous.
   std::string getQualifiedName(const NamedDecl &d) {
     std::string ret;
+    const FunctionDecl *fd = nullptr;
     const DeclContext *ctx = d.getDeclContext();
     if (ctx->isFunctionOrMethod() && isa<NamedDecl>(ctx)) {
       // This is a local variable.
@@ -268,10 +269,33 @@ public:
       ret = getQualifiedName(*cast<NamedDecl>(ctx)) + "::" + d.getNameAsString();
     }
     else {
-      ret = d.getQualifiedNameAsString();
+      if ((fd = dyn_cast<FunctionDecl>(&d))) {  // A function
+        if (fd->isTemplateInstantiation()) {
+          // Use the original template pattern, not the substituted concrete
+          // types, for the qualname:
+          fd = fd->getTemplateInstantiationPattern();
+#if 0 // Activate this section to give most full (but no partial!) function
+      // template specializations the same qualname as the base template.
+        } else if (FunctionTemplateSpecializationInfo *ftsi =
+                     fd->getTemplateSpecializationInfo()) {
+          // This gives a function template and its full specializations the
+          // same qualname.  Unfortunately I don't know how to do the same for
+          // *partial* class template specializations, so for now the original
+          // template and each partial specialization gets its own qualname.
+          fd = ftsi->getTemplate()->getTemplatedDecl();
+#endif
+        }
+        // Canonicalize the decl - otherwise you can get different qualnames
+        // depending on the location of your decl (which would be bad).
+        fd = fd->getCanonicalDecl();
+        ret = fd->getQualifiedNameAsString();
+      }
+      else {
+        ret = d.getQualifiedNameAsString();
+      }
     }
 
-    if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(&d)) {
+    if (fd) {
       // This is a function.  getQualifiedNameAsString will return a string
       // like "ANamespace::AFunction".  To this we append the list of parameters
       // so that we can distinguish correctly between
@@ -279,9 +303,6 @@ public:
       //    and
       // void ANamespace::AFunction(float);
       ret += "(";
-      // Use the canonical decl - otherwise you can get different param strings
-      // depending on the location of your decl (which is bad).
-      fd = fd->getCanonicalDecl();
       const FunctionType *ft = fd->getType()->castAs<FunctionType>();
       if (const FunctionProtoType *fpt = dyn_cast<FunctionProtoType>(ft)) {
         unsigned num_params = fd->getNumParams();
