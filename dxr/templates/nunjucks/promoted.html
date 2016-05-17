@@ -26,10 +26,15 @@
 {%- endmacro %}
 
 {%- macro promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) -%}
-    <p class="promoted-see-more">
-        <a href="{{ promoted_query }}">{{ promoted_count_formatted }}
-            path {{ 'result' if promoted_count == 1 else 'results' }}</a>:
-    </p>
+  <p class="promoted-see-more">
+    {% if promoted_count == 0 %}
+      Found 0 path results
+    {% elif promoted_count == 1 %}
+      Found 1 path result:
+    {% else %}
+      <a href="{{ promoted_query }}">View all {{ promoted_count_formatted }} path results</a>:
+    {% endif %}
+  </p>
 {%- endmacro -%}
 
 {# When not being included as a macro, render the code above. #}

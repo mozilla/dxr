@@ -197,7 +197,7 @@ mark {
     max-width: 33%;
 }
 .promoted-see-more {
-    margin: 0 0 1rem;
+    margin: 0 10em 1rem 0;
 }
 .promoted-icon {
     width: 16px;
@@ -242,9 +242,8 @@ mark {
 .results .right-column {
     word-break: break-all;
 }
-/* cannot underline block-display nodes. */
-.results .right-column a:hover {
-    background-color: #fffdae;
+.results .right-column code:hover {
+    text-decoration: underline;
 }
 .results td {
     padding: .1rem .5rem;

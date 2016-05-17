@@ -200,7 +200,8 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'results': results_to_json(results),
         'promoted': results_to_json(promoted),
         'result_count': count,
-        'promoted_count': format_number(promoted_count),
+        'promoted_count': promoted_count,
+        'promoted_count_formatted': format_number(promoted_count),
         'result_count_formatted': format_number(count),
         'promoted_query': promoted_query,
         'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})

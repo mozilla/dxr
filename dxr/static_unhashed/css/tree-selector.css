@@ -12,6 +12,7 @@
     float: right;
     width: auto;
     text-align: right;
+    position: relative;
 }
 .select-options {
     display: none;
@@ -54,6 +55,8 @@
     border: 1px solid #d4d4d4;
     border-radius: 6px;
     z-index: 10;
+    right: 0;
+    position: absolute;
 }
 header {
     background-color: #e0e0e0;
