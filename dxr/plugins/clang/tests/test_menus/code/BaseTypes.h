@@ -19,6 +19,4 @@ public:
   ~Z();
 };
 
-Z::~Z() {}
-
 #endif

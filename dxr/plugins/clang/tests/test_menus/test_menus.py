@@ -296,10 +296,10 @@ class MenuTests(DxrInstanceTestCase):
     def test_destructor_def(self):
         """Make sure we link the full destructor name and not just the '~' on a
         destructor def."""
-        menu_on(self.source_page('BaseTypes.h'),
-                '~BaseClass',
+        menu_on(self.source_page('Z.cpp'),
+                '~Z',
                 {'html': 'Find callers',
-                 'href': '/code/search?q=%2Bcallers%3ABaseClass%3A%3A%7EBaseClass%28%29'})
+                 'href': '/code/search?q=%2Bcallers%3AZ%3A%3A%7EZ%28%29'})
 
     def test_destructor_call(self):
         """Make sure we link the full destructor name and not just the '~' on a
