@@ -27,7 +27,7 @@ class VisitorTests(TestCase):
     def test_tricksy_orphanses(self):
         """Try to trick the parser into prematurely committing to various
         classifications."""
-        eq_(self.visit('- -+ +- -+fred +type: +-type:hey type: smoo hi:mom +boo'),
+        eq_(self.visit('- -+ @ +- -+fred +type: +-type:hey type: smoo hi:mom +boo'),
             [{'arg': '-',
               'name': 'text',
               'not': False,
@@ -36,6 +36,11 @@ class VisitorTests(TestCase):
              {'arg': '+',
               'name': 'text',
               'not': True,
+              'case_sensitive': False,
+              'qualified': False},
+             {'arg': '@',
+              'name': 'text',
+              'not': False,
               'case_sensitive': False,
               'qualified': False},
              {'arg': '+-',
@@ -81,7 +86,7 @@ class VisitorTests(TestCase):
 
     def test_normal_things(self):
         """Make sure normal, everyday things that should work do."""
-        eq_(self.visit('regexp:smoo -regexp:foo|bar -baz qux type:yeah'),
+        eq_(self.visit('regexp:smoo -regexp:foo|bar -baz qux foo Foo @foo type:yeah'),
             [{'arg': 'smoo',
               'name': 'regexp',
               'not': False,
@@ -102,6 +107,21 @@ class VisitorTests(TestCase):
               'not': False,
               'case_sensitive': False,
               'qualified': False},
+             {'arg': 'foo',
+              'name': 'text',
+              'not': False,
+              'case_sensitive': False,
+              'qualified': False},
+             {'arg': 'Foo',
+              'name': 'text',
+              'not': False,
+              'case_sensitive': True,
+              'qualified': False},
+             {'arg': 'foo',
+              'name': 'text',
+              'not': False,
+              'case_sensitive': True,
+              'qualified': False},
              {'arg': 'yeah',
               'name': 'type',
               'not': False,
@@ -114,7 +134,7 @@ class VisitorTests(TestCase):
             [{'arg': 'Snork',
               'name': 'type',
               'not': False,
-              'case_sensitive': False,
+              'case_sensitive': True,
               'qualified': True}])
 
     def test_unclosed_quotes(self):

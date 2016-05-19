@@ -85,15 +85,6 @@ $(function() {
     }
 
     /**
-     * If the `case` param is in the URL, returns its boolean value. Otherwise,
-     * returns null.
-     */
-    function caseFromUrl() {
-        var match = /[?&]?case=([^&]+)/.exec(location.search);
-        return match ? (match[1] === 'true') : null;
-    }
-
-    /**
      * Represents the path line displayed next to the file path label on individual document pages.
      * Also handles population of the path lines template in the correct format.
      *
@@ -131,7 +122,6 @@ $(function() {
     var searchForm = $('#basic_search'),
         queryField = $('#query'),
         query = null,
-        caseSensitiveBox = $('#case'),
         contentContainer = $('#content'),
         waiter = null,
         historyWaiter = null,
@@ -149,14 +139,9 @@ $(function() {
     var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
     if (fromQuery !== null) {
         // Offer the user the option to see all the results instead.
-        var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>',
-            isCaseSensitive = caseFromUrl();
+        var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>';
 
         var searchUrl = constants.data('search') + '?q=' + fromQuery[1];
-        if (isCaseSensitive !== null) {
-            searchUrl += '&case=' + isCaseSensitive;
-        }
-
         queryField.val(decodeURIComponent(fromQuery[1]));
         showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
     }
@@ -169,17 +154,15 @@ $(function() {
      * Return the full Ajax URL for search.
      *
      * @param {string} query - The query string
-     * @param {bool} isCaseSensitive - Whether the query should be case-sensitive
      * @param {int} limit - The number of results to return.
      * @param {int} offset - The cursor position
      * @param {bool} redirect - Whether to redirect.
      */
-    function buildAjaxURL(query, isCaseSensitive, limit, offset, redirect) {
+    function buildAjaxURL(query, limit, offset, redirect) {
         var search = dxr.searchUrl;
         var params = {};
         params.q = query;
         params.redirect = redirect;
-        params['case'] = isCaseSensitive;
         params.limit = limit;
         params.offset = offset;
 
@@ -220,7 +203,7 @@ $(function() {
                 previousDataLimit = defaultDataLimit;
 
                 // Resubmit query for the next set of results, making sure redirect is turned off.
-                var requestUrl = buildAjaxURL(query, caseSensitiveBox.prop('checked'), defaultDataLimit, dataOffset, false);
+                var requestUrl = buildAjaxURL(query, defaultDataLimit, dataOffset, false);
                 doQuery(false, requestUrl, true);
             }
         }
@@ -254,14 +237,6 @@ $(function() {
     }
 
     /**
-     * Saves checkbox checked property to localStorage and invokes queryNow function.
-     */
-    function updateLocalStorageAndQueryNow(){
-       localStorage.setItem('caseSensitive', $('#case').prop('checked'));
-       queryNow();
-    }
-
-    /**
      * Clears any existing query timer and queries immediately.
      */
     function queryNow(redirect) {
@@ -280,8 +255,7 @@ $(function() {
         data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
 
         var params = {
-            q: data.query,
-            case: data.is_case_sensitive
+            q: data.query
         };
         data.query_string = $.param(params);
 
@@ -365,7 +339,7 @@ $(function() {
         } else {
             lineHeight = parseInt(contentContainer.css('line-height'), 10);
             limit = Math.floor((window.innerHeight / lineHeight) + 25);
-            queryString = buildAjaxURL(query, caseSensitiveBox.prop('checked'), limit, 0, redirect);
+            queryString = buildAjaxURL(query, limit, 0, redirect);
         }
         function oneMoreRequest() {
             if (requestsInFlight === 0) {
@@ -471,20 +445,6 @@ $(function() {
         queryNow(true);
     });
 
-    // Update the search when the case-sensitive box is toggled, canceling any pending query:
-    caseSensitiveBox.on('change', updateLocalStorageAndQueryNow);
-
-
-    var urlCaseSensitive = caseFromUrl();
-    if (urlCaseSensitive !== null) {
-        // Any case-sensitivity specification in the URL overrides what was in localStorage:
-        localStorage.setItem('caseSensitive', urlCaseSensitive);
-    } else {
-        // Restore checkbox state from localStorage:
-        caseSensitiveBox.prop('checked', 'true' === localStorage.getItem('caseSensitive'));
-    }
-
-
     // Toggle the help box when the help icon is clicked, and hide it when
     // anything outside of the box is clicked.
 
@@ -583,11 +543,6 @@ $(function() {
     window.addEventListener('load', function() {
         lastURLWasSearch = locationIsSearch();
         if (lastURLWasSearch) {
-            // Set case-sensitive checkbox according to the URL, and make sure
-            // the localstorage mirrors it.
-            var urlIsCaseSensitive = caseFromUrl() === true;
-            caseSensitiveBox.prop('checked', urlIsCaseSensitive);
-            localStorage.setItem('caseSensitive', urlIsCaseSensitive);
             doQuery(false, window.location.href);
         }
     });

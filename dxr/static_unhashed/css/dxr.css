@@ -308,13 +308,6 @@ mark {
     flex: 9;
     position: relative;
 }
-.case {
-    -webkit-flex: 1;
-    flex: 1;
-    padding: 0 1rem;
-    min-width: 9rem;
-    align-self: center;
-}
 .basic_search {
     position: absolute;
     top: 80%;

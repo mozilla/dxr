@@ -129,7 +129,7 @@ $(function() {
 
             // If the regex did not find a start index, start from index 0
             if (startIndex === -1) {
-                start = 0;
+                startIndex = 0;
             }
 
             // If the regex did not find an end index, end at the position
@@ -154,7 +154,7 @@ $(function() {
             var contextMenu = {},
                 menuItems = [{
                     html: 'Search for the substring <strong>' + htmlEscape(word) + '</strong>',
-                    href: dxr.wwwRoot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word) + "&case=true",
+                    href: dxr.wwwRoot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word),
                     icon: 'search'
                 }];
 
