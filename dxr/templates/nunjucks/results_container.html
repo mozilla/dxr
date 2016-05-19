@@ -5,18 +5,16 @@
 
 <div class="results-row">
 
+  <div class="result_header">
   {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
+  {{ tree_menu(tree_tuples, tree) }}
+  </div>
 
   {% if has_promoted_results %}
     <div class="promoted-container">
-      {{ tree_menu(tree_tuples, tree) }}
-      {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree, tree_tuples|length) }}
-      {% if promoted|length > 0 %}
-        {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
-      {% endif %}
+      {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) }}
+      {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
     </div>
-  {% else %}
-    {{ tree_menu(tree_tuples, tree) }}
   {% endif %}
 
   {% if results|length > 0 %}

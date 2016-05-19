@@ -196,17 +196,20 @@ mark {
     padding: 1.5em 2em;
     max-width: 33%;
 }
-.promoted-see-more.with-room-for-switch {
-    margin: 0 10em 1rem 0;
+.promoted-row {
+    padding-left: 26px;
+    padding-bottom: 5px;
+    position: relative;
 }
 .promoted-icon {
     width: 16px;
     height: 16px;
-    display: inline-block;
+    display: block;
+    left: 0px;
+    position: absolute;
 }
 .promoted-result {
-    margin-left: 5px;
-    display: inline-block;
+    display: inline;
 }
 .promoted-line.left-column {
     display: inline;
