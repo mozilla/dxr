@@ -28,7 +28,6 @@ from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
 from dxr.vcs import file_contents_at_rev
 
 
-
 # Look in the 'dxr' package for static files, etc.:
 dxr_blueprint = Blueprint(DXR_BLUEPRINT,
                           'dxr',
