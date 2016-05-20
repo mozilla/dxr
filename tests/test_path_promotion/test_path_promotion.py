@@ -4,7 +4,7 @@ from dxr.testing import DxrInstanceTestCase
 
 
 class PathPromotionTests(DxrInstanceTestCase):
-    """Tests for functionality that isn't specific to particular filters"""
+    """Test that path promotion finds paths and text, and in the correct order."""
 
     def test_ordering(self):
         """Test that a 'sub' search will find both filenames and contents containing sub,

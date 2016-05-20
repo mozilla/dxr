@@ -185,10 +185,10 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         if offset == 0 and single_term:
             # Now we pull out the single line term and pass into promoted paths.
             try:
-                has_promoted_results = True
                 promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
                 promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
                                          redirect='false')
+                has_promoted_results = True
             except BadTerm:
                 # If we get BadTerm here, just return no promoted results rather than bailing
                 # out of the whole query.

@@ -65,13 +65,13 @@ mappings = {
             'enabled': False
         },
         'properties': {
-            # FILE filters query this. It supports globbing via JS regex script.
-
             # Basename of path for fast lookup.
             # FILE filters query this. It supports globbing via JS regex script.
             'file_name': PATH_SEGMENT_MAPPING,  # filename.cpp
 
             'ext': UNANALYZED_STRING,
+
+            # FILE filters query this. It supports globbing via JS regex script.
             'path': FILE_PATH_MAPPING,
 
             # the target path if this FILE is a symlink

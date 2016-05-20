@@ -1,25 +1,9 @@
-{% from "result_lines.html" import result_lines -%}
-
 {% macro promoted_list(query, promoted, promoted_count, www_root, tree) -%}
   {% for result in promoted %}
     <div class="promoted-row {% if result.is_binary %} binary_row {% endif %}">
       <div class="promoted-icon {{ result.iconClass }}"></div>
       <div class="promoted-result">
         <span class="promoted-path">{{ result.pathLine | safe }}</span>
-        {% for entry in result.lines %}
-          <div class="promoted-line">
-            <span class="left-column">
-             <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-               {{ entry.line_number }}
-             </a>
-           </span>
-           <span class="promoted-text">
-             <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
-               <code aria-labelledby="{{ entry.line_number }}">{{ entry.line|safe }}</code>
-             </a>
-           </span>
-          </div>
-        {% endfor %}
       </div>
     </div>
   {% endfor %}
