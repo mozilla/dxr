@@ -269,13 +269,7 @@ $(function () {
             }
 
         } else {
-            //set lastModifierKey ranges and single lines to null, then clear all highlights
-            lastModifierKey = null;
-            //Remove existing highlights.
-            $('.line-number, .code code').removeClass('last-selected highlighted multihighlight clicked');
-            //empty out single lines and ranges arrays
-            rangesArray = [];
-            singleLinesArray = [];
+            removeAllHighlighting();
             //toggle highlighting on for any line that was not previously clicked
             if (lastSelectedNum !== clickedNum) {
                 //With this we're one better than github, which doesn't allow toggling single lines
@@ -287,8 +281,15 @@ $(function () {
         setWindowHash();
     });
 
-    //highlight line(s) if someone visits a url directly with an #anchor
-    $(document).ready(function () {
+    function removeAllHighlighting() {
+        lastModifierKey = null;
+        rangesArray = [];
+        singleLinesArray = [];
+        $('.line-number, .code code').removeClass('last-selected highlighted multihighlight clicked');
+    }
+
+    //highlight line(s) if someone visits a url with an #anchor
+    function processHash() {
         if (window.location.hash.substring(1)) {
             var toHighlight = getSortedHashLines(),
                 jumpPosition = $('#' + toHighlight.lineStart).offset(),
@@ -323,6 +324,12 @@ $(function () {
             //tidy up an incoming url that might be typed in manually
             setWindowHash();
         }
-    });
+    }
 
+    // Highlight any lines specified by hash in either a direct page load or a history pop.
+    $(document).ready(processHash);
+    $(window).on('popstate', function() {
+        removeAllHighlighting();
+        processHash();
+    });
 });

@@ -28,11 +28,8 @@ class BasicTests(DxrInstanceTestCase):
         """Make sure case-sensitive searching is case-sensitive.
 
         """
-        self.found_files_eq('really',
-                            ['README.mkd'],
-                            is_case_sensitive=True)
-        self.found_nothing('REALLY',
-                           is_case_sensitive=True)
+        self.found_files_eq('really', ['README.mkd'])
+        self.found_nothing('REALLY')
 
     def test_case_insensitive(self):
         """Test case-insensitive free-text searching without extents.
@@ -40,8 +37,7 @@ class BasicTests(DxrInstanceTestCase):
         Also test negation of text queries.
 
         """
-        results = self.search_results(
-            'path:makefile -CODE', is_case_sensitive=False)
+        results = self.search_results('path:makefile -code')
         eq_(results,
             [{"path": "makefile",
               "lines": [
@@ -55,9 +51,7 @@ class BasicTests(DxrInstanceTestCase):
         """Test case-insensitive free-text searching with extents.
 
         """
-        self.found_files_eq('MAIN',
-                            ['main.c', 'makefile'],
-                            is_case_sensitive=False)
+        self.found_files_eq('main', ['main.c', 'makefile'])
 
     def test_index(self):
         """Make sure the index controller redirects."""

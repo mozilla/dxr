@@ -132,23 +132,21 @@ def search(tree):
     query_text = req.get('q', '')
     offset = non_negative_int(req.get('offset'), 0)
     limit = min(non_negative_int(req.get('limit'), 100), 1000)
-    is_case_sensitive = req.get('case') == 'true'
 
     # Make a Query:
     query = Query(partial(current_app.es.search,
                           index=frozen['es_alias']),
                   query_text,
-                  plugins_named(frozen['enabled_plugins']),
-                  is_case_sensitive=is_case_sensitive)
+                  plugins_named(frozen['enabled_plugins']))
 
     # Fire off one of the two search routines:
     if _request_wants_json():
-        return _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config)
+        return _search_json(query, tree, query_text, offset, limit, config)
     else:
-        return _search_html(tree, query_text, is_case_sensitive, config)
+        return _search_html(tree, query_text, config)
 
 
-def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, config):
+def _search_json(query, tree, query_text, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
     then return {redirect: hit location}.If that doesn't work, fall back to a normal search
     and return the results as JSON."""
@@ -171,8 +169,6 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
                 'path': path,
                 'from': query_text
             }
-            if is_case_sensitive:
-                params['case'] = 'true'
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
 
     has_promoted_results = False
@@ -206,10 +202,10 @@ def _search_json(query, tree, query_text, is_case_sensitive, offset, limit, conf
         'promoted_count_formatted': format_number(promoted_count),
         'result_count_formatted': format_number(count),
         'promoted_query': promoted_query,
-        'tree_tuples': _tree_tuples(query_text, is_case_sensitive)})
+        'tree_tuples': _tree_tuples(query_text)})
 
 
-def _search_html(tree, query_text, is_case_sensitive, config):
+def _search_html(tree, query_text, config):
     """Return the rendered template for search.html.
 
     """
@@ -221,7 +217,6 @@ def _search_html(tree, query_text, is_case_sensitive, config):
                 plugins_named(frozen['enabled_plugins'])),
             'generated_date': frozen['generated_date'],
             'google_analytics_key': config.google_analytics_key,
-            'is_case_sensitive': is_case_sensitive,
             'query': query_text,
             'search_url': url_for('.search',
                                   tree=tree,
@@ -229,19 +224,18 @@ def _search_html(tree, query_text, is_case_sensitive, config):
                                   redirect='false'),
             'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
-            'tree_tuples': _tree_tuples(query_text, is_case_sensitive),
+            'tree_tuples': _tree_tuples(query_text),
             'www_root': config.www_root}
 
     return render_template('search.html', **template_vars)
 
 
-def _tree_tuples(query_text, is_case_sensitive):
+def _tree_tuples(query_text):
     """Return a list of rendering info for Switch Tree menu items."""
     return [(f['name'],
              url_for('.search',
                      tree=f['name'],
-                     q=query_text,
-                     **({'case': 'true'} if is_case_sensitive else {})),
+                     q=query_text),
              f['description'])
             for f in frozen_configs()]
 

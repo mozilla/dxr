@@ -63,14 +63,13 @@ def _make_es_query(filters, is_line_query):
 class Query(object):
     """Query object, constructor will parse any search query"""
 
-    def __init__(self, es_search, querystr, enabled_plugins, is_case_sensitive=True):
+    def __init__(self, es_search, querystr, enabled_plugins):
         self.es_search = es_search
         self.enabled_plugins = list(enabled_plugins)
-        self.is_case_sensitive = is_case_sensitive
 
         # A list of dicts describing query terms:
         grammar = query_grammar(self.enabled_plugins)
-        self._terms = QueryVisitor(is_case_sensitive=is_case_sensitive).visit(grammar.parse(querystr))
+        self._terms = QueryVisitor().visit(grammar.parse(querystr))
 
         enabled_filters_by_name = filters_by_name(self.enabled_plugins)
         # A list of lists, each inner list representing the filters of the name
@@ -178,7 +177,7 @@ class Query(object):
         filtered_query = _make_es_query(file_filters, False)
         path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
         # We add a second query that boosts exact path segment matches.
-        match_field = 'path.segments' if self.is_case_sensitive else 'path.segments_lower'
+        match_field = 'path.segments' if term['case_sensitive'] else 'path.segments_lower'
         exact_query = {
             'filtered': {
                 'query': {'constant_score': {'query': {'match': {match_field: term['arg']}},
@@ -282,12 +281,13 @@ def query_grammar(plugins):
         terms = term*
         term = not_term / positive_term
         not_term = not positive_term
-        positive_term = filtered_term / text
+        positive_term = filtered_term / cased_text / text
 
         # A term with a filter name prepended:
-        filtered_term = maybe_plus filter ":" text
+        filtered_term = maybe_plus filter ":" (cased_text / text)
 
         # Bare or quoted text, possibly with spaces. Not empty.
+        cased_text = case text
         text = (double_quoted_text / single_quoted_text / bare_text) _
 
         filter = ~r"''' +
@@ -301,6 +301,8 @@ def query_grammar(plugins):
                             reverse=True)) + ur'''"
 
         not = "-"
+        # Stick an @ in front of text to negate the case-sensitivity guess.
+        case = "@"
 
         # You can stick a plus in front of anything, and it'll parse, but it has
         # meaning only with the filters where it makes sense.
@@ -334,22 +336,15 @@ class QueryVisitor(NodeVisitor):
         [{'name': 'path',
           'arg': 'ns*.cpp',
           'qualified': False,
-          'not': False,
-          'case_sensitive': False}]
+          'not': False}]
 
     """
     visit_positive_term = NodeVisitor.lift_child
 
-    def __init__(self, is_case_sensitive=False):
+    def __init__(self):
         """Construct.
-
-        :arg is_case_sensitive: What "case_sensitive" value to set on every
-            term. This is meant to be temporary, until we expose per-term case
-            sensitivity to the user.
-
         """
         super(NodeVisitor, self).__init__()
-        self.is_case_sensitive = is_case_sensitive
 
     def visit_query(self, query, (_, terms)):
         """Return a list of query term term_dicts."""
@@ -361,7 +356,6 @@ class QueryVisitor(NodeVisitor):
     def visit_term(self, term, (term_dict,)):
         """Set the case-sensitive bit and, if not already set, a default not
         bit."""
-        term_dict['case_sensitive'] = self.is_case_sensitive
         term_dict.setdefault('not', False)
         term_dict.setdefault('qualified', False)
         return term_dict
@@ -371,10 +365,15 @@ class QueryVisitor(NodeVisitor):
         term_dict['not'] = True
         return term_dict
 
-    def visit_filtered_term(self, filtered_term, (plus, filter, colon, term_dict)):
+    def visit_filtered_term(self, filtered_term, (plus, filter, colon, (term_dict,))):
         """Add fully-qualified indicator and the filter name to the term_dict."""
         term_dict['qualified'] = plus.text == '+'
         term_dict['name'] = filter.text
+        return term_dict
+
+    def visit_cased_text(self, cased_text, (at_, term_dict)):
+        """Force case_sensitive to True in the term_dict."""
+        term_dict['case_sensitive'] = True
         return term_dict
 
     def visit_text(self, text, ((some_text,), _)):
@@ -384,7 +383,9 @@ class QueryVisitor(NodeVisitor):
         ``visit_filtered_term`` will overrule us later.
 
         """
-        return {'name': 'text', 'arg': some_text}
+        # Case-sensitive if there's any uppercase characters in the term.
+        case_sensitive = any((c.isupper() for c in some_text))
+        return {'name': 'text', 'arg': some_text, 'case_sensitive': case_sensitive}
 
     def visit_maybe_plus(self, plus, wtf):
         """Keep the plus from turning into a list half the time. That makes it

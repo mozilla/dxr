@@ -67,15 +67,13 @@ class RegexpTests(SingleFileTestCase):
 
     def test_case_sensitive(self):
         self.found_line_eq('regexp:" ?The ?"',
-                           '//<b> The </b>paddle-shaped tail is a dead giveaway.',
-                           is_case_sensitive=True)
+                           '//<b> The </b>paddle-shaped tail is a dead giveaway.')
 
     def test_case_insensitive(self):
         self.found_lines_eq(
             'regexp:sha[a-z]+d',
             [('// The paddle-<b>shaped</b> tail is a dead giveaway.', 2),
-             ("// We know it's you, <b>Shahad</b>.", 3)],
-            is_case_sensitive=False)
+             ("// We know it's you, <b>Shahad</b>.", 3)])
 
 
 

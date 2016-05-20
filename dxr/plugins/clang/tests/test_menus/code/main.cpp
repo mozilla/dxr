@@ -18,6 +18,9 @@ int main(int argc, char* argv[]) {
   der->virtualFunc();
   delete der;
 
+  Z zz;
+  zz.~Z();
+
   return 1;
 }
 
