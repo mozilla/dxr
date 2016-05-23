@@ -211,13 +211,6 @@ mark {
 .promoted-result {
     display: inline;
 }
-.promoted-line.left-column {
-    display: inline;
-    width: 6ex;
-}
-.promoted-text {
-    padding: .1rem .5rem;
-}
 
 /* results */
 .results-container {

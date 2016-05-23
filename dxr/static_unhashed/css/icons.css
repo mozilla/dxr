@@ -131,14 +131,14 @@ a.type {
 .folder-content .diff {
     background-image: url('/static/icons/mimetypes/diff.png');
 }
+.icon-container.folder, .promoted-icon.folder {
+    background: transparent url('/static/icons/mimetypes/folder.png');
+}
 .h {
     background-image: url('/static/icons/mimetypes/h.png');
 }
 .html {
     background-image: url('/static/icons/mimetypes/html.png');
-}
-.icon-container.folder, .promoted-icon.folder {
-    background: transparent url('/static/icons/mimetypes/folder.png');
 }
 .iso {
     background-image: url('/static/icons/mimetypes/iso.png');
