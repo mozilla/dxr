@@ -21,14 +21,14 @@ class RefNeedlesTests(DxrInstanceTestCase):
         page = self.source_page('somejs.js')
 
         menu_on(page, 'echo', {'html': 'Find definition of prop echo',
-                               'href': '/code/search?q=%2Bid%3A%22%23echo%22'})
+                               'href': '/code/search?q=%2Bid%3A%22foo%23echo%22'})
         menu_on(page, 'echo', {'html': 'Find references to prop echo',
-                               'href': '/code/search?q=%2Bref%3A%22%23echo%22'})
+                               'href': '/code/search?q=%2Bref%3A%22foo%23echo%22'})
 
         menu_on(page, 'print', {'html': 'Find definition of prop print',
-                                'href': '/code/search?q=%2Bid%3A%22%23print%22'})
+                                'href': '/code/search?q=%2Bid%3A%22foo%23print%22'})
         menu_on(page, 'print', {'html': 'Find references to prop print',
-                                'href': '/code/search?q=%2Bref%3A%22%23print%22'})
+                                'href': '/code/search?q=%2Bref%3A%22foo%23print%22'})
 
         menu_on(page, 'identity2', {'html': 'Find definition of var identity2',
                                     'href': '/code/search?q=%2Bid%3A%22somejs.js-3%22'})

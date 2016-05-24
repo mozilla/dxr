@@ -2,61 +2,26 @@ const esprima = require('esprima');
 const fs = require('fs');
 const path = require('path');
 
-let nextSymId = 0;
-let fileIndex, outLines;
+let nextSymId, fileIndex, outLines;
 
 // Write s out to the assigned temp file.
 function emit(s) {
-    outLines.push(s);
+  outLines.push(s);
 }
 
-function Symbol(name, loc)
-{
-  this.name = name;
-  this.loc = loc;
-  this.id = fileIndex + "-" + nextSymId++;
-  this.uses = [];
-  this.skip = false;
-}
-
-Symbol.prototype = {
-  use(loc) {
-    this.uses.push(loc);
-  },
-};
-
-function SymbolTable()
-{
-  this.table = new Map();
-}
-
-SymbolTable.prototype = {
-  put(name, symbol) {
-    this.table.set(name, symbol);
-  },
-
-  get(name) {
-    return this.table.get(name);
-  },
-};
-
+// Return whether loc1 begins before loc2.
 function locBefore(loc1, loc2) {
   return loc1.start.line < loc2.start.line ||
          (loc1.start.line == loc2.start.line && loc1.start.column < loc2.start.column);
 }
 
-function locstr(loc)
-{
-  return `${loc.start.line}:${loc.start.column}`;
+// Return string repr of location with given name.
+function locstr(loc, name) {
+  return `${loc.start.line}:${loc.start.column}-${loc.start.column + name.length}`;
 }
 
-function locstr2(loc, str)
-{
-  return `${loc.start.line}:${loc.start.column}-${loc.start.column + str.length}`;
-}
-
-function nameValid(name)
-{
+// Return whether the name could be a valid symbol.
+function nameValid(name) {
   return name.indexOf(" ") == -1 &&
          name.indexOf("\n") == -1 &&
          name.indexOf("\r") == -1 &&
@@ -65,92 +30,67 @@ function nameValid(name)
          name.indexOf('"') == -1;
 }
 
-function memberPropLoc(expr)
-{
+// Fix the location attribute of the expr's member property, and return it.
+function memberPropLoc(expr) {
   let idLoc = expr.loc;
   idLoc.start.line = idLoc.end.line;
   idLoc.start.column = idLoc.end.column - expr.property.name.length;
   return idLoc;
 }
 
+
+// A JS symbol with given name and source location.
+function JSSymbol(name, loc) {
+  this.name = name;
+  this.loc = loc;
+  this.id = fileIndex + "-" + nextSymId++;
+  this.uses = [];
+}
+
+JSSymbol.prototype = {
+  use(loc) {
+    this.uses.push(loc);
+  },
+};
+
 let Analyzer = {
-  symbols: new SymbolTable(),
+  // Map name -> JSSymbol for each symbol used/defined in the current scope.
+  symbols: new Map(),
+  // Stack of symbols, where top of stack is symbol map of current scope.
   symbolTableStack: [],
 
+  // The name of the "this" object in the current scope.
   nameForThis: null,
+  // The name of the current class statement, if we enter a class definition.
   className: null,
 
+  // Enter a scope.
   enter() {
     this.symbolTableStack.push(this.symbols);
-    this.symbols = new SymbolTable();
+    this.symbols = new Map();
   },
 
+  // Leave a scope. Do not exit() on global scope.
   exit() {
     let old = this.symbols;
     this.symbols = this.symbolTableStack.pop();
     return old;
   },
 
+  // Return whether the analyzer is currently at global scope.
   isToplevel() {
     return this.symbolTableStack.length == 0;
   },
 
+  // Enter a new scope, call f, then exit the scope.
   scoped(f) {
     this.enter();
     f();
     this.exit();
   },
 
-  program(prog) {
-    for (let stmt of prog.body) {
-      this.statement(stmt);
-    }
-  },
-
-  defProp(name, loc, extra, extraPretty) {
-    if (!nameValid(name)) {
-      return;
-    }
-    emit(JSON.stringify({loc: locstr2(loc, name), type: 'prop', kind: "def", name, sym: `#${name}`}));
-    if (extra) {
-      emit(JSON.stringify({loc: locstr2(loc, name), kind: "def", type: 'prop', name: extraPretty, sym: extra}));
-    }
-  },
-
-  useProp(name, loc, extra, extraPretty) {
-    if (!nameValid(name)) {
-      return;
-    }
-    emit(JSON.stringify({loc: locstr2(loc, name), kind: "use", name, type: "prop", sym: `#${name}`}));
-    if (extra) {
-      emit(JSON.stringify({loc: locstr2(loc, name), kind: "use", type: "prop", name: extraPretty, sym: extra}));
-    }
-  },
-
-  assignProp(name, loc, extra, extraPretty) {
-    if (!nameValid(name)) {
-      return;
-    }
-    emit(JSON.stringify({loc: locstr2(loc, name), kind: "assign", type: "prop", name, sym: `#${name}`}));
-    if (extra) {
-      emit(JSON.stringify({loc: locstr2(loc, name), kind: "assign", type: "prop", name: extraPretty, sym: extra}));
-    }
-  },
-
-  defVar(name, loc) {
-    if (!nameValid(name)) {
-      return;
-    }
-    if (this.isToplevel()) {
-      this.defProp(name, loc);
-      return;
-    }
-    let sym = new Symbol(name, loc);
-    this.symbols.put(name, sym);
-
-    emit(JSON.stringify({loc: locstr2(loc, name), kind: "def", type: "var", name, sym: sym.id}));
-  },
-
+  // Return the JSSymbol of the given name accessible from the current scope,
+  // undefined if not found.
   findSymbol(name) {
     let sym = this.symbols.get(name);
     if (!sym) {
@@ -164,30 +104,74 @@ let Analyzer = {
     return sym;
   },
 
+  // Emit lines for a property definition in global scope.
+  defPropGlobal(name, loc) {
+    if (!nameValid(name)) {
+      return;
+    }
+    emit(JSON.stringify({loc: locstr(loc, name), type: 'prop', kind: "def", name, sym: `#${name}`}));
+  },
+
+  // Emit lines for a property usage in global scope.
+  usePropGlobal(name, loc) {
+    if (!nameValid(name)) {
+      return;
+    }
+    emit(JSON.stringify({loc: locstr(loc, name), kind: "use", name, type: "prop", sym: `#${name}`}));
+  },
+
+  // Define a qualified property.
+  defProp(name, qualname, loc) {
+    if (!nameValid(name)) {
+        return;
+    }
+    emit(JSON.stringify({loc: locstr(loc, name), kind: "def", type: "prop", name, sym: qualname}));
+  },
+
+  // Use a qualified property.
+  useProp(name, qualname, loc) {
+    if (!nameValid(name)) {
+        return;
+    }
+    emit(JSON.stringify({loc: locstr(loc, name), kind: "use", type: "prop", name, sym: qualname}));
+  },
+
+  // Emit lines for a variable definition.
+  defVar(name, loc) {
+    if (!nameValid(name)) {
+      return;
+    }
+    if (this.isToplevel()) {
+      this.defPropGlobal(name, loc);
+      return;
+    }
+    let sym = new JSSymbol(name, loc);
+    this.symbols.set(name, sym);
+
+    emit(JSON.stringify({loc: locstr(loc, name), kind: "def", type: "var", name, sym: sym.id}));
+  },
+
+  // Emit lines for a variable usage.
   useVar(name, loc) {
     if (!nameValid(name)) {
       return;
     }
     let sym = this.findSymbol(name);
     if (!sym) {
-      this.useProp(name, loc);
-    } else if (!sym.skip) {
-      emit(JSON.stringify({loc: locstr2(loc, name), kind: "use", name, type: "prop", sym: sym.id}));
+      this.usePropGlobal(name, loc);
+    } else {
+      emit(JSON.stringify({loc: locstr(loc, name), kind: "use", name, type: "prop", sym: sym.id}));
     }
   },
 
-  assignVar(name, loc) {
-    if (!nameValid(name)) {
-      return;
-    }
-    let sym = this.findSymbol(name);
-    if (!sym) {
-      this.assignProp(name, loc);
-    } else if (!sym.skip) {
-      emit(JSON.stringify({loc: locstr2(loc, name), kind: "assign", name, type: "var", sym: sym.id}));
+  // Analyze every statement of the program body.
+  program(prog) {
+    for (let stmt of prog.body) {
+      this.statement(stmt);
     }
   },
 
+  // Analyze a statement, dispatching based on its type.
   statement(stmt) {
     switch (stmt.type) {
     case "EmptyStatement":
@@ -341,12 +325,14 @@ let Analyzer = {
     }
   },
 
+  // Handle one more more variable declarations.
   variableDeclaration(decl) {
     for (let d of decl.declarations) {
       this.variableDeclarator(d);
     }
   },
 
+  // Handle a single variable declaration.
   variableDeclarator(decl) {
     this.pattern(decl.id);
 
@@ -362,12 +348,14 @@ let Analyzer = {
     this.nameForThis = oldNameForThis;
   },
 
+  // If the optional statement is defined, then handle it.
   maybeStatement(stmt) {
     if (stmt) {
       this.statement(stmt);
     }
   },
 
+  // If the optional expression is defined, then handle it.
   maybeExpression(expr) {
     if (expr) {
       this.expression(expr);
@@ -391,6 +379,7 @@ let Analyzer = {
     this.statement(clause.body);
   },
 
+  // Handle an expression by dispatching based on its type.
   expression(expr) {
     if (!expr) console.log(Error().stack);
 
@@ -400,8 +389,6 @@ let Analyzer = {
       break;
 
     case "Literal":
-      break;
-
     case "Super":
       break;
 
@@ -414,11 +401,11 @@ let Analyzer = {
       break;
 
     case "TaggedTemplate":
-      // Do something eventually!
+      // TODO
       break;
 
     case "ThisExpression":
-      // Do something eventually!
+      // TODO
       break;
 
     case "ArrayExpression":
@@ -443,14 +430,13 @@ let Analyzer = {
             loc = prop.key.loc;
             loc.start.column++;
           }
-          let extra = null;
+          let qualname = null;
           let extraPretty = null;
           if (this.nameForThis) {
-            extra = `${this.nameForThis}#${name}`;
-            extraPretty = `${this.nameForThis}.${name}`;
+            qualname = `${this.nameForThis}#${name}`;
           }
           if (name) {
-            this.defProp(name, prop.key.loc, extra, extraPretty);
+            this.defProp(name, qualname, prop.key.loc);
           }
         }
 
@@ -493,28 +479,26 @@ let Analyzer = {
 
     case "AssignmentExpression":
       if (expr.left.type == "Identifier") {
-        this.assignVar(expr.left.name, expr.left.loc);
+        this.defVar(expr.left.name, expr.left.loc);
       } else if (expr.left.type == "MemberExpression" && !expr.left.computed) {
         this.expression(expr.left.object);
 
-        let extra = null;
+        let qualname = null;
         let extraPretty = null;
         if (expr.left.object.type == "ThisExpression" && this.nameForThis) {
-          extra = `${this.nameForThis}#${expr.left.property.name}`;
+          qualname = `${this.nameForThis}#${expr.left.property.name}`;
           extraPretty = `${this.nameForThis}.${expr.left.property.name}`;
         } else if (expr.left.object.type == "Identifier") {
-          extra = `${expr.left.object.name}#${expr.left.property.name}`;
-          extraPretty = `${expr.left.object.name}.${expr.left.property.name}`;
+          qualname = `${expr.left.object.name}#${expr.left.property.name}`;
         }
-        this.assignProp(expr.left.property.name, memberPropLoc(expr.left), extra, extraPretty);
+        this.defProp(expr.left.property.name, qualname, memberPropLoc(expr.left));
       } else {
         this.expression(expr.left);
       }
 
       let oldNameForThis = this.nameForThis;
       if (expr.left.type == "MemberExpression" &&
-          !expr.left.computed)
-      {
+          !expr.left.computed) {
         if (expr.left.property.name == "prototype" &&
             expr.left.object.type == "Identifier")
         {
@@ -553,17 +537,16 @@ let Analyzer = {
       if (expr.computed) {
         this.expression(expr.property);
       } else {
-        let extra = null;
+        let qualname = null;
         let extraPretty = null;
         if (expr.object.type == "ThisExpression" && this.nameForThis) {
-          extra = `${this.nameForThis}#${expr.property.name}`;
+          qualname = `${this.nameForThis}#${expr.property.name}`;
           extraPretty = `${this.nameForThis}.${expr.property.name}`;
         } else if (expr.object.type == "Identifier") {
-          extra = `${expr.object.name}#${expr.property.name}`;
-          extraPretty = `${expr.object.name}.${expr.property.name}`;
+          qualname = `${expr.object.name}#${expr.property.name}`;
         }
 
-        this.useProp(expr.property.name, memberPropLoc(expr), extra, extraPretty);
+        this.useProp(expr.property.name, qualname, memberPropLoc(expr));
       }
       break;
 
@@ -627,6 +610,7 @@ let Analyzer = {
     }
   },
 
+  // Handle a pattern-matching assignment by dispatching on type.
   pattern(pat) {
     if (!pat) {
       console.log(Error().stack);
@@ -667,6 +651,7 @@ let Analyzer = {
   },
 };
 
+// Comment out some mozilla-specific preprocessor headers in js files.
 function preprocess(text, comment)
 {
   let substitution = false;
@@ -724,6 +709,7 @@ function preprocess(text, comment)
 function analyzeJS(filepath, relpath, tempFilepath)
 {
   fileIndex = relpath;
+  nextSymId = 0;
   outLines = [];
   let text = preprocess(String(fs.readFileSync(filepath)), line => "//" + line);
   try {
