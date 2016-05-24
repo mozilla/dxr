@@ -62,7 +62,7 @@ class _TreeToIndex(TreeToIndex):
                                    self.tree.source_folder,
                                    join(self.tree.temp_folder, "plugins/js")] +
                                    self.tree.ignore_filenames,
-                                  cwd=self.plugin_folder)
+                                  cwd=join(self.plugin_folder, "analyze_js"))
         return retcode
 
     def file_to_index(self, path, contents):

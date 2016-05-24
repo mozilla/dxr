@@ -6,8 +6,8 @@
   "engine": "node >= 0.8.x",
   "license": "MIT",
   "dependencies": {
-    "esprima": "^2.7.2",
-    "minimatch": "^3.0.0",
-    "walk": "^2.3.9"
+    "esprima": "2.7.2",
+    "minimatch": "3.0.0",
+    "walk": "2.3.9"
   }
 }

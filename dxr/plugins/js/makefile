@@ -1,5 +1,5 @@
 build:
-	npm install
+	cd analyze_js; npm install
 
 clean:
-	rm -r node_modules
+	rm -rf analyze_js/node_modules
