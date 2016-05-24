@@ -23,6 +23,27 @@ class PathFilterTests(TestCase):
     More is covered in integration tests.
 
     """
+    def filter_str(self):
+        """Test that str(filter) works with different operators.
+        """
+        term = {'arg': "foo", 'name': 'path',
+                'not': False, 'case_sensitive': False, 'qualified': False}
+        a_filter = PathFilter(term, [])
+        eq_(str(a_filter), "path:foo")
+
+        term['not'] = True
+        eq_(str(a_filter), "-path:foo")
+
+        term['case_sensitive'] = True
+        eq_(str(a_filter), "-path:@foo")
+
+        term['qualified'] = True
+        term['not'] = False
+        eq_(str(a_filter), "+path:@foo")
+
+        term['arg'] = 'foo bar'
+        eq_(str(a_filter), 'path:"foo bar"')
+
     def test_bigrams_and_wildcards(self):
         """Make sure the right query shape is constructed and strings shorter
         than 3 chars are stripped out.

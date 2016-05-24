@@ -79,15 +79,18 @@ class Filter(object):
         """
 
         prefix = ""
+        infix = ""
         if 'not' in self._term and self._term['not']:
             prefix += "-"
         if 'qualified' in self._term and self._term['qualified']:
             prefix += "+"
+        if 'case_sensitive' in self._term and self._term['case_sensitive']:
+            infix = "@"
         # If the term has spaces, then surround with double quotes and escape internal quotes.
         if ' ' in self._term['arg']:
             return '%s%s:"%s"' % (prefix, self.name, self._term['arg'].replace('"', r'\"'))
         else:
-            return '%s%s:%s' % (prefix, self.name, self._term['arg'])
+            return '%s%s:%s%s' % (prefix, self.name, infix, self._term['arg'])
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
