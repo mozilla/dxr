@@ -88,7 +88,8 @@ class Filter(object):
             infix = "@"
         # If the term has spaces, then surround with double quotes and escape internal quotes.
         if ' ' in self._term['arg']:
-            return '%s%s:"%s"' % (prefix, self.name, self._term['arg'].replace('"', r'\"'))
+            return '%s%s:%s"%s"' % (prefix, self.name, infix,
+                                    self._term['arg'].replace('"', r'\"'))
         else:
             return '%s%s:%s%s' % (prefix, self.name, infix, self._term['arg'])
 

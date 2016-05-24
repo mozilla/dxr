@@ -41,8 +41,8 @@ class PathFilterTests(TestCase):
         term['not'] = False
         eq_(str(a_filter), "+path:@foo")
 
-        term['arg'] = 'foo bar'
-        eq_(str(a_filter), 'path:"foo bar"')
+        term['arg'] = 'Foo bar'
+        eq_(str(a_filter), 'path:@"Foo bar"')
 
     def test_bigrams_and_wildcards(self):
         """Make sure the right query shape is constructed and strings shorter
