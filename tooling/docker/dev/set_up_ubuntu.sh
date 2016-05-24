@@ -12,6 +12,11 @@ apt-get -q update \
         llvm-3.5 libclang-3.5-dev clang-3.5 \
         curl
 
+# Install newer node.
+apt-get remove -y nodejs
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
+apt-get install -y nodejs
+
 # Alias some things:
 #
 # --force overrides any older-version LLVM alternative lying around. This was
