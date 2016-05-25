@@ -4,7 +4,13 @@
   "author": "Mozilla",
   "version": "2.0.0",
   "devDependencies": {
-    "nunjucks": "2.0.0"
+    "nunjucks": "2.0.0",
+    "mocha": "~2.5.3",
+    "chai": "~3.5.0",
+    "slimerjs": "~0.906.1",
+    "sync-exec": "~0.6.2",
+    "node-phantom-simple": "~2.2.4",
+    "sleep": "~3.0.1"
   },
   "engine": "node >= 0.8.x",
   "dependencies": {
