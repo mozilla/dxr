@@ -297,6 +297,8 @@ let Analyzer = {
 
     case "ClassDeclaration":
       this.defVar(stmt.id.name, stmt.id.loc);
+      let oldNameForThis = this.nameForThis;
+      this.nameForThis = stmt.id.name;
       this.scoped(() => {
         let oldClass = this.className;
         this.className = stmt.id.name;
@@ -306,6 +308,7 @@ let Analyzer = {
         this.expression(stmt.body);
         this.className = oldClass;
       });
+      this.nameForThis = oldNameForThis;
       break;
 
     case "ClassMethod":
@@ -428,8 +431,7 @@ let Analyzer = {
             loc = prop.key.loc;
             loc.start.column++;
           }
-          let qualname = null;
-          let extraPretty = null;
+          let qualname = `#${name}`;
           if (this.nameForThis) {
             qualname = `${this.nameForThis}#${name}`;
           }
@@ -446,8 +448,9 @@ let Analyzer = {
     case "ArrowFunctionExpression":
       this.scoped(() => {
         let name = expr.id ? expr.id.name : "";
+        let loc = expr.id ? expr.id.loc : expr.loc;
         if (expr.type == "FunctionExpression" && name) {
-          this.defVar(name, expr.loc);
+          this.defVar(name, loc);
         }
         for (let i = 0; i < expr.params.length; i++) {
           this.pattern(expr.params[i]);
@@ -487,11 +490,9 @@ let Analyzer = {
       } else if (expr.left.type == "MemberExpression" && !expr.left.computed) {
         this.expression(expr.left.object);
 
-        let qualname = null;
-        let extraPretty = null;
+        let qualname = `#${expr.left.property.name}`;
         if (expr.left.object.type == "ThisExpression" && this.nameForThis) {
           qualname = `${this.nameForThis}#${expr.left.property.name}`;
-          extraPretty = `${this.nameForThis}.${expr.left.property.name}`;
         } else if (expr.left.object.type == "Identifier") {
           qualname = `${expr.left.object.name}#${expr.left.property.name}`;
         }
@@ -541,11 +542,9 @@ let Analyzer = {
       if (expr.computed) {
         this.expression(expr.property);
       } else {
-        let qualname = null;
-        let extraPretty = null;
+        let qualname = `#${expr.property.name}`;
         if (expr.object.type == "ThisExpression" && this.nameForThis) {
           qualname = `${this.nameForThis}#${expr.property.name}`;
-          extraPretty = `${this.nameForThis}.${expr.property.name}`;
         } else if (expr.object.type == "Identifier") {
           qualname = `${expr.object.name}#${expr.property.name}`;
         }
@@ -669,7 +668,7 @@ let Analyzer = {
   },
 };
 
-// Comment out some mozilla-specific preprocessor headers in js files.
+// Attempt to comment out some mozilla-specific preprocessor headers.
 function preprocess(text, comment)
 {
   let substitution = false;

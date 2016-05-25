@@ -40,9 +40,8 @@ class ReadAnalysis(object):
         """Add needle for qualified filter_name from line:start
         to line:end with given name and qualname.
         """
-        mapping = {'name': name}
-        if qualname:
-            mapping['qualname'] = qualname
+        # If qualname is not provided, then use name.
+        mapping = {'name': name, 'qualname': qualname or name}
         self.needles.append((PLUGIN_NAME + '_' + filter_name,
                              mapping,
                              Extent(Position(row=line, col=start), Position(row=line, col=end))))

@@ -16,6 +16,10 @@ class RefNeedlesTests(DxrInstanceTestCase):
                            "return <b>y</b>;", 9)
         self.found_line_eq("ref:foo",
                            "stuff.doStuff(<b>foo</b>);", 16)
+        self.found_line_eq("+id:Guy#fun",
+                           "this.<b>fun</b> = function thathasaname() {", 21)
+        self.found_line_eq("+ref:somejs.js-8",
+                           'return "HI " + <b>other</b>;', 27)
 
     def test_menus(self):
         page = self.source_page('somejs.js')
@@ -34,3 +38,18 @@ class RefNeedlesTests(DxrInstanceTestCase):
                                     'href': '/code/search?q=%2Bid%3A%22somejs.js-3%22'})
         menu_on(page, 'identity2', {'html': 'Find references to var identity2',
                                     'href': '/code/search?q=%2Bref%3A%22somejs.js-3%22'})
+
+        menu_on(page, 'Guy', {'html': 'Find definition of prop Guy',
+                              'href': '/code/search?q=%2Bid%3A%22%23Guy%22'})
+        menu_on(page, 'Guy', {'html': 'Find references to prop Guy',
+                              'href': '/code/search?q=%2Bref%3A%22%23Guy%22'})
+
+        menu_on(page, 'thathasaname', {'html': 'Find definition of var thathasaname',
+                                       'href': '/code/search?q=%2Bid%3A%22somejs.js-7%22'})
+        menu_on(page, 'thathasaname', {'html': 'Find references to var thathasaname',
+                                       'href': '/code/search?q=%2Bref%3A%22somejs.js-7%22'})
+
+        menu_on(page, 'fun', {'html': 'Find definition of prop fun',
+                                       'href': '/code/search?q=%2Bid%3A%22Guy%23fun%22'})
+        menu_on(page, 'fun', {'html': 'Find references to prop fun',
+                                       'href': '/code/search?q=%2Bref%3A%22Guy%23fun%22'})
