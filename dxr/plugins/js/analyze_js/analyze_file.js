@@ -43,15 +43,10 @@ function memberPropLoc(expr) {
 function JSSymbol(name, loc) {
   this.name = name;
   this.loc = loc;
+  // A tree-unique id for this symbol from the path and its number in the file.
   this.id = fileIndex + "-" + nextSymId++;
-  this.uses = [];
 }
 
-JSSymbol.prototype = {
-  use(loc) {
-    this.uses.push(loc);
-  },
-};
 
 let Analyzer = {
   // Map name -> JSSymbol for each symbol used/defined in the current scope.
@@ -300,17 +295,15 @@ let Analyzer = {
       this.variableDeclaration(stmt);
       break;
 
-    case "ClassStatement":
-      this.defVar(stmt.id.name, stmt.loc);
+    case "ClassDeclaration":
+      this.defVar(stmt.id.name, stmt.id.loc);
       this.scoped(() => {
         let oldClass = this.className;
         this.className = stmt.id.name;
         if (stmt.superClass) {
           this.expression(stmt.superClass);
         }
-        for (let stmt2 of stmt.body) {
-          this.statement(stmt2);
-        }
+        this.expression(stmt.body);
         this.className = oldClass;
       });
       break;
@@ -319,8 +312,13 @@ let Analyzer = {
       this.expression(stmt.body);
       break;
 
+    case "MethodDefinition":
+      this.expression(stmt.key);
+      this.expression(stmt.value);
+      break;
+
     default:
-      console.log("Unexpected statement: " + stmt.type + " " + JSON.stringify(stmt));
+      console.log(`In ${fileIndex}, Unexpected statement: ${stmt.type} ${JSON.stringify(stmt)}`);
       break;
     }
   },
@@ -337,6 +335,8 @@ let Analyzer = {
     this.pattern(decl.id);
 
     let oldNameForThis = this.nameForThis;
+    // If the declaration is an object, then the LHS of the declaration is
+    // "this" for the duration of the object initializer.
     if (decl.id.type == "Identifier" && decl.init) {
       if (decl.init.type == "ObjectExpression") {
         this.nameForThis = decl.id.name;
@@ -392,20 +392,18 @@ let Analyzer = {
     case "Super":
       break;
 
+    case "TaggedTemplate":
+    case "TaggedTemplateExpression":
+    case "ThisExpression":
+      // TODO
+      break;
+
     case "TemplateLiteral":
       if (expr.elemnts) {
           for (let elt of expr.elements) {
               this.expression(elt);
           }
       }
-      break;
-
-    case "TaggedTemplate":
-      // TODO
-      break;
-
-    case "ThisExpression":
-      // TODO
       break;
 
     case "ArrayExpression":
@@ -475,6 +473,12 @@ let Analyzer = {
     case "UnaryExpression":
     case "UpdateExpression":
       this.expression(expr.argument);
+      break;
+
+    // Why does this show up as both a pattern and an expression?
+    case "AssignmentPattern":
+      this.expression(expr.left);
+      this.expression(expr.right);
       break;
 
     case "AssignmentExpression":
@@ -550,7 +554,15 @@ let Analyzer = {
       }
       break;
 
+    case "ClassBody":
+      for (let stmt of expr.body) {
+          this.statement(stmt);
+      }
+      break;
+
     case "YieldExpression":
+    case "SpreadElement":
+    case "RestElement":
       this.maybeExpression(expr.argument);
       break;
 
@@ -580,8 +592,10 @@ let Analyzer = {
         if (expr.superClass) {
           this.expression(expr.superClass);
         }
-        for (let stmt2 of expr.body) {
-          this.statement(stmt2);
+        if (expr.body.type == "BlockStatement") {
+          this.statement(expr.body);
+        } else {
+          this.expression(expr.body);
         }
       });
       break;
@@ -592,7 +606,7 @@ let Analyzer = {
 
     default:
       console.log(Error().stack);
-      console.log(`Invalid expression ${expr.type}: ${JSON.stringify(expr)}`);
+      console.log(`In ${fileIndex}, Unexpected expression ${expr.type}: ${JSON.stringify(expr)}`);
       break;
     }
   },
@@ -639,13 +653,17 @@ let Analyzer = {
       this.pattern(pat.expression);
       break;
 
-    case "AssignmentExpression":
-      this.pattern(pat.left);
+    case "RestElement":
+      this.pattern(pat.argument);
+      break;
+
+    case "AssignmentPattern":
+      this.expression(pat.left);
       this.expression(pat.right);
       break;
 
     default:
-      console.log(`Unexpected pattern: ${pat.type} ${JSON.stringify(pat)}`);
+      console.log(`In ${fileIndex}, Unexpected pattern: ${pat.type} ${JSON.stringify(pat)}`);
       break;
     }
   },
@@ -713,12 +731,17 @@ function analyzeJS(filepath, relpath, tempFilepath)
   outLines = [];
   let text = preprocess(String(fs.readFileSync(filepath)), line => "//" + line);
   try {
-    let ast = esprima.parse(text, {loc: true, source: path.basename(filepath), line: 1, sourceType: "script"});
+    let ast = esprima.parse(text,
+                            {loc: true,
+                             source: path.basename(filepath),
+                             line: 1,
+                             tolerant: true,
+                             sourceType: "script"});
     if (ast) {
         Analyzer.program(ast);
     }
   } catch (e) {
-      console.log(e.name, e.message);
+      console.log(fileIndex, e.name, e.message);
   }
   fs.writeFileSync(tempFilepath, outLines.join('\n'));
 }
