@@ -8,6 +8,7 @@ all: static plugins requirements .dxr_installed
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
 	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	tooling/node/node_modules/.bin/mocha --harmony "tests/js/**/test_*.js"
 
 clean: static_clean
 	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
