@@ -12,6 +12,11 @@ apt-get -q update \
         llvm-3.5 libclang-3.5-dev clang-3.5 \
         curl
 
+# Install newer node.
+apt-get remove -y nodejs
+curl -sL https://deb.nodesource.com/setup_6.x | bash -
+apt-get install -y nodejs
+
 # Alias some things:
 #
 # --force overrides any older-version LLVM alternative lying around. This was
@@ -21,5 +26,3 @@ update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /us
 update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
 # And we might as well make a clang link so we can compile mozilla-central:
 update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
-# Homogenize names with RHEL. Perhaps not useful anymore.
-ln -sf /usr/bin/nodejs /usr/local/bin/node

@@ -18,6 +18,7 @@ clean: static_clean
 	       .dxr_installed
 	find . -name "*.pyc" -exec rm -f {} \;
 	$(MAKE) -C dxr/plugins/clang clean
+	$(MAKE) -C dxr/plugins/js clean
 
 static_clean:
 	rm -rf dxr/static_unhashed/js/templates.js \
@@ -97,6 +98,7 @@ requirements: $(VIRTUAL_ENV)/bin/activate .peep_installed
 
 plugins:
 	$(MAKE) -C dxr/plugins/clang
+	$(MAKE) -C dxr/plugins/js
 
 dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 	                                 .npm_installed
