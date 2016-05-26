@@ -15,67 +15,67 @@ const ignores = process.argv.slice(4);
 
 // Ensure that the folder dir exists.
 function ensurePath(dir) {
-    let reconstruct = "";
-    for (let portion of dir.split('/')) {
-        reconstruct += portion + '/';
-        try {
-            fs.statSync(reconstruct);
-        } catch (e) {
-            fs.mkdirSync(reconstruct);
-        }
+  let reconstruct = "";
+  for (const portion of dir.split('/')) {
+    reconstruct += portion + '/';
+    try {
+      fs.statSync(reconstruct);
+    } catch (e) {
+      fs.mkdirSync(reconstruct);
     }
+  }
 }
 
 // Return whether to ignore the path.
 function reduceIgnores(path, initial) {
-    initial = initial || false;
-    return ignores.reduce((disallow, glob) => disallow || minimatch(path, glob), initial);
+  initial = initial || false;
+  return ignores.reduce((disallow, glob) => disallow || minimatch(path, glob), initial);
 }
 
 function main() {
-    let done = false;
+  let done = false;
     // Walk the tree, call analyzeFile on all the .js files.
-    let walker = walk.walk(treeRoot);
+  const walker = walk.walk(treeRoot);
     // Map path segment -> whether to ignore.
-    let dirCache = new Map();
-    function testSegments(path) {
-        let reconstruct = "";
-        for (let portion of path.split('/')) {
-            reconstruct += portion + '/';
-            if (dirCache.get(reconstruct) === undefined) {
-                dirCache.set(reconstruct, reduceIgnores(reconstruct));
-            } else if (dirCache.get(reconstruct) === true) {
-                dirCache.set(path, true);
-                break;
-            }
-        }
-        return dirCache.get(path);
+  const dirCache = new Map();
+  function testSegments(path) {
+    let reconstruct = "";
+    for (const portion of path.split('/')) {
+      reconstruct += portion + '/';
+      if (dirCache.get(reconstruct) === undefined) {
+        dirCache.set(reconstruct, reduceIgnores(reconstruct));
+      } else if (dirCache.get(reconstruct) === true) {
+        dirCache.set(path, true);
+        break;
+      }
     }
-    walker.on("file", (root, stat, next) => {
-        let fullPath = path.join(root, stat.name);
-        let pathSegment = path.relative(treeRoot, root);
+    return dirCache.get(path);
+  }
+  walker.on("file", (root, stat, next) => {
+    const fullPath = path.join(root, stat.name);
+    const pathSegment = path.relative(treeRoot, root);
         // Test each ignore pattern against the path, and make sure it ends in .js.
-        let disallow = (reduceIgnores(fullPath, !/jsm?$/.test(stat.name))
+    const disallow = (reduceIgnores(fullPath, !/jsm?$/.test(stat.name))
                         || testSegments(pathSegment));
-        if (!disallow) {
-            let tempPath = path.join(tempRoot, pathSegment);
-            ensurePath(tempPath);
-            analyzeFile(fullPath,
+    if (!disallow) {
+      const tempPath = path.join(tempRoot, pathSegment);
+      ensurePath(tempPath);
+      analyzeFile(fullPath,
                         path.join(pathSegment, stat.name),
                         path.join(tempPath, stat.name + '.data'));
-        }
-        next();
-    });
+    }
+    next();
+  });
 
-    walker.on('end', () => done = true);
+  walker.on('end', () => done = true);
 
     // Do not exit until we are done.
-    function wait() {
-        if (!done) {
-            setTimeout(wait, 100);
-        }
+  function wait() {
+    if (!done) {
+      setTimeout(wait, 100);
     }
-    wait();
+  }
+  wait();
 }
 
 main();

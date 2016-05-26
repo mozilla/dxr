@@ -32,7 +32,7 @@ function nameValid(name) {
 
 // Fix the location attribute of the expr's member property, and return it.
 function memberPropLoc(expr) {
-  let idLoc = expr.loc;
+  const idLoc = expr.loc;
   idLoc.start.line = idLoc.end.line;
   idLoc.start.column = idLoc.end.column - expr.property.name.length;
   return idLoc;
@@ -48,7 +48,7 @@ function JSSymbol(name, loc) {
 }
 
 
-let Analyzer = {
+const Analyzer = {
   // Map name -> JSSymbol for each symbol used/defined in the current scope.
   symbols: new Map(),
   // Stack of symbols, where top of stack is symbol map of current scope.
@@ -65,7 +65,7 @@ let Analyzer = {
 
   // Leave a scope. Do not exit() on global scope.
   exit() {
-    let old = this.symbols;
+    const old = this.symbols;
     this.symbols = this.symbolTableStack.pop();
     return old;
   },
@@ -84,10 +84,10 @@ let Analyzer = {
 
   // Save nameForThis, set to newName, call f, then reset it.
   withNameForThis(newName, f) {
-      let oldNameForThis = this.nameForThis;
-      this.nameForThis = newName;
-      f();
-      this.nameForThis = oldNameForThis;
+    const oldNameForThis = this.nameForThis;
+    this.nameForThis = newName;
+    f();
+    this.nameForThis = oldNameForThis;
   },
 
   // Return the JSSymbol of the given name accessible from the current scope,
@@ -124,7 +124,7 @@ let Analyzer = {
   // Define a qualified property.
   defProp(name, qualname, loc) {
     if (!nameValid(name)) {
-        return;
+      return;
     }
     emit(JSON.stringify({loc: locstr(loc, name), kind: "def", type: "prop", name, sym: qualname}));
   },
@@ -132,7 +132,7 @@ let Analyzer = {
   // Use a qualified property.
   useProp(name, qualname, loc) {
     if (!nameValid(name)) {
-        return;
+      return;
     }
     emit(JSON.stringify({loc: locstr(loc, name), kind: "use", type: "prop", name, sym: qualname}));
   },
@@ -146,7 +146,7 @@ let Analyzer = {
       this.defPropGlobal(name, loc);
       return;
     }
-    let sym = new JSSymbol(name, loc);
+    const sym = new JSSymbol(name, loc);
     this.symbols.set(name, sym);
 
     emit(JSON.stringify({loc: locstr(loc, name), kind: "def", type: "var", name, sym: sym.id}));
@@ -157,7 +157,7 @@ let Analyzer = {
     if (!nameValid(name)) {
       return;
     }
-    let sym = this.findSymbol(name);
+    const sym = this.findSymbol(name);
     if (!sym) {
       this.usePropGlobal(name, loc);
     } else {
@@ -167,7 +167,7 @@ let Analyzer = {
 
   // Analyze every statement of the program body.
   program(prog) {
-    for (let stmt of prog.body) {
+    for (const stmt of prog.body) {
       this.statement(stmt);
     }
   },
@@ -183,7 +183,7 @@ let Analyzer = {
 
     case "BlockStatement":
       this.scoped(() => {
-        for (let stmt2 of stmt.body) {
+        for (const stmt2 of stmt.body) {
           this.statement(stmt2);
         }
       });
@@ -210,7 +210,7 @@ let Analyzer = {
 
     case "SwitchStatement":
       this.expression(stmt.discriminant);
-      for (let scase of stmt.cases) {
+      for (const scase of stmt.cases) {
         this.switchCase(scase);
       }
       break;
@@ -225,7 +225,7 @@ let Analyzer = {
 
     case "TryStatement":
       this.statement(stmt.block);
-      for (let guarded of stmt.guardedHandlers) {
+      for (const guarded of stmt.guardedHandlers) {
         this.catchClause(guarded);
       }
       if (stmt.handler) {
@@ -272,7 +272,7 @@ let Analyzer = {
 
     case "LetStatement":
       this.scoped(() => {
-        for (let decl of stmt.head) {
+        for (const decl of stmt.head) {
           this.variableDeclarator(decl);
         }
         this.statement(stmt.body);
@@ -332,7 +332,7 @@ let Analyzer = {
 
   // Handle one or more variable declarations.
   variableDeclaration(decl) {
-    for (let d of decl.declarations) {
+    for (const d of decl.declarations) {
       this.variableDeclarator(d);
     }
   },
@@ -343,7 +343,7 @@ let Analyzer = {
     // If the declaration is an object, then the LHS of the declaration is
     // "this" for the duration of the object initializer.
     if (decl.id.type == "Identifier" && decl.init && decl.init.type == "ObjectExpression") {
-      withNameForThis(decl.id.name, () => {
+      this.withNameForThis(decl.id.name, () => {
         this.maybeExpression(decl.init);
       });
     } else {
@@ -369,7 +369,7 @@ let Analyzer = {
     if (scase.test) {
       this.expression(scase.test);
     }
-    for (let stmt of scase.consequent) {
+    for (const stmt of scase.consequent) {
       this.statement(stmt);
     }
   },
@@ -403,22 +403,22 @@ let Analyzer = {
 
     case "TemplateLiteral":
       if (expr.elemnts) {
-          for (let elt of expr.elements) {
-              this.expression(elt);
-          }
+        for (const elt of expr.elements) {
+          this.expression(elt);
+        }
       }
       break;
 
     case "ArrayExpression":
     case "ArrayPattern":
-      for (let elt of expr.elements) {
+      for (const elt of expr.elements) {
         this.maybeExpression(elt);
       }
       break;
 
     case "ObjectExpression":
     case "ObjectPattern":
-      for (let prop of expr.properties) {
+      for (const prop of expr.properties) {
         let name;
 
         if (prop.key) {
@@ -447,8 +447,8 @@ let Analyzer = {
     case "FunctionExpression":
     case "ArrowFunctionExpression":
       this.scoped(() => {
-        let name = expr.id ? expr.id.name : "";
-        let loc = expr.id ? expr.id.loc : expr.loc;
+        const name = expr.id ? expr.id.name : "";
+        const loc = expr.id ? expr.id.loc : expr.loc;
         if (expr.type == "FunctionExpression" && name) {
           this.defVar(name, loc);
         }
@@ -468,7 +468,7 @@ let Analyzer = {
       break;
 
     case "SequenceExpression":
-      for (let elt of expr.expressions) {
+      for (const elt of expr.expressions) {
         this.expression(elt);
       }
       break;
@@ -484,7 +484,7 @@ let Analyzer = {
       this.expression(expr.right);
       break;
 
-    case "AssignmentExpression":
+    case "AssignmentExpression": {
       // For assignments we evaluate the RHS first because in a block such as
       // 1. let foo = 3;
       // 2. foo = foo + 1;
@@ -499,7 +499,7 @@ let Analyzer = {
           newNameForThis = expr.left.property.name;
         }
       }
-      withNameForThis(newNameForThis, () => {
+      this.withNameForThis(newNameForThis, () => {
         this.expression(expr.right);
       });
 
@@ -519,6 +519,7 @@ let Analyzer = {
         this.expression(expr.left);
       }
       break;
+    }
 
     case "BinaryExpression":
     case "LogicalExpression":
@@ -535,7 +536,7 @@ let Analyzer = {
     case "NewExpression":
     case "CallExpression":
       this.expression(expr.callee);
-      for (let arg of expr.arguments) {
+      for (const arg of expr.arguments) {
         this.expression(arg);
       }
       break;
@@ -557,8 +558,8 @@ let Analyzer = {
       break;
 
     case "ClassBody":
-      for (let stmt of expr.body) {
-          this.statement(stmt);
+      for (const stmt of expr.body) {
+        this.statement(stmt);
       }
       break;
 
@@ -575,11 +576,11 @@ let Analyzer = {
     case "ComprehensionExpression":
     case "GeneratorExpression":
       this.scoped(() => {
-        let before = locBefore(expr.body.loc, expr.blocks[0].loc);
+        const before = locBefore(expr.body.loc, expr.blocks[0].loc);
         if (before) {
           this.expression(expr.body);
         }
-        for (let block of expr.blocks) {
+        for (const block of expr.blocks) {
           this.comprehensionBlock(block);
         }
         this.maybeExpression(expr.filter);
@@ -638,13 +639,13 @@ let Analyzer = {
       break;
 
     case "ObjectPattern":
-      for (let prop of pat.properties) {
+      for (const prop of pat.properties) {
         this.pattern(prop.value);
       }
       break;
 
     case "ArrayPattern":
-      for (let e of pat.elements) {
+      for (const e of pat.elements) {
         if (e) {
           this.pattern(e);
         }
@@ -668,22 +669,22 @@ let Analyzer = {
       console.log(`In ${fileIndex}, Unexpected pattern: ${pat.type} ${JSON.stringify(pat)}`);
       break;
     }
-  },
+  }
 };
 
 // Attempt to comment out some mozilla-specific preprocessor headers.
 function preprocess(text, comment)
 {
   let substitution = false;
-  let lines = text.split("\n");
-  let preprocessedLines = [];
-  let branches = [true];
+  const lines = text.split("\n");
+  const preprocessedLines = [];
+  const branches = [true];
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
     if (substitution) {
       line = line.replace(/@(\w+)@/, "''");
     }
-    let tline = line.trim();
+    const tline = line.trim();
     if (tline.startsWith("#ifdef") || tline.startsWith("#ifndef") || tline.startsWith("#if ")) {
       preprocessedLines.push(comment(tline));
       branches.push(branches[branches.length-1]);
@@ -731,19 +732,19 @@ function analyzeJS(filepath, relpath, tempFilepath)
   fileIndex = relpath;
   nextSymId = 0;
   outLines = [];
-  let text = preprocess(String(fs.readFileSync(filepath)), line => "//" + line);
+  const text = preprocess(String(fs.readFileSync(filepath)), line => "//" + line);
   try {
-    let ast = esprima.parse(text,
+    const ast = esprima.parse(text,
                             {loc: true,
                              source: path.basename(filepath),
                              line: 1,
                              tolerant: true,
                              sourceType: "script"});
     if (ast) {
-        Analyzer.program(ast);
+      Analyzer.program(ast);
     }
   } catch (e) {
-      console.log(fileIndex, e.name, e.message);
+    console.log(fileIndex, e.name, e.message);
   }
   fs.writeFileSync(tempFilepath, outLines.join('\n'));
 }
