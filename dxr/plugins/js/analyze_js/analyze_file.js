@@ -56,8 +56,6 @@ let Analyzer = {
 
   // The name of the "this" object in the current scope.
   nameForThis: null,
-  // The name of the current class statement, if we enter a class definition.
-  className: null,
 
   // Enter a scope.
   enter() {
@@ -82,6 +80,14 @@ let Analyzer = {
     this.enter();
     f();
     this.exit();
+  },
+
+  // Save nameForThis, set to newName, call f, then reset it.
+  withNameForThis(newName, f) {
+      let oldNameForThis = this.nameForThis;
+      this.nameForThis = newName;
+      f();
+      this.nameForThis = oldNameForThis;
   },
 
   // Return the JSSymbol of the given name accessible from the current scope,
@@ -275,19 +281,21 @@ let Analyzer = {
 
     case "FunctionDeclaration":
       this.defVar(stmt.id.name, stmt.id.loc);
-      this.scoped(() => {
-        for (let i = 0; i < stmt.params.length; i++) {
-          this.pattern(stmt.params[i]);
-          this.maybeExpression(stmt.defaults[i]);
-        }
-        if (stmt.rest) {
-          this.defVar(stmt.rest.name, stmt.rest.loc);
-        }
-        if (stmt.body.type == "BlockStatement") {
-          this.statement(stmt.body);
-        } else {
-          this.expression(stmt.body);
-        }
+      this.withNameForThis(stmt.id.name, () => {
+        this.scoped(() => {
+          for (let i = 0; i < stmt.params.length; i++) {
+            this.pattern(stmt.params[i]);
+            this.maybeExpression(stmt.defaults[i]);
+          }
+          if (stmt.rest) {
+            this.defVar(stmt.rest.name, stmt.rest.loc);
+          }
+          if (stmt.body.type == "BlockStatement") {
+            this.statement(stmt.body);
+          } else {
+            this.expression(stmt.body);
+          }
+        });
       });
       break;
 
@@ -297,18 +305,14 @@ let Analyzer = {
 
     case "ClassDeclaration":
       this.defVar(stmt.id.name, stmt.id.loc);
-      let oldNameForThis = this.nameForThis;
-      this.nameForThis = stmt.id.name;
-      this.scoped(() => {
-        let oldClass = this.className;
-        this.className = stmt.id.name;
-        if (stmt.superClass) {
-          this.expression(stmt.superClass);
-        }
-        this.expression(stmt.body);
-        this.className = oldClass;
+      this.withNameForThis(stmt.id.name, () => {
+        this.scoped(() => {
+          if (stmt.superClass) {
+            this.expression(stmt.superClass);
+          }
+          this.expression(stmt.body);
+        });
       });
-      this.nameForThis = oldNameForThis;
       break;
 
     case "ClassMethod":
@@ -326,7 +330,7 @@ let Analyzer = {
     }
   },
 
-  // Handle one more more variable declarations.
+  // Handle one or more variable declarations.
   variableDeclaration(decl) {
     for (let d of decl.declarations) {
       this.variableDeclarator(d);
@@ -336,19 +340,15 @@ let Analyzer = {
   // Handle a single variable declaration.
   variableDeclarator(decl) {
     this.pattern(decl.id);
-
-    let oldNameForThis = this.nameForThis;
     // If the declaration is an object, then the LHS of the declaration is
     // "this" for the duration of the object initializer.
-    if (decl.id.type == "Identifier" && decl.init) {
-      if (decl.init.type == "ObjectExpression") {
-        this.nameForThis = decl.id.name;
-      } else {
-        // Handle Object.freeze({...})
-      }
+    if (decl.id.type == "Identifier" && decl.init && decl.init.type == "ObjectExpression") {
+      withNameForThis(decl.id.name, () => {
+        this.maybeExpression(decl.init);
+      });
+    } else {
+      this.maybeExpression(decl.init);
     }
-    this.maybeExpression(decl.init);
-    this.nameForThis = oldNameForThis;
   },
 
   // If the optional statement is defined, then handle it.
@@ -431,7 +431,7 @@ let Analyzer = {
             loc = prop.key.loc;
             loc.start.column++;
           }
-          let qualname = `#${name}`;
+          let qualname = `##${name}`;
           if (this.nameForThis) {
             qualname = `${this.nameForThis}#${name}`;
           }
@@ -485,12 +485,30 @@ let Analyzer = {
       break;
 
     case "AssignmentExpression":
+      // For assignments we evaluate the RHS first because in a block such as
+      // 1. let foo = 3;
+      // 2. foo = foo + 1;
+      // The foo on RHS of line 2 refers to foo of line 1.
+      let newNameForThis = this.nameForThis;
+      if (expr.left.type == "MemberExpression" && !expr.left.computed) {
+        if (expr.left.property.name == "prototype" &&
+            expr.left.object.type == "Identifier") {
+          newNameForThis = expr.left.object.name;
+        }
+        if (expr.left.object.type == "ThisExpression") {
+          newNameForThis = expr.left.property.name;
+        }
+      }
+      withNameForThis(newNameForThis, () => {
+        this.expression(expr.right);
+      });
+
       if (expr.left.type == "Identifier") {
         this.defVar(expr.left.name, expr.left.loc);
       } else if (expr.left.type == "MemberExpression" && !expr.left.computed) {
         this.expression(expr.left.object);
 
-        let qualname = `#${expr.left.property.name}`;
+        let qualname = `##${expr.left.property.name}`;
         if (expr.left.object.type == "ThisExpression" && this.nameForThis) {
           qualname = `${this.nameForThis}#${expr.left.property.name}`;
         } else if (expr.left.object.type == "Identifier") {
@@ -500,21 +518,6 @@ let Analyzer = {
       } else {
         this.expression(expr.left);
       }
-
-      let oldNameForThis = this.nameForThis;
-      if (expr.left.type == "MemberExpression" &&
-          !expr.left.computed) {
-        if (expr.left.property.name == "prototype" &&
-            expr.left.object.type == "Identifier")
-        {
-          this.nameForThis = expr.left.object.name;
-        }
-        if (expr.left.object.type == "ThisExpression") {
-          this.nameForThis = expr.left.property.name;
-        }
-      }
-      this.expression(expr.right);
-      this.nameForThis = oldNameForThis;
       break;
 
     case "BinaryExpression":
@@ -542,7 +545,7 @@ let Analyzer = {
       if (expr.computed) {
         this.expression(expr.property);
       } else {
-        let qualname = `#${expr.property.name}`;
+        let qualname = `##${expr.property.name}`;
         if (expr.object.type == "ThisExpression" && this.nameForThis) {
           qualname = `${this.nameForThis}#${expr.property.name}`;
         } else if (expr.object.type == "Identifier") {
