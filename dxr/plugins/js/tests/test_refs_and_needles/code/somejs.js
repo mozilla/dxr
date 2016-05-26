@@ -45,3 +45,4 @@ class Bob extends Guy {
 let him = new Bob("Abe");
 Guy.greet("Joe");
 him.doIt("Jef");
+him.name.toString();

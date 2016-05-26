@@ -10,13 +10,13 @@ class _QualifiedNameFilter(QualifiedNameFilterBase):
 class PropFilter(_QualifiedNameFilter):
     name = 'prop'
     is_identifier = True
-    description = Markup('Property definition filter: <code>prop:foo</code>')
+    description = Markup('JavaScript property definition filter: <code>prop:foo</code>')
 
 
 class PropRefFilter(_QualifiedNameFilter):
     name = 'prop-ref'
     is_reference = True
-    description = 'Reference to object properties'
+    description = 'References to JavaScript object properties'
 
 
 class VarFilter(_QualifiedNameFilter):

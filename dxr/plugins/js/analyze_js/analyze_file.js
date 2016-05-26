@@ -324,6 +324,10 @@ const Analyzer = {
       this.expression(stmt.value);
       break;
 
+    case "ExportNamedDeclaration":
+      this.statement(stmt.declaration)
+      break;
+
     default:
       console.log(`In ${fileIndex}, Unexpected statement: ${stmt.type} ${JSON.stringify(stmt)}`);
       break;
@@ -478,7 +482,8 @@ const Analyzer = {
       this.expression(expr.argument);
       break;
 
-    // Why does this show up as both a pattern and an expression?
+    // We have to repeat this case expression because it can appear as the
+    // 'value' of an ObjectPattern which is otherwise an expression.
     case "AssignmentPattern":
       this.expression(expr.left);
       this.expression(expr.right);
