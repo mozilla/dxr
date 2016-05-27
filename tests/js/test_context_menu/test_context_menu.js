@@ -1,12 +1,12 @@
-"use strict";
+'use strict';
 
-const node_modules = '../../../tooling/node/node_modules/'
+const node_modules = '../../../tooling/node/node_modules/';
 const should = require(node_modules + 'chai').should();
 const dxr = require('../dxr.js');
 const instance = dxr.instance();
 
 describe('Context menu dismiss tests', function() {
-    const url = "http://127.0.0.1:8000/code/source/fixed_ref.h";
+    const url = 'http://127.0.0.1:8000/code/source/fixed_ref.h';
     // Coordinates of a variable to click on:
     const varLocX = 200;
     const varLocY = 120;

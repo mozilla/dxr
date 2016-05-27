@@ -1,7 +1,7 @@
-"use strict";
+'use strict';
 
 const exec = require('child_process').exec;
-const node_modules = '../../tooling/node/node_modules/'
+const node_modules = '../../tooling/node/node_modules/';
 const sync_exec = require(node_modules + 'sync-exec');
 const sleep = require(node_modules + 'sleep');
 const driver = require(node_modules + 'node-phantom-simple');
@@ -28,7 +28,7 @@ function instance() {
                 sync_exec('dxr index');
                 const server = exec('dxr serve -a');
                 server.stderr.once('data', function (data) {
-                    resolve("served");
+                    resolve('served');
                 });
             });
             Promise.all([browserPromise, servePromise])
