@@ -138,6 +138,8 @@ private:
   SourceManager &sm;
   std::ostream *out;
   std::map<std::string, FileInfoPtr> relmap;
+  // Map the SourceLocation of a macro to the text of the macro def.
+  std::map<SourceLocation, std::string> macromap;
   LangOptions &features;
 #if CLANG_AT_LEAST(3, 6)
   std::unique_ptr<DiagnosticConsumer> inner;
@@ -1129,32 +1131,39 @@ public:
     } else {
       defnStart = nameLen;
     }
-    // Find the first non-whitespace character for the definition.
-    for (; defnStart < length; defnStart++) {
-      switch (contents[defnStart]) {
-        case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
-          continue;
+    bool hasArgs = (argsEnd - argsStart > 2);  // An empty '()' doesn't count.
+    if (!hasArgs) {
+      // Skip leading whitespace in the definition up to and including any first
+      // line continuation.
+      for (; defnStart < length; defnStart++) {
+        switch (contents[defnStart]) {
+          case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
+            continue;
+          case '\\':
+            if (defnStart + 2 < length && contents[defnStart + 1] == '\n') {
+              defnStart += 2;
+            }
+            break;
+        }
+        break;
       }
-      break;
     }
     beginRecord("macro", nameStart);
     recordValue("loc", locationToString(nameStart));
     recordValue("locend", locationToString(afterToken(nameStart)));
     recordValue("name", std::string(contents, nameLen));
-    if (argsStart > 0) {
-      recordValue("args", std::string(contents + argsStart,
-                                      argsEnd - argsStart), true);
-    }
     if (defnStart < length) {
-      std::string text =  std::string(contents + defnStart,
-        length - defnStart);
+      std::string text;
+      if (hasArgs)  // Give the argument list.
+        text = std::string(contents + argsStart, argsEnd - argsStart);
+      text += std::string(contents + defnStart, length - defnStart);
       // FIXME: handle non-ASCII characters better
       for (size_t i = 0; i < text.size(); ++i) {
         if ((text[i] < ' ' || text[i] >= 0x7F) &&
             text[i] != '\t' && text[i] != '\n')
           text[i] = '?';
       }
-      recordValue("text", text, true);
+      macromap.insert(make_pair(nameStart, text));
     }
     *out << std::endl;
   }
@@ -1177,6 +1186,11 @@ public:
     recordValue("loc", locationToString(refLoc));
     recordValue("locend", locationToString(afterToken(refLoc)));
     recordValue("kind", "macro");
+    std::map<SourceLocation, std::string>::const_iterator it =
+      macromap.find(macroLoc);
+    if (it != macromap.end()) {
+      recordValue("text", it->second, true);
+    }
     *out << std::endl;
   }
 
