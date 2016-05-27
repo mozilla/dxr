@@ -10,11 +10,15 @@ apt-get -q update \
         python-pip python-virtualenv python2.7-dev \
         mercurial git \
         llvm-3.5 libclang-3.5-dev clang-3.5 \
-        curl
+        curl apt-transport-https
 
 # Install newer node.
 apt-get remove -y nodejs
-curl -sL https://deb.nodesource.com/setup_6.x | bash -
+curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+DISTRO=$(lsb_release -c -s)
+echo "deb https://deb.nodesource.com/node_6.x ${DISTRO} main" > /etc/apt/sources.list.d/nodesource.list
+echo "deb-src https://deb.nodesource.com/node_6.x ${DISTRO} main" >> /etc/apt/sources.list.d/nodesource.list
+apt-get update
 apt-get install -y nodejs
 
 # Alias some things:
