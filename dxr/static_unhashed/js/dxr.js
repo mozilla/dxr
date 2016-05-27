@@ -496,7 +496,7 @@ $(function() {
     });
 
     function locationIsSearch() {
-        return /search$/.test(window.location.pathname) && window.location.search;
+        return /search$/.test(window.location.pathname) && window.location.search !== '';
     }
 
     // Expose the DXR Object to the global object.
@@ -514,8 +514,8 @@ $(function() {
 
     // Reload the page when we go back or forward.
     function popStateHandler(event) {
-        if (event.state ||  // If it's a search (we only push state on a search), or...
-            (!locationIsSearch() && lastURLWasSearch)) {  // if we switched from search to file view:
+        if (locationIsSearch() ||  // If new location is a search, or...
+            lastURLWasSearch) {  // if we switched from search to file view:
             window.onpopstate = null;
             window.location.reload();
         }
