@@ -95,20 +95,33 @@ public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
 #if CLANG_AT_LEAST(3, 3)
   void MacroDefined(const Token &tok, const MacroDirective *md) override;
-  void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range,
-                    const MacroArgs *ma) override;
-  void MacroUndefined(const Token &tok, const MacroDirective *md) override;
-#if CLANG_AT_LEAST(3, 4)
-  void Defined(const Token &tok, const MacroDirective *md,
-               SourceRange range) override;
-#else
-  void Defined(const Token &tok, const MacroDirective *md) override;
-#endif
-  void Ifdef(SourceLocation loc, const Token &tok,
-             const MacroDirective *md) override;
-  void Ifndef(SourceLocation loc, const Token &tok,
-              const MacroDirective *md) override;
-#else
+  #if CLANG_AT_LEAST(3, 7)
+    void MacroExpands(const Token &tok, const MacroDefinition &md,
+                      SourceRange range, const MacroArgs *ma) override;
+    void MacroUndefined(const Token &tok, const MacroDefinition &md) override;
+    void Ifdef(SourceLocation loc, const Token &tok,
+               const MacroDefinition &md) override;
+    void Ifndef(SourceLocation loc, const Token &tok,
+                const MacroDefinition &md) override;
+  #else
+    void MacroExpands(const Token &tok, const MacroDirective *md,
+                      SourceRange range, const MacroArgs *ma) override;
+    void MacroUndefined(const Token &tok, const MacroDirective *md) override;
+    void Ifdef(SourceLocation loc, const Token &tok,
+               const MacroDirective *md) override;
+    void Ifndef(SourceLocation loc, const Token &tok,
+                const MacroDirective *md) override;
+  #endif
+  #if CLANG_AT_LEAST(3, 7)
+    void Defined(const Token &tok, const MacroDefinition &md,
+                 SourceRange range) override;
+  #elif CLANG_AT_LEAST(3, 4)
+    void Defined(const Token &tok, const MacroDirective *md,
+                 SourceRange range) override;
+  #else
+    void Defined(const Token &tok, const MacroDirective *md) override;
+  #endif
+#else  // clang < 3.3
   void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) override;
   void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI,
                     SourceRange Range) override;
@@ -117,7 +130,7 @@ public:
   void Ifdef(SourceLocation loc, const Token &tok) override;
   void Ifndef(SourceLocation loc, const Token &tok) override;
 #endif
-  void InclusionDirective(  // same in 3.2 and 3.3
+  void InclusionDirective(
       SourceLocation hashLoc,
       const Token &includeTok,
       StringRef fileName,
@@ -1247,30 +1260,55 @@ public:
 void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
   real->MacroDefined(tok, md->getMacroInfo());
 }
-void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md,
-                                SourceRange range, const MacroArgs *ma) {
-  real->MacroExpands(tok, md->getMacroInfo(), range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
-  real->MacroUndefined(tok, md->getMacroInfo());
-}
-#if CLANG_AT_LEAST(3, 4)
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md,
-                           SourceRange) {
-#else
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
-#endif
-  real->Defined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
-                         const MacroDirective *md) {
-  real->Ifdef(loc, tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
-                          const MacroDirective *md) {
-  real->Ifndef(loc, tok, md->getMacroInfo());
-}
-#else
+  #if CLANG_AT_LEAST(3, 7)
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDefinition &md,
+                                  SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md.getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDefinition &md) {
+    real->MacroUndefined(tok, md.getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
+                           const MacroDefinition &md) {
+    real->Ifdef(loc, tok, md.getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
+                            const MacroDefinition &md) {
+    real->Ifndef(loc, tok, md.getMacroInfo());
+  }
+  #else
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md,
+                                  SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md->getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
+    real->MacroUndefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
+                           const MacroDirective *md) {
+    real->Ifdef(loc, tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
+                            const MacroDirective *md) {
+    real->Ifndef(loc, tok, md->getMacroInfo());
+  }
+  #endif
+  #if CLANG_AT_LEAST(3, 7)
+  void PreprocThunk::Defined(const Token &tok, const MacroDefinition &md,
+                             SourceRange range) {
+    real->Defined(tok, md.getMacroInfo());
+  }
+  #elif CLANG_AT_LEAST(3, 4)
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md,
+                             SourceRange) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  #else
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  #endif
+#else  // clang < 3.3
 void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
   real->MacroDefined(tok, MI);
 }
@@ -1291,7 +1329,7 @@ void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
   real->Ifndef(loc, tok, nullptr);
 }
 #endif
-void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
+void PreprocThunk::InclusionDirective(
     SourceLocation hashLoc,
     const Token &includeTok,
     StringRef fileName,
