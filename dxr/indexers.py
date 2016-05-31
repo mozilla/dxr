@@ -563,3 +563,20 @@ def iterable_per_line(triples):
             for line_num in xrange(1, last_line)]
 
     # If this has to be generic so we can use it on annotations_by_line as well, pass in a key function that extracts the line number and maybe another that constructs the return value.
+
+def iterable_per_line_sorted(triples):
+    """Yield iterables of (key, value mapping), one for each line, where triples are sorted already."""
+    last_row = 1
+    last_row_kvs = []
+    for k, v, extent in triples:
+        if extent.start.row == last_row:
+            last_row_kvs.append((k, v))
+        else:
+            yield last_row_kvs
+            # Yield empty lists for any skipped lines.
+            for _ in xrange(last_row + 1, extent.start.row):
+                yield []
+            last_row_kvs = [(k, v)]
+            last_row = extent.start.row
+    # Emit anything on the last line.
+    yield last_row_kvs

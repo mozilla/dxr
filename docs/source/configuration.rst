@@ -84,8 +84,9 @@ containing the config file.
     working directory).
 
 ``skip_stages``
-    Build/indexing stages to skip, for debugging: ``build``, ``index``, or
-    both, whitespace-separated. Default: none
+    Build/indexing/clean stages to skip, for debugging: ``build``, ``index``,
+    ``clean``, or any combination, whitespace-separated Either of ``build`` or
+    ``index`` implies ``clean``. Default: none
 
 ``temp_folder``
     A ``format()``-style template for deciding where to store temporary files

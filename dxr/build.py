@@ -197,7 +197,7 @@ def index_tree(tree, es, verbose=False):
 
     skip_indexing = 'index' in config.skip_stages
     skip_build = 'build' in config.skip_stages
-    skip_cleanup  = skip_indexing or skip_build
+    skip_cleanup = skip_indexing or skip_build or 'clean' in config.skip_stages
 
     # Create and/or clear out folders:
     ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
@@ -418,7 +418,6 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
             for f in folders:
                 yield join(root, f)
 
-
 def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.
 
@@ -474,7 +473,11 @@ def index_file(tree, tree_indexers, path, es, index):
                                file_to_index.annotations_by_line())
 
     def docs():
-        """Yield documents for bulk indexing."""
+        """Yield documents for bulk indexing.
+
+        Big Warning: docs also clears the contents of all elements of
+        needles_by_line because they will no longer be used.
+        """
         # Index a doc of type 'file' so we can build folder listings.
         # At the moment, we send to ES in the same worker that does the
         # indexing. We could interpose an external queueing system, but I'm
@@ -522,6 +525,11 @@ def index_file(tree, tree_indexers, path, es, index):
                 if annotations_for_this_line:
                     total['annotations'] = annotations_for_this_line
                 yield es.index_op(total)
+
+                # Because needles_by_line holds a reference, total is not
+                # garbage collected. Since we won't use it again, we can clear
+                # the contents, saving substantial memory on long files.
+                total.clear()
 
     # Indexing a 277K-line file all in one request makes ES time out (>60s),
     # so we chunk it up. 300 docs is optimal according to the benchmarks in
