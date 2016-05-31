@@ -154,9 +154,9 @@ class TestCase(unittest.TestCase):
         except KeyError:
             self.fail("The query didn't return a direct result.")
         if line:
-            ok_(location == '/code/source/%s#%s' % (path, line))
+            eq_(location, '/code/source/%s#%s' % (path, line))
         else:
-            ok_(location == '/code/source/%s' % path)
+            eq_(location, '/code/source/%s' % path)
 
     def redirect_result_eq(self, query, path, line_number, kind):
         """Assert that a redirect result of the given kind ('direct' for a
@@ -180,9 +180,9 @@ class TestCase(unittest.TestCase):
         eq_(location[:location.index('?')], '/code/source/' + path)
 
         if kind == 'direct':
-            ok_('from=' in location)
+            ok_('redirect_type=direct' in location)
         elif kind == 'single':
-            ok_('from_q=' in location)
+            ok_('redirect_type=single' in location)
         else:
             self.fail("Bad 'kind' value: %s" % kind)
 

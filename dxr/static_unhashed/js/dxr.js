@@ -304,7 +304,7 @@ $(function() {
     /**
      * Queries and populates the results templates with the returned data.
      *
-     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.  Default is false.
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct or unique result.  Default is false.
      * @param {string} [queryString] - The url to which to send the request. If left out,
      * queryString will be constructed from the contents of the query field.
      * @param {bool} [appendResults] - Append new results to the current list if true,

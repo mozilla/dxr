@@ -150,22 +150,21 @@ def search(tree):
 def _search_json(query, tree, query_text, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
     then return {redirect: hit location}. If that doesn't work, fall back to a normal
-    search, and if that yields a single result then return {redirect: hit location},
-    otherwise return the results as JSON.
+    search, and if that yields a single result and redirect is true then return
+    {redirect: hit location}, otherwise return the results as JSON.
 
-    There are several querystring parameters controlling the behavior of jumping to
-    results now:
-        * 'from=query' indicates a direct_result result and comes with a bubble giving the
-          option to switch to all results instead.
-        * 'from_q=query' indicates a unique search result and comes with a bubble
-          indicating as much.
+    'redirect=true' along with 'redirect_type={direct, single}' control the behavior
+    of jumping to results:
+        * 'redirect_type=direct' indicates a direct_result result and comes with
+          a bubble giving the option to switch to all results instead.
+        * 'redirect_type=single' indicates a unique search result and comes with
+          a bubble indicating as much.
     We only redirect to a direct/unique result if the original query contained a
     'redirect=true' parameter, which the user can elicit by hitting enter on the query
-    input.  In addition, the info bubble and the from_q parameters normally associated with
-    a unique search result can be silenced by including a 'no_from=true' parameter in the
-    initial query string (that's so we can use a query to load a page without letting
-    on that the result came from a query).
-        """
+    input.  In addition, the info bubble normally associated with a unique search result
+    can be silenced by including a 'no_from=true' parameter in the initial query string
+    (that's so we can use a query to load a page without letting on that the result came
+    from a query)."""
 
     # If we're asked to redirect and have a direct hit, then return the url to that.
     if request.values.get('redirect') == 'true':
@@ -176,7 +175,8 @@ def _search_json(query, tree, query_text, offset, limit, config):
             params = {
                 'tree': tree,
                 'path': path,
-                'from': query_text
+                'q': query_text,
+                'redirect_type': 'direct'
             }
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
     try:
@@ -188,10 +188,11 @@ def _search_json(query, tree, query_text, offset, limit, config):
             line = line[0][0] if line else None
             params = {
                 'tree': tree,
-                'path': path,
+                'path': path
             }
             if request.values.get('no_from') != 'true':
-                params['from_q'] = query_text
+                params['q'] = query_text
+                params['redirect_type'] = 'single'
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
@@ -526,9 +527,8 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
                           for doc, tags_in_line, offset, skim_annotations
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
                 'sections': sidebar_links(links + skim_links),
-                'query': request.args.get('from') or request.args.get('from_q') or '',
-                'bubble': ('direct' if request.args.get('from') else
-                           'single' if request.args.get('from_q') else None)}))
+                'query': request.args.get('q', ''),
+                'bubble': request.args.get('redirect_type')}))
 
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')

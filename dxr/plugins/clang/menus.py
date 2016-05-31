@@ -2,8 +2,6 @@
 
 from os.path import basename
 
-from flask import url_for
-
 from dxr.app import DXR_BLUEPRINT
 from dxr.lines import Ref
 from dxr.utils import browse_file_url, search_url
@@ -218,10 +216,10 @@ class FunctionRef(_ClangRef):
         if search_for_def:
             menu = [{'html': "Jump to definition",
                      'title': "Jump to definition",
-                     'href': url_for('.search', tree=self.tree.name,
-                                     q="+function:%s" % quote(qualname),
-                                     redirect='true',
-                                     no_from='true'),
+                     'href': '%s&%s&%s' % (search_url(self.tree.name,
+                                                      '+function:%s' % quote(qualname)),
+                                           'redirect=true',
+                                           'no_from=true'),
                      'icon': 'jump'}]
         else:
             menu = []
