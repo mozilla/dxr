@@ -216,10 +216,9 @@ class FunctionRef(_ClangRef):
         if search_for_def:
             menu = [{'html': "Jump to definition",
                      'title': "Jump to definition",
-                     'href': '%s&%s&%s' % (search_url(self.tree.name,
-                                                      '+function:%s' % quote(qualname)),
-                                           'redirect=true',
-                                           'no_from=true'),
+                     'href': '%s&%s' % (search_url(self.tree.name,
+                                                   '+function:%s' % quote(qualname)),
+                                        'redirect=true'),
                      'icon': 'jump'}]
         else:
             menu = []

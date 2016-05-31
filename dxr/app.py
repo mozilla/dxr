@@ -161,10 +161,7 @@ def _search_json(query, tree, query_text, offset, limit, config):
           a bubble indicating as much.
     We only redirect to a direct/unique result if the original query contained a
     'redirect=true' parameter, which the user can elicit by hitting enter on the query
-    input.  In addition, the info bubble normally associated with a unique search result
-    can be silenced by including a 'no_from=true' parameter in the initial query string
-    (that's so we can use a query to load a page without letting on that the result came
-    from a query)."""
+    input."""
 
     # If we're asked to redirect and have a direct hit, then return the url to that.
     if request.values.get('redirect') == 'true':
@@ -188,11 +185,10 @@ def _search_json(query, tree, query_text, offset, limit, config):
             line = line[0][0] if line else None
             params = {
                 'tree': tree,
-                'path': path
+                'path': path,
+                'q': query_text,
+                'redirect_type': 'single'
             }
-            if request.values.get('no_from') != 'true':
-                params['q'] = query_text
-                params['redirect_type'] = 'single'
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,

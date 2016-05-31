@@ -34,7 +34,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('main.cpp'),
                 'another_file',
                 {'html': 'Jump to definition',
-                 'href': '/code/search?q=%2Bfunction%3Aanother_file%28%29&redirect=true&no_from=true'},
+                 'href': '/code/search?q=%2Bfunction%3Aanother_file%28%29&redirect=true'},
                 {'html': 'Find callers',
                  'href': '/code/search?q=%2Bcallers%3Aanother_file%28%29'})
 
@@ -161,7 +161,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('extern.c'),
                 'fib',
                 {'html': 'Jump to definition',
-                 'href': '/code/search?q=%2Bfunction%3AMyClass%3A%3Afib%28int%29&redirect=true&no_from=true'},
+                 'href': '/code/search?q=%2Bfunction%3AMyClass%3A%3Afib%28int%29&redirect=true'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bfunction-ref%3AMyClass%3A%3Afib%28int%29'})
 

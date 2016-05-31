@@ -135,29 +135,6 @@ class TestCase(unittest.TestCase):
                          redirect='false'),
             headers={'Accept': 'application/json'})
 
-    def no_from_result_eq(self, query, path, line):
-        """Send a redirect query with "no_from='true'" and assert that the
-        result is a redirect to the given path and line number with no
-        querystring.
-
-        """
-        response = self.client().get(
-            self.url_for('.search',
-                         tree='code',
-                         q=query,
-                         redirect='true',
-                         no_from='true'),
-            headers={'Accept': 'application/json'})
-        eq_(response.status_code, 200)
-        try:
-            location = json.loads(response.data)['redirect']
-        except KeyError:
-            self.fail("The query didn't return a direct result.")
-        if line:
-            eq_(location, '/code/source/%s#%s' % (path, line))
-        else:
-            eq_(location, '/code/source/%s' % path)
-
     def redirect_result_eq(self, query, path, line_number, kind):
         """Assert that a redirect result of the given kind ('direct' for a
         direct result, 'single' for a single search result) is returned and
@@ -176,7 +153,7 @@ class TestCase(unittest.TestCase):
         try:
             location = json.loads(response.data)['redirect']
         except KeyError:
-            self.fail("The query didn't return a direct result.")
+            self.fail("The query didn't return a redirect result.")
         eq_(location[:location.index('?')], '/code/source/' + path)
 
         if kind == 'direct':

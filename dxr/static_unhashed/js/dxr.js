@@ -365,7 +365,7 @@ $(function() {
             // tab feature on search pages (Chrome and Firefox).
             cache: appendResults,
             success: function (data) {
-                // Check whether to redirect to a direct hit.
+                // Check whether to redirect to a direct or single hit.
                 if (data.redirect) {
                     window.location.href = data.redirect;
                     lastURLWasSearch = false;
@@ -379,13 +379,7 @@ $(function() {
                     if (addToHistory) {
                         var pushHistory = function () {
                             // Strip off offset= and limit= when updating.
-                            function dropAmp(fullMatch, ampOrQuestion) {
-                                // Drop a leading ampersand, keep a leading question mark.
-                                return (ampOrQuestion === '?') ? '?' : '';
-                            }
-                            var displayURL = queryString.replace(/([&?])offset=\d+/, dropAmp).
-                                                         replace(/([&?])limit=\d+/, dropAmp).
-                                                         replace('?&', '?');
+                            var displayURL = removeParams(queryString, ['offset', 'limit']);
                             history.pushState({}, '', displayURL);
                             lastURLWasSearch = true;
                         };
@@ -530,9 +524,15 @@ $(function() {
     // If on load of the search endpoint we have a query string then we need to
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
+        var savedURL, noRedirectURL;
         lastURLWasSearch = locationIsSearch();
         if (lastURLWasSearch) {
-            doQuery(false, window.location.href);
+            savedURL = window.location.href;
+            if (/[&?]redirect=true/.test(window.location.href)) {
+                noRedirectURL = removeParams(window.location.href, ['redirect']);
+                history.replaceState({}, '', noRedirectURL);
+            }
+            doQuery(false, savedURL);
         }
     });
 });
