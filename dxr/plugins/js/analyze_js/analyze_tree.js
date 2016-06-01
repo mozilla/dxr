@@ -61,8 +61,8 @@ function main() {
       const tempPath = path.join(tempRoot, pathSegment);
       ensurePath(tempPath);
       analyzeFile(fullPath,
-                        path.join(pathSegment, stat.name),
-                        path.join(tempPath, stat.name + '.data'));
+                  path.join(pathSegment, stat.name),
+                  path.join(tempPath, stat.name + '.data'));
     }
     next();
   });

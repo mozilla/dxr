@@ -487,8 +487,6 @@ def span_to_lines((kv, span)):
         warn('Bad Extent: end.row < start.row: %s < %s' %
              (span.end.row, span.start.row))
     else:
-        num_rows = span.end.row - span.start.row
-
         # TODO: There are a lot of Nones used as slice bounds below. Do we
         # ever translate them back into char offsets? If not, does the
         # highlighter or anything else choke on them?
@@ -499,7 +497,6 @@ def span_to_lines((kv, span)):
             yield (kv, 0, None), row
 
         yield (kv, 0, span.end.col), span.end.row
-
 
 
 def split_into_lines(triples):
@@ -519,8 +516,6 @@ def split_into_lines(triples):
             warn('Bad extent: end.row < start.row: %s < %s' %
                  (extent.end.row, extent.start.row))
         else:
-            num_rows = extent.end.row - extent.start.row
-
             # TODO: There are a lot of Nones used as slice bounds below. Do we
             # ever translate them back into char offsets? If not, does the
             # highlighter or anything else choke on them?

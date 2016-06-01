@@ -1,3 +1,4 @@
+from collections import namedtuple
 from itertools import imap
 import json
 import subprocess
@@ -10,39 +11,19 @@ from dxr.indexers import (Extent, Position, iterable_per_line,
 from dxr.utils import cumulative_sum
 
 
-class ReadAnalysis(object):
-    def __init__(self, tree, lines, contents):
-        self.needles = []
-        self.refs = []
-        # Build map of line number -> byte offset to use for emitting refs.
-        self.offsets = list(cumulative_sum(imap(len, contents.splitlines(True))))
-        for line in lines:
-            row, (start, end) = line['loc']
-            qref = QualifiedRef(tree, (line['sym'], line['name'], line['type']), qualname=line['sym'])
-            typ = line['type']
-            if line['kind'] == 'use':
-                typ += '_ref'
-            self.yield_needle(typ, row, start, end, line['name'], line['sym'])
-            self.yield_ref(row, start, end, qref)
+AnalysisSchema = namedtuple('AnalysisSchema', ['loc', 'kind', 'type', 'name', 'sym'])
 
-    def yield_ref(self, row, start, end, ref):
-        offset = self.row_to_offset(row)
-        self.refs.append((offset + start, offset + end, ref))
 
-    def row_to_offset(self, line):
-        """Return the byte offset in the file of given line number.
-        """
-        return self.offsets[line - 1]
-
-    def yield_needle(self, filter_name, line, start, end, name, qualname=None):
-        """Add needle for qualified filter_name from line:start
-        to line:end with given name and qualname.
-        """
-        # If qualname is not provided, then use name.
-        mapping = {'name': name, 'qualname': qualname or name}
-        self.needles.append((PLUGIN_NAME + '_' + filter_name,
-                             mapping,
-                             Extent(Position(row=line, col=start), Position(row=line, col=end))))
+def to_analysis(line):
+    """Convert a json-parsed line into an AnalysisSchema.
+    """
+    row, col = line['loc'].split(':', 1)
+    if '-' in col:
+        col = tuple(map(int, col.split('-', 1)))
+    else:
+        col = int(col), int(col)
+    line['loc'] = int(row), col
+    return AnalysisSchema(**line)
 
 
 class TreeToIndex(dxr.indexers.TreeToIndex):
@@ -72,31 +53,52 @@ class FileToIndex(dxr.indexers.FileToIndex):
         self.analysis_path = join(join(join(tree.temp_folder, 'plugins/js'),
                                        relpath(dirname(self.absolute_path()), tree.source_folder)),
                                   basename(path) + '.data')
-        lines = []
+        # All lines from the analysis output file.
+        self.lines = []
+        # Map of line number -> byte offset to use for emitting refs.
+        self.offsets = []
         if self.is_interesting():
             with open(self.analysis_path) as analysis:
-                lines = self.parse_analysis(analysis.readlines())
-            lines = sorted(lines, key=lambda x: x['loc'])
-        self.analyzer = ReadAnalysis(tree, lines, contents)
+                self.lines = sorted((self.parse_analysis(line) for line in analysis), key=lambda x: x.loc)
+            self.offsets = list(cumulative_sum(imap(len, contents.splitlines(True))))
 
     def is_interesting(self):
         return exists(self.analysis_path)
 
-    def parse_analysis(self, lines):
-        def parse_loc(line):
-            if 'loc' in line:
-                row, col = line['loc'].split(':', 1)
-                if '-' in col:
-                    col = tuple(map(int, col.split('-', 1)))
-                else:
-                    col = int(col), int(col)
-                line['loc'] = int(row), col
-            return line
+    def parse_analysis(self, line):
+        """Convert JSON line string into a AnalysisSchema object.
+        """
+        return json.loads(line, object_hook=to_analysis)
 
-        return (parse_loc(json.loads(line)) for line in lines)
+    def build_ref(self, row, start, end, ref):
+        """Create a 3-tuple from given line, start and end columns, and ref.
+        """
+        # Offset table is 0-indexed, line numbers are 1-indexed.
+        offset = self.offsets[row - 1]
+        return offset + start, offset + end, ref
+
+    def build_needle(self, filter_name, line, start, end, name, qualname=None):
+        """Create a needle mapping for the given filter, line, start and end
+        columns, and name.
+        """
+        # If qualname is not provided, then use name.
+        mapping = {'name': name, 'qualname': qualname or name}
+        return (PLUGIN_NAME + '_' + filter_name, mapping,
+                Extent(Position(row=line, col=start), Position(row=line, col=end)))
 
     def needles_by_line(self):
-        return iterable_per_line(with_start_and_end(split_into_lines(self.analyzer.needles)))
+        def all_needles():
+            for line in self.lines:
+                row, (start, end) = line.loc
+                typ = line.type
+                if line.kind == 'use':
+                    typ += '_ref'
+                yield self.build_needle(typ, row, start, end, line.name, line.sym)
+
+        return iterable_per_line(with_start_and_end(all_needles()))
 
     def refs(self):
-        return self.analyzer.refs
+        for line in self.lines:
+            row, (start, end) = line.loc
+            qref = QualifiedRef(self.tree, (line.sym, line.name, line.type), qualname=line.sym)
+            yield self.build_ref(row, start, end, qref)
