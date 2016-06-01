@@ -37,7 +37,7 @@ their equivalents on other distributions:
   theoretically support back to 3.2.
 * llvm-dev (LLVM dev headers, version 3.5 recommended)
 * pkg-config
-* npm (Node.js and its package manager)
+* npm; node 6.0.0 or higher
 * openjdk-7-jdk
 * elasticsearch 1.1 or higher. The elasticsearch corporation maintains its own
   packages; they aren't often found in distros. Newer is better, though I tend
