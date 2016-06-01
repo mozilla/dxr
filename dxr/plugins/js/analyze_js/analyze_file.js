@@ -678,10 +678,9 @@ const Analyzer = {
 };
 
 // Attempt to comment out some mozilla-specific preprocessor headers.
-function preprocess(text, comment)
+function preprocess(lines, comment)
 {
   let substitution = false;
-  const lines = text.split("\n");
   const preprocessedLines = [];
   const branches = [true];
   for (let i = 0; i < lines.length; i++) {
@@ -729,7 +728,7 @@ function preprocess(text, comment)
     }
   }
 
-  return preprocessedLines.join("\n");
+  return preprocessedLines.join('\n');
 }
 
 function analyzeJS(filepath, relpath, tempFilepath)
@@ -737,14 +736,21 @@ function analyzeJS(filepath, relpath, tempFilepath)
   fileIndex = relpath;
   nextSymId = 0;
   outLines = [];
-  const text = preprocess(String(fs.readFileSync(filepath)), line => "//" + line);
+  const text = String(fs.readFileSync(filepath));
+  const lines = text.split('\n');
+  // With files this large we currently risk running out of memory in the
+  // indexer, so we skip them. TODO: fix the issue and disable this check.
+  if (lines.length >= 100000) {
+    console.warn(`Skipping ${filepath} because length of ${lines.length} exceeds limit.`);
+    return;
+  }
   try {
-    const ast = esprima.parse(text,
-                            {loc: true,
-                             source: path.basename(filepath),
-                             line: 1,
-                             tolerant: true,
-                             sourceType: "script"});
+    const ast = esprima.parse(preprocess(lines, line => "//" + line),
+                              {loc: true,
+                               source: path.basename(filepath),
+                               line: 1,
+                               tolerant: true,
+                               sourceType: "script"});
     if (ast) {
       Analyzer.program(ast);
     }
