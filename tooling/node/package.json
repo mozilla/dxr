@@ -6,7 +6,9 @@
   "devDependencies": {
     "nunjucks": "2.0.0"
   },
-  "engine": "node >= 0.8.x",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
   "dependencies": {
     "lockdown": "0.0.6"
   },
