@@ -10,12 +10,13 @@ test: all
 	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
 
 clean: static_clean
-	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
-	       tooling/node/node_modules/nunjucks \
-	       .npm_installed \
+	rm -rf .npm_installed \
 	       .peep_installed \
 	       venv \
 	       .dxr_installed
+	@# Remove anything within node_modules that's not checked into git. Skip things
+	@# with spaces in them, lest xargs screw up and delete the wrong thing.
+	cd tooling/node/node_modules && git ls-files -o --directory -x '* *' -x '.DS_Store' | xargs rm -rf
 	find . -name "*.pyc" -exec rm -f {} \;
 	$(MAKE) -C dxr/plugins/clang clean
 	$(MAKE) -C dxr/plugins/js clean

@@ -3,7 +3,7 @@
   "description": "esprima-based javascript plugin for DXR",
   "author": "Mozilla",
   "version": "1.0.0",
-  "engine": "node >= 6.0.0",
+  "engines": { "node": ">= 6.0.0" },
   "license": "MIT",
   "scripts": { "preinstall": "lockdown" },
   "dependencies": {
