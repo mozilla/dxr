@@ -85,3 +85,19 @@ function extension(path) {
     }
     return file.substring(lastDotPos + 1);
 }
+
+/**
+ * Remove each parameter name in the params array from url's query parameters.
+ */
+function removeParams(url, params) {
+    var i, paramRegex;
+    function dropAmp(fullMatch, ampOrQuestion) {
+        // Keep a leading question mark, drop a leading ampersand.
+        return (ampOrQuestion === '?') ? '?' : '';
+    }
+    for (i = 0; i < params.length; i++) {
+        paramRegex = new RegExp('([&?])' + params[i] + '=[^&]+');
+        url = url.replace(paramRegex, dropAmp);
+    }
+    return url.replace('?&', '?');
+}
