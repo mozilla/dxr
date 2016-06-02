@@ -6,3 +6,5 @@ clean:
 
 lint: build
 	cd analyze_js; node_modules/.bin/eslint .
+
+.PHONY: build clean lint
