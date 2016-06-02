@@ -557,7 +557,6 @@ mark {
 }
 .bubble.info {
     background: white url('/static/images/info.gif') 12px 0 / 3ex no-repeat;
-    display: block;
 }
 .bubble.warning {
     background: white url('/static/images/warning.gif') 10px -2px / 3.5ex no-repeat;

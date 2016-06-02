@@ -5,22 +5,6 @@
 
   {% set state_eof = True %}
 
-  {% block bubble %}
-    {% if bubble %}
-      <div class="bubble info">
-        {% if bubble == 'single' %}
-          There was only 1 search result, so I took you straight to it.
-        {% else %}
-          Showing a direct result.
-          <a href="{{ url_for('.search', tree=tree, q=query) }}">
-          Show all results instead.</a>
-        {% endif %}
-      </div>
-    {% else %}
-      {{ super() }}
-    {% endif %}
-  {% endblock %}
-
   <div id="annotations">
     {% for line, annotations in lines %}
       <div class="annotation-set" id="aset-{{ loop.index }}">

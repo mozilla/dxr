@@ -30,20 +30,14 @@ class MenuTests(DxrInstanceTestCase):
                  'href': '/code/search?q=%2Bfunction-decl%3Aanother_file%28%29'})
 
     def test_function_refs(self):
-        """Make sure qualname-using searches are properly constructed."""
+        """Make sure definitions are found and a representative qualname-using
+        search is properly constructed."""
         menu_on(self.source_page('main.cpp'),
                 'another_file',
                 {'html': 'Jump to definition',
-                 'href': '/code/search?q=%2Bfunction%3Aanother_file%28%29&redirect=true'},
+                 'href': '/code/source/extern.c#7'},
                 {'html': 'Find callers',
                  'href': '/code/search?q=%2Bcallers%3Aanother_file%28%29'})
-
-    def test_function_def_no_jump(self):
-        """Make sure a function definition doesn't get a 'Jump to definition'
-        entry."""
-        menu_item_not_on(self.source_page('extern.c'),
-                         'another_file',
-                         'Jump to definition')
 
     def test_variables(self):
         """Make sure var declarations are found and have a representative sane
@@ -161,7 +155,7 @@ class MenuTests(DxrInstanceTestCase):
         menu_on(self.source_page('extern.c'),
                 'fib',
                 {'html': 'Jump to definition',
-                 'href': '/code/search?q=%2Bfunction%3AMyClass%3A%3Afib%28int%29&redirect=true'},
+                 'href': '/code/source/extern.c#19'},
                 {'html': 'Find references',
                  'href': '/code/search?q=%2Bfunction-ref%3AMyClass%3A%3Afib%28int%29'})
 

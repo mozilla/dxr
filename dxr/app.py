@@ -149,19 +149,8 @@ def search(tree):
 
 def _search_json(query, tree, query_text, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
-    then return {redirect: hit location}. If that doesn't work, fall back to a normal
-    search, and if that yields a single result and redirect is true then return
-    {redirect: hit location}, otherwise return the results as JSON.
-
-    'redirect=true' along with 'redirect_type={direct, single}' control the behavior
-    of jumping to results:
-        * 'redirect_type=direct' indicates a direct_result result and comes with
-          a bubble giving the option to switch to all results instead.
-        * 'redirect_type=single' indicates a unique search result and comes with
-          a bubble indicating as much.
-    We only redirect to a direct/unique result if the original query contained a
-    'redirect=true' parameter, which the user can elicit by hitting enter on the query
-    input."""
+    then return {redirect: hit location}.If that doesn't work, fall back to a normal search
+    and return the results as JSON."""
 
     # If we're asked to redirect and have a direct hit, then return the url to that.
     if request.values.get('redirect') == 'true':
@@ -172,24 +161,11 @@ def _search_json(query, tree, query_text, offset, limit, config):
             params = {
                 'tree': tree,
                 'path': path,
-                'q': query_text,
-                'redirect_type': 'direct'
+                'from': query_text
             }
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
     try:
         count_and_results = query.results(offset, limit)
-        # If we're asked to redirect and there's a single result, redirect to the result.
-        if (request.values.get('redirect') == 'true' and
-            count_and_results['result_count'] == 1):
-            _, path, line = next(count_and_results['results'])
-            line = line[0][0] if line else None
-            params = {
-                'tree': tree,
-                'path': path,
-                'q': query_text,
-                'redirect_type': 'single'
-            }
-            return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
                     'path': path,
@@ -522,9 +498,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
                            doc.get('annotations', []) + skim_annotations)
                           for doc, tags_in_line, offset, skim_annotations
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
-                'sections': sidebar_links(links + skim_links),
-                'query': request.args.get('q', ''),
-                'bubble': request.args.get('redirect_type')}))
+                'sections': sidebar_links(links + skim_links)}))
 
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
