@@ -14,11 +14,25 @@ def icon(path, is_binary=False):
     return class_name
 
 
-def decode_data(data, encoding_guess):
-    """Given str data, return an (is_text, data) tuple, where data is returned
-    as unicode if we think it's text and were able to determine an encoding for
-    it."""
-    if not is_binary_string(data[:1024]):
+def decode_file(file_handle, encoding_guess):
+    """Given a file handle, return an (is_text, data) tuple, where data is
+    returned as unicode if we think the block is text and were able to
+    determine an encoding for it, otherwise a string."""
+    initial_portion = file_handle.read(4096)
+    if not is_binary_string(initial_portion):
+        # Move the cursor back to the start of the file.
+        file_handle.seek(0)
+        return decode_data(file_handle.read(), encoding_guess, False)
+    return False, initial_portion
+
+
+def decode_data(data, encoding_guess, can_be_binary=True):
+    """Given string data, return an (is_text, data) tuple, where data is
+    returned as unicode if we think it's text and were able to determine an
+    encoding for it.
+    If can_be_binary is False, then skip the initial is_binary check.
+    """
+    if not (can_be_binary and is_binary_string(data[:1024])):
         try:
             # Try our default encoding.
             data = data.decode(encoding_guess)

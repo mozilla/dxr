@@ -2,10 +2,9 @@ from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
 from itertools import chain, izip, repeat
-from operator import attrgetter
 import os
-from os import stat, mkdir, makedirs
-from os.path import dirname, islink, relpath, join, split
+from os import stat, makedirs
+from os.path import islink, relpath, join, split
 from shutil import rmtree
 import subprocess
 import sys
@@ -16,23 +15,18 @@ from uuid import uuid1
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
-from funcy import merge, ichunks, first, suppress
-import jinja2
-from more_itertools import chunked
-from ordereddict import OrderedDict
+from funcy import ichunks, first, suppress
 from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
                              IndexAlreadyExistsError, bulk_chunks, Timeout,
                              ConnectionError)
 
-import dxr
 from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import decode_data, icon
-from dxr.query import filter_menu_items
+from dxr.mime import decode_file, is_binary_image
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
 from dxr.vcs import VcsCache
@@ -359,9 +353,11 @@ def _unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
                 yield folder
 
 
-def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
+def file_contents(path, encoding_guess, force_read=False):  # TODO: Make accessible to TreeToIndex.post_build.
     """Return the unicode contents of a file if we can figure out a decoding.
-    Otherwise, return the contents as a string.
+    Otherwise, we could not decode it and the result is a string with some of
+    the contents. Unless force_read is true, in which case we return a string
+    of the file's contents even if they could not decode.
 
     :arg path: A sufficient path to the file
     :arg encoding_guess: A guess at the encoding of the file, to be applied if
@@ -370,9 +366,12 @@ def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex
     """
     # Read the binary contents of the file.
     with open(path, 'rb') as source_file:
-        contents = source_file.read()  # always str
-    _, contents = decode_data(contents, encoding_guess)
-    return contents  # unicode if we were able to decode, str if not
+        decoded, contents = decode_file(source_file, encoding_guess)
+        if not decoded and force_read:
+            source_file.seek(0)
+            contents = source_file.read()
+        # unicode if we were able to decode, str if not
+        return contents
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
@@ -432,7 +431,9 @@ def index_file(tree, tree_indexers, path, es, index):
 
     """
     try:
-        contents = file_contents(path, tree.source_encoding)
+        contents = file_contents(path,
+                                 tree.source_encoding,
+                                 force_read=is_binary_image(path))
     except IOError as exc:
         if exc.errno == ENOENT and islink(path):
             # It's just a bad symlink (or a symlink that was swiped out

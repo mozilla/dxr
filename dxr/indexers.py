@@ -131,7 +131,8 @@ class TreeToIndex(PluginConfig):
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess an
-            encoding and decode it, str otherwise
+            encoding and decode it, str otherwise (only the first 4 kb unless
+            it's an image to avoid loading the contents of large binary blobs)
 
         Return None if there is no indexing to do on the file.
 
