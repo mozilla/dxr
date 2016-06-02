@@ -14,8 +14,15 @@ dxr-temp-*
 /build
 /dist
 /*.egg-info
-/tooling/node/node_modules/.bin/nunjucks-precompile
-/tooling/node/node_modules/nunjucks
+/tooling/node/node_modules/*
+!tooling/node/node_modules/.bin/lockdown
+!tooling/node/node_modules/.bin/lockdown-relock
+!tooling/node/node_modules/lockdown
+/dxr/plugins/js/.npm_installed
+/dxr/plugins/js/analyze_js/node_modules/*
+!/dxr/plugins/js/analyze_js/node_modules/.bin/lockdown
+!/dxr/plugins/js/analyze_js/node_modules/.bin/lockdown-relock
+!/dxr/plugins/js/analyze_js/node_modules/lockdown
 /docs/build
 .dxr_installed
 .npm_installed
