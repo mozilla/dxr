@@ -22,9 +22,9 @@ class UselessLine(Exception):
     """A CSV line isn't suitable for getting anything useful out of."""
 
 
-POSSIBLE_KINDS = set(['call', 'macro', 'function', 'func_override', 'variable',
-                      'ref', 'type', 'impl', 'decldef', 'typedef', 'warning',
-                      'namespace', 'namespace_alias', 'include'])
+POSSIBLE_KINDS = ('call', 'macro', 'function', 'func_override', 'variable',
+                  'ref', 'type', 'impl', 'decldef', 'typedef', 'warning',
+                  'namespace', 'namespace_alias', 'include')
 
 
 def c_type_sig(inputs, output, method=None):

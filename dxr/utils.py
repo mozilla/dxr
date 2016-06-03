@@ -186,17 +186,54 @@ def cached(f):
     return inner
 
 
-class frozendict(dict):
-    """A dict that can be hashed if all its values are hashable
+# Cache FrozenDictLike objects to avoid reconstruction on every usage.
+_dict_cache = {}
 
-    You shouldn't modify one of these once constructed; it will change the
-    hash.
 
+def _frozendict_factory(dict_keys):
+    """Factory that produces FrozenDictLike objects whose slots match
+    dict_keys.
     """
-    def __hash__(self):
-        items = self.items()
-        items.sort()
-        return hash(tuple(items))
+    class FrozenDictLike(object):
+        __slots__ = dict_keys
+
+        def __init__(self, current_dict):
+            for (k, v) in current_dict.iteritems():
+                setattr(self, k, v)
+
+        def __getitem__(self, key):
+            return getattr(self, key)
+
+        def get(self, key, default=None):
+            if key in self:
+                return self[key]
+            return default
+
+        def __contains__(self, key):
+            return key in FrozenDictLike.__slots__
+
+        def keys(self):
+            return FrozenDictLike.__slots__
+
+        def items(self):
+            return [(key, self[key]) for key in self.keys()]
+
+        def __hash__(self):
+            return hash(tuple(self.items()))
+
+        def __eq__(self, other):
+            return self.items() == other.items()
+
+    return FrozenDictLike
+
+
+def frozendict(current_dict):
+    """Freeze current_dict whose keys are all strings.
+    """
+    keys = tuple(sorted(current_dict.keys()))
+    if keys not in _dict_cache:
+        _dict_cache[keys] = _frozendict_factory(keys)
+    return _dict_cache[keys](current_dict)
 
 
 def if_raises(exception, callable, fallback, *args, **kwargs):
