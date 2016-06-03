@@ -14,11 +14,13 @@ def icon(path, is_binary=False):
     return class_name
 
 
-def decode_data(data, encoding_guess):
-    """Given str data, return an (is_text, data) tuple, where data is returned
-    as unicode if we think it's text and were able to determine an encoding for
-    it."""
-    if not is_binary_string(data[:1024]):
+def decode_data(data, encoding_guess, can_be_binary=True):
+    """Given string data, return an (is_text, data) tuple, where data is
+    returned as unicode if we think it's text and were able to determine an
+    encoding for it.
+    If can_be_binary is False, then skip the initial is_binary check.
+    """
+    if not (can_be_binary and is_binary_string(data[:1024])):
         try:
             # Try our default encoding.
             data = data.decode(encoding_guess)

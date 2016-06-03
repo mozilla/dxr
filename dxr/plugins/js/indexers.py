@@ -6,8 +6,8 @@ from os.path import basename, dirname, relpath, join, exists
 
 from dxr.plugins.js.refs import PLUGIN_NAME, QualifiedRef
 import dxr.indexers
-from dxr.indexers import (Extent, Position, iterable_per_line,
-                          with_start_and_end, split_into_lines)
+from dxr.indexers import (Extent, Position, iterable_per_line_sorted,
+                          with_start_and_end)
 from dxr.utils import cumulative_sum
 
 
@@ -45,7 +45,6 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.plugin_name, self.tree)
-
 
 class FileToIndex(dxr.indexers.FileToIndex):
     def __init__(self, path, contents, plugin_name, tree):
@@ -95,7 +94,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
                     typ += '_ref'
                 yield self.build_needle(typ, row, start, end, line.name, line.sym)
 
-        return iterable_per_line(with_start_and_end(all_needles()))
+        return iterable_per_line_sorted(with_start_and_end(all_needles()))
 
     def refs(self):
         for line in self.lines:

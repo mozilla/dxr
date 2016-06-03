@@ -2,10 +2,9 @@ from datetime import datetime
 from errno import ENOENT
 from fnmatch import fnmatchcase
 from itertools import chain, izip, repeat
-from operator import attrgetter
 import os
-from os import stat, mkdir, makedirs
-from os.path import dirname, islink, relpath, join, split
+from os import stat, makedirs
+from os.path import islink, relpath, join, split
 from shutil import rmtree
 import subprocess
 import sys
@@ -13,26 +12,22 @@ from sys import exc_info
 from traceback import format_exc
 from uuid import uuid1
 
+from binaryornot.helpers import is_binary_string
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
-from funcy import merge, ichunks, first, suppress
-import jinja2
-from more_itertools import chunked
-from ordereddict import OrderedDict
+from funcy import ichunks, first, suppress
 from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
                              IndexAlreadyExistsError, bulk_chunks, Timeout,
                              ConnectionError)
 
-import dxr
 from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_wait
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import decode_data, icon
-from dxr.query import filter_menu_items
+from dxr.mime import decode_data, is_binary_image
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
 from dxr.vcs import VcsCache
@@ -197,7 +192,7 @@ def index_tree(tree, es, verbose=False):
 
     skip_indexing = 'index' in config.skip_stages
     skip_build = 'build' in config.skip_stages
-    skip_cleanup  = skip_indexing or skip_build
+    skip_cleanup = skip_indexing or skip_build or 'clean' in config.skip_stages
 
     # Create and/or clear out folders:
     ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
@@ -359,9 +354,9 @@ def _unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
                 yield folder
 
 
-def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
-    """Return the unicode contents of a file if we can figure out a decoding.
-    Otherwise, return the contents as a string.
+def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
+    """Return the unicode contents of a file if we can figure out a decoding,
+    or else None.
 
     :arg path: A sufficient path to the file
     :arg encoding_guess: A guess at the encoding of the file, to be applied if
@@ -370,9 +365,15 @@ def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex
     """
     # Read the binary contents of the file.
     with open(path, 'rb') as source_file:
-        contents = source_file.read()  # always str
-    _, contents = decode_data(contents, encoding_guess)
-    return contents  # unicode if we were able to decode, str if not
+        initial_portion = source_file.read(4096)
+        if not is_binary_string(initial_portion):
+            # Move the cursor back to the start of the file.
+            source_file.seek(0)
+            decoded, contents = decode_data(source_file.read(),
+                                            encoding_guess,
+                                            can_be_binary=False)
+            if decoded:
+                return contents
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
@@ -418,7 +419,6 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
             for f in folders:
                 yield join(root, f)
 
-
 def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.
 
@@ -433,7 +433,7 @@ def index_file(tree, tree_indexers, path, es, index):
 
     """
     try:
-        contents = file_contents(path, tree.source_encoding)
+        contents = unicode_contents(path, tree.source_encoding)
     except IOError as exc:
         if exc.errno == ENOENT and islink(path):
             # It's just a bad symlink (or a symlink that was swiped out
@@ -474,7 +474,11 @@ def index_file(tree, tree_indexers, path, es, index):
                                file_to_index.annotations_by_line())
 
     def docs():
-        """Yield documents for bulk indexing."""
+        """Yield documents for bulk indexing.
+
+        Big Warning: docs also clears the contents of all elements of
+        needles_by_line because they will no longer be used.
+        """
         # Index a doc of type 'file' so we can build folder listings.
         # At the moment, we send to ES in the same worker that does the
         # indexing. We could interpose an external queueing system, but I'm
@@ -522,6 +526,11 @@ def index_file(tree, tree_indexers, path, es, index):
                 if annotations_for_this_line:
                     total['annotations'] = annotations_for_this_line
                 yield es.index_op(total)
+
+                # Because needles_by_line holds a reference, total is not
+                # garbage collected. Since we won't use it again, we can clear
+                # the contents, saving substantial memory on long files.
+                total.clear()
 
     # Indexing a 277K-line file all in one request makes ES time out (>60s),
     # so we chunk it up. 300 docs is optimal according to the benchmarks in
