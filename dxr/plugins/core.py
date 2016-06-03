@@ -464,6 +464,10 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # We store both the contents of textual images twice so that they can
         # both show up in searches and be previewed in the browser.
         if is_binary_image(self.path) or is_textual_image(self.path):
+            # If the file was binary, then contents are None, so read it here.
+            if self.contents is None:
+                with open(self.absolute_path(), "rb") as imagefile:
+                    self.contents = imagefile.read()
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)

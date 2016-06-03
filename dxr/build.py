@@ -12,6 +12,7 @@ from sys import exc_info
 from traceback import format_exc
 from uuid import uuid1
 
+from binaryornot.helpers import is_binary_string
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
@@ -26,7 +27,7 @@ from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_w
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import decode_file, is_binary_image
+from dxr.mime import decode_data, is_binary_image
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
 from dxr.vcs import VcsCache
@@ -353,11 +354,9 @@ def _unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
                 yield folder
 
 
-def file_contents(path, encoding_guess, force_read=False):  # TODO: Make accessible to TreeToIndex.post_build.
-    """Return the unicode contents of a file if we can figure out a decoding.
-    Otherwise, we could not decode it and the result is a string with some of
-    the contents. Unless force_read is true, in which case we return a string
-    of the file's contents even if they could not decode.
+def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
+    """Return the unicode contents of a file if we can figure out a decoding,
+    or else None.
 
     :arg path: A sufficient path to the file
     :arg encoding_guess: A guess at the encoding of the file, to be applied if
@@ -366,12 +365,15 @@ def file_contents(path, encoding_guess, force_read=False):  # TODO: Make accessi
     """
     # Read the binary contents of the file.
     with open(path, 'rb') as source_file:
-        decoded, contents = decode_file(source_file, encoding_guess)
-        if not decoded and force_read:
+        initial_portion = source_file.read(4096)
+        if not is_binary_string(initial_portion):
+            # Move the cursor back to the start of the file.
             source_file.seek(0)
-            contents = source_file.read()
-        # unicode if we were able to decode, str if not
-        return contents
+            decoded, contents = decode_data(source_file.read(),
+                                            encoding_guess,
+                                            can_be_binary=False)
+            if decoded:
+                return contents
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
@@ -431,9 +433,7 @@ def index_file(tree, tree_indexers, path, es, index):
 
     """
     try:
-        contents = file_contents(path,
-                                 tree.source_encoding,
-                                 force_read=is_binary_image(path))
+        contents = file_contents(path, tree.source_encoding)
     except IOError as exc:
         if exc.errno == ENOENT and islink(path):
             # It's just a bad symlink (or a symlink that was swiped out

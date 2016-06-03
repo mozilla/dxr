@@ -131,8 +131,7 @@ class TreeToIndex(PluginConfig):
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess an
-            encoding and decode it, str otherwise (only the first 4 kb unless
-            it's an image to avoid loading the contents of large binary blobs)
+            encoding and decode it, None otherwise
 
         Return None if there is no indexing to do on the file.
 
@@ -176,11 +175,11 @@ class FileToSkim(PluginConfig):
             source folder. Such a file might not exist on disk. This is useful
             mostly as a hint for syntax coloring.
         :arg contents: What's in the file: unicode if we knew or successfully
-            guessed an encoding, str otherwise. Don't return any by-line data
-            for strs; the framework won't have succeeded in breaking up the
+            guessed an encoding, None otherwise. Don't return any by-line data
+            for None; the framework won't have succeeded in breaking up the
             file by line for display, so there will be no useful UI for those
             data to support. In fact, most skimmers won't be be able to do
-            anything useful with strs at all. For unicode, split the file into
+            anything useful with None at all. For unicode, split the file into
             lines using universal newlines (``unicode.splitlines()`` with no
             params); that's what the rest of the framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
@@ -345,8 +344,8 @@ class FileToIndex(FileToSkim):
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess at an
-            encoding and decode it, str otherwise. Don't return any by-line
-            data for strs; the framework won't have succeeded in breaking up
+            encoding and decode it, None otherwise. Don't return any by-line
+            data for None; the framework won't have succeeded in breaking up
             the file by line for display, so there will be no useful UI for
             those data to support. Think more along the lines of returning
             EXIF data to search by for a JPEG. For unicode, split the file into
