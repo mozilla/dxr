@@ -354,7 +354,7 @@ def _unignored_folders(folders, source_path, ignore_filenames, ignore_paths):
                 yield folder
 
 
-def file_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
+def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIndex.post_build.
     """Return the unicode contents of a file if we can figure out a decoding,
     or else None.
 
@@ -433,7 +433,7 @@ def index_file(tree, tree_indexers, path, es, index):
 
     """
     try:
-        contents = file_contents(path, tree.source_encoding)
+        contents = unicode_contents(path, tree.source_encoding)
     except IOError as exc:
         if exc.errno == ENOENT and islink(path):
             # It's just a bad symlink (or a symlink that was swiped out

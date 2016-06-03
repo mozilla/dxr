@@ -466,8 +466,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
         if is_binary_image(self.path) or is_textual_image(self.path):
             # If the file was binary, then contents are None, so read it here.
             if self.contents is None:
-                with open(self.absolute_path(), "rb") as imagefile:
-                    self.contents = imagefile.read()
+                with open(self.absolute_path(), 'rb') as image_file:
+                    self.contents = image_file.read()
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
