@@ -1,5 +1,4 @@
 from collections import namedtuple
-from itertools import imap
 import json
 import subprocess
 from os.path import basename, dirname, relpath, join, exists
@@ -8,7 +7,6 @@ from dxr.plugins.js.refs import PLUGIN_NAME, QualifiedRef
 import dxr.indexers
 from dxr.indexers import (Extent, Position, iterable_per_line_sorted,
                           with_start_and_end)
-from dxr.utils import cumulative_sum
 
 
 AnalysisSchema = namedtuple('AnalysisSchema', ['loc', 'kind', 'type', 'name', 'sym'])
@@ -46,6 +44,7 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.plugin_name, self.tree)
 
+
 class FileToIndex(dxr.indexers.FileToIndex):
     def __init__(self, path, contents, plugin_name, tree):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
@@ -59,10 +58,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         if self.is_interesting():
             with open(self.analysis_path) as analysis:
                 self.lines = sorted((self.parse_analysis(line) for line in analysis), key=lambda x: x.loc)
-            self.offsets = list(cumulative_sum(imap(len, contents.splitlines(True))))
 
     def is_interesting(self):
-        return exists(self.analysis_path)
+        return super(FileToIndex, self).is_interesting() and exists(self.analysis_path)
 
     def parse_analysis(self, line):
         """Convert JSON line string into a AnalysisSchema object.
@@ -72,9 +70,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
     def build_ref(self, row, start, end, ref):
         """Create a 3-tuple from given line, start and end columns, and ref.
         """
-        # Offset table is 0-indexed, line numbers are 1-indexed.
-        offset = self.offsets[row - 1]
-        return offset + start, offset + end, ref
+        return self.char_offset(row, start), self.char_offset(row, end), ref
 
     def build_needle(self, filter_name, line, start, end, name, qualname=None):
         """Create a needle mapping for the given filter, line, start and end

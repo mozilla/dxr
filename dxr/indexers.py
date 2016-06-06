@@ -2,11 +2,14 @@
 
 import cgi
 from collections import namedtuple
+from itertools import imap
 from operator import itemgetter
 from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
+
+from dxr.utils import build_offset_map
 
 
 STRING_PROPERTY = {
@@ -274,7 +277,7 @@ class FileToSkim(PluginConfig):
 
     def contains_text(self):
         """Return whether this file can be decoded and divided into lines as
-        text.
+        text. Empty files contain text.
 
         This may come in handy as a component of your own
         :meth:`~dxr.indexers.FileToSkim.is_interesting()` methods.
@@ -326,12 +329,8 @@ class FileToSkim(PluginConfig):
             if not self.contains_text():
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
-            lines = self.contents.splitlines(True)
-            self._line_offset_list = []
-            chars = 0
-            for i in xrange(0, len(lines)):
-                self._line_offset_list.append(chars)
-                chars += len(lines[i])
+            lines = self.contents.splitlines(True) if self.contents is not None else []
+            self._line_offset_list = build_offset_map(lines)
         return self._line_offset_list
 
 

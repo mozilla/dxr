@@ -28,7 +28,7 @@ from dxr.mime import icon, is_binary_image, is_textual_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_update, append_by_line, cumulative_sum)
+                       format_number, append_update, append_by_line, build_offset_map)
 from dxr.vcs import file_contents_at_rev
 
 # Look in the 'dxr' package for static files, etc.:
@@ -457,7 +457,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
             # If contents are not provided, we can reconstruct them by
             # stitching the lines together.
             contents = ''.join(lines)
-        offsets = cumulative_sum(imap(len, lines))
+        offsets = build_offset_map(lines)
         tree_config = config.trees[tree]
         if is_textual_image(path) and image_rev:
             # Add a link to view textual images on revs:

@@ -34,7 +34,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def is_interesting(self):
         # TODO: consider adding a link from generated headers back to the idl
-        return self.path.endswith('.idl')
+        # Perform the endswith check first because super.is_interesting hits the filesystem.
+        return self.path.endswith('.idl') and super(FileToIndex, self).is_interesting()
 
     def links(self):
         if self.idl:

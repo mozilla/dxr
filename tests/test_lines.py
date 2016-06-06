@@ -13,7 +13,7 @@ from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
                        html_line, nesting_order, balanced_tags_with_empties,
                        es_lines, tags_per_line)
-from dxr.utils import cumulative_sum
+from dxr.utils import build_offset_map
 
 
 def test_line_boundaries():
@@ -219,7 +219,7 @@ class BalancedTagTests(TestCase):
 
 """
         lines = text.splitlines(True)
-        offsets = cumulative_sum(map(len, lines))
+        offsets = build_offset_map(lines)
         actual_lines = [html_line(text_line.rstrip('\r\n'), e, offset) for
                         text_line, e, offset in
                         zip(lines, tags_per_line(balanced_tags(tags)), offsets)]
@@ -259,7 +259,7 @@ def text_to_html_lines(text, refs=(), regions=()):
     """Run the full pipeline, and return a list of htmlified lines of ``text``
     with markup interspersed for ``regions``."""
     lines = text.splitlines(True)
-    offsets = cumulative_sum(map(len, lines))
+    offsets = build_offset_map(lines)
     return [html_line(text_line, e, o) for (text_line, e, o) in
             zip(lines, tags_per_line(finished_tags(lines,
                                                    refs,

@@ -5,7 +5,7 @@ from datetime import datetime
 from errno import ENOENT
 import fnmatch
 from functools import partial, wraps
-from itertools import izip
+from itertools import izip, imap
 from os import chdir, dup, fdopen, getcwd
 from os.path import join
 from shutil import rmtree
@@ -245,6 +245,13 @@ def cumulative_sum(nums):
         # cumulative sum, which includes the current value
         yield cum_sum
         cum_sum += n
+
+
+def build_offset_map(lines):
+    """Return a list of byte offsets of the positions of the start of each
+    line, where lines is an iterable of strings.
+    """
+    return list(cumulative_sum(imap(len, lines)))
 
 
 @contextmanager

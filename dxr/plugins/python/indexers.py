@@ -187,7 +187,7 @@ class FileToIndex(FileToIndexBase):
         self._visitor = None
 
     def is_interesting(self):
-        return is_interesting(self.path)
+        return super(FileToIndex, self).is_interesting() and is_interesting(self.path)
 
     @property
     def visitor(self):

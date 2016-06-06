@@ -50,7 +50,11 @@ class TreeAnalysis(object):
 
         """
         try:
-            syntax_tree = ast_parse(unicode_contents(path, encoding))
+            contents = unicode_contents(path, encoding)
+            if contents is None:
+                # Then we could not decode the file, nothing we can do here.
+                return
+            syntax_tree = ast_parse(contents)
         except (IOError, SyntaxError, TypeError, UnicodeDecodeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
