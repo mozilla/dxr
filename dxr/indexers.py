@@ -326,7 +326,7 @@ class FileToSkim(PluginConfig):
             if not self.contains_text():
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
-            lines = self.contents.splitlines(True)
+            lines = self.contents.splitlines(True) if self.contents else []
             self._line_offset_list = []
             chars = 0
             for i in xrange(0, len(lines)):

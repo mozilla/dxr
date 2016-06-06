@@ -50,7 +50,8 @@ class TreeAnalysis(object):
 
         """
         try:
-            syntax_tree = ast_parse(unicode_contents(path, encoding))
+            contents = unicode_contents(path, encoding)
+            syntax_tree = ast_parse(contents) if contents else None
         except (IOError, SyntaxError, TypeError, UnicodeDecodeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
@@ -58,9 +59,10 @@ class TreeAnalysis(object):
             self.ignore_paths.add(rel_path)
             return
 
-        abs_module_name = path_to_module(self.python_path, path)  # e.g. package.sub.current_file
-        visitor = AnalyzingNodeVisitor(abs_module_name, self)
-        visitor.visit(syntax_tree)
+        if syntax_tree:
+            abs_module_name = path_to_module(self.python_path, path)  # e.g. package.sub.current_file
+            visitor = AnalyzingNodeVisitor(abs_module_name, self)
+            visitor.visit(syntax_tree)
 
     def _finish_analysis(self):
         """Finishes the analysis by computing some relations that

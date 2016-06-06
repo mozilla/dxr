@@ -62,7 +62,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
             self.offsets = list(cumulative_sum(imap(len, contents.splitlines(True))))
 
     def is_interesting(self):
-        return exists(self.analysis_path)
+        return super(FileToIndex, self).is_interesting() and exists(self.analysis_path)
 
     def parse_analysis(self, line):
         """Convert JSON line string into a AnalysisSchema object.
