@@ -9,7 +9,7 @@ from warnings import warn
 
 from funcy import group_by, decorator, imapcat
 
-from dxr.utils import cumulative_sum
+from dxr.utils import build_offset_map
 
 
 STRING_PROPERTY = {
@@ -330,7 +330,7 @@ class FileToSkim(PluginConfig):
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
             lines = self.contents.splitlines(True) if self.contents is not None else []
-            self._line_offset_list = list(cumulative_sum(imap(len, lines)))
+            self._line_offset_list = build_offset_map(lines)
         return self._line_offset_list
 
 
