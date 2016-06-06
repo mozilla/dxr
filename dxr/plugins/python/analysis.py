@@ -51,7 +51,7 @@ class TreeAnalysis(object):
         """
         try:
             contents = unicode_contents(path, encoding)
-            syntax_tree = ast_parse(contents) if contents else None
+            syntax_tree = ast_parse(contents) if contents is not None else None
         except (IOError, SyntaxError, TypeError, UnicodeDecodeError) as error:
             rel_path = os.path.relpath(path, self.source_folder)
             warn('Failed to analyze {filename} due to error "{error}".'.format(
