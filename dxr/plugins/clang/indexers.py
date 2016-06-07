@@ -1,9 +1,10 @@
 from collections import defaultdict
-import os
-import sys
+from hashlib import sha1
+from itertools import chain
 from operator import itemgetter
-from itertools import chain, izip, ifilter
-from functools import partial
+import os
+from os import listdir
+import sys
 
 from funcy import (merge, imap, group_by, is_mapping, repeat,
                    constantly, icat, autocurry)
@@ -56,7 +57,7 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, plugin_name, tree, overrides, overriddens, parents, children, temp_folder):
+    def __init__(self, path, contents, plugin_name, tree, overrides, overriddens, parents, children, csv_names, temp_folder):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.overrides = overrides
         self.overriddens = overriddens
@@ -64,7 +65,8 @@ class FileToIndex(FileToIndexBase):
         self.children = children
         self.condensed = condense_file(temp_folder, path,
                                        overrides, overriddens,
-                                       parents, children)
+                                       parents, children,
+                                       csv_names)
 
     def needles_by_line(self):
         return all_needles(
@@ -218,7 +220,28 @@ class TreeToIndex(TreeToIndexBase):
         return merge(vars_, env)
 
     def post_build(self):
-        self._overrides, self._overriddens, self._parents, self._children = condense_global(self._temp_folder)
+        def csv_map():
+            """Map input files to the output CSVs corresponding to them.
+
+            Return {path sha1: [file names (minus '.csv' extension)]}.
+
+            This saves a lot of globbing later, which can add up to hours over
+            the course of tens of thousands of files, depending on IO speed. An
+            alternative approach might be a radix tree of folders: less RAM,
+            more IO. Try that and bench it sometime.
+
+            """
+            ret = defaultdict(list)
+            for csv_name in listdir(self._temp_folder):
+                if csv_name.endswith('.csv'):
+                    path_hash, content_hash, ext = csv_name.split('.')
+                    # Removing ".csv" saves at least 2MB per worker on 700K files:
+                    ret[path_hash].append(csv_name[:-4])
+            return ret
+
+        self._csv_map = csv_map()
+        self._overrides, self._overriddens, self._parents, self._children = condense_global(self._temp_folder,
+                            chain.from_iterable(self._csv_map.itervalues()))
 
     def file_to_index(self, path, contents):
         return FileToIndex(path,
@@ -229,4 +252,5 @@ class TreeToIndex(TreeToIndexBase):
                            self._overriddens,
                            self._parents,
                            self._children,
+                           self._csv_map[sha1(path).hexdigest()],
                            self._temp_folder)
