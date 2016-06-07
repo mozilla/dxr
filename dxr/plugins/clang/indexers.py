@@ -1,7 +1,6 @@
 from collections import defaultdict
-from functools import partial
 from hashlib import sha1
-from itertools import chain, izip, ifilter
+from itertools import chain
 from operator import itemgetter
 import os
 from os import listdir
