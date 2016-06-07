@@ -56,15 +56,16 @@ mappings = {
 class FileToIndex(FileToIndexBase):
     """C and C++ indexer using clang compiler plugin"""
 
-    def __init__(self, path, contents, plugin_name, tree, overrides, overriddens, parents, children, temp_folder):
+    def __init__(self, path, contents, plugin_name, tree, overrides, overriddens, parents, children, csvdict, temp_folder):
         super(FileToIndex, self).__init__(path, contents, plugin_name, tree)
         self.overrides = overrides
         self.overriddens = overriddens
         self.parents = parents
         self.children = children
+        self.csvdict = csvdict
         self.condensed = condense_file(temp_folder, path,
                                        overrides, overriddens,
-                                       parents, children)
+                                       parents, children, csvdict)
 
     def needles_by_line(self):
         return all_needles(
@@ -218,7 +219,7 @@ class TreeToIndex(TreeToIndexBase):
         return merge(vars_, env)
 
     def post_build(self):
-        self._overrides, self._overriddens, self._parents, self._children = condense_global(self._temp_folder)
+        self._overrides, self._overriddens, self._parents, self._children, self._csvdict = condense_global(self._temp_folder)
 
     def file_to_index(self, path, contents):
         return FileToIndex(path,
@@ -229,4 +230,5 @@ class TreeToIndex(TreeToIndexBase):
                            self._overriddens,
                            self._parents,
                            self._children,
+                           self._csvdict,
                            self._temp_folder)
