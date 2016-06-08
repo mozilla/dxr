@@ -160,7 +160,7 @@ class Ref(object):
         else:
             title = ''
         if self.qualname_hash is not None:
-            cls = ' class="tok%i"' % self.qualname_hash
+            cls = ' data-id="tok%i"' % self.qualname_hash
         else:
             cls = ''
 
