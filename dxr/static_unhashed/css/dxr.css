@@ -185,6 +185,7 @@ code a {
 }
 .clicking {
     background-color: yellow;
+    box-shadow: 0px 0.15rem yellow, 0px -0.15rem yellow;
 }
 .logo a:focus {
     background-color: transparent;
