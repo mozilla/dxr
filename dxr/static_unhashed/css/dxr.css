@@ -183,9 +183,8 @@ code a {
 .code code a {
     cursor: context-menu;
 }
-mark {
-    position: relative;
-    padding: .5rem;
+.clicking {
+    background-color: yellow;
 }
 .logo a:focus {
     background-color: transparent;
@@ -251,9 +250,6 @@ mark {
 }
 .access-key {
     text-decoration: underline;
-}
-mark {
-    padding: .3rem 0;
 }
 
 /* Context Menu */
