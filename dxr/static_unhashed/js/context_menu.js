@@ -170,7 +170,12 @@ $(function() {
             }
 
             contextMenu.menuItems = menuItems;
-            setContextMenu(fileContainer, contextMenu, event);
+            // Rather than putting the context menu in the file container,
+            // attaching it to the body makes the re-layout much quicker
+            // because the lines of the file do not need to be re-flowed.
+            // In the end they're the same, since the menu will be absolute'd
+            // to where it should go.
+            setContextMenu($('body'), contextMenu, event);
         }
     });
 
