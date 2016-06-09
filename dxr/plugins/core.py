@@ -1,7 +1,9 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 from base64 import b64encode
+from datetime import datetime
 from itertools import chain
+from os import stat
 from os.path import relpath, splitext, realpath, basename
 import re
 
@@ -474,6 +476,17 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # binary, but not an image
         elif not self.contains_text():
             yield 'is_binary', True
+        # Find the last modified time from version control if possible,
+        # otherwise fall back to the timestamp from stat'ing the file.
+        modified = NotImplemented
+        if self.vcs:
+            vcs_relative_path = relpath(self.absolute_path(),
+                                        self.vcs.get_root_dir())
+            modified = self.vcs.last_modified_date(vcs_relative_path)
+        if not modified or modified is NotImplemented:
+            file_info = stat(self.absolute_path())
+            modified = datetime.fromtimestamp(file_info.st_mtime)
+        yield 'modified', modified
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""

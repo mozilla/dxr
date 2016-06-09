@@ -43,3 +43,11 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
         ok_('/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon:%20name" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
         response = self.client().get('/code/rev/84798105c9ab5897f8c7d630d133d9003b44a62f/Colon: name')
         eq_(response.status_code, 200)
+
+    def test_mdates(self):
+        """Make sure that modified dates listed in browse view are dates of
+        the last commit to the file.
+        """
+        response = self.client().get('/code/source/').data
+        ok_('2015 Oct 29' in response)
+        ok_('2015 Jun 15' in response)

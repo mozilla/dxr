@@ -371,7 +371,7 @@ def _browse_folder(tree, path, config):
         files_and_folders=[
             (_icon_class_name(f),
              f['name'],
-             decode_es_datetime(f['modified']) if 'modified' in f else None,
+             decode_es_datetime(f['modified'][0]) if 'modified' in f else None,
              f.get('size'),
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
