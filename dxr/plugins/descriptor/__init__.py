@@ -4,6 +4,7 @@ Refer to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#27
 import re
 from os import listdir
 from os.path import splitext, basename, join, isfile
+from warnings import warn
 
 import dxr.indexers
 
@@ -86,17 +87,20 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # Not a readme file, try to match the filename: description pattern.
         root, ext = splitext(filename)
         delimiters = ':,-'
-        description_re = re.compile(r'({}|{}|description)\
-                                     ({})?\s*([{}]\n?)\s*\
-                                     (?P<description>[\w\s-]+)'.format(self.path,
-                                                                       root,
-                                                                       ext,
-                                                                       delimiters),
-                                    re.IGNORECASE)
-        for line in sixty_lines:
-            match = re.search(description_re, line)
-            if match:
-                return match.group('description')
+        try:
+            description_re = re.compile(r'({}|{}|description)\
+                                         ({})?\s*([{}]\n?)\s*\
+                                         (?P<description>[\w\s-]+)'.format(self.path,
+                                                                           root,
+                                                                           ext,
+                                                                           delimiters),
+                                        re.IGNORECASE)
+            for line in sixty_lines:
+                match = re.search(description_re, line)
+                if match:
+                    return match.group('description')
+        except re.error:
+            warn("Error on compiling or search regexp for {}".format(self.path))
 
         # Haven't returned so we can fall back to the first non-empty line of
         # the first doc-comment.
