@@ -147,7 +147,7 @@ class Mercurial(Vcs):
         return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
 
     def generate_blame(self, path):
-        return self.upstream + 'annotate/' + self.revision + '/' + path
+        return self.upstream + 'annotate/' + self.revision + '/' + path + '#l{{line}}'
 
     def generate_log(self, path):
         return self.upstream + 'filelog/' + self.revision + '/' + path
@@ -210,7 +210,7 @@ class Git(Vcs):
         return self.upstream + "/commit/" + self.revision
 
     def generate_blame(self, path):
-        return self.upstream + "/blame/" + self.revision + "/" + path
+        return self.upstream + "/blame/" + self.revision + "/" + path + '#L{{line}}'
 
     def generate_log(self, path):
         return self.upstream + "/commits/" + self.revision + "/" + path

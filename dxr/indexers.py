@@ -224,6 +224,9 @@ class FileToSkim(PluginConfig):
 
             (sort order, heading, [(icon, title, href), ...])
 
+            File views will replace any {{line}} within the href with the
+            last-selected line number.
+
         """
         return []
 
