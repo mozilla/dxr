@@ -600,21 +600,15 @@ public:
                methodDecl->begin_overridden_methods(),
                end = methodDecl->end_overridden_methods();
              iter != end; ++iter) {
-          const FunctionDecl *overriddenDecl = nullptr;
-          // Get the overridden definition if it exists...
-          (*iter)->isDefined(overriddenDecl);
-          // Otherwise get the pure virtual declaration if that exists.
-          if (!overriddenDecl && (*iter)->isPure()) {
-            overriddenDecl = *iter;
-          }
-          if (overriddenDecl) {
-            beginRecord("func_override", functionLocation);
-            recordValue("name", functionName);
-            recordValue("qualname", functionQualName);
-            recordValue("overriddenname", overriddenDecl->getNameAsString());
-            recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
-            *out << std::endl;
-          }
+          const FunctionDecl *overriddenDecl = *iter;
+          if (!interestingLocation(overriddenDecl->getLocation()))
+            continue;
+          beginRecord("func_override", functionLocation);
+          recordValue("name", functionName);
+          recordValue("qualname", functionQualName);
+          recordValue("overriddenname", overriddenDecl->getNameAsString());
+          recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
+          *out << std::endl;
         }
       }
     }
