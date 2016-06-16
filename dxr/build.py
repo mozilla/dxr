@@ -55,7 +55,9 @@ def index_and_deploy_tree(tree, verbose=False):
 
     """
     config = tree.config
-    es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
+    es = ElasticSearch(config.es_hosts,
+                       timeout=config.es_indexing_timeout,
+                       max_retries=config.es_indexing_retries)
     index_name = index_tree(tree, es, verbose=verbose)
     if 'index' not in tree.config.skip_stages:
         deploy_tree(tree, es, index_name)

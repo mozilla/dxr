@@ -133,8 +133,13 @@ class Config(DotSection):
                         lambda v: v >= 0,
                         error='"es_indexing_timeout" must be a non-negative '
                               'integer.'),
+                Optional('es_indexing_retries', default=0):
+                    And(Use(int),
+                        lambda v: v >= 0,
+                        error='"es_indexing_retries" must be a non-negative '
+                              'integer.'),
                 Optional('es_refresh_interval', default=60):
-                    Use(int, error='"es_indexing_timeout" must be an integer.')
+                    Use(int, error='"es_refresh_interval" must be an integer.')
             },
             basestring: dict
         })
