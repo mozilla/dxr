@@ -77,9 +77,10 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         the last commit to the file.
         """
         response = self.client().get('/code/source/').data
-        # TODO: does this depend on time zone/locale?
-        ok_('2015 Oct 29' in response)
-        ok_('2015 May 26' in response)
+        # main.c
+        ok_('<time>2015 May 26 18:05</time>' in response)
+        # binary_file
+        ok_('<time>2016 Apr 07 21:04</time>' in response)
 
     def test_pygmentize(self):
         """Check that the pygmentize FileToSkim correctly colors a file from permalink."""

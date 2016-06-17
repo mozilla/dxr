@@ -58,7 +58,7 @@ class Vcs(object):
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
-        return NotImplemented
+        raise NotImplementedError
 
     def has_upstream(self):
         """Return true if this VCS has a usable upstream."""
@@ -69,35 +69,35 @@ class Vcs(object):
 
     def generate_log(self, path):
         """Construct URL to upstream view of log of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_diff(self, path):
         """Construct URL to upstream view of diff of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_blame(self, path):
         """Construct URL to upstream view of blame on file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_raw(self, path):
         """Construct URL to upstream view to raw file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def last_modified_date(self, path):
         """Return a datetime object that represents the last time a commit was
         made to the given path.
         """
-        return NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
         """Return contents of file at specified path at given revision, where path is an
         absolute path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def display_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
-        return NotImplemented
+        raise NotImplementedError
 
 
 class Mercurial(Vcs):
@@ -147,7 +147,7 @@ class Mercurial(Vcs):
         last_change = {}
         for line in client.rawcommand(['previous-revisions']).splitlines():
             commit, date, path = line.split('@', 2)
-            last_change[path] = (commit, datetime.fromtimestamp(float(date)))
+            last_change[path] = (commit, datetime.utcfromtimestamp(float(date)))
         return last_change
 
     @classmethod
@@ -216,7 +216,7 @@ class Git(Vcs):
                 consume_date = True
             else:
                 if consume_date:
-                    current_date = datetime.fromtimestamp(float(line))
+                    current_date = datetime.utcfromtimestamp(float(line))
                     consume_date = False
                 else:
                     # Then the line should have a file path, record it if we have

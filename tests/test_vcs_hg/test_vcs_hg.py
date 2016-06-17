@@ -49,5 +49,5 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
         the last commit to the file.
         """
         response = self.client().get('/code/source/').data
-        ok_('2015 Oct 29' in response)
-        ok_('2015 Jun 15' in response)
+        ok_('<time>2014 Nov 06 19:11</time>' in response)
+        ok_('<time>2014 Oct 30 20:10</time>' in response)
