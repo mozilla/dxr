@@ -143,18 +143,17 @@ $(function () {
     //displayed url.
     function updateNavLinks(lastNumber) {
         navlinks.each(function() {
-            console.log(lastNumber);
-            var jqthis = $(this);
+            var $this = $(this);
             // Copy the href to a template attr, since we will be updating it
             // and don't want to lose the template. This behavior will happen
             // only the first time this function is called.
-            if (!jqthis.data('template')) {
-                jqthis.data('template', jqthis.attr('href'));
+            if (!$this.data('template')) {
+                $this.data('template', $this.attr('href'));
             }
             if (lastNumber) {
-                jqthis.attr('href', jqthis.data('template').replace(/{{line}}/g, lastNumber));
+                $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber));
             } else {
-                jqthis.attr('href', jqthis.data('template').replace(/{{line}}/g, ''));
+                $this.attr('href', $this.data('template').replace(/{{line}}/g, ''));
             }
         });
     }
