@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+
+<bindings id="socialChatBindings"
+    xmlns="http://www.mozilla.org/xbl"
+    xmlns:xbl="http://www.mozilla.org/xbl"
+    xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <binding id="chatbox">
+    <implementation implements="nsIDOMEventListener, nsIMessageListener">
+
+      <property name="promiseChatLoaded">
+      </property>
+
+      <field name="_chat" readonly="true">
+      </field>
+
+      <method name="focus">
+      </method>
+
+      <method name="showNotifications">
+        <parameter name="aAnchor"/>
+        <body>
+        </body>
+      </method>
+    </implementation>
+
+    <handlers>
+      <handler event="focus" phase="capturing">
+      </handler>
+    </handlers>
+  </binding>
+
+  <binding id="chatbar">
+    <implementation implements="nsIDOMEventListener2">
+
+      <method name="focus">
+        <body>
+        </body>
+      </method>
+
+      <property name="selectedChat">
+      </property>
+
+      <field name="menuItemMap">new WeakMap()</field>
+    </implementation>
+  </binding>
+
+</bindings>

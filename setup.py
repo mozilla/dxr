@@ -19,6 +19,7 @@ setup(
     packages=find_packages(exclude=['ez_setup']),
     entry_points={'dxr.plugins': ['urllink = dxr.plugins.urllink',
                                   'buglink = dxr.plugins.buglink:plugin',
+                                  'xbl = dxr.plugins.xbl:plugin',
                                   'clang = dxr.plugins.clang:plugin',
                                   'python = dxr.plugins.python:plugin',
                                   'omniglot = dxr.plugins.omniglot',
