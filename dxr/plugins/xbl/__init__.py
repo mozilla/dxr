@@ -36,11 +36,11 @@ class FileToIndex(dxr.indexers.FileToIndex):
         return "<bindings" in self.contents and super(FileToIndex, self).is_interesting()
 
     def refs(self):
-        return self.analyzer.refs if self.analyzer else []
+        return self.analyzer.refs
 
     def needles_by_line(self):
         return iterable_per_line(
-            with_start_and_end(split_into_lines(self.analyzer.needles if self.analyzer else [])))
+            with_start_and_end(split_into_lines(self.analyzer.needles)))
 
 
 plugin = Plugin(

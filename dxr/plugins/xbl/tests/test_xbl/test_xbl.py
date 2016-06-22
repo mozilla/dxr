@@ -1,4 +1,4 @@
-"""Tests for whether buglink finds and links bug references"""
+"""Tests for XBL plugin refs and needles."""
 
 from dxr.testing import DxrInstanceTestCase, menu_on
 
