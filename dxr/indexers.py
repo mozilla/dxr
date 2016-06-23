@@ -1,8 +1,6 @@
 """Base classes and convenience functions for writing indexers and skimmers"""
 
-import cgi
 from collections import namedtuple
-from itertools import imap
 from operator import itemgetter
 from os.path import join, islink
 from warnings import warn

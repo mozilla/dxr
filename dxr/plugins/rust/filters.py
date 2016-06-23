@@ -1,6 +1,6 @@
-from funcy import identity
 from jinja2 import Markup
-from dxr.filters import QualifiedNameFilterBase, Filter, negatable
+from dxr.filters import QualifiedNameFilterBase
+
 
 class _QualifiedNameFilter(QualifiedNameFilterBase):
     lang = "rust"

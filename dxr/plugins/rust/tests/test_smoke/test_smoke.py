@@ -2,10 +2,7 @@
 # index finishes without crashing. This is also a good test for manual
 # experimentation.
 
-from nose import SkipTest
-from nose.tools import eq_,ok_
 from dxr.plugins.rust.tests import RustDxrInstanceTestCase
-import os
 
 
 class RustTests(RustDxrInstanceTestCase):

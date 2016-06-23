@@ -16,10 +16,9 @@ from binaryornot.helpers import is_binary_string
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
-from funcy import ichunks, first, suppress
-from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
-                             IndexAlreadyExistsError, bulk_chunks, Timeout,
-                             ConnectionError)
+from funcy import ichunks, first
+from pyelasticsearch import (ElasticSearch, IndexAlreadyExistsError,
+                             bulk_chunks, Timeout, ConnectionError)
 
 from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
@@ -27,7 +26,7 @@ from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_w
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import decode_data, is_binary_image
+from dxr.mime import decode_data
 from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket)
 from dxr.vcs import VcsCache

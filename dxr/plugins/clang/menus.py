@@ -2,7 +2,6 @@
 
 from os.path import basename
 
-from dxr.app import DXR_BLUEPRINT
 from dxr.lines import Ref
 from dxr.utils import browse_file_url, search_url
 

@@ -6,6 +6,12 @@ from dxr.config import Config
 from dxr.exceptions import ConfigError
 
 
+def fail(message):
+    """Raise an AssertionError along with given message.
+    """
+    ok_(False, message)
+
+
 def test_enabled_star():
     """Make sure even plugins that aren't packages get enabled when
     enabled_plugins = *.
@@ -89,7 +95,7 @@ def test_plugin_section_required():
         eq_(exc.sections, ['mozilla-central'])
         ok_('buglink' in exc.message)
     else:
-        self.fail("Didn't raise ConfigError")
+        fail("Didn't raise ConfigError")
 
 
 def test_deep_attrs():
@@ -151,7 +157,7 @@ def test_unknown_options():
         eq_(exc.sections, ['DXR'])
         ok_('smoop' in exc.message)
     else:
-        self.fail("Didn't raise ConfigError")
+        fail("Didn't raise ConfigError")
 
 
 def test_and_error():
@@ -169,7 +175,7 @@ def test_and_error():
         eq_(exc.sections, ['DXR'])
         ok_('non-negative' in exc.message)
     else:
-        self.fail("Didn't raise ConfigError")
+        fail("Didn't raise ConfigError")
 
 
 def test_unknown_plugin():
@@ -185,5 +191,5 @@ def test_unknown_plugin():
     except ConfigError as exc:
         ok_('Never heard of plugin "wonko"' in str(exc))
     else:
-        self.fail("An unknown plugin name passed to enabled_plugins didn't "
-                  "raise ConfigError")
+        fail("An unknown plugin name passed to enabled_plugins didn't "
+             "raise ConfigError")

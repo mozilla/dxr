@@ -2,7 +2,6 @@
 
 from functools import partial
 from inspect import isclass, isfunction
-from os.path import join
 
 from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points

@@ -1,9 +1,5 @@
-from os.path import dirname, join
-import subprocess
-
 from dxr.testing import DxrInstanceTestCaseMakeFirst
 
-from nose import SkipTest
 from nose.tools import ok_, eq_
 
 

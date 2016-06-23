@@ -8,11 +8,9 @@ from warnings import catch_warnings
 from more_itertools import first
 from nose.tools import eq_
 
-from dxr.lines import Ref
 from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
-                       html_line, nesting_order, balanced_tags_with_empties,
-                       es_lines, tags_per_line)
+                       html_line, nesting_order, tags_per_line)
 from dxr.utils import build_offset_map
 
 
