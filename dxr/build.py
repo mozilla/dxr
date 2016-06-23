@@ -444,7 +444,13 @@ def index_file(tree, tree_indexers, path, es, index):
         else:
             raise
 
+    # Just like index_folders, if the path is not in UTF-8, then elasticsearch
+    # will not accept the path, so just move on.
     rel_path = relpath(path, tree.source_folder)
+    try:
+        rel_path = rel_path.decode('utf-8')
+    except UnicodeDecodeError:
+        return
     is_text = isinstance(contents, unicode)
     is_link = islink(path)
     # Index by line if the contents are text and the path is not a symlink.
@@ -591,6 +597,12 @@ def index_folders(tree, index, es):
                      label='Indexing folders') as folders:
         for folder in folders:
             rel_path = relpath(folder, tree.source_folder)
+            # If the path is not in UTF-8, then elasticsearch will not
+            # accept the path, so just move on.
+            try:
+                rel_path = rel_path.decode('utf-8')
+            except UnicodeDecodeError:
+                continue
             superfolder_path, folder_name = split(rel_path)
             es.index(index, FILE, {
                 'path': [rel_path],  # array for consistency with non-folder file docs
