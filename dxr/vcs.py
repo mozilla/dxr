@@ -59,6 +59,13 @@ class Vcs(object):
         """Does the repository track this file?"""
         return NotImplemented
 
+    def has_upstream(self):
+        """Return true if this VCS has a usable upstream."""
+        return NotImplemented
+
+    # Note: the generate_* methods shouldn't be expected to return useful URLs
+    # unless this VCS has_upstream().
+
     def generate_log(self, path):
         """Construct URL to upstream view of log of file at path."""
         return NotImplemented
@@ -99,8 +106,17 @@ class Mercurial(Vcs):
             self.previous_revisions = self.find_previous_revisions(client)
         self.upstream = self._construct_upstream_url()
 
+    def has_upstream(self):
+        return self.upstream != ""
+
     def _construct_upstream_url(self):
-        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'], self.root).strip())
+        with open(os.devnull, 'w') as devnull:
+            try:
+                upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'],
+                                                             self.root, stderr=devnull).strip())
+            except subprocess.CalledProcessError:
+                # No default path, so no upstream
+                return ""
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
             recomb[0] = 'http'
@@ -168,6 +184,9 @@ class Git(Vcs):
         self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], self.root).strip()
         self.upstream = self._construct_upstream_url()
 
+    def has_upstream(self):
+        return self.upstream != ""
+
     def _construct_upstream_url(self):
         source_urls = self.invoke_vcs(['remote', '-v'], self.root).split('\n')
         for src_url in source_urls:
@@ -185,8 +204,9 @@ class Git(Vcs):
                     return repo
                 warn("Your git remote is not supported yet. Please use a "
                      "GitHub remote if you would like version control "
-                     "naviagtion links to show.")
+                     "navigation links to show.")
                 break
+        return ""
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
@@ -230,6 +250,9 @@ class Perforce(Vcs):
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
         self.upstream = upstream
         self.revision = self._p4run(['changes', '-m1', '#have'])[0]['change']
+
+    def has_upstream(self):
+        return self.upstream != ""
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
