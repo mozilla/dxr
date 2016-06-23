@@ -145,6 +145,11 @@ class Mercurial(Vcs):
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.hg' in dirs:
+            # Make sure mercurial is happy before claiming the source.
+            try:
+                Mercurial.invoke_vcs(['status'], path)
+            except subprocess.CalledProcessError:
+                return None
             dirs.remove('.hg')
             return cls(path)
         return None
@@ -211,6 +216,12 @@ class Git(Vcs):
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
+            # Before claiming the source, make sure git actually thinks it's
+            # alright.
+            try:
+                Git.invoke_vcs(['status'], path)
+            except subprocess.CalledProcessError:
+                return None
             dirs.remove('.git')
             return cls(path)
         return None
