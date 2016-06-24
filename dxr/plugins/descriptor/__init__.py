@@ -1,12 +1,24 @@
 """Descriptor - Provide useful descriptions for common file types.
 Refer to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#27
 """
+from itertools import ifilter
 import re
 from os import listdir
 from os.path import splitext, basename, join, isfile
 from warnings import warn
 
 import dxr.indexers
+
+
+def describe_readme(lines):
+    """Return a string that represents a description for the given lines of a
+    presumed readme file or None if it can extract no suitable description.
+    """
+    # For now the heuristic is just the first non-empty line.
+    try:
+        return next(ifilter(None, (line.strip() for line in lines)))
+    except StopIteration:
+        return None
 
 
 class FolderToIndex(dxr.indexers.FolderToIndex):
@@ -24,10 +36,10 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
             # it's non-empty.
             if "readme" in entry.lower() and isfile(path):
                 with open(path) as readme:
-                    first_line = readme.readline(100).strip()
-                    if first_line:
+                    description = describe_readme([readme])
+                    if description:
                         # Pack into a list for consistency with the file needle.
-                        return [("Description", [first_line])]
+                        return [("Description", [description])]
         # Didn't find anything to use as a description
         return []
 
@@ -82,9 +94,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         filename = basename(self.path)
         # Is it a readme? Just return the first non-empty line.
         if "readme" in filename.lower():
-            for line in sixty_lines:
-                if line:
-                    return line
+            possible_description = describe_readme(sixty_lines)
+            if possible_description:
+                return possible_description
         # Not a readme file, try to match the filename: description pattern.
         root, ext = splitext(filename)
         delimiters = ':,-'
