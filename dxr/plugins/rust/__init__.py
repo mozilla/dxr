@@ -46,7 +46,7 @@ RUST_DXR_FLAG = " -Zsave-analysis"
 # We know these crates come from the rust distribution (probably, the user could
 # override that, but lets assume for now...).
 std_libs = ['alloc', 'arena', 'backtrace', 'collections', 'core', 'coretest',
-            'flate','fmt_macros', 'getopts', 'graphviz', 'libc', 'log', 'rand',
+            'flate', 'fmt_macros', 'getopts', 'graphviz', 'libc', 'log', 'rand',
             'rbml', 'regex', 'rustc', 'rustc_bitflags', 'rustc_back', 'rustc_borrowck',
             'rustc_driver', 'rustc_llvm', 'rustc_privacy', 'rustc_resolve', 'rustc_trans',
             'rustc_typeck', 'rustdoc', 'serialize', 'std', 'syntax', 'term',
@@ -247,7 +247,7 @@ class RustFile:
         return self.lines[line]
 
 # Data for the tree, mappings for each of the various kinds of language item to
-# the place it occurs and info about it. 
+# the place it occurs and info about it.
 class TreeData:
     def __init__(self):
         # non-refs are id->args, refs are lists
@@ -306,8 +306,9 @@ class TreeToIndex(indexers.TreeToIndex):
         self.crates_by_name = {}
         self.id_map = {}
         self.local_libs = []
-        self.files = {} # map from file name to RustFile, which in turn stores all data
-                        # mapping location -> info.
+        # Map from file name to RustFile, which in turn stores all data mapping
+        # location -> info.
+        self.files = {}
         self.data = TreeData()
         # Map from the id of a scope to the id of its parent (or 0), if there is no parent.
         # Note that these are Rust ids, not DXR ids
@@ -634,7 +635,7 @@ class TreeToIndex(indexers.TreeToIndex):
         # This is nasty - Rust implicitly includes the standard library,
         # crate `std`, but without generating an `extern crate` item, so we need
         # to do that. However, it is possible the project includes some other crate
-        # called `std` (by building without the standard lib, we can't tell from 
+        # called `std` (by building without the standard lib, we can't tell from
         # the indexing data which is the case), so we need to check in case there
         # is one already.
         # We probably wouldn't need this if we dealt with generated code properly
@@ -671,7 +672,7 @@ class TreeToIndex(indexers.TreeToIndex):
 
     def find_id(self, crate, node):
         """ Maps a crate name and a node number to a globally unique id. """
-        if node == None:
+        if node is None:
             return None
 
         if node < 0:
@@ -822,7 +823,7 @@ def process_external_crate(args, tree):
 
 def process_type_ref(args, tree):
     if tree.add_external_item(args):
-        return;
+        return
 
     args = tree.convert_ids(args)
     tree.fixup_qualname(args)
@@ -901,7 +902,7 @@ def process_impl(args, tree):
 
 def process_fn_call(args, tree):
     if tree.add_external_item(args):
-        return;
+        return
 
     args = tree.convert_ids(args)
     tree.fixup_qualname(args)
@@ -911,7 +912,7 @@ def process_fn_call(args, tree):
 
 def process_var_ref(args, tree):
     if tree.add_external_item(args):
-        return;
+        return
 
     args = tree.convert_ids(args)
     tree.fixup_qualname(args)
@@ -932,11 +933,11 @@ def process_method_call(args, tree):
     ex_def = tree.add_external_item(args)
     ex_decl = tree.add_external_decl(args)
     if ex_def and ex_decl:
-        return;
+        return
     if (ex_def and not args['refid']) or (ex_decl and not args['declid']):
         # FIXME, I think this is meant to be an assertion, but not sure
         print "Unexpected(?) missing id in method call"
-        return;
+        return
 
     args = tree.convert_ids(args)
     tree.fixup_qualname(args)
@@ -948,7 +949,7 @@ def process_mod_ref(args, tree):
     args['name'] = args['qualname'].split('::')[-1]
 
     if tree.add_external_item(args):
-        return;
+        return
     args['aliasid'] = 0
 
     args = tree.convert_ids(args)
@@ -1015,7 +1016,7 @@ def process_module(args, tree):
 # are logically the latter and this is stupid code dup...
 def process_fn_ref(args, tree):
     if tree.add_external_item(args):
-        return;
+        return
 
     args = tree.convert_ids(args)
     tree.fixup_qualname(args)
@@ -1027,9 +1028,9 @@ def process_extern_crate(args, tree):
     crate = int(args['crate'])
     args['refid'] = '0'
     args['refidcrate'] = '0'
-    
+
     args = tree.convert_ids(args)
-    args['qualname'] = str(args['scopeid']) + "$" + args['name']   
+    args['qualname'] = str(args['scopeid']) + "$" + args['name']
     args['refid'] = tree.crate_map[crate][1]['id']
 
     tree.data.module_aliases[args['id']] = args

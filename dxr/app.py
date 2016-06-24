@@ -1,24 +1,19 @@
 from cStringIO import StringIO
 from datetime import datetime
 from functools import partial
-from itertools import chain, imap, izip
+from itertools import chain, izip
 from logging import StreamHandler
 import os
-from os import chdir
-from os.path import join, basename, split, dirname, relpath
+from os.path import join, basename, split, dirname
 from sys import stderr
-from time import time
 from mimetypes import guess_type
-from urllib import quote_plus
 
-from flask import (Blueprint, Flask, send_from_directory, current_app,
-                   send_file, request, redirect, jsonify, render_template,
-                   url_for)
-from funcy import merge, imap
+from flask import (Blueprint, Flask, current_app, send_file, request, redirect,
+                   jsonify, render_template, url_for)
+from funcy import merge
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
-from dxr.config import Config
 from dxr.es import (filtered_query, frozen_config, frozen_configs,
                     es_alias_or_not_found)
 from dxr.exceptions import BadTerm
@@ -28,7 +23,7 @@ from dxr.mime import icon, is_binary_image, is_textual_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_update, append_by_line, build_offset_map)
+                       format_number, append_by_line, build_offset_map)
 from dxr.vcs import file_contents_at_rev
 
 # Look in the 'dxr' package for static files, etc.:
@@ -192,9 +187,9 @@ def _search_json(query, tree, query_text, offset, limit, config):
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
         # Convert to dicts for ease of manipulation in JS:
         results = [{'icon': icon,
-                    'path': path,
+                    'path': file_path,
                     'lines': [{'line_number': nb, 'line': l} for nb, l in lines]}
-                   for icon, path, lines in count_and_results['results']]
+                   for icon, file_path, lines in count_and_results['results']]
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
 

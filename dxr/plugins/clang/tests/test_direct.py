@@ -1,9 +1,4 @@
-import os.path
-
-from dxr.query import Query
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
-
-from nose.tools import eq_
 
 
 class TypeAndMethodTests(CSingleFileTestCase):

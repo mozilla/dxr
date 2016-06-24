@@ -1,9 +1,7 @@
-import sys
-
 # Prevent spurious errors during `python setup.py test`, a la
 # http://www.eby-sarna.com/pipermail/peak/2010-May/003357.html:
 try:
-    import concurrent.futures
+    import concurrent.futures  # NOQA
 except ImportError:
     pass
 
@@ -65,3 +63,5 @@ setup(
         ],
     keywords=['lxr', 'static analysis', 'source code']
 )
+
+#noqa

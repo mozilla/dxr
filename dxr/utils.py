@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from errno import ENOENT
 import fnmatch
-from functools import partial, wraps
+from functools import wraps
 from itertools import izip, imap
 from os import chdir, dup, fdopen, getcwd
 from os.path import join

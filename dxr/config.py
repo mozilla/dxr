@@ -6,15 +6,14 @@ Please update docs/source/configuration.rst when you change this.
 from datetime import datetime
 from multiprocessing import cpu_count
 from ordereddict import OrderedDict
-from operator import attrgetter
 from os import getcwd
-from os.path import abspath, join
+from os.path import abspath
 
 from configobj import ConfigObj
 from funcy import merge
 from more_itertools import first
 from pkg_resources import resource_string
-from schema import Schema, Optional, Use, And, Schema, SchemaError
+from schema import Optional, Use, And, Schema, SchemaError
 
 from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins_but_core, core_plugin

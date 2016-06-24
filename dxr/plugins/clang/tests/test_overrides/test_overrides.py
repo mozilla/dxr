@@ -2,7 +2,6 @@
 
 from dxr.testing import DxrInstanceTestCase
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
-import nose.tools
 
 
 class ParallelOverrideTests(CSingleFileTestCase):

@@ -6,7 +6,6 @@ unscathed.
 
 """
 from dxr.testing import DxrInstanceTestCase, menu_on, menu_item_not_on
-import nose.tools
 
 
 class MenuTests(DxrInstanceTestCase):

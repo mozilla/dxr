@@ -17,7 +17,7 @@ before_install:
   - make docker_es
 
 script:
-  - docker-compose -f tooling/docker/docker-compose.yml run -e DXR_PROD=1 dev make test
+  - docker-compose -f tooling/docker/docker-compose.yml run -e DXR_PROD=1 dev make lint test
 
 notifications:
   email: false

@@ -4,16 +4,13 @@ from itertools import chain
 from operator import itemgetter
 import os
 from os import listdir
-import sys
 
-from funcy import (merge, imap, group_by, is_mapping, repeat,
-                   constantly, icat, autocurry)
+from funcy import merge, imap, autocurry
 
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
-from dxr.lines import Ref
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (FunctionRef, VariableRef, TypeRef,
     NamespaceRef, NamespaceAliasRef, MacroRef, IncludeRef, TypedefRef)

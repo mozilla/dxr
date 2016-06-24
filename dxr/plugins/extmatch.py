@@ -6,7 +6,8 @@ extensions.
 """
 
 from fnmatch import fnmatchcase
-from os.path import relpath, join, basename, splitext, isfile
+import os
+from os.path import join, basename, splitext, isfile
 from collections import namedtuple
 
 from dxr.indexers import (FileToIndex as FileToIndexBase,
@@ -52,10 +53,10 @@ class FileToIndex(FileToIndexBase):
 
         def is_indexed(path):
             if any(fnmatchcase(basename(path), e)
-                       for e in self.tree.ignore_filenames):
+                   for e in self.tree.ignore_filenames):
                 return False
-            if any(fnmatchcase("/" + path.replace(os.sep, "/"), e)
-                       for e in self.tree.ignore_paths):
+            if any(fnmatchcase('/' + path.replace(os.sep, '/'), e)
+                   for e in self.tree.ignore_paths):
                 return False
             return True
 

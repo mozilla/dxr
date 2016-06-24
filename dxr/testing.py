@@ -1,5 +1,5 @@
 import cgi
-from commands import getoutput, getstatusoutput
+from commands import getoutput
 import json
 from os import chdir, mkdir
 from os.path import dirname, join

@@ -1,9 +1,9 @@
-from click import ClickException, command, echo, secho
+from click import command, echo, secho
 from itertools import izip
 from pyelasticsearch import ElasticSearch
 from tabulate import tabulate
 
-from dxr.cli.utils import config_option, tree_names_argument
+from dxr.cli.utils import config_option
 from dxr.config import FORMAT
 from dxr.es import TREE, sources
 
