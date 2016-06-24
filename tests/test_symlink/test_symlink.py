@@ -18,7 +18,7 @@ class SymlinkTests(DxrInstanceTestCase):
         """Make sure that searching for path:<symlink name> does not return the symlink.
 
         """
-        self.found_files_eq('path:mkd', ['README.mkd'])
+        self.found_files_eq('path:*mkd', ['README.mkd'])
 
     def test_line_search(self):
         """Make sure that searching for contents within the real file does not return duplicates
