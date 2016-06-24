@@ -10,8 +10,8 @@ from dxr.testing import DxrInstanceTestCase
 class DescriptionTests(DxrInstanceTestCase):
     def test_browse_page(self):
         """Test that the expected descriptions appear on the root page.
-        """
 
+        """
         response = self.client().get('/code/source/').data
         ok_("Highly important subfolder. with a description over 100 bbytesbytesbytesbytesbytesbytesbytesbytesbyt" in response)
         # Make sure we didn't exceed the limit.
@@ -26,8 +26,8 @@ class DescriptionTests(DxrInstanceTestCase):
 
     def test_sub_browse_page(self):
         """Test that the expected descriptions appear on the subfolder's page.
-        """
 
+        """
         response = self.client().get('/code/source/sub/').data
         # cpp description with /* */ comment
         ok_("Foo is great." in response)

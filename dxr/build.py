@@ -602,7 +602,7 @@ def index_folders(tree, index, es):
                 continue
             needles = {'is_folder': True}
             for name, folder_to_index in folder_indexers:
-                needles.update(dict((folder_to_index(name, tree, folder)).needles()))
+                needles.update(dict(folder_to_index(name, tree, folder)).needles())
             es.index(index, FILE, needles)
 >>>>>>> 639bf4c... Add a descriptor plugin that emulates MXR's descriptor column.
 

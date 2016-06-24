@@ -15,9 +15,10 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
     def needles(self):
         """If the folder contains a readme, then yield the first line of the
         readme as the description.
-        Similar to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#251
+
+        Similar to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#251.
         """
-        for entry in listdir(self.path):
+        for entry in sorted(listdir(self.path)):
             path = join(self.path, entry)
             # If we find a readme, then open it and return the first line if
             # it's non-empty.
@@ -35,7 +36,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
     """Do lots of work to yield a description needle."""
 
     comment_re = re.compile(r'(?:.*?/\*+)(?:\s*\*?\s*)(?P<description>.*?)(?:(?:\*+/.*)|(?:$))', flags=re.M)
-    docstring_re = re.compile(r'(\'\'\'|""")(?:\s*)(?P<description>.*?)(?:(?:(\'\'\'|"""))|(?:$))', flags=re.M)
+    docstring_re = re.compile(r'(?:\'\'\'|""")(?:\s*)(?P<description>.*?)(?:(?:(\'\'\'|"""))|(?:$))', flags=re.M)
     title_re = re.compile(r'<title>([^<]*)</title>')
 
     def needles(self):
@@ -67,8 +68,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
         """Return the contents of the first line of the first docstring if
         there is one in the first 60 lines."""
 
-        sixty_lines = self.contents.splitlines(True)[:60]
-        match = re.search(self.docstring_re, ''.join(sixty_lines))
+        sixty_lines = self.contents[:self.char_offset(60, 1)].splitlines(True)
+        match = self.docstring_re.search(''.join(sixty_lines))
         if match:
             return match.group('description')
 
@@ -77,7 +78,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         [delimiter] text, and return the first text we find. Unless it's a
         readme, then return the first line."""
 
-        sixty_lines = self.contents.splitlines(True)[:60]
+        sixty_lines = self.contents[:self.char_offset(60, 1)].splitlines(True)
         filename = basename(self.path)
         # Is it a readme? Just return the first non-empty line.
         if "readme" in filename.lower():
@@ -88,15 +89,15 @@ class FileToIndex(dxr.indexers.FileToIndex):
         root, ext = splitext(filename)
         delimiters = ':,-'
         try:
-            description_re = re.compile(r'({}|{}|description)\
-                                         ({})?\s*([{}]\n?)\s*\
-                                         (?P<description>[\w\s-]+)'.format(self.path,
-                                                                           root,
-                                                                           ext,
-                                                                           delimiters),
+            description_re = re.compile(r'(?:{}|{}|description)\
+                                          (?:{})?\s*(?:[{}]\n?)\s*\
+                                          (?P<description>[\w\s-]+)'.format(re.escape(self.path),
+                                                                            re.escape(root),
+                                                                            re.escape(ext),
+                                                                            delimiters),
                                         re.IGNORECASE)
             for line in sixty_lines:
-                match = re.search(description_re, line)
+                match = description_re.search(line)
                 if match:
                     return match.group('description')
         except re.error:
@@ -105,6 +106,6 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # Haven't returned so we can fall back to the first non-empty line of
         # the first doc-comment.
         # TODO: skip the license
-        match = re.search(self.comment_re, ''.join(sixty_lines))
+        match = self.comment_re.search(''.join(sixty_lines))
         if match:
             return match.group('description')

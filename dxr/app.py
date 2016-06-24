@@ -361,6 +361,7 @@ def browse(tree, path=''):
 def concat_plugin_headers(plugin_list):
     """Return a list of the concatenation of all browse_headers in the
     FolderToIndexes of given plugin list.
+
     """
     return list(chain.from_iterable(p.folder_to_index.browse_headers
                                     for p in plugin_list if p.folder_to_index))

@@ -66,7 +66,7 @@ class PluginConfig(object):
 
 
 class FolderToIndex(PluginConfig):
-    """The FolderToIndex generates needles for folders, and provides an
+    """The FolderToIndex generates needles for folders and provides an
     optional list of headers to display in browse view as `browse_headers`.
     """
     browse_headers = []
