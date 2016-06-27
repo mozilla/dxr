@@ -2,7 +2,7 @@ import ast
 import os
 import re
 from contextlib import contextmanager
-
+from dxr.utils import splitlines_keepends
 
 # The actual check that Python uses seems to be done in C, but this
 # regex was taken from lib2to3.pgen.tokenize.
@@ -21,7 +21,7 @@ def ast_parse(contents):
         u''.join(
             # The encoding declaration is only meaningful in the top two lines.
             u'\n' if i < 2 and encoding_re.match(line) else line
-            for i, line in enumerate(contents.splitlines(True))
+            for i, line in enumerate(splitlines_keepends(contents))
         )
     )
 

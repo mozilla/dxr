@@ -1,0 +1,191 @@
+/* icons */
+.icon.folder {
+    background: transparent url('/static/icons/mimetypes/folder.fbd3929a.png') .5em 7px no-repeat;
+    padding: .5em .5em .5em 30px;  /* 30px = 16px icon + 7px padding above + a little more whitespace */
+}
+.folder-content {
+    clear: both;
+}
+.icon {
+    background-color: transparent;
+    background-position: .5em center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    padding: .5em .5em .5em 30px;
+}
+.icon-container {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    float: right;
+    padding: 8px; /* Makes the container 16x16 in order to show full icon. */
+}
+
+/* Folder context-menu */
+a.goto-folder {
+    background-image: url('/static/icons/goto_folder.fb299dd1.png');
+}
+a.path-search {
+    background-image: url('/static/icons/path_search.f6a8572d.png');
+}
+a.exclude-path {
+    background-image: url('/static/icons/exclude_path.4095dc4c.png');
+}
+/* End of folder context-menu */
+
+/* Context-menu and Panel icons */
+a.class {
+    background-image: url('/static/icons/class.0f5055d3.png');
+}
+a.method {
+    background-image: url('/static/icons/method.ff3d24ad.png');
+}
+a.field {
+    background-image: url('/static/icons/field.ad31d95d.png');
+}
+/* End of Context-menu and Panel icons */
+
+/* Context-menu only icons */
+a.reference {
+    background-image: url('/static/icons/reference.f0cdbd3c.png');
+}
+a.search {
+    background-image: url('/static/icons/search.89fc4a92.png');
+}
+a.buglink {
+    background-image: url('/static/icons/buglink.930f507c.png');
+}
+a.external_link {
+    background-image: url('/static/icons/external_link.6bc744e7.png');
+}
+a.jump {
+    background-image: url('/static/icons/jump.45b6a086.png');
+}
+a.members {
+    background-image: url('/static/icons/members.3ecfbd89.png');
+}
+a.type {
+    background-image: url('/static/icons/type.0f5055d3.png');
+}
+/* End of Context-menu only icons */
+
+/* Panel only icons */
+
+/* Panel icons that are always shown - uncomment when ready! ->
+.panel .blame {
+    background-image: url('/static/icons/blame.5190ba61.png');
+}
+.panel .diff {
+    background-image: url('/static/icons/diff.1944b6f0.png');
+}
+.panel .log {
+    background-image: url('/static/icons/log.904999b9.png');
+}
+.panel .raw {
+    background-image: url('/static/icons/raw.65b01f14.png');
+}
+/* End of Panel icons that are always shown */
+
+.enum {
+    background-image: url('/static/icons/enum.f1c905e5.png');
+}
+.struct {
+    background-image: url('/static/icons/struct.06ed24a3.png');
+}
+.union {
+    background-image: url('/static/icons/union.06ed24a3.png');
+}
+.macro {
+    background-image: url('/static/icons/macro.04704ae1.png');
+}
+/* End of Panel only icons */
+
+/* MimeType Icons */
+/* Not one of the original mimetypes (copied from icons/raw.png), but used for
+   binary files with an otherwise unknown mimetype, mostly to make it easy to
+   recognize binaries in /browse/ and search results. */
+.binary {
+    background-image: url('/static/icons/mimetypes/binary.65b01f14.png');
+}
+.build {
+    background-image: url('/static/icons/mimetypes/build.64bfcded.png');
+}
+/* The .c class is used in files for comments. This definition is there just to prevent overriding. */
+.icon-container.c,
+.icon.c {
+    background-image: url('/static/icons/mimetypes/c.c770b262.png');
+}
+.conf {
+    background-image: url('/static/icons/mimetypes/conf.b3ad681b.png');
+}
+.cpp {
+    background-image: url('/static/icons/mimetypes/cpp.3d73031b.png');
+}
+.cs {
+    background-image: url('/static/icons/mimetypes/cs.eba9c06e.png');
+}
+.css {
+    background-image: url('/static/icons/mimetypes/css.6b715577.png');
+}
+/* Prevents display of diff icon in the panel, which has its own */
+.results .diff,
+.folder-content .diff {
+    background-image: url('/static/icons/mimetypes/diff.1944b6f0.png');
+}
+.h {
+    background-image: url('/static/icons/mimetypes/h.a899ac1f.png');
+}
+.html {
+    background-image: url('/static/icons/mimetypes/html.12ace1a9.png');
+}
+.iso {
+    background-image: url('/static/icons/mimetypes/iso.45872609.png');
+}
+.image {
+    background-image: url('/static/icons/mimetypes/image.783f5b06.png');
+}
+.java {
+    background-image: url('/static/icons/mimetypes/java.8456c3c0.png');
+}
+.js {
+    background-image: url('/static/icons/mimetypes/js.016d891b.png');
+}
+.mm {
+    background-image: url('/static/icons/mimetypes/mm.f73bccae.png');
+}
+.page_white_code_red {
+    background-image: url('/static/icons/mimetypes/page_white_code_red.2d9b7df1.png');
+}
+.php {
+    background-image: url('/static/icons/mimetypes/php.48cda2a2.png');
+}
+.py {
+    background-image: url('/static/icons/mimetypes/py.5ef6367a.png');
+}
+.rb {
+    background-image: url('/static/icons/mimetypes/rb.661505d2.png');
+}
+.sh {
+    background-image: url('/static/icons/mimetypes/sh.375a1702.png');
+}
+.svg {
+    background-image: url('/static/icons/mimetypes/svg.0437640d.png');
+}
+.tex {
+    background-image: url('/static/icons/mimetypes/tex.fb3ce8e4.png');
+}
+.txt {
+    background-image: url('/static/icons/mimetypes/txt.0da66bdb.png');
+}
+.ui {
+    background-image: url('/static/icons/mimetypes/ui.be815031.png');
+}
+.unknown {
+    background-image: url('/static/icons/mimetypes/unknown.a3112ba7.png');
+}
+.vs {
+    background-image: url('/static/icons/mimetypes/vs.7d297cc2.png');
+}
+.xml {
+    background-image: url('/static/icons/mimetypes/xml.c65fadae.png');
+}
+
