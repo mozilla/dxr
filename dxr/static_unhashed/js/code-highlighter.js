@@ -143,17 +143,13 @@ $(function () {
     //displayed url.
     function updateNavLinks(lastNumber) {
         navlinks.each(function() {
-            var $this = $(this);
-            // Copy the href to a template attr, since we will be updating it
-            // and don't want to lose the template. This behavior will happen
-            // only the first time this function is called.
-            if (!$this.data('template')) {
-                $this.data('template', $this.attr('href'));
-            }
-            if (lastNumber) {
-                $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber));
-            } else {
-                $this.attr('href', $this.data('template').replace(/{{line}}/g, ''));
+            const $this = $(this);
+            if ($this.data('template')) {
+                if (lastNumber) {
+                    $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber));
+                } else {
+                    $this.attr('href', $this.data('template').replace(/{{line}}/g, ''));
+                }
             }
         });
     }
@@ -354,12 +350,10 @@ $(function () {
 
     // Highlight any lines specified by hash in either a direct page load or a history pop.
     $(document).ready(function() {
-        updateNavLinks();
         processHash();
     });
     $(window).on('popstate', function() {
         removeAllHighlighting();
-        updateNavLinks();
         processHash();
     });
 });

@@ -28,7 +28,8 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
     def test_blame(self):
         """Make sure the blame link goes to the right place."""
         response = self.client().get('/code/source/ChangedInCommit1')
-        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1#l{{line}}" title="Blame" class="blame icon">Blame</a>' in response.data)
+        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1#l" title="Blame" class="blame icon"' in response.data)
+        ok_('/annotate/84798105c9ab5897f8c7d630d133d9003b44a62f/ChangedInCommit1#l{{line}}">Blame' in response.data)
 
     def test_raw(self):
         """Make sure the raw link goes to the right place."""

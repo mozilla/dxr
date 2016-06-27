@@ -37,7 +37,11 @@
           <ul>
             {% for item in section['items'] %}
               <li>
-                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon">{{ item.title }}</a>
+                {% if 'template' in item %}
+                  <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon" data-template="{{ item.template }}">{{ item.title }}</a>
+                {% else %}
+                  <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon">{{ item.title }}</a>
+                {% endif %}
               </li>
             {%- endfor %}
           </ul>

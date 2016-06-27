@@ -419,12 +419,23 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
     :arg image_rev: revision number of a textual or binary image, for images
         displayed at a certain rev
     """
+    def process_link_templates(sections):
+        """Look for {{line}} in the links of given sections, and duplicate them onto
+        a 'template' field.
+        """
+        for section in sections:
+            for link in section['items']:
+                if '{{line}}' in link['href']:
+                    link['template'] = link['href']
+                    link['href'] = link['href'].replace('{{line}}', '')
+
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
 
             [('Section Name', [{'icon': ..., 'title': ..., 'href': ...}])]
 
         """
+        process_link_templates(sections)
         # Sort by order, resolving ties by section name:
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))
