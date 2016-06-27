@@ -424,14 +424,6 @@ used above are defined in the core plugin as follows::
         }
     }
 
-Crash Early, Crash Often
-========================
-
-Since :program:`dxr index` generally runs without manual supervision, it's
-better to err on the side of crashing than to risk incorrectness. Any error
-that could make a plugin emit inaccurate output should be fatal. This keeps
-DXR's structural queries trustworthy.
-
 
 Contributing Documentation
 --------------------------
