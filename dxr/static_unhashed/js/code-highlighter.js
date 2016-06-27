@@ -145,11 +145,7 @@ $(function () {
         navlinks.each(function() {
             const $this = $(this);
             if ($this.data('template')) {
-                if (lastNumber) {
-                    $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber));
-                } else {
-                    $this.attr('href', $this.data('template').replace(/{{line}}/g, ''));
-                }
+                $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber || ''));
             }
         });
     }
