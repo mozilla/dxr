@@ -12,7 +12,7 @@ dev:
   ports:
     - "8000:8000"
   volumes:
-    - ../..:/home/dxr/dxr
+    - ../..:/home/dxr/dxr:Z
   volumes_from:
     - code
     - venv
