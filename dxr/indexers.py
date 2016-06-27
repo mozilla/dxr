@@ -9,7 +9,7 @@ from warnings import warn
 
 from funcy import group_by, decorator, imapcat
 
-from dxr.utils import build_offset_map
+from dxr.utils import build_offset_map, split_content_lines
 
 
 STRING_PROPERTY = {
@@ -329,7 +329,7 @@ class FileToSkim(PluginConfig):
             if not self.contains_text():
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
-            lines = self.contents.splitlines(True) if self.contents is not None else []
+            lines = split_content_lines(self.contents) if self.contents is not None else []
             self._line_offset_list = build_offset_map(lines)
         return self._line_offset_list
 

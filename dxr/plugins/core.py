@@ -20,7 +20,7 @@ from dxr.query import some_filters
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
-from dxr.utils import glob_to_regex
+from dxr.utils import glob_to_regex, split_content_lines
 
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter',
            'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
@@ -477,7 +477,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
-        for number, text in enumerate(self.contents.splitlines(True), 1):
+        for number, text in enumerate(split_content_lines(self.contents), 1):
             yield [('number', number),
                    ('content', text)]
 

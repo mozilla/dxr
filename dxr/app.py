@@ -28,7 +28,7 @@ from dxr.mime import icon, is_binary_image, is_textual_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_update, append_by_line, build_offset_map)
+                       format_number, append_update, append_by_line, build_offset_map, split_content_lines)
 from dxr.vcs import file_contents_at_rev
 
 # Look in the 'dxr' package for static files, etc.:
@@ -552,7 +552,7 @@ def rev(tree, revision, path):
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
-                            [{'content': line} for line in contents.splitlines(True)],
+                            [{'content': line} for line in split_content_lines(contents)],
                             {},
                             config,
                             not is_text,
