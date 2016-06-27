@@ -41,7 +41,7 @@ html {
 
 body {
     background-color: #fff;
-    color: #333;
+    color: #000;
     font: 12px/1.5 Arial, Helvetica, sans-serif;
     margin: 0;
 }
@@ -289,7 +289,6 @@ code a {
     background-image: linear-gradient(to bottom, #f8f8f8, #eaeaea);
     border-bottom: 1px solid #6d6d6d;
     border-top: 1px solid #f5f5f5;
-    color: #333;
     padding: .8rem;
     width: 100%;
     z-index: 100;

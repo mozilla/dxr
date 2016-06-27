@@ -30,11 +30,7 @@
     border-top-left-radius: 6px;
 }
 .selector-option-label {
-    color: #505050;
     font-weight: bold;
-}
-.selector-option-description {
-    color: #555;
 }
 .selector-option-description code {
     border: 1px solid #ddd;
