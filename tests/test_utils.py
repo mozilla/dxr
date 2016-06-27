@@ -95,7 +95,7 @@ def test_glob_to_regex():
     In other words, pin down the behavior of fnmatch.translate().
 
     """
-    eq_(glob_to_regex('hi'), '^hi$')
+    eq_(glob_to_regex('hi'), 'hi')
 
 
 def test_decode_es_datetime():

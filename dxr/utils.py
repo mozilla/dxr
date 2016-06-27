@@ -162,15 +162,10 @@ def glob_to_regex(glob):
     """Return a regex equivalent to a shell-style glob.
 
     Don't include the regex flags and \\Z at the end like fnmatch.translate(),
-    because we don't parse flags and JavaScript doesn't support \\Z.
-
-    Add ^ to the beginning and $ to the end to ensure that the match is exact
-    and not just occuring somewhere in the middle of the string.  If the user
-    wants the "match anywhere" behavior they can add a * to the beginning
-    and/or end of their query term.
+    because we don't parse flags and we don't want to pin to the end.
 
     """
-    return '^' + fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN] + '$'
+    return fnmatch.translate(glob)[:-_FNMATCH_TRANSLATE_SUFFIX_LEN]
 
 
 def cached(f):

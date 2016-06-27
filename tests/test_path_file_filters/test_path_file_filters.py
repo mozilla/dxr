@@ -8,22 +8,22 @@ class PathAndFileFilterTests(DxrInstanceTestCase):
 
     def test_basic_path_results(self):
         """Check that a 'path:' result includes both file and folder matches."""
-        self.found_files_eq('path:*fish*', ['fish1', 'fishy_folder/fish2',
-                                            'fishy_folder/gill', 'folder/fish3',
-                                            'folder/fish4'])
+        self.found_files_eq('path:fish', ['fish1', 'fishy_folder/fish2',
+                                          'fishy_folder/gill', 'folder/fish3',
+                                          'folder/fish4'])
 
     def test_basic_file_results(self):
         """Check that a 'file:' result includes only file matches."""
-        self.found_files_eq('file:fish*', ['fish1', 'fishy_folder/fish2',
-                                           'folder/fish3', 'folder/fish4'])
+        self.found_files_eq('file:fish', ['fish1', 'fishy_folder/fish2',
+                                          'folder/fish3', 'folder/fish4'])
 
     def test_path_and_file_line_promotion(self):
         """Make sure promotion of a 'path:' or 'file:' filter to a LINE query
         works.
 
         """
-        self.found_files_eq('path:*fish* fins', ['folder/fish3'])
-        self.found_files_eq('file:fish* fins', ['folder/fish3'])
+        self.found_files_eq('path:fish fins', ['folder/fish3'])
+        self.found_files_eq('file:fish fins', ['folder/fish3'])
 
     # This fails because we currently intentionally exclude folder paths from
     # FILE query results - remove the @raises line when that's changed.  (Of
@@ -37,7 +37,7 @@ class PathAndFileFilterTests(DxrInstanceTestCase):
         """Test basic wildcard functionality."""
         # 'path:' and 'file:' currently have the same underlying wildcard
         # support, so we're spreading out the basic wildcard testing over both.
-        self.found_files_eq('path:fish?_fo*er/*',
+        self.found_files_eq('path:fish?_fo*er',
                             ['fishy_folder/fish2', 'fishy_folder/gill'])
 
         self.found_files_eq('file:fish[14]', ['fish1', 'folder/fish4'])
