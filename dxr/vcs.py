@@ -84,7 +84,7 @@ class Vcs(object):
         raise NotImplementedError
 
     def last_modified_date(self, path):
-        """Return a datetime object that represents the last time a commit was
+        """Return a datetime object that represents the last UTC a commit was
         made to the given path.
         """
         raise NotImplementedError
