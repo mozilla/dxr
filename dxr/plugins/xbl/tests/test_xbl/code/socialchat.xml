@@ -5,8 +5,16 @@
     xmlns:xbl="http://www.mozilla.org/xbl"
     xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <binding id="chatbox">
-    <implementation implements="nsIDOMEventListener, nsIMessageListener">
+  <binding
+
+
+
+
+
+  id="chatbox"
+  >
+    <implementation implements="nsIDOMEventListener,
+                                nsIMessageListener">
 
       <property name="promiseChatLoaded">
       </property>

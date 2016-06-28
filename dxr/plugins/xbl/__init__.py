@@ -29,11 +29,13 @@ class FileToIndex(dxr.indexers.FileToIndex):
     @property
     def analyzer(self):
         if not self._analyzer:
-            self._analyzer = XBLAnalyzer(self.tree, self.contents, self.tree.source_encoding)
+            self._analyzer = XBLAnalyzer(self.path, self.tree,
+                                         self.contents, self.tree.source_encoding)
         return self._analyzer
 
     def is_interesting(self):
-        return "<bindings" in self.contents and super(FileToIndex, self).is_interesting()
+        return (self.path.endswith('.xml') and '<bindings' in self.contents
+                and super(FileToIndex, self).is_interesting())
 
     def refs(self):
         return self.analyzer.refs

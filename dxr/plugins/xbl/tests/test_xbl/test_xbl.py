@@ -25,37 +25,37 @@ class XblTests(DxrInstanceTestCase):
         """Be able to find fields, properties, and methods qualified and unqualified.
         """
         self.found_line_eq('type:nsIDOMEventListener',
-                           '&lt;implementation implements="<b>nsIDOMEventListener</b>, nsIMessageListener"&gt;',
-                           9)
+                           '&lt;implementation implements="<b>nsIDOMEventListener</b>,',
+                           16)
 
         self.found_line_eq('type:nsIMessageListener',
-                           '&lt;implementation implements="nsIDOMEventListener, <b>nsIMessageListener</b>"&gt;',
-                           9)
+                           '<b>nsIMessageListener</b>"&gt;',
+                           17)
 
         self.found_line_eq('prop:promiseChatLoaded',
                            '&lt;property name="<b>promiseChatLoaded</b>"&gt;',
-                           11)
+                           19)
 
         self.found_line_eq('prop:_chat',
                            '&lt;field name="<b>_chat</b>" readonly="true"&gt;',
-                           14)
+                           22)
 
         self.found_line_eq('+prop:chatbox#focus',
                            '&lt;method name="<b>focus</b>"&gt;',
-                           17)
+                           25)
 
         self.found_line_eq('+prop:chatbox#showNotifications',
                            '&lt;method name="<b>showNotifications</b>"&gt;',
-                           20)
+                           28)
 
         self.found_line_eq('+prop:chatbar#focus',
                            '&lt;method name="<b>focus</b>"&gt;',
-                           36)
+                           44)
 
         self.found_line_eq('+prop:chatbar#selectedChat',
                            '&lt;property name="<b>selectedChat</b>"&gt;',
-                           41)
+                           49)
 
         self.found_line_eq('prop:menuItemMap',
                            '&lt;field name="<b>menuItemMap</b>"&gt;new WeakMap()&lt;/field&gt;',
-                           44)
+                           52)

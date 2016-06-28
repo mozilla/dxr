@@ -10,8 +10,7 @@ class _XblRef(Ref):
 
 
 class TypeRef(_XblRef):
-    """Ref that yields a menu option for search on type and type-decl.
-    """
+    """Ref that yields a menu option for search on type and type-decl."""
     def menu_items(self):
         name = self.menu_data
         for text, filtername, title, icon in [
