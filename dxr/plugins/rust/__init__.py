@@ -41,7 +41,7 @@ from dxr.plugins.rust import filters
 from dxr.plugins.rust import refs
 
 
-RUST_DXR_FLAG = " -Zsave-analysis"
+RUST_DXR_FLAG = " -Zsave-analysis-csv"
 
 # We know these crates come from the rust distribution (probably, the user could
 # override that, but lets assume for now...).
@@ -353,8 +353,10 @@ class TreeToIndex(indexers.TreeToIndex):
             env['RUSTFLAGS_STAGE2'] += RUST_DXR_FLAG
         else:
             env['RUSTFLAGS_STAGE2'] = RUST_DXR_FLAG
+        # Pretty sure this environment variable does nothing, but perhaps someone
+        # is using it in a script or something.
         env['DXR_RUST_OBJECT_FOLDER'] = self.tree.object_folder
-        env['DXR_RUST_TEMP_FOLDER'] = self._temp_folder
+        env['RUST_SAVE_ANALYSIS_FOLDER'] = self._temp_folder
 
         return env
 

@@ -3,4 +3,4 @@
 # don't do anything specific to development or CI.
 
 # Install Rust.
-curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=2016-01-25 --yes
+curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --yes
