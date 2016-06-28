@@ -8,7 +8,7 @@ apt-get -q update \
  && apt-get -q -y install \
         npm \
         python-pip python-virtualenv python2.7-dev \
-        mercurial git \
+        mercurial git subversion \
         llvm-3.5 libclang-3.5-dev clang-3.5 \
         curl apt-transport-https
 

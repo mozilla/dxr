@@ -27,12 +27,22 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def links(self):
         def items():
-            yield 'log', "Log", self.vcs.generate_log(vcs_relative_path)
-            yield 'blame', "Blame", self.vcs.generate_blame(vcs_relative_path)
-            yield 'diff',  "Diff", self.vcs.generate_diff(vcs_relative_path)
-            yield 'raw', "Raw", self.vcs.generate_raw(vcs_relative_path)
+            log = self.vcs.generate_log(vcs_relative_path)
+            if log:
+                yield 'log', "Log", log
+
+            blame = self.vcs.generate_blame(vcs_relative_path)
+            if blame:
+                yield 'blame', "Blame", blame
+
+            diff = self.vcs.generate_diff(vcs_relative_path)
+            if diff:
+                yield 'diff',  "Diff", diff
+
+            raw = self.vcs.generate_raw(vcs_relative_path)
+            if raw:
+                yield 'raw', "Raw", raw
 
         if self.vcs and self.vcs.has_upstream():
             vcs_relative_path = relpath(self.absolute_path(), self.vcs.get_root_dir())
             yield (5, 'VCS Links', items())
-

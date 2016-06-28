@@ -17,10 +17,13 @@ TODO:
 - Check if the mercurial paths are specific to Mozilla's customization or not.
 
 """
+
+import glob
 import marshal
 import os
-from os.path import relpath, join, split
+from os.path import isfile, join, relpath, split
 from pkg_resources import resource_filename
+import re
 import subprocess
 import urlparse
 from warnings import warn
@@ -327,8 +330,125 @@ class Perforce(Vcs):
                                         filename + '@' + revision],
                                        cwd=directory, env=env, stderr=stderr)
 
+class Subversion(Vcs):
+    command = 'svn'
 
-every_vcs = [Mercurial, Git, Perforce]
+    def __init__(self, root):
+        super(Subversion, self).__init__(root)
+        # All tracked files as a dictionary (file => revision).
+        self.files = __get_files_with_revision()
+        # Determine repository revision once.
+        self.revision = __get_revision()
+        # Determine upstream URL once.
+        self.upstream = __get_upstream_url()
+
+    # Interface class methods.
+
+    @classmethod
+    def claim_vcs_source(cls, path, dirs, tree):
+        # Requires ".svn" directory.
+        if '.svn' not in dirs:
+            return None
+
+        # Requires successful "svn info".
+        try:
+            cls.invoke_vcs(['info'], path)
+        except subprocess.CalledProcessError:
+            return None
+
+        # Exclude ".svn" from indexing.
+        dirs.remove('.svn')
+
+        return cls(path)
+
+    @classmethod
+    def get_contents(cls, path, revision, stderr=None):
+        directory, filename = split(path)
+        args = ['cat', '-r', str(revision), os.path.abspath(path)]
+        return cls.invoke_vcs(args, directory)
+
+    # Interface instance methods.
+
+    def is_tracked(self, path):
+        return path in self.files
+
+    def has_upstream(self):
+        return self.upstream != ""
+
+    def generate_log(self, path):
+        return None
+
+    def generate_diff(self, path):
+        return None
+
+    def generate_blame(self, path):
+        return None
+
+    def generate_raw(self, path):
+        return self.upstream + "/" + path
+
+    def display_rev(self, path):
+        return "r%s" % self.files[path]
+
+    # Private methods.
+
+    def __get_files_with_revision(self, path):
+        files = dict()
+
+        root_path = "%s/" % path
+
+        for root, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                abs_path = join(root, filename)
+
+                if not isfile(abs_path):
+                    # Ignore directories.
+                    print "%s is not a file" % abs_path
+                    continue
+
+                rel_path = abs_path.replace(root_path, '')
+
+                if rel_path.startswith('.svn'):
+                    # Ignore ".svn" path.
+                    continue
+
+                revision = __get_last_changed_rev(abs_path)
+
+                if not revision:
+                    # Ignore untracked files.
+                    print "%s has no revision!" % abs_path
+                    continue
+
+                files[rel_path] = revision
+
+        return files
+
+    def __get_revision(self, path):
+        return Subversion.svn_info(self.root, "Revision")
+
+    def __get_upstream_url(self, path):
+        return Subversion.svn_info(self.root, "URL")
+
+    def __get_last_changed_rev(self, path):
+        return Subversion.svn_info(self.root, "Last Changed Rev", [path])
+
+    @classmethod
+    def svn_info(cls, path, prop=None, args=[]):
+         try:
+           info = cls.invoke_vcs(['info'] + args, path)
+
+           if not prop:
+               # Return full info.
+               return info
+
+           # Find and return specific property.
+           regex = re.compile("(?<=%s: )(.+)" % prop)
+           return regex.search(info).group()
+         except subprocess.CalledProcessError:
+           return None
+
+
+every_vcs = [Mercurial, Git, Perforce, Subversion]
 
 
 def tree_to_repos(tree):
