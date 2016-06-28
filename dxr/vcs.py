@@ -391,18 +391,17 @@ class Subversion(Vcs):
 
     # Private methods.
 
-    def __get_files_with_revision(self, path):
+    def __get_files_with_revision(self):
         files = dict()
 
-        root_path = "%s/" % path
+        root_path = "%s/" % self.root
 
-        for root, dirnames, filenames in os.walk(path):
+        for root, dirnames, filenames in os.walk(self.root):
             for filename in filenames:
                 abs_path = join(root, filename)
 
                 if not isfile(abs_path):
                     # Ignore directories.
-                    print "%s is not a file" % abs_path
                     continue
 
                 rel_path = abs_path.replace(root_path, '')
@@ -415,17 +414,16 @@ class Subversion(Vcs):
 
                 if not revision:
                     # Ignore untracked files.
-                    print "%s has no revision!" % abs_path
                     continue
 
                 files[rel_path] = revision
 
         return files
 
-    def __get_revision(self, path):
+    def __get_revision(self):
         return Subversion.svn_info(self.root, "Revision")
 
-    def __get_upstream_url(self, path):
+    def __get_upstream_url(self):
         return Subversion.svn_info(self.root, "URL")
 
     def __get_last_changed_rev(self, path):
@@ -495,6 +493,9 @@ def file_contents_at_rev(abspath, revision):
             try:
                 return cls.get_contents(abspath, revision, stderr=devnull)
             except subprocess.CalledProcessError:
+                continue
+            except OSError:
+                # Caused by Perforce#get_contents in SVN repositories.
                 continue
     return None
 
