@@ -18,7 +18,6 @@ TODO:
 
 """
 
-import glob
 import marshal
 import os
 from os.path import isfile, join, relpath, split
@@ -336,11 +335,11 @@ class Subversion(Vcs):
     def __init__(self, root):
         super(Subversion, self).__init__(root)
         # All tracked files as a dictionary (file => revision).
-        self.files = __get_files_with_revision()
+        self.files = get_files_with_revision()
         # Determine repository revision once.
-        self.revision = __get_revision()
+        self.revision = get_revision()
         # Determine upstream URL once.
-        self.upstream = __get_upstream_url()
+        self.upstream = get_upstream_url()
 
     # Interface class methods.
 
@@ -392,7 +391,7 @@ class Subversion(Vcs):
 
     # Private methods.
 
-    def __get_files_with_revision(self, path):
+    def get_files_with_revision(self, path):
         files = dict()
 
         root_path = "%s/" % path
@@ -412,7 +411,7 @@ class Subversion(Vcs):
                     # Ignore ".svn" path.
                     continue
 
-                revision = __get_last_changed_rev(abs_path)
+                revision = get_last_changed_rev(abs_path)
 
                 if not revision:
                     # Ignore untracked files.
@@ -423,29 +422,29 @@ class Subversion(Vcs):
 
         return files
 
-    def __get_revision(self, path):
+    def get_revision(self, path):
         return Subversion.svn_info(self.root, "Revision")
 
-    def __get_upstream_url(self, path):
+    def get_upstream_url(self, path):
         return Subversion.svn_info(self.root, "URL")
 
-    def __get_last_changed_rev(self, path):
+    def get_last_changed_rev(self, path):
         return Subversion.svn_info(self.root, "Last Changed Rev", [path])
 
     @classmethod
     def svn_info(cls, path, prop=None, args=[]):
-         try:
-           info = cls.invoke_vcs(['info'] + args, path)
+        try:
+            info = cls.invoke_vcs(['info'] + args, path)
 
-           if not prop:
-               # Return full info.
-               return info
+            if not prop:
+                # Return full info.
+                return info
 
-           # Find and return specific property.
-           regex = re.compile("(?<=%s: )(.+)" % prop)
-           return regex.search(info).group()
-         except subprocess.CalledProcessError:
-           return None
+            # Find and return specific property.
+            regex = re.compile("(?<=%s: )(.+)" % prop)
+            return regex.search(info).group()
+        except subprocess.CalledProcessError:
+            return None
 
 
 every_vcs = [Mercurial, Git, Perforce, Subversion]
