@@ -335,11 +335,11 @@ class Subversion(Vcs):
     def __init__(self, root):
         super(Subversion, self).__init__(root)
         # All tracked files as a dictionary (file => revision).
-        self.files = get_files_with_revision()
+        self.files = self.__get_files_with_revision()
         # Determine repository revision once.
-        self.revision = get_revision()
+        self.revision = self.__get_revision()
         # Determine upstream URL once.
-        self.upstream = get_upstream_url()
+        self.upstream = self.__get_upstream_url()
 
     # Interface class methods.
 
@@ -391,7 +391,7 @@ class Subversion(Vcs):
 
     # Private methods.
 
-    def get_files_with_revision(self, path):
+    def __get_files_with_revision(self, path):
         files = dict()
 
         root_path = "%s/" % path
@@ -411,7 +411,7 @@ class Subversion(Vcs):
                     # Ignore ".svn" path.
                     continue
 
-                revision = get_last_changed_rev(abs_path)
+                revision = self.__get_last_changed_rev(abs_path)
 
                 if not revision:
                     # Ignore untracked files.
@@ -422,13 +422,13 @@ class Subversion(Vcs):
 
         return files
 
-    def get_revision(self, path):
+    def __get_revision(self, path):
         return Subversion.svn_info(self.root, "Revision")
 
-    def get_upstream_url(self, path):
+    def __get_upstream_url(self, path):
         return Subversion.svn_info(self.root, "URL")
 
-    def get_last_changed_rev(self, path):
+    def __get_last_changed_rev(self, path):
         return Subversion.svn_info(self.root, "Last Changed Rev", [path])
 
     @classmethod
