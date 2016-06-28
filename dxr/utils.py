@@ -286,6 +286,6 @@ def without_ending(ending, string):
     """If ``string`` ends with ``ending``, strip it off."""
     return string[:-len(ending)] if string.endswith(ending) else string
 
-def splitlines_keepends(string):
+def split_content_lines(string):
     """Line breaks are included in the resulting list"""
     return string.splitlines(True)

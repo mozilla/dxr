@@ -29,7 +29,7 @@ from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
 from dxr.mime import decode_data, is_binary_image
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line, bucket, splitlines_keepends)
+                       append_update_by_line, append_by_line, bucket, split_content_lines)
 from dxr.vcs import VcsCache
 
 
@@ -450,7 +450,7 @@ def index_file(tree, tree_indexers, path, es, index):
     # Index by line if the contents are text and the path is not a symlink.
     index_by_line = is_text and not is_link
     if index_by_line:
-        lines = splitlines_keepends(contents)
+        lines = split_content_lines(contents)
         num_lines = len(lines)
         needles_by_line = [{} for _ in xrange(num_lines)]
         annotations_by_line = [[] for _ in xrange(num_lines)]
