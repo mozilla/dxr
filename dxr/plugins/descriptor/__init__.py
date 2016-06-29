@@ -15,10 +15,7 @@ def describe_readme(lines):
     presumed readme file or None if it can extract no suitable description.
     """
     # For now the heuristic is just the first non-empty line.
-    try:
-        return next(ifilter(None, (line.strip() for line in lines)))
-    except StopIteration:
-        return None
+    return next(ifilter(None, (line.strip() for line in lines)), None)
 
 
 class FolderToIndex(dxr.indexers.FolderToIndex):

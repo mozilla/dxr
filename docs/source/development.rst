@@ -250,7 +250,7 @@ manually:
        :members:
 
 Actual plugin functionality is implemented within file indexers, tree indexers,
-file indexers, filters, and skimmers.
+folder indexers, filters, and skimmers.
 
 Folder Indexers
 =============
