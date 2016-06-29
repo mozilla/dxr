@@ -28,6 +28,10 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
         Similar to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#251.
         """
         for entry in sorted(listdir(self.path)):
+            try:
+                entry = entry.decode('utf-8')
+            except UnicodeDecodeError:
+                continue
             path = join(self.path, entry)
             # If we find a readme, then open it and return the first line if
             # it's non-empty.
@@ -45,8 +49,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
     """Do lots of work to yield a description needle."""
 
     comment_re = re.compile(r'(?:.*?/\*+)(?:\s*\*?\s*)(?P<description>.*?)(?:(?:\*+/.*)|(?:$))', flags=re.M)
-    docstring_re1 = re.compile(r'"""\s*(?P<description>[^"]*)', flags=re.M)
-    docstring_re2 = re.compile(r"'''\s*(?P<description>[^']*)", flags=re.M)
+    docstring_res = [re.compile(r'"""\s*(?P<description>[^"]*)', flags=re.M),
+                     re.compile(r"'''\s*(?P<description>[^']*)", flags=re.M)]
     title_re = re.compile(r'<title>([^<]*)</title>')
 
     def __init__(self, path, contents, plugin_name, tree):
@@ -84,7 +88,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
     def describe_html(self):
         """Return the contents of the <title> tag."""
 
-        match = re.search(self.title_re, self.contents)
+        match = self.title_re.search(self.contents)
         if match:
             return match.group(1)
 
@@ -93,12 +97,10 @@ class FileToIndex(dxr.indexers.FileToIndex):
         there is one in the first 60 lines."""
 
         joined_lines = ''.join(self.sixty_lines)
-        match = self.docstring_re1.search(joined_lines)
-        if match:
-            return match.group('description')
-        match = self.docstring_re2.search(joined_lines)
-        if match:
-            return match.group('description')
+        for docstring_re in self.docstring_res:
+            match = docstring_re.search(joined_lines)
+            if match:
+                return match.group('description')
 
     def generic_describe(self):
         """Look at the first 60 lines for a match for {{self.path|description}}
