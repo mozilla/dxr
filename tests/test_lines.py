@@ -13,14 +13,14 @@ from dxr.lines import (line_boundaries, remove_overlapping_refs, Region, LINE,
                        Ref, balanced_tags, finished_tags, tag_boundaries,
                        html_line, nesting_order, balanced_tags_with_empties,
                        es_lines, tags_per_line)
-from dxr.utils import build_offset_map
+from dxr.utils import build_offset_map, split_content_lines
 
 
 def test_line_boundaries():
     """Make sure we find the correct line boundaries with all sorts of line
     endings, even in files that don't end with a newline."""
     eq_(list((point, is_start) for point, is_start, _ in
-             line_boundaries('abc\ndef\r\nghi\rjkl'.splitlines(True))),
+             line_boundaries(split_content_lines('abc\ndef\r\nghi\rjkl'))),
         [(4, False),
          (9, False),
          (13, False),
@@ -218,7 +218,7 @@ class BalancedTagTests(TestCase):
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 """
-        lines = text.splitlines(True)
+        lines = split_content_lines(text)
         offsets = build_offset_map(lines)
         actual_lines = [html_line(text_line.rstrip('\r\n'), e, offset) for
                         text_line, e, offset in
@@ -258,7 +258,7 @@ def test_simple_html_line():
 def text_to_html_lines(text, refs=(), regions=()):
     """Run the full pipeline, and return a list of htmlified lines of ``text``
     with markup interspersed for ``regions``."""
-    lines = text.splitlines(True)
+    lines = split_content_lines(text)
     offsets = build_offset_map(lines)
     return [html_line(text_line, e, o) for (text_line, e, o) in
             zip(lines, tags_per_line(finished_tags(lines,
