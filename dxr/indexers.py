@@ -183,8 +183,9 @@ class FileToSkim(PluginConfig):
             file by line for display, so there will be no useful UI for those
             data to support. In fact, most skimmers won't be be able to do
             anything useful with None at all. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 
@@ -348,8 +349,9 @@ class FileToIndex(FileToSkim):
             the file by line for display, so there will be no useful UI for
             those data to support. Think more along the lines of returning
             EXIF data to search by for a JPEG. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 
