@@ -205,7 +205,7 @@ code a {
 .file td:first-child {
     text-align: right;
     color: #555;
-    width: 6ex;
+    width: 6.5ch;
 }
 .results a {
     cursor: pointer;
@@ -216,7 +216,7 @@ code a {
 }
 .result_line, .result-head {
     position: relative;
-    padding-left: 60px;
+    padding-left: 9ch;
 }
 .result_line {
     padding-top: 5px;
@@ -236,7 +236,7 @@ code a {
     left: 0px;
 }
 .result_line .left-column {
-    left: 1.5ex;
+    left: 1ch;
 }
 .leftmost-column > span:hover
 {
