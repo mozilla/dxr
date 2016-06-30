@@ -119,9 +119,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         try:
             description_re = re.compile(r'(?:{}|{}|description)\
                                           (?:{})?\s*(?:[{}]\n?)\s*\
-                                          (?P<description>[\w\s-]+)'.format(re.escape(self.path),
-                                                                            re.escape(root),
-                                                                            re.escape(ext),
+                                          (?P<description>[\w\s-]+)'.format(re.escape(self.path.encode('utf-8')),
+                                                                            re.escape(root.encode('utf-8')),
+                                                                            re.escape(ext.encode('utf-8')),
                                                                             delimiters),
                                         re.IGNORECASE)
             for line in self.sixty_lines:
