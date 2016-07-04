@@ -215,10 +215,10 @@ code a {
     cursor: pointer;
     display: inline-block;
 }
-
 .results a[data-path]{
     cursor: context-menu;
 }
+
 .file a:target {
     background-color: gray;
     color: white;
@@ -240,8 +240,6 @@ code a {
 {
     display: inline;
 }
-
-
 
 /* end results */
 
