@@ -372,7 +372,7 @@ class Subversion(Vcs):
         return path in self.files
 
     def has_upstream(self):
-        return self.upstream != None
+        return self.upstream is not None
 
     def generate_log(self, path):
         return None
