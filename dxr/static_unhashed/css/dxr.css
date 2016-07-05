@@ -211,6 +211,9 @@ code a {
     cursor: pointer;
     display: inline-block;
 }
+.results a[data-path]{
+    cursor: context-menu;
+}
 .results code {
     white-space: pre;
 }
