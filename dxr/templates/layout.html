@@ -91,7 +91,7 @@
     {% set eof = True if state_eof else False %}
 
     <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
-    <span id="data" data-root="{{ www_root }}" data-search="{{ url_for('.search', tree=tree) }}" data-tree="{{ tree }}"></span>
+    <span id="data" data-root="{{ www_root }}" data-lines="{{ url_for('.lines', tree=tree) }}" data-search="{{ url_for('.search', tree=tree) }}" data-tree="{{ tree }}"></span>
     <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-results-line-count="{{ results_line_count }}" data-eof="{{ eof }}"></span>
 
     {% block site_js %}

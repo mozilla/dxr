@@ -171,7 +171,6 @@ td pre code {
     float: left;
     margin: 0;
     padding: 0;
-    position: relative;
 }
 code a {
     cursor: pointer;
@@ -193,11 +192,11 @@ code a {
 
 /* results */
 
-.results tr:hover,
+.results .result_line:hover,
 .file tr:hover {
     background: none;
 }
-.results tr,
+.results .result_line, .results.result-head
 .file tr {
     border: 0;
     line-height: 1.3;
@@ -205,11 +204,8 @@ code a {
 .left-column,
 .file td:first-child {
     text-align: right;
-    color: #aaa;
-    width: 6ex;
-}
-.results td {
-    padding: .1rem .5rem;
+    color: #555;
+    width: 6.5ch;
 }
 .results a {
     cursor: pointer;
@@ -218,31 +214,55 @@ code a {
 .results a[data-path]{
     cursor: context-menu;
 }
-
-.file a:target {
-    background-color: gray;
-    color: white;
-    padding: 0 .5rem;
-}
 .results code {
     white-space: pre;
 }
-.result-head td
+.result_line, .result-head {
+    position: relative;
+    padding-left: 9ch;
+}
+.result_line {
+    padding-top: 5px;
+}
+.result-head
 {
     padding-top: .3rem; /* Additional padding to visually seperate results.*/
-    padding-bottom: 0;
 }
-.result-head td.left-column
+.left-column, .leftmost-column {
+    position: absolute;
+}
+.result-head .left-column
 {
-    padding-right: .2rem; /* Moves the icon closer to the path by reducing the padding.*/
+    left: 8px;
+}
+.result_line .leftmost-column {
+    left: 0px;
+}
+.result_line .left-column {
+    left: 1ch;
+}
+.leftmost-column > span:hover
+{
+    cursor: pointer;
+    background: rgba(0, 140, 0, 0.14)
 }
 .result-head a
 {
     display: inline;
 }
+.results .ctx_row {
+    opacity: 0.5;
+}
+.ctx_row .left_column {
+    color: #bbb;
+}
 
 /* end results */
-
+.file a:target {
+    background-color: gray;
+    color: white;
+    padding: 0 .5rem;
+}
 .file td {
     padding: 0;
 }

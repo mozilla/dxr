@@ -4,12 +4,7 @@
 {{ results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) }}
 
 {% if results|length > 0 %}
-  <table class="results">
-    <caption class="visually-hidden">Query matches</caption>
-    <thead class="visually-hidden">
-      <th scope="col">Line</th>
-      <th scope="col">Code Snippet</th>
-    </thead>
+  <div class="results">
     {{ results_list(results, www_root, tree) }}
-  </table>
+  </div>
 {% endif %}
