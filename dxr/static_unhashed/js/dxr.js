@@ -1,4 +1,4 @@
-/* jshint devel:true, esnext: true */
+/* jshint devel:true */
 /* globals nunjucks: true, $ */
 
 var htmlEscape;
@@ -237,7 +237,8 @@ $(function() {
      * Add click listeners to the context buttons to load more contexts.
      */
     function withContextListeners(renderedResults) {
-        const toJquery = $(renderedResults);
+        var toJquery = $(renderedResults);
+
         // AJAX query as context lines after given row if after is true,
         // otherwise before given row.
         function getContextLines(row, query, after) {
@@ -245,8 +246,9 @@ $(function() {
                 dataType: "json",
                 url: query,
                 success: function(data) {
+                    var result;
                     if (data.lines.length > 0) {
-                        const result = nunjucks.render('context_lines.html', {
+                        result = nunjucks.render('context_lines.html', {
                             www_root: dxr.wwwRoot,
                             tree: dxr.tree,
                             result: data
@@ -275,13 +277,13 @@ $(function() {
          {klass: ".ctx_up", start: -4, end: -1, after: false},
          {klass: ".ctx_down", start: 1, end: 4, after: true}].forEach(
                 function(ctx) {
-                    const c = ctx;
+                    var c = ctx;
                     $(c.klass, toJquery).on('click', function() {
-                        const $this = $(this),
-                              path = $this.parents('.result').data('path'),
-                              line = parseInt($this.parents(".result_line").data('line')),
-                              queryString = (dxr.linesUrl + '?' +
-                                             $.param({path, start: line + c.start, end: line + c.end}));
+                        var $this = $(this),
+                            path = $this.parents('.result').data('path'),
+                            line = parseInt($this.parents(".result_line").data('line')),
+                            queryString = (dxr.linesUrl + '?' +
+                                           $.param({path, start: line + c.start, end: line + c.end}));
                         getContextLines($this.parents(".result_line"), queryString, c.after);
                     });
                 });
@@ -293,11 +295,12 @@ $(function() {
      */
     function cleanupResults(result) {
         // Construct {line: {contextEl, resultEl}}
-        const lineMap = {};
+        var lineMap = {};
+        var spaces, text, resultCode, lineNode, ctxSpan;
         // Visit the lines and remove duplicates.
         result.children('.result_line').each(function() {
-            const $this = $(this);
-            const line = parseInt($this.data("line"));
+            var $this = $(this);
+            var line = parseInt($this.data("line"));
             lineMap[line] = lineMap[line] || {};
             if (this.classList.contains("ctx_row")) {
                 if (lineMap[line].contextEl) {
@@ -316,23 +319,23 @@ $(function() {
             }
         });
         // Now go through and fix some things.
-        for (let line in lineMap) {
+        for (var line in lineMap) {
             if (!lineMap.hasOwnProperty(line)) continue;
             // If some line has both context and result, then replace context line by result line.
             // But since result strips trailing whitespace where context has it,
             // we must bring that from the context line.
             if (lineMap[line].contextEl && lineMap[line].resultEl) {
-                const text = lineMap[line].contextEl.querySelector("code").textContent;
-                const resultCode = lineMap[line].resultEl.querySelector("code");
-                let spaces = "";
-                for (let i = 0; i < text.length && /\s/.test(text[i]); i++) {
+                text = lineMap[line].contextEl.querySelector("code").textContent;
+                resultCode = lineMap[line].resultEl.querySelector("code");
+                spaces = "";
+                for (var i = 0; i < text.length && /\s/.test(text[i]); i++) {
                     spaces += text[i];
                 }
                 resultCode.innerHTML = spaces + resultCode.innerHTML;
                 $(lineMap[line].contextEl).replaceWith(lineMap[line].resultEl);
             }
-            const lineNode = lineMap[line].resultEl || lineMap[line].contextEl,
-                  ctxSpan = lineNode.querySelector(".leftmost-column > span");
+            lineNode = lineMap[line].resultEl || lineMap[line].contextEl;
+            ctxSpan = lineNode.querySelector(".leftmost-column > span");
             line = parseInt(line);
             // If previous line exists, remove ctx_up. If below line exists, remove ctx_down.
             // If surrounded, remove ctx_full.
