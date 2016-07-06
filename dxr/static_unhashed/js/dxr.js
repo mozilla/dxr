@@ -283,7 +283,9 @@ $(function() {
                             path = $this.parents('.result').data('path'),
                             line = parseInt($this.parents(".result_line").data('line')),
                             queryString = (dxr.linesUrl + '?' +
-                                           $.param({path, start: line + c.start, end: line + c.end}));
+                                           $.param({path: path,
+                                                    start: line + c.start,
+                                                    end: line + c.end}));
                         getContextLines($this.parents(".result_line"), queryString, c.after);
                     });
                 });
@@ -367,13 +369,14 @@ $(function() {
      * @param {bool} append - Should the content be appended or overwrite
      */
     function populateResults(data, append) {
-        data.www_root = dxr.wwwRoot;
-        data.tree = dxr.tree;
-        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
-
+        var renderedData;
         var params = {
             q: data.query
         };
+
+        data.www_root = dxr.wwwRoot;
+        data.tree = dxr.tree;
+        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
         data.query_string = $.param(params);
 
         // If no data is returned, inform the user.
@@ -396,7 +399,7 @@ $(function() {
             }
 
             if (!append) {
-                var renderedData = nunjucks.render('results_container.html', data);
+                renderedData = nunjucks.render('results_container.html', data);
                 contentContainer.empty().append(withContextListeners(renderedData));
             } else {
                 var resultsList = contentContainer.find('.results');
@@ -419,7 +422,7 @@ $(function() {
 
                 // Don't render if there was only the first result and it was rendered.
                 if (data.results.length) {
-                    var renderedData = nunjucks.render('results.html', data);
+                    renderedData = nunjucks.render('results.html', data);
                     resultsList.append(withContextListeners(renderedData));
                 }
             }
