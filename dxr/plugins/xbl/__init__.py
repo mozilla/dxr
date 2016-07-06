@@ -34,8 +34,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
         return self._analyzer
 
     def is_interesting(self):
-        return (self.path.endswith('.xml') and '<bindings' in self.contents
-                and super(FileToIndex, self).is_interesting())
+        return (super(FileToIndex, self).is_interesting and
+                self.path.endswith('.xml') and '<bindings' in self.contents)
 
     def refs(self):
         return self.analyzer.refs
