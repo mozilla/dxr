@@ -334,7 +334,10 @@ def _browse_folder(tree, path, config):
 
     """
     def item_or_list(item):
-        """If item is a list, return its first element. Otherwise, just return it.
+        """If item is a list, return its first element.
+
+        Otherwise, just return it.
+
         """
         # TODO @pelmers: remove this function when format bumps to 20
         if isinstance(item, list):
