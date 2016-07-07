@@ -56,6 +56,13 @@
                                   <span class="selector-option-label">
                                     {{ filter.name }}
                                   </span>
+                                  <span class="selector-badges">
+                                    {% for text, color in filter.badges %}
+                                      {% if color %}
+                                        <span class="badge-label" style="background-color:{{ color }};">{{ text }}</span>
+                                      {% endif %}
+                                    {% endfor %}
+                                  </span>
                                   <span class="selector-option-description">
                                     {{ filter.description }}
                                   </span>
