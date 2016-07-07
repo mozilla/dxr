@@ -12,7 +12,7 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
-	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
 
 lint: $(VIRTUAL_ENV)/bin/activate requirements
 	$(VIRTUAL_ENV)/bin/pip install flake8

@@ -285,3 +285,14 @@ def is_in(needle, haystack):
 def without_ending(ending, string):
     """If ``string`` ends with ``ending``, strip it off."""
     return string[:-len(ending)] if string.endswith(ending) else string
+
+
+def split_content_lines(unicode):
+    """Split the content of a recognizably textual file into lines.
+
+    This is a single point of truth for how to do this between skimmers,
+    indexers, and other miscellany. At present, line breaks are included in the
+    resulting lines.
+
+    """
+    return unicode.splitlines(True)
