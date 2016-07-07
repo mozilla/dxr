@@ -29,13 +29,21 @@ class XBLAnalyzer(object):
         """Return Extent for the next occurrence of name."""
         # Because the parser does not provide location info on attr positions,
         # we can only search for them from the current position.
-        found = False
-        for number, line in enumerate(self.lines[self.parser.CurrentLineNumber - 1:]):
-            offset = line.find(name)
-            if offset != -1:
-                row, col = self.parser.CurrentLineNumber + number, offset
-                found = True
-                break
+        # First check the current line.
+        offset = self.lines[self.parser.CurrentLineNumber - 1].find(name, self.parser.currentColumnNumber - 1)
+        if offset != -1:
+            row, col = self.parser.CurrentLineNumber, offset
+            found = True
+        else:
+            found = False
+        # Not on the current line, keep going until we find it.
+        if not found:
+            for number, line in enumerate(self.lines[self.parser.CurrentLineNumber:]):
+                offset = line.find(name)
+                if offset != -1:
+                    row, col = self.parser.CurrentLineNumber + number + 1, offset
+                    found = True
+                    break
         if found:
             return Extent(Position(row, col), Position(row, col + len(name)))
         else:
