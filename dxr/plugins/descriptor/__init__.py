@@ -10,10 +10,15 @@ from warnings import warn
 import dxr.indexers
 
 
+def is_readme(filename):
+    """Return whether filename is probably a readme."""
+    return filename.lower() in {'readme', 'readme.md', 'readme.txt'}
+
+
 def describe_readme(lines):
-    """Return a string that represents a description for the given lines of a
-    presumed readme file or None if it can extract no suitable description.
-    """
+    """Return a string that represents a description for the given lines
+    of a presumed readme file or None if it can extract no suitable
+    description."""
     # For now the heuristic is just the first non-empty line.
     return next(ifilter(None, (line.strip() for line in lines)), None)
 
@@ -35,9 +40,13 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
             path = join(self.path, entry)
             # If we find a readme, then open it and return the first line if
             # it's non-empty.
-            if "readme" in entry.lower() and isfile(path):
+            if is_readme(entry) and isfile(path):
                 with open(path) as readme:
-                    description = describe_readme([readme.readline(100)])
+                    try:
+                        first_line = readme.readline(100).decode(self.tree.source_encoding)
+                    except UnicodeDecodeError:
+                        continue
+                    description = describe_readme([first_line])
                     if description:
                         # Pack into a list for consistency with the file needle.
                         return [("Description", [description])]
@@ -108,8 +117,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         readme, then return the first line."""
 
         filename = basename(self.path)
-        # Is it a readme? Just return the first non-empty line.
-        if "readme" in filename.lower():
+        if is_readme(filename):
             possible_description = describe_readme(self.sixty_lines)
             if possible_description:
                 return possible_description
