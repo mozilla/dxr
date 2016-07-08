@@ -414,7 +414,7 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
                 try:
                     yield join(root, f).decode('utf-8')
                 except UnicodeDecodeError:
-                    continue
+                    pass
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
@@ -425,7 +425,7 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
                 try:
                     yield join(root, f).decode('utf-8')
                 except UnicodeDecodeError:
-                    continue
+                    pass
 
 def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.

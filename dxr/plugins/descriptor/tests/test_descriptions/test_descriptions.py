@@ -20,9 +20,13 @@ class DescriptionTests(DxrInstanceTestCase):
         # Check that I stripped prepended spaces.
         ok_("  A line of the readme, with prepended spaces." not in response)
         # Javascript description with /** */ comment
-        ok_("Define foo, a dynamic higher order weakly typed late binded function." in response)
+        ok_("Define foon, a dynamic higher order weakly typed late binded function." in response)
         # Python docstring
         ok_("foo.py: some very Pythonic codes." in response)
+        # First case of generic description_re.
+        ok_("more foo" in response)
+        # Second case of generic description_re.
+        ok_("great code" in response)
 
     def test_sub_browse_page(self):
         """Test that the expected descriptions appear on the subfolder's page.
