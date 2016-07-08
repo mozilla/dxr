@@ -14,8 +14,8 @@ class TypeRef(_XblRef):
     def menu_items(self):
         name = self.menu_data
         for text, filtername, title, icon in [
-                ("Find declaration of %s" % (name), "type-decl", "Find declaration", "reference"),
-                ("Find definition of %s" % (name), "type", "Find definition", "type")]:
+                (u'Find declaration of %s' % (name), 'type-decl', 'Find declaration', 'reference'),
+                (u'Find definition of %s' % (name), 'type', 'Find definition', 'type')]:
             yield {
                 'html': text,
                 'title': title,

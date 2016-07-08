@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+
+<bindings id="一二三"
+          xmlns="http://www.mozilla.org/xbl"
+          xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+          xmlns:xbl="http://www.mozilla.org/xbl">
+  <binding id="你" extends="chrome://global/content/bindings/button.xml#button-base">
+    <implementation implements="我, 他">
+      <method name="叶公好龙">
+      </method>
+    </implementation>
+  </binding>
+</bindings>
+
