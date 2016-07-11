@@ -499,7 +499,6 @@ def index_file(tree, tree_indexers, path, es, index):
                     folder=folder_name,
                     name=file_name,
                     size=file_info.st_size,
-                    modified=datetime.fromtimestamp(file_info.st_mtime),
                     is_folder=False,
 
                     # And these, which all get mashed into arrays:

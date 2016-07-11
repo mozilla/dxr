@@ -27,7 +27,7 @@
     <thead>
       <tr>
         <th scope="col">Name</th>
-        <th scope="col">Modified</th>
+        <th scope="col">Modified (UTC)</th>
         <th scope="col">Size</th>
       </tr>
     </thead>
@@ -35,7 +35,11 @@
       {% for icon, name, modified, size, relative_url in files_and_folders %}
         <tr>
           <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
-          <td><a href="{{ relative_url }}">{{ '' if modified is none else modified.strftime("%Y %b %d %H:%m") }}</a></td>
+          <td><a href="{{ relative_url }}">
+            {% if modified is not none %}
+              <time>{{ modified.strftime("%Y %b %d %H:%m") }}</time>
+            {% endif %}
+          </a></td>
           <td><a href="{{ relative_url }}">{{ '' if size is none else size|filesizeformat }}</a></td>
         </tr>
       {% endfor %}

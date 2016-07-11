@@ -365,6 +365,17 @@ def _browse_folder(tree, path, config):
     listing. Otherwise, raise NotFound.
 
     """
+    def item_or_list(item):
+        """If item is a list, return its first element.
+
+        Otherwise, just return it.
+
+        """
+        # TODO @pelmers: remove this function when format bumps to 20
+        if isinstance(item, list):
+            return item[0]
+        return item
+
     frozen = frozen_config(tree)
 
     files_and_folders = filtered_query(
@@ -403,7 +414,7 @@ def _browse_folder(tree, path, config):
         files_and_folders=[
             (_icon_class_name(f),
              f['name'],
-             decode_es_datetime(f['modified']) if 'modified' in f else None,
+             decode_es_datetime(item_or_list(f['modified'])) if 'modified' in f else None,
              f.get('size'),
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
