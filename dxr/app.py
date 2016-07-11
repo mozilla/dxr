@@ -372,7 +372,7 @@ def _browse_folder(tree, path, config):
         FILE,
         filter={'folder': path},
         sort=[{'is_folder': 'desc'}, 'name'],
-        size=10000,
+        size=1000000,
         include=['name', 'modified', 'size', 'link', 'path', 'is_binary',
                  'is_folder'])
 
