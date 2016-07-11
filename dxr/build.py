@@ -378,7 +378,7 @@ def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIn
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
-    """Return an iterable of UTF-8 encoded absolute paths to unignored source
+    """Return an iterable of Unicode absolute paths to unignored source
     tree files or the folders that contain them. Skip any non-utf8-decodeable
     paths.
 
