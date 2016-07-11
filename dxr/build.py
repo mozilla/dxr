@@ -587,6 +587,8 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
+    folder_indexers = [(p.name, p.folder_to_index)
+                       for p in tree.enabled_plugins if p.folder_to_index]
     with aligned_progressbar(unignored(tree.source_folder,
                                        tree.ignore_paths,
                                        tree.ignore_filenames,
@@ -594,19 +596,15 @@ def index_folders(tree, index, es):
                      show_eta=False,  # never even close
                      label='Indexing folders') as folders:
         for folder in folders:
-            rel_path = relpath(folder, tree.source_folder)
-            # If the path is not in UTF-8, then elasticsearch will not
-            # accept the path, so just move on.
             try:
-                rel_path = rel_path.decode('utf-8')
+                folder = folder.decode('utf-8')
             except UnicodeDecodeError:
                 continue
-            superfolder_path, folder_name = split(rel_path)
-            es.index(index, FILE, {
-                'path': [rel_path],  # array for consistency with non-folder file docs
-                'folder': superfolder_path,
-                'name': folder_name,
-                'is_folder': True})
+            needles = {'is_folder': True}
+            for name, folder_to_index in folder_indexers:
+                needles.update(dict((folder_to_index(name, tree, folder)).needles()))
+            es.index(index, FILE, needles)
+>>>>>>> 639bf4c... Add a descriptor plugin that emulates MXR's descriptor column.
 
 
 def index_files(tree, tree_indexers, index, pool, es):

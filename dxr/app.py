@@ -358,6 +358,14 @@ def browse(tree, path=''):
                             frozen['generated_date'])
 
 
+def concat_plugin_headers(plugin_list):
+    """Return a list of the concatenation of all browse_headers in the
+    FolderToIndexes of given plugin list.
+    """
+    return list(chain.from_iterable(p.folder_to_index.browse_headers
+                                    for p in plugin_list if p.folder_to_index))
+
+
 def _browse_folder(tree, path, config):
     """Return a rendered folder listing for folder ``path``.
 
@@ -378,6 +386,7 @@ def _browse_folder(tree, path, config):
 
     frozen = frozen_config(tree)
 
+    plugin_headers = concat_plugin_headers(plugins_named(frozen['enabled_plugins']))
     files_and_folders = filtered_query(
         frozen['es_alias'],
         FILE,
@@ -385,7 +394,7 @@ def _browse_folder(tree, path, config):
         sort=[{'is_folder': 'desc'}, 'name'],
         size=1000000,
         include=['name', 'modified', 'size', 'link', 'path', 'is_binary',
-                 'is_folder'])
+                 'is_folder'] + plugin_headers)
 
     if not files_and_folders:
         raise NotFound
@@ -403,6 +412,7 @@ def _browse_folder(tree, path, config):
         generated_date=frozen['generated_date'],
         google_analytics_key=config.google_analytics_key,
         paths_and_names=_linked_pathname(path, tree),
+        plugin_headers=plugin_headers,
         filters=filter_menu_items(
             plugins_named(frozen['enabled_plugins'])),
         # Autofocus only at the root of each tree:
@@ -416,6 +426,7 @@ def _browse_folder(tree, path, config):
              f['name'],
              decode_es_datetime(item_or_list(f['modified'])) if 'modified' in f else None,
              f.get('size'),
+             [f.get(h, [''])[0] for h in plugin_headers],
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
 
