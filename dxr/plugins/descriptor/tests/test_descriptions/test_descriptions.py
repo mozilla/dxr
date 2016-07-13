@@ -27,6 +27,8 @@ class DescriptionTests(DxrInstanceTestCase):
         ok_("more foo" in response)
         # Second case of generic description_re.
         ok_("great code" in response)
+        # Make sure license, vim, emacs mode lines skip.
+        ok_("The description appears after a MPL and after some mode settings." in response)
 
     def test_sub_browse_page(self):
         """Test that the expected descriptions appear on the subfolder's page.
