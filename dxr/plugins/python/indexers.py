@@ -85,6 +85,14 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         self.needles = []
         self.refs = []
 
+    def visit_Name(self, node):
+        self.file_to_index.advance_node(node)
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        self.file_to_index.advance_node(node)
+        self.generic_visit(node)
+
     def visit_FunctionDef(self, node):
         # Index the function itself for the function: filter.
         start, end = self.file_to_index.get_node_start_end(node)
@@ -195,7 +203,7 @@ class FileToIndex(FileToIndexBase):
 
         """
         if not self._visitor:
-            self.node_start_table, self.call_start_table = self.analyze_tokens()
+            self.node_start_table = self.analyze_tokens()
             self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
             syntax_tree = ast_parse(self.contents)
             self._visitor.visit(syntax_tree)
@@ -233,13 +241,13 @@ class FileToIndex(FileToIndexBase):
         utf8_token_gen = tokenize.generate_tokens(
             StringIO(self.contents.encode('utf-8')).readline)
 
-        # These are a mapping from the utf-8 byte starting points provided by
-        # the ast nodes, to the unicode character offset tuples for both the
-        # start and the end points.
+        # This is a mapping from the utf-8 byte starting points provided by
+        # the ast nodes, to a list of the unicode character offset tuples for
+        # both the start and the end points of the actual tokens.  Attribute
+        # ast nodes wind up with the same lineno and col_offset as the object
+        # they are attributes of, so store all of the offsets in a list.
         node_start_table = {}
-        call_start_table = {}
 
-        node_type, node_start = None, None
         paren_level, paren_stack = 0, {}
 
         for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
@@ -249,44 +257,43 @@ class FileToIndex(FileToIndexBase):
             if tok_type == token.NAME:
                 # AST nodes for classes and functions point to the position of
                 # their 'def' and 'class' tokens. To get the position of their
-                # names, we look for 'def' and 'class' tokens and store the
-                # position of the token immediately following them.
-                if node_start and node_type == 'definition':
-                    node_start_table[node_start[0]] = (start, end)
-                    node_type, node_start = None, None
-                    continue
+                # names, we start the queue for the current parenthesis level
+                # at the byte offset for the keyword token, but only start
+                # pushing character offsets once we're past the keyword.
+                paren_stack.setdefault(paren_level, (utf8_start, []))
 
-                if tok_name in ('def', 'class'):
-                    node_type, node_start = 'definition', (utf8_start, start)
-                    continue
+                if tok_name not in ('def', 'class'):
+                    paren_stack[paren_level][1].append((start, end))
 
-                # Record all name nodes in the token table.  Currently unused,
-                # but will be needed for recording variable references.
-                node_start_table[utf8_start] = (start, end)
-                node_type, node_start = 'name', (utf8_start, start)
+                continue
 
             elif tok_type == token.OP:
-                # In order to properly capture the start and end of function
-                # calls, we need to keep track of the parens.  Put the
-                # starting positions on a stack (here implemented with a dict
-                # so that it can be sparse), but only if the previous node was
-                # a name.
-                if tok_name == '(':
-                    if node_type == 'name':
-                        paren_stack[paren_level] = node_start
+                # Container delimiters (parens, brackets, and braces) start a
+                # new context where the node for following name tokens will no
+                # longer be tied to the position of the head of the current
+                # queue.  So, keep track of the current context with a stack,
+                # here implemented with a dict so that it can be sparse.
+                if tok_name in '([{':
                     paren_level += 1
-                elif tok_name == ')':
+                elif tok_name in '}])':
+                    node_start, node_queue = paren_stack.pop(paren_level, (None, None))
+                    if node_start is not None:
+                        node_start_table[node_start] = node_queue
                     paren_level -= 1
-                    if paren_level in paren_stack:
-                        call_start = paren_stack.pop(paren_level)
-                        call_start_table[call_start[0]] = (call_start[1], end)
+                elif tok_name == '.':
+                    # Attribute access.  Don't reset, stay at the same level.
+                    pass
+                else:
+                    node_start, node_queue = paren_stack.pop(paren_level, (None, None))
+                    if node_start is not None:
+                        node_start_table[node_start] = node_queue
 
-                node_type, node_start = None, None
+            elif tok_type == token.NEWLINE:
+                node_start, node_queue = paren_stack.pop(paren_level, (None, None))
+                if node_start is not None:
+                    node_start_table[node_start] = node_queue
 
-            else:
-                node_type, node_start = None, None
-
-        return node_start_table, call_start_table
+        return node_start_table
 
     def get_node_start_end(self, node):
         """Return start and end positions within the file for the given
@@ -295,14 +302,23 @@ class FileToIndex(FileToIndexBase):
         """
         loc = node.lineno, node.col_offset
 
-        if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            start, end = self.node_start_table.get(loc, (None, None))
-        elif isinstance(node, ast.Call):
-            start, end = self.call_start_table.get(loc, (None, None))
-        else:
-            start, end = None, None
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Call)):
+            loc_list = self.node_start_table.get(loc, [])
+            if loc_list:
+                return loc_list[-1]
 
-        return start, end
+        return None, None
+
+    def advance_node(self, node):
+        """Destructively change which actual token offset we'll get on a call
+        to get_node_start_end.
+
+        """
+        loc = node.lineno, node.col_offset
+        try:
+            self.node_start_table[loc].pop()
+        except Exception:
+            pass
 
 
 def file_needle(needle_type, name, qualname=None):

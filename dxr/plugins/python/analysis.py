@@ -10,7 +10,7 @@ from warnings import warn
 
 from dxr.build import unicode_contents
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
-                                      convert_node_to_name, package_for_module,
+                                      convert_node_to_fullname, package_for_module,
                                       path_to_module, ast_parse)
 
 
@@ -192,7 +192,7 @@ class AnalyzingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         class_path = self.abs_module_name + '.' + node.name
         bases = []
         for base in node.bases:
-            base_name = convert_node_to_name(base)
+            base_name = convert_node_to_fullname(base)
             if base_name:
                 bases.append((self.abs_module_name, base_name))
         self.tree_analysis.base_classes[class_path] = bases
