@@ -79,6 +79,8 @@ class CallersMethodTests(PythonSingleFileTestCase):
     foo.method()
 
     a.b().c().d
+
+    f(g(h()))
     """)
 
     def test_class_method_called(self):
@@ -95,3 +97,8 @@ class CallersMethodTests(PythonSingleFileTestCase):
         self.found_line_eq('callers:b', 'a.<b>b</b>().c().d', 15)
         self.found_line_eq('callers:c', 'a.b().<b>c</b>().d', 15)
         self.found_nothing('callers:d')
+
+    def test_sequence_of_nested_calls(self):
+        self.found_line_eq('callers:f', '<b>f</b>(g(h()))', 17)
+        self.found_line_eq('callers:g', 'f(<b>g</b>(h()))', 17)
+        self.found_line_eq('callers:h', 'f(g(<b>h</b>()))', 17)
