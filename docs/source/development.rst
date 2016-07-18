@@ -253,9 +253,9 @@ Actual plugin functionality is implemented within file indexers, tree indexers,
 folder indexers, filters, and skimmers.
 
 Folder Indexers
-=============
+===============
 
-.. autoclass:: dxr.indexers.TreeToIndex
+.. autoclass:: dxr.indexers.FolderToIndex
    :members:
 
 Tree Indexers

@@ -58,8 +58,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
     """Do lots of work to yield a description needle."""
 
     comment_re = re.compile(r'(?:.*?/\*+)(?:\s*\*?\s*)(?P<description>.*?)(?:(?:\*+/)|(?:$))', flags=re.S)
-    docstring_res = [re.compile(r'"""\s*(?P<description>[^"]*)', flags=re.M),
-                     re.compile(r"'''\s*(?P<description>[^']*)", flags=re.M)]
+    docstring_res = [re.compile(r'"""\s*(?P<description>[^"]*)"""', flags=re.M),
+                     re.compile(r"'''\s*(?P<description>[^']*)'''", flags=re.M)]
     title_re = re.compile(r'<title>([^<]*)</title>')
 
     def __init__(self, path, contents, plugin_name, tree):
@@ -146,5 +146,5 @@ class FileToIndex(dxr.indexers.FileToIndex):
             desc_lower = desc.lower()
             # Skip any comment that contains the license or a tab-width
             # emacs/vim setting.
-            if not any((pattern in desc_lower for pattern in {'tab-width', 'license', 'vim:'})):
+            if not any(pattern in desc_lower for pattern in ('tab-width', 'license', 'vim:')):
                 return desc
