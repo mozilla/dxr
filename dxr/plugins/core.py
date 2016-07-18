@@ -4,7 +4,7 @@ from base64 import b64encode
 from datetime import datetime
 from itertools import chain
 from os import stat
-from os.path import relpath, splitext, realpath, basename
+from os.path import relpath, splitext, realpath, basename, split
 import re
 
 from flask import url_for
@@ -86,6 +86,7 @@ mappings = {
                 'type': 'boolean',
                 'index': 'no'
             },
+            'description': UNINDEXED_STRING,
 
             # Sidebar nav links:
             'links': {
@@ -435,6 +436,17 @@ class RefFilter(FilterAggregator):
 
     def __init__(self, term, enabled_plugins):
         super(RefFilter, self).__init__(term, enabled_plugins, lambda f: f.is_reference)
+
+
+class FolderToIndex(dxr.indexers.FolderToIndex):
+    def needles(self):
+        rel_path = relpath(self.path, self.tree.source_folder)
+        superfolder_path, folder_name = split(rel_path)
+        return [
+            ('path', [rel_path]),  # array for consistency with non-folder file docs
+            ('folder', superfolder_path),
+            ('name', folder_name)
+        ]
 
 
 class TreeToIndex(dxr.indexers.TreeToIndex):

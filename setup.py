@@ -22,6 +22,7 @@ setup(
                                   'clang = dxr.plugins.clang:plugin',
                                   'python = dxr.plugins.python:plugin',
                                   'omniglot = dxr.plugins.omniglot',
+                                  'descriptor = dxr.plugins.descriptor',
                                   'rust = dxr.plugins.rust:plugin',
                                   'xpidl = dxr.plugins.xpidl:plugin',
                                   'js = dxr.plugins.js:plugin',

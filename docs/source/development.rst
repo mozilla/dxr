@@ -203,6 +203,7 @@ collection of subcomponents which do the actual work:
 
 .. digraph:: plugin
 
+   "Plugin" -> "FolderToIndex";
    "Plugin" -> "TreeToIndex" -> "FileToIndex";
    "Plugin" -> "FileToSkim";
    "Plugin" -> "filters";
@@ -248,8 +249,14 @@ manually:
     .. autoclass:: dxr.plugins.Plugin
        :members:
 
-Actual plugin functionality is implemented within tree indexers, file
-indexers, filters, and skimmers.
+Actual plugin functionality is implemented within file indexers, tree indexers,
+folder indexers, filters, and skimmers.
+
+Folder Indexers
+===============
+
+.. autoclass:: dxr.indexers.FolderToIndex
+   :members:
 
 Tree Indexers
 =============

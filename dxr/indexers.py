@@ -65,6 +65,21 @@ class PluginConfig(object):
         return getattr(self.tree, self.plugin_name)
 
 
+class FolderToIndex(PluginConfig):
+    """The FolderToIndex generates needles for folders and provides an
+    optional list of headers to display in browse view as `browse_headers`.
+    """
+    browse_headers = []
+
+    def __init__(self, plugin_name, tree, path):
+        self.plugin_name = plugin_name
+        self.tree = tree
+        self.path = path
+
+    def needles(self):
+        return []
+
+
 class TreeToIndex(PluginConfig):
     """A TreeToIndex performs build environment setup and teardown and serves
     as a repository for scratch data that should persist across an entire

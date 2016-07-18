@@ -27,14 +27,20 @@
     <thead>
       <tr>
         <th scope="col">Name</th>
+        {% for header in plugin_headers %}
+          <th scope="col">{{ header }}</th>
+        {% endfor %}
         <th scope="col">Modified (UTC)</th>
         <th scope="col">Size</th>
       </tr>
     </thead>
     <tbody>
-      {% for icon, name, modified, size, relative_url in files_and_folders %}
+      {% for icon, name, modified, size, plugin_columns, relative_url in files_and_folders %}
         <tr>
           <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
+          {% for col in plugin_columns %}
+            <td>{{ col }}</th>
+          {% endfor %}
           <td><a href="{{ relative_url }}">
             {% if modified is not none %}
               <time>{{ modified.strftime("%Y %b %d %H:%m") }}</time>
