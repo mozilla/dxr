@@ -1,4 +1,3 @@
-from itertools import islice
 from warnings import warn
 import xml.parsers.expat as expat
 
@@ -43,9 +42,7 @@ class XBLAnalyzer(object):
             found = False
         # Not on the current line, keep going until we find it.
         if not found:
-            for number, line in enumerate(islice(self.lines,
-                                                 self.parser.CurrentLineNumber,
-                                                 len(self.lines))):
+            for number, line in enumerate(self.lines[self.parser.CurrentLineNumber:]):
                 offset = line.find(name)
                 if offset != -1:
                     row, col = self.parser.CurrentLineNumber + number + 1, offset
