@@ -50,6 +50,9 @@
       </property>
 
       <field name="menuItemMap">new WeakMap()</field>
+
+      <method name="name">
+      </method>
     </implementation>
   </binding>
 

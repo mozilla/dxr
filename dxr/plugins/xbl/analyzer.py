@@ -1,3 +1,4 @@
+from itertools import islice
 from warnings import warn
 import xml.parsers.expat as expat
 
@@ -29,6 +30,10 @@ class XBLAnalyzer(object):
         """Return Extent for the next occurrence of name."""
         # Because the parser does not provide location info on attr positions,
         # we can only search for them from the current position.
+
+        # FIXME: if the name we're looking for appears twice, e.g.
+        # <binding id="id">id</binding>, then we will pick up the wrong extent
+        # for the "id" name.
         # First check the current line.
         offset = self.lines[self.parser.CurrentLineNumber - 1].find(name, self.parser.CurrentColumnNumber - 1)
         if offset != -1:
@@ -38,7 +43,9 @@ class XBLAnalyzer(object):
             found = False
         # Not on the current line, keep going until we find it.
         if not found:
-            for number, line in enumerate(self.lines[self.parser.CurrentLineNumber:]):
+            for number, line in enumerate(islice(self.lines,
+                                                 self.parser.CurrentLineNumber,
+                                                 len(self.lines))):
                 offset = line.find(name)
                 if offset != -1:
                     row, col = self.parser.CurrentLineNumber + number + 1, offset

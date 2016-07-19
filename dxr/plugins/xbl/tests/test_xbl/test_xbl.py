@@ -1,5 +1,7 @@
 """Tests for XBL plugin refs and needles."""
 
+from nose import SkipTest
+
 from dxr.testing import DxrInstanceTestCase, menu_on
 
 
@@ -59,3 +61,12 @@ class XblTests(DxrInstanceTestCase):
         self.found_line_eq('prop:menuItemMap',
                            '&lt;field name="<b>menuItemMap</b>"&gt;new WeakMap()&lt;/field&gt;',
                            52)
+
+    def test_doubled_name_search(self):
+        """Test that in a case where attr key === attr val, we pick out the val
+        as the needle.
+        """
+        raise SkipTest
+        self.found_line_eq('prop:name',
+                           '&lt;method name="<b>name</b>"&gt;',
+                           54)
