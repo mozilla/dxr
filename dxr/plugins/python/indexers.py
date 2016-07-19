@@ -317,7 +317,7 @@ class FileToIndex(FileToIndexBase):
         loc = node.lineno, node.col_offset
         try:
             self.node_start_table[loc].pop()
-        except Exception:
+        except (KeyError, IndexError):
             pass
 
 
