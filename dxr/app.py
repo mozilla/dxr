@@ -236,7 +236,7 @@ def _tree_tuples(endpoint, **kwargs):
                      **kwargs),
              f['description'],
              [(lang, color) for p in plugins_named(f['enabled_plugins'])
-                 for lang, color in p.badge_colors.iteritems()])
+              for lang, color in sorted(p.badge_colors.iteritems())])
             for f in frozen_configs()]
 
 

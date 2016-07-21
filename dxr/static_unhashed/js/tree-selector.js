@@ -49,13 +49,9 @@ $(function() {
         }
     });
 
-    options.on('click', 'a', function(event) {
+    options.on('click', 'tr', function(event) {
         event.stopPropagation();
-        setSelectedItem($(this));
-        // Set the value of the relevant hidden type element to
-        // the selected value.
-        $('#ts-value').val($(this).text());
-        $('.select-options').hide();
+        window.location = $(this).data('href');
     });
 
     onEsc(hideOptionsAndHelp);

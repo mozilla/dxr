@@ -49,27 +49,25 @@
                           </button>
                         </section>
                         <div class="sf-select-options sf-modal" aria-expanded="false">
-                          <ul class="selector-options" tabindex="-1">
+                          <table class="selector-options" tabindex="-1">
                             {% for filter in filters %}
-                              <li>
-                                <a href="javascript:void(0)" data-value="{{ filter.name }}:">
-                                  <span class="selector-option-label">
-                                    {{ filter.name }}
-                                  </span>
-                                  <span class="selector-badges">
-                                    {% for text, color in filter.badges %}
-                                      {% if color %}
-                                        <span class="badge-label" style="background-color:{{ color }};">{{ text }}</span>
-                                      {% endif %}
-                                    {% endfor %}
-                                  </span>
-                                  <span class="selector-option-description">
-                                    {{ filter.description }}
-                                  </span>
-                                </a>
-                              </li>
+                              <tr data-value="{{ filter.name }}:">
+                                <td class="selector-option-label">
+                                  {{ filter.name }}
+                                </td>
+                                <td class="selector-badges">
+                                  {% for text, color in filter.badges %}
+                                    {% if color %}
+                                      <span class="badge-label" style="background-color:{{ color }}">{{ text }}</span>
+                                    {% endif %}
+                                  {% endfor %}
+                                </td>
+                                <td class="selector-option-description">
+                                  {{ filter.description }}
+                                </td>
+                              </tr>
                             {% endfor %}
-                          </ul>
+                          </table>
                         </div>
                     </div>
                 </div>

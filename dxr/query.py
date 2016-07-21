@@ -395,9 +395,7 @@ def filter_menu_items(plugins):
         menu
 
     Language-agnostic filters come first (as they happen to be among the most
-    useful ones and are relatively few), then the rest, alphabetically. There
-    is room for better UI here. For instance, I'd like to badge each filter
-    with the languages it supports.
+    useful ones and are relatively few), then the rest, alphabetically.
 
     """
     # Concretize to iterate over it more than once.
@@ -406,7 +404,8 @@ def filter_menu_items(plugins):
         ((name, filters) for name, filters in filters_by_name(plugins).items()),
         key=lambda (name, filters): (hasattr(filters[0], 'lang'), name))
     badge_colors = lang_badge_colors(plugins)
-    return (dict(name=name, description=filters[0].description,
+    return (dict(name=name,
+                 description=filters[0].description,
                  badges=[(f.lang, badge_colors.get(f.lang)) for f in filters if hasattr(f, 'lang')])
             for name, filters in sorted_filters_by_name
             if filters[0].description)
