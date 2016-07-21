@@ -374,6 +374,7 @@ def filters_by_name(plugins):
          chain.from_iterable(p.filters for p in plugins)))
 
 
+@cached
 def lang_badge_colors(plugins):
     """Return a mapping of filter languages to their badge colors as defined by
     provided plugins.
@@ -401,7 +402,7 @@ def filter_menu_items(plugins):
     # Concretize to iterate over it more than once.
     plugins = list(plugins)
     sorted_filters_by_name = sorted(
-        ((name, filters) for name, filters in filters_by_name(plugins).items()),
+        ((name, filters) for name, filters in filters_by_name(plugins).iteritems()),
         key=lambda (name, filters): (hasattr(filters[0], 'lang'), name))
     badge_colors = lang_badge_colors(plugins)
     return (dict(name=name,
