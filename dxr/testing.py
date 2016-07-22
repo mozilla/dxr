@@ -2,7 +2,7 @@ import cgi
 from commands import getoutput
 import json
 from os import chdir, mkdir
-from os.path import dirname, join, sep
+from os.path import dirname, join
 import re
 from shutil import rmtree
 import subprocess

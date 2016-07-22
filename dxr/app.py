@@ -7,7 +7,6 @@ from mimetypes import guess_type
 import os
 from os.path import join, basename, split, dirname
 from sys import stderr
-from mimetypes import guess_type
 
 from flask import (Blueprint, Flask, current_app, send_file, request, redirect,
                    jsonify, render_template, url_for)

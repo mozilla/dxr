@@ -9,7 +9,7 @@ from os.path import relpath, splitext, realpath, basename, split
 import re
 
 from flask import url_for
-from funcy import identity, merge
+from funcy import identity
 from jinja2 import Markup
 from parsimonious import ParseError
 
