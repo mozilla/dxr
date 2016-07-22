@@ -1,6 +1,6 @@
 from os.path import abspath, dirname
 
-from click import ClickException, group, option, Path, argument
+from click import ClickException, option, Path, argument
 
 from dxr.config import Config
 

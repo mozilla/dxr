@@ -1,3 +1,8 @@
+# If there's an activated virtualenv, use that. Otherwise, make one in the cwd.
+# This lets the installed Python packages persist across container runs when
+# using Docker.
+VIRTUAL_ENV ?= $(PWD)/venv
+
 # Things you might normally want to run:
 
 ## These are meant to be run within whatever virtualized, containerized, or
@@ -7,17 +12,23 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
-	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+
+lint: $(VIRTUAL_ENV)/bin/activate requirements
+	$(VIRTUAL_ENV)/bin/pip install flake8
+	$(VIRTUAL_ENV)/bin/flake8 --config=tooling/flake8.config dxr/
 
 clean: static_clean
-	rm -rf tooling/node/node_modules/.bin/nunjucks-precompile \
-	       tooling/node/node_modules/nunjucks \
-	       .npm_installed \
+	rm -rf .npm_installed \
 	       .peep_installed \
 	       venv \
 	       .dxr_installed
+	@# Remove anything within node_modules that's not checked into git. Skip things
+	@# with spaces in them, lest xargs screw up and delete the wrong thing.
+	cd tooling/node/node_modules && git ls-files -o --directory -x '* *' -x '.DS_Store' | xargs rm -rf
 	find . -name "*.pyc" -exec rm -f {} \;
 	$(MAKE) -C dxr/plugins/clang clean
+	$(MAKE) -C dxr/plugins/js clean
 
 static_clean:
 	rm -rf dxr/static_unhashed/js/templates.js \
@@ -56,10 +67,6 @@ docker_stop:
 
 # Private things:
 
-# If there's an activated virtualenv, use that. Otherwise, make one in the cwd.
-# This lets the installed Python packages persist across container runs when
-# using Docker.
-VIRTUAL_ENV ?= $(PWD)/venv
 DXR_PROD ?= 0
 
 # Bring the elasticsearch container up if it isn't:
@@ -97,6 +104,7 @@ requirements: $(VIRTUAL_ENV)/bin/activate .peep_installed
 
 plugins:
 	$(MAKE) -C dxr/plugins/clang
+	$(MAKE) -C dxr/plugins/js
 
 dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 	                                 .npm_installed
@@ -163,4 +171,4 @@ dxr/static_manifest: $(CSS_TEMPS) dxr/build/leaf_manifest dxr/build/css_manifest
 	
 	cat dxr/build/leaf_manifest dxr/build/css_manifest > $@
 
-.PHONY: all test clean static_clean static docs dev docker_es shell docker_test docker_clean requirements plugins
+.PHONY: all test lint clean static_clean static docs dev docker_es shell docker_test docker_clean requirements plugins

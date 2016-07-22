@@ -13,11 +13,11 @@ class WildcardTests(CSingleFileTestCase):
         int get_foo() {
             return 0;
         }
-        
+
         int get_bar() {
             return 0;
         }
-        
+
         int getX() {
             return 0;
         }

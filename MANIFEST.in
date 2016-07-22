@@ -4,6 +4,7 @@ recursive-include docs *
 include dxr/format
 include dxr/static_manifest
 recursive-include dxr/plugins *.py *.so
+recursive-include dxr/plugins/js/analyze_js *
 recursive-include dxr/static *
 recursive-include dxr/templates *
 recursive-include dxr/hgext *

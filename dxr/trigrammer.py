@@ -32,63 +32,6 @@ class NoTrigrams(Exception):
     """We couldn't extract any trigrams (or longer) from a regex."""
 
 
-class RegexSummary(object):
-    """The digested result of analyzing a parsed regex
-
-    :attr can_match_empty: Whether the regex can match the empty string
-    :attr exacts: Set of exact strings which, unioned, exhaust the regex. For
-        example (s?printf) would yield {sprintf, printf}.
-    :attr prefixes: The set of prefixes of strings the regex can match
-    :attr suffixes: The set of suffixes of strings the regex can match
-    :attr query: A TrigramTree that must be satisfied by any matching
-        string, in addition to the restrictions expressed by the other
-        attributes
-
-    Prefixes, suffixes, and the rest are used only as intermediate values. The
-    point is for them ultimately to become part of the query, which is itself a
-    boolean combination of trigrams.
-
-    """
-    def __init__(self, regex):
-        """Dispatch on the opcode of regex, and descend recursively, analyzing
-        lower nodes and then pulling back up to finally summarize the whole.
-
-        :arg regex: A parsed regex, as returned by ``sre_parse.parse()``
-
-        """
-        self.can_match_empty = can_match_empty
-        self.exacts = exacts
-        self.prefix = prefix  # This can probably be an actual set. The Go impl blows a lot of code removing dupes and such.
-        self.suffix = suffix
-        self.query = query
-
-
-def summarize_regex(regex):
-    """Return a RegexSummary of a regex.
-
-    :arg regex: A string containing a regex pattern
-
-    """
-
-
-def trigram_query(regex):
-    """Return an iterable of trigrams that will be found in any text matching
-    the given regex.
-
-    :arg regex: A string containing a regex pattern
-
-    """
-    # TODO: Veto patterns which are easy DOSes.
-
-    # I suspect simplify(force=True) mashes everything down into `match` in
-    # preparation for actually running `match` against a corpus.
-
-    summary = RegexSummary(regex)
-    summary.simplify(force=True)
-    summary.add_exact()
-    return summary.query
-
-
 # We should parse a regex. Then go over the tree and turn things like c+ into cc*, perhaps, as it makes it easier to see trigrams to extract.
 # TODO: Parse normal regex syntax, but spit out Lucene-compatible syntax, with " escaped. And all special chars escaped even in character classes, in accordance with https://lucene.apache.org/core/4_6_0/core/org/apache/lucene/util/automaton/RegExp.html?is-external=true.
 
@@ -478,7 +421,7 @@ class SubstringTreeVisitor(NodeVisitor):
 
     def visit_backslash_hex(self, backslash_hex, children):
         """Return the character specified by the hex code."""
-        return unichr(backslash_char.text[1:])
+        return unichr(backslash_hex.text[1:])
 
     def visit_backslash_normal(self, backslash_normal, children):
         return backslash_normal.text

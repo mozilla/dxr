@@ -160,7 +160,7 @@ class Ref(object):
         else:
             title = ''
         if self.qualname_hash is not None:
-            cls = ' class="tok%i"' % self.qualname_hash
+            cls = ' data-id="tok%i"' % self.qualname_hash
         else:
             cls = ''
 
@@ -177,8 +177,8 @@ class Ref(object):
 class Region(object):
     """A <span> tag with a CSS class, wrapped around a run of text"""
 
-    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
-                    # them.
+    # Sort Regions innermost, as it doesn't matter if we split them.
+    sort_order = 2
     __slots__ = ['css_class']
 
     def __init__(self, css_class):
@@ -464,15 +464,12 @@ def finished_tags(lines, refs, regions):
     """
     # Plugins return unicode offsets, not byte ones.
 
-    # Get start and endpoints of intervals:
-    tags = list(tag_boundaries(chain(refs, regions)))
-
-    tags.extend(line_boundaries(lines))
-
-    # Sorting is actually not a significant use of time in an actual indexing
-    # run.
-    tags.sort(key=nesting_order)  # balanced_tags undoes this, but we tolerate
-                                  # that in html_lines().
+    # balanced_tags undoes the sorting, but we tolerate that in html_lines().
+    # Remark: this sort is the memory peak, but it is not a significant use of
+    # time in an indexing run.
+    tags = sorted(chain(tag_boundaries(chain(refs, regions)),
+                        line_boundaries(lines)),
+                  key=nesting_order)
     remove_overlapping_refs(tags)
     return balanced_tags(tags)
 

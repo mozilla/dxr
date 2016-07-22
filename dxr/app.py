@@ -7,11 +7,11 @@ from mimetypes import guess_type
 import os
 from os.path import join, basename, split, dirname
 from sys import stderr
+from mimetypes import guess_type
 
-from flask import (Blueprint, Flask, current_app,
-                   send_file, request, redirect, jsonify, render_template,
-                   url_for)
-from funcy import merge, imap
+from flask import (Blueprint, Flask, current_app, send_file, request, redirect,
+                   jsonify, render_template, url_for)
+from funcy import merge
 from pyelasticsearch import ElasticSearch
 from werkzeug.exceptions import NotFound
 
@@ -24,7 +24,8 @@ from dxr.mime import icon, is_binary_image, is_textual_image, decode_data
 from dxr.plugins import plugins_named
 from dxr.query import Query, filter_menu_items
 from dxr.utils import (non_negative_int, decode_es_datetime, DXR_BLUEPRINT,
-                       format_number, append_by_line, cumulative_sum)
+                       format_number, append_by_line, build_offset_map,
+                       split_content_lines)
 from dxr.vcs import file_contents_at_rev
 
 
@@ -148,8 +149,19 @@ def search(tree):
 
 def _search_json(query, tree, query_text, offset, limit, config):
     """Try a "direct search" (for exact identifier matches, etc.). If we have a direct hit,
-    then return {redirect: hit location}.If that doesn't work, fall back to a normal search
-    and return the results as JSON."""
+    then return {redirect: hit location}. If that doesn't work, fall back to a normal
+    search, and if that yields a single result and redirect is true then return
+    {redirect: hit location}, otherwise return the results as JSON.
+
+    'redirect=true' along with 'redirect_type={direct, single}' control the behavior
+    of jumping to results:
+        * 'redirect_type=direct' indicates a direct_result result and comes with
+          a bubble giving the option to switch to all results instead.
+        * 'redirect_type=single' indicates a unique search result and comes with
+          a bubble indicating as much.
+    We only redirect to a direct/unique result if the original query contained a
+    'redirect=true' parameter, which the user can elicit by hitting enter on the query
+    input."""
 
     # Convert to dicts for ease of manipulation in JS:
     def results_to_json(es_results):
@@ -167,29 +179,40 @@ def _search_json(query, tree, query_text, offset, limit, config):
             params = {
                 'tree': tree,
                 'path': path,
-                'from': query_text
+                'q': query_text,
+                'redirect_type': 'direct'
             }
             return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
 
-    has_promoted_results = False
     try:
-        # Pull up all the non-negated text terms.
-        single_term = query.single_text_term()
         count, results = query.results(offset, limit)
-        promoted_count, promoted, promoted_query = 0, [], ""
-        if offset == 0 and single_term:
-            # Now we pull out the single line term and pass into promoted paths.
-            try:
-                promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
-                promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
-                                         redirect='false')
-                has_promoted_results = True
-            except BadTerm:
-                # If we get BadTerm here, just return no promoted results rather than bailing
-                # out of the whole query.
-                pass
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
+    # If we're asked to redirect and there's a single result, redirect to the result.
+    if (request.values.get('redirect') == 'true' and count == 1):
+        _, path, line = next(results)
+        line = line[0][0] if line else None
+        params = {
+            'tree': tree,
+            'path': path,
+            'q': query_text,
+            'redirect_type': 'single'
+        }
+        return jsonify({'redirect': url_for('.browse', _anchor=line, **params)})
+
+    # Pull up all the non-negated text terms.
+    single_term = query.single_text_term()
+    promoted_count, promoted, promoted_query = 0, [], ""
+    if offset == 0 and single_term:
+        # Now we pull out the single line term and pass into promoted paths.
+        try:
+            promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
+            promoted_query = url_for('.search', tree=tree, q=promoted_querystring,
+                                        redirect='false')
+        except BadTerm:
+            # If we get BadTerm here, just return no promoted results rather than bailing
+            # out of the whole query.
+            pass
 
     return jsonify({
         'www_root': config.www_root,
@@ -197,7 +220,6 @@ def _search_json(query, tree, query_text, offset, limit, config):
         'results': results_to_json(results),
         'promoted': results_to_json(promoted),
         'result_count': count,
-        'has_promoted_results': has_promoted_results,
         'promoted_count': promoted_count,
         'promoted_count_formatted': format_number(promoted_count),
         'result_count_formatted': format_number(count),
@@ -284,6 +306,37 @@ def raw_rev(tree, revision, path):
     return send_file(data_file, mimetype=guess_type(path)[0])
 
 
+@dxr_blueprint.route('/<tree>/lines/')
+def lines(tree):
+    """Return lines start:end of path in tree, where start, end, path are URL params.
+    """
+    req = request.values
+    path = req.get('path', '')
+    from_line = max(0, int(req.get('start', '')))
+    to_line = int(req.get('end', ''))
+    ctx_found = []
+    possible_hits = current_app.es.search(
+            {
+                'filter': {
+                    'and': [
+                        {'term': {'path': path}},
+                        {'range': {'number': {'gte': from_line, 'lte': to_line}}}
+                        ]
+                    },
+                '_source': {'include': ['content']},
+                'sort': ['number']
+            },
+            size=max(0, to_line - from_line + 1), # keep it non-negative
+            doc_type=LINE,
+            index=es_alias_or_not_found(tree))
+    if 'hits' in possible_hits and len(possible_hits['hits']['hits']) > 0:
+        for hit in possible_hits['hits']['hits']:
+            ctx_found.append({'line_number': hit['sort'][0],
+                              'line': hit['_source']['content'][0]})
+
+    return jsonify({'lines': ctx_found, 'path': path})
+
+
 @dxr_blueprint.route('/<tree>/source/')
 @dxr_blueprint.route('/<tree>/source/<path:path>')
 def browse(tree, path=''):
@@ -329,6 +382,15 @@ def browse(tree, path=''):
                             frozen['generated_date'])
 
 
+def concat_plugin_headers(plugin_list):
+    """Return a list of the concatenation of all browse_headers in the
+    FolderToIndexes of given plugin list.
+
+    """
+    return list(chain.from_iterable(p.folder_to_index.browse_headers
+                                    for p in plugin_list if p.folder_to_index))
+
+
 def _browse_folder(tree, path, config):
     """Return a rendered folder listing for folder ``path``.
 
@@ -336,16 +398,28 @@ def _browse_folder(tree, path, config):
     listing. Otherwise, raise NotFound.
 
     """
+    def item_or_list(item):
+        """If item is a list, return its first element.
+
+        Otherwise, just return it.
+
+        """
+        # TODO @pelmers: remove this function when format bumps to 20
+        if isinstance(item, list):
+            return item[0]
+        return item
+
     frozen = frozen_config(tree)
 
+    plugin_headers = concat_plugin_headers(plugins_named(frozen['enabled_plugins']))
     files_and_folders = filtered_query(
         frozen['es_alias'],
         FILE,
         filter={'folder': path},
         sort=[{'is_folder': 'desc'}, 'name'],
-        size=10000,
+        size=1000000,
         include=['name', 'modified', 'size', 'link', 'path', 'is_binary',
-                 'is_folder'])
+                 'is_folder'] + plugin_headers)
 
     if not files_and_folders:
         raise NotFound
@@ -363,6 +437,7 @@ def _browse_folder(tree, path, config):
         generated_date=frozen['generated_date'],
         google_analytics_key=config.google_analytics_key,
         paths_and_names=_linked_pathname(path, tree),
+        plugin_headers=plugin_headers,
         filters=filter_menu_items(
             plugins_named(frozen['enabled_plugins'])),
         # Autofocus only at the root of each tree:
@@ -374,8 +449,9 @@ def _browse_folder(tree, path, config):
         files_and_folders=[
             (_icon_class_name(f),
              f['name'],
-             decode_es_datetime(f['modified']) if 'modified' in f else None,
+             decode_es_datetime(item_or_list(f['modified'])) if 'modified' in f else None,
              f.get('size'),
+             [f.get(h, [''])[0] for h in plugin_headers],
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
 
@@ -479,7 +555,7 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
             # If contents are not provided, we can reconstruct them by
             # stitching the lines together.
             contents = ''.join(lines)
-        offsets = cumulative_sum(imap(len, lines))
+        offsets = build_offset_map(lines)
         tree_config = config.trees[tree]
         if is_textual_image(path) and image_rev:
             # Add a link to view textual images on revs:
@@ -520,7 +596,9 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
                            doc.get('annotations', []) + skim_annotations)
                           for doc, tags_in_line, offset, skim_annotations
                               in izip(line_docs, tags_per_line(tags), offsets, annotationses)],
-                'sections': sidebar_links(links + skim_links)}))
+                'sections': sidebar_links(links + skim_links),
+                'query': request.args.get('q', ''),
+                'bubble': request.args.get('redirect_type')}))
 
 
 @dxr_blueprint.route('/<tree>/rev/<revision>/<path:path>')
@@ -548,7 +626,7 @@ def rev(tree, revision, path):
         # We do some wrapping to mimic the JSON returned by an ES lines query.
         return _browse_file(tree,
                             path,
-                            [{'content': line} for line in contents.splitlines(True)],
+                            [{'content': line} for line in split_content_lines(contents)],
                             {},
                             config,
                             not is_text,

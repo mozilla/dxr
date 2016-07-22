@@ -12,7 +12,6 @@ from dxr.indexers import (Extent, FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_FILE_NEEDLE, QUALIFIED_LINE_NEEDLE,
                           with_start_and_end)
-from dxr.lines import Ref
 from dxr.plugins.python.analysis import TreeAnalysis
 from dxr.plugins.python.menus import ClassRef
 from dxr.plugins.python.utils import (ClassFunctionVisitorMixin,
@@ -187,7 +186,7 @@ class FileToIndex(FileToIndexBase):
         self._visitor = None
 
     def is_interesting(self):
-        return is_interesting(self.path)
+        return super(FileToIndex, self).is_interesting() and is_interesting(self.path)
 
     @property
     def visitor(self):

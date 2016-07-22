@@ -67,6 +67,10 @@ containing the config file.
     The number of seconds DXR should wait for elasticsearch responses during
     indexing. Default: 60
 
+``es_indexing_retries``
+    How many other ES nodes to try if a query to one during indexing times out
+    or the connection fails. This is an experimental feature. Default: 0
+
 ``es_refresh_interval``
     The number of seconds between elasticsearch's consolidation passes during
     indexing. Set to -1 to do no refreshes at all, except directly after an
@@ -84,8 +88,9 @@ containing the config file.
     working directory).
 
 ``skip_stages``
-    Build/indexing stages to skip, for debugging: ``build``, ``index``, or
-    both, whitespace-separated. Default: none
+    Build/indexing/clean stages to skip, for debugging: ``build``, ``index``,
+    ``clean``, or any combination, whitespace-separated Either of ``build`` or
+    ``index`` implies ``clean``. Default: none
 
 ``temp_folder``
     A ``format()``-style template for deciding where to store temporary files

@@ -35,8 +35,10 @@
                         <label for="query" class="query_label visually-hidden">Find</label>
                         <input type="text" name="q" {% if should_autofocus_query %}autofocus {% endif %}value="{{ query }}" maxlength="2048" id="query" class="query" accesskey="s" title="Search" placeholder="Search {{ tree }}" autocomplete="off" />
                         <div class="zero-size-container">
+                        {% block bubble %}
                           <div class="bubble">
                           </div>
+                        {% endblock %}
                         </div>
                         <section id="search-filter" class="search-filter">
                           <button type="button" class="sf-select-trigger" aria-label="Select Filter">
@@ -89,7 +91,7 @@
     {% set eof = True if state_eof else False %}
 
     <!-- avoid inline JS and use data attributes instead. Hackey but hey... -->
-    <span id="data" data-root="{{ www_root }}" data-search="{{ url_for('.search', tree=tree) }}" data-tree="{{ tree }}"></span>
+    <span id="data" data-root="{{ www_root }}" data-lines="{{ url_for('.lines', tree=tree) }}" data-search="{{ url_for('.search', tree=tree) }}" data-tree="{{ tree }}"></span>
     <span id="state" data-offset="{{state_offset or 0}}" data-limit="{{state_limit or 100}}" data-results-line-count="{{ results_line_count }}" data-eof="{{ eof }}"></span>
 
     {% block site_js %}

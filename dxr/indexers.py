@@ -1,12 +1,13 @@
 """Base classes and convenience functions for writing indexers and skimmers"""
 
-import cgi
 from collections import namedtuple
 from operator import itemgetter
 from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
+
+from dxr.utils import build_offset_map, split_content_lines
 
 
 STRING_PROPERTY = {
@@ -62,6 +63,21 @@ class PluginConfig(object):
     def plugin_config(self):
         """Return a mapping of plugin-specific config options."""
         return getattr(self.tree, self.plugin_name)
+
+
+class FolderToIndex(PluginConfig):
+    """The FolderToIndex generates needles for folders and provides an
+    optional list of headers to display in browse view as `browse_headers`.
+    """
+    browse_headers = []
+
+    def __init__(self, plugin_name, tree, path):
+        self.plugin_name = plugin_name
+        self.tree = tree
+        self.path = path
+
+    def needles(self):
+        return []
 
 
 class TreeToIndex(PluginConfig):
@@ -131,7 +147,7 @@ class TreeToIndex(PluginConfig):
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess an
-            encoding and decode it, str otherwise
+            encoding and decode it, None otherwise
 
         Return None if there is no indexing to do on the file.
 
@@ -175,13 +191,14 @@ class FileToSkim(PluginConfig):
             source folder. Such a file might not exist on disk. This is useful
             mostly as a hint for syntax coloring.
         :arg contents: What's in the file: unicode if we knew or successfully
-            guessed an encoding, str otherwise. Don't return any by-line data
-            for strs; the framework won't have succeeded in breaking up the
+            guessed an encoding, None otherwise. Don't return any by-line data
+            for None; the framework won't have succeeded in breaking up the
             file by line for display, so there will be no useful UI for those
             data to support. In fact, most skimmers won't be be able to do
-            anything useful with strs at all. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            anything useful with None at all. For unicode, split the file into
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 
@@ -274,7 +291,7 @@ class FileToSkim(PluginConfig):
 
     def contains_text(self):
         """Return whether this file can be decoded and divided into lines as
-        text.
+        text. Empty files contain text.
 
         This may come in handy as a component of your own
         :meth:`~dxr.indexers.FileToSkim.is_interesting()` methods.
@@ -326,12 +343,8 @@ class FileToSkim(PluginConfig):
             if not self.contains_text():
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
-            lines = self.contents.splitlines(True)
-            self._line_offset_list = []
-            chars = 0
-            for i in xrange(0, len(lines)):
-                self._line_offset_list.append(chars)
-                chars += len(lines[i])
+            lines = split_content_lines(self.contents) if self.contents is not None else []
+            self._line_offset_list = build_offset_map(lines)
         return self._line_offset_list
 
 
@@ -344,13 +357,14 @@ class FileToIndex(FileToSkim):
         :arg path: A path to the file to index, relative to the tree's source
             folder
         :arg contents: What's in the file: unicode if we managed to guess at an
-            encoding and decode it, str otherwise. Don't return any by-line
-            data for strs; the framework won't have succeeded in breaking up
+            encoding and decode it, None otherwise. Don't return any by-line
+            data for None; the framework won't have succeeded in breaking up
             the file by line for display, so there will be no useful UI for
             those data to support. Think more along the lines of returning
             EXIF data to search by for a JPEG. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 
@@ -487,8 +501,6 @@ def span_to_lines((kv, span)):
         warn('Bad Extent: end.row < start.row: %s < %s' %
              (span.end.row, span.start.row))
     else:
-        num_rows = span.end.row - span.start.row
-
         # TODO: There are a lot of Nones used as slice bounds below. Do we
         # ever translate them back into char offsets? If not, does the
         # highlighter or anything else choke on them?
@@ -499,7 +511,6 @@ def span_to_lines((kv, span)):
             yield (kv, 0, None), row
 
         yield (kv, 0, span.end.col), span.end.row
-
 
 
 def split_into_lines(triples):
@@ -519,8 +530,6 @@ def split_into_lines(triples):
             warn('Bad extent: end.row < start.row: %s < %s' %
                  (extent.end.row, extent.start.row))
         else:
-            num_rows = extent.end.row - extent.start.row
-
             # TODO: There are a lot of Nones used as slice bounds below. Do we
             # ever translate them back into char offsets? If not, does the
             # highlighter or anything else choke on them?
@@ -568,3 +577,20 @@ def iterable_per_line(triples):
             for line_num in xrange(1, last_line)]
 
     # If this has to be generic so we can use it on annotations_by_line as well, pass in a key function that extracts the line number and maybe another that constructs the return value.
+
+def iterable_per_line_sorted(triples):
+    """Yield iterables of (key, value mapping), one for each line, where triples are sorted already."""
+    last_row = 1
+    last_row_kvs = []
+    for k, v, extent in triples:
+        if extent.start.row == last_row:
+            last_row_kvs.append((k, v))
+        else:
+            yield last_row_kvs
+            # Yield empty lists for any skipped lines.
+            for _ in xrange(last_row + 1, extent.start.row):
+                yield []
+            last_row_kvs = [(k, v)]
+            last_row = extent.start.row
+    # Emit anything on the last line.
+    yield last_row_kvs

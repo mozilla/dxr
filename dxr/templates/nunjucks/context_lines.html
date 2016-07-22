@@ -1,0 +1,28 @@
+{% macro context_lines(result, www_root, tree) -%}
+  {% for entry in result.lines %}
+    <div class="result_line ctx_row" data-line={{ entry.line_number }}>
+      <div class="leftmost-column">
+          {% if loop.length > 1 %}
+            {% if loop.index == 1 %}
+                <span class="ctx_up">△</span>
+            {% elif loop.revindex == 1 %}
+                <span class="ctx_down">▽</span>
+            {% endif %}
+          {% endif %}
+      </div>
+      <div class="left-column">
+        <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+          {{ entry.line_number }}
+        </a>
+      </div>
+      <div>
+        <a href="{{ www_root }}/{{ tree }}/source/{{ result.path }}#{{ entry.line_number }}">
+          <code aria-labelledby="{{ entry.line_number }}">{{ entry.line }}</code>
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+{%- endmacro %}
+
+{# When not being included as a macro, render the code above. #}
+{{ context_lines(result, www_root, tree) }}

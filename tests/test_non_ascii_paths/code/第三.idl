@@ -1,0 +1,6 @@
+interface nsIURI;
+
+interface 第三 {
+  const unsigned long EVENT_REORDER = 0x0003;
+  readonly attribute AString description;
+};

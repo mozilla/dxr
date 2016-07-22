@@ -41,7 +41,7 @@ html {
 
 body {
     background-color: #fff;
-    color: #333;
+    color: #000;
     font: 12px/1.5 Arial, Helvetica, sans-serif;
     margin: 0;
 }
@@ -180,43 +180,28 @@ code a {
 .code code a {
     cursor: context-menu;
 }
-mark {
-    position: relative;
-    padding: .5rem;
+.clicking {
+    background-color: yellow;
+    box-shadow: 0px 0.15rem yellow, 0px -0.15rem yellow;
 }
 .logo a:focus {
     background-color: transparent;
 }
 
-/* promoted stuff, on the right */
+/* promoted stuff, on the top */
 .promoted-container {
-    float: right;
     border: 1px solid #a0a0a0;
     border-radius: 4px;
-    padding: 1.5em 2em;
-    max-width: 33%;
+    padding: 0.5em 1.5em 1em;
 }
 .promoted-row {
     padding-left: 26px;
     padding-bottom: 5px;
     position: relative;
 }
-.promoted-icon {
-    width: 16px;
-    height: 16px;
-    display: block;
-    left: 0px;
-    position: absolute;
-}
-.promoted-result {
-    display: inline;
-}
 
 /* results */
-.results-container {
-}
-
-.results tr:hover,
+.results .result_line:hover,
 .file tr:hover {
     background: none;
 }
@@ -231,8 +216,8 @@ mark {
 .left-column,
 .file td:first-child {
     text-align: right;
-    color: #aaa;
-    width: 6ex;
+    color: #555;
+    width: 6.5ch;
     vertical-align: top;
 }
 .results .right-column {
@@ -248,10 +233,8 @@ mark {
     cursor: pointer;
     display: inline-block;
 }
-.file a:target {
-    background-color: gray;
-    color: white;
-    padding: 0 .5rem;
+.results a[data-path]{
+    cursor: context-menu;
 }
 .results code {
     white-space: pre-wrap;
@@ -260,22 +243,52 @@ mark {
     max-height: 1.2em;
     overflow: hidden;
 }
-.result-head td
+.result_line, .result-head {
+    position: relative;
+    padding-left: 9ch;
+}
+.result_line {
+    padding-top: 5px;
+}
+.result-head
 {
     padding-top: .3rem; /* Additional padding to visually seperate results.*/
-    padding-bottom: 0;
 }
-.result-head td.left-column
+.left-column, .leftmost-column {
+    position: absolute;
+}
+.result-head .left-column
 {
-    padding-right: .2rem; /* Moves the icon closer to the path by reducing the padding.*/
+    left: 8px;
+}
+.result_line .leftmost-column {
+    left: 0px;
+}
+.result_line .left-column {
+    left: 1ch;
+}
+.leftmost-column > span:hover
+{
+    cursor: pointer;
+    background: rgba(0, 140, 0, 0.14)
 }
 .result-head a
 {
     display: inline;
 }
+.results .ctx_row {
+    opacity: 0.5;
+}
+.ctx_row .left_column {
+    color: #bbb;
+}
 
 /* end results */
-
+.file a:target {
+    background-color: gray;
+    color: white;
+    padding: 0 .5rem;
+}
 .file td {
     padding: 0;
 }
@@ -288,9 +301,6 @@ mark {
 }
 .access-key {
     text-decoration: underline;
-}
-mark {
-    padding: .3rem 0;
 }
 
 /* Context Menu */
@@ -329,7 +339,6 @@ mark {
     background-image: linear-gradient(to bottom, #f8f8f8, #eaeaea);
     border-bottom: 1px solid #6d6d6d;
     border-top: 1px solid #f5f5f5;
-    color: #333;
     padding: .8rem;
     width: 100%;
     z-index: 100;
@@ -444,8 +453,6 @@ mark {
 .breadcrumbs a:visited,
 .bubble a:link,
 .bubble a:visited,
-.promoted-path a:link,
-.promoted-path a:visited,
 .promoted-see-more a:link,
 .promoted-see-more a:visited,
 .result-head a:link,
@@ -604,6 +611,7 @@ mark {
 }
 .bubble.info {
     background: white url('/static/images/info.gif') 12px 0 / 3ex no-repeat;
+    display: block;
 }
 .bubble.warning {
     background: white url('/static/images/warning.gif') 10px -2px / 3.5ex no-repeat;

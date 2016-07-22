@@ -4,8 +4,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from errno import ENOENT
 import fnmatch
-from functools import partial, wraps
-from itertools import izip
+from functools import wraps
+from itertools import izip, imap
 from os import chdir, dup, fdopen, getcwd
 from os.path import join
 from shutil import rmtree
@@ -247,6 +247,13 @@ def cumulative_sum(nums):
         cum_sum += n
 
 
+def build_offset_map(lines):
+    """Return a list of byte offsets of the positions of the start of each
+    line, where lines is an iterable of strings.
+    """
+    return list(cumulative_sum(imap(len, lines)))
+
+
 @contextmanager
 def cd(path):
     """Change the working dir on enter, and change it back on exit."""
@@ -278,3 +285,14 @@ def is_in(needle, haystack):
 def without_ending(ending, string):
     """If ``string`` ends with ``ending``, strip it off."""
     return string[:-len(ending)] if string.endswith(ending) else string
+
+
+def split_content_lines(unicode):
+    """Split the content of a recognizably textual file into lines.
+
+    This is a single point of truth for how to do this between skimmers,
+    indexers, and other miscellany. At present, line breaks are included in the
+    resulting lines.
+
+    """
+    return unicode.splitlines(True)

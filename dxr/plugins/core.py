@@ -2,8 +2,10 @@
 
 from base64 import b64encode
 from copy import deepcopy
+from datetime import datetime
 from itertools import chain
-from os.path import relpath, splitext, realpath, basename
+from os import stat
+from os.path import relpath, splitext, realpath, basename, split
 import re
 
 from flask import url_for
@@ -20,7 +22,7 @@ from dxr.mime import is_binary_image, is_textual_image
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
-from dxr.utils import glob_to_regex
+from dxr.utils import glob_to_regex, split_content_lines
 
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter',
            'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
@@ -99,6 +101,7 @@ mappings = {
                 'type': 'boolean',
                 'index': 'no'
             },
+            'description': UNINDEXED_STRING,
 
             # Sidebar nav links:
             'links': {
@@ -469,6 +472,17 @@ class RefFilter(FilterAggregator):
         super(RefFilter, self).__init__(term, enabled_plugins, lambda f: f.is_reference)
 
 
+class FolderToIndex(dxr.indexers.FolderToIndex):
+    def needles(self):
+        rel_path = relpath(self.path, self.tree.source_folder)
+        superfolder_path, folder_name = split(rel_path)
+        return [
+            ('path', [rel_path]),  # array for consistency with non-folder file docs
+            ('folder', superfolder_path),
+            ('name', folder_name)
+        ]
+
+
 class TreeToIndex(dxr.indexers.TreeToIndex):
     def environment(self, vars):
         vars['source_folder'] = self.tree.source_folder
@@ -498,16 +512,34 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # We store both the contents of textual images twice so that they can
         # both show up in searches and be previewed in the browser.
         if is_binary_image(self.path) or is_textual_image(self.path):
+            # If the file was binary, then contents are None, so read it here.
+            if self.contents is None:
+                with open(self.absolute_path(), 'rb') as image_file:
+                    self.contents = image_file.read()
             bytestring = (self.contents.encode('utf-8') if self.contains_text()
                           else self.contents)
             yield 'raw_data', b64encode(bytestring)
         # binary, but not an image
         elif not self.contains_text():
             yield 'is_binary', True
+        # Find the last modified time from version control if possible,
+        # otherwise fall back to the timestamp from stat'ing the file.
+        modified = None
+        if self.vcs:
+            vcs_relative_path = relpath(self.absolute_path(),
+                                        self.vcs.get_root_dir())
+            try:
+                modified = self.vcs.last_modified_date(vcs_relative_path)
+            except NotImplementedError:
+                pass
+        if modified is None:
+            file_info = stat(self.absolute_path())
+            modified = datetime.utcfromtimestamp(file_info.st_mtime)
+        yield 'modified', modified
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
-        for number, text in enumerate(self.contents.splitlines(True), 1):
+        for number, text in enumerate(split_content_lines(self.contents), 1):
             yield [('number', number),
                    ('content', text)]
 

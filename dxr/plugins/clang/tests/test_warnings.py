@@ -1,7 +1,5 @@
 """Tests for searches about warnings"""
 
-import commands
-import re
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
 
 

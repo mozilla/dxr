@@ -10,7 +10,6 @@ from StringIO import StringIO
 
 from nose.tools import eq_
 
-from dxr.indexers import Extent, Position
 from dxr.plugins.clang.condense import condense, process_call, process_function
 
 

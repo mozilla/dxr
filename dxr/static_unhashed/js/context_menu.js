@@ -1,4 +1,4 @@
-/* jshint devel:true, esnext: true */
+/* jshint devel:true */
 /* globals nunjucks: true, $ */
 
 $(function() {
@@ -25,12 +25,12 @@ $(function() {
      */
     function toggleSymbolHighlights(currentNode) {
         // First remove all highlighting
-        fileContainer.find('mark a').unwrap();
+        fileContainer.find('.clicking').removeClass('clicking');
 
         // Only add highlights if the currentNode is not undefined or null and
         // is an anchor link, as symbols will always be links.
         if (currentNode && currentNode[0].tagName === 'A') {
-            fileContainer.find('.' + currentNode.attr('class')).wrap('<mark />');
+            fileContainer.find('a[data-id=' + currentNode.data('id') + ']').addClass('clicking');
         }
     }
 
@@ -169,7 +169,12 @@ $(function() {
             }
 
             contextMenu.menuItems = menuItems;
-            setContextMenu(fileContainer, contextMenu, event);
+            // Rather than putting the context menu in the file container,
+            // attaching it to the body makes the re-layout much quicker
+            // because the lines of the file do not need to be re-flowed.
+            // In the end they're the same, since the menu will be absolute'd
+            // to where it should go.
+            setContextMenu($('body'), contextMenu, event);
         }
     });
 

@@ -10,7 +10,7 @@
   {{ tree_menu(tree_tuples, tree) }}
   </div>
 
-  {% if has_promoted_results %}
+  {% if promoted_count > 0 %}
     <div class="promoted-container">
       {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) }}
       {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}

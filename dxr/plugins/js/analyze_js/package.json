@@ -1,0 +1,16 @@
+{
+  "name": "js_esprima",
+  "description": "esprima-based javascript plugin for DXR",
+  "author": "Mozilla",
+  "version": "1.0.0",
+  "engines": { "node": ">= 6.0.0" },
+  "license": "MIT",
+  "scripts": { "preinstall": "lockdown" },
+  "dependencies": {
+    "eslint": "2.9.0",
+    "esprima": "2.7.2",
+    "lockdown": "0.0.6",
+    "minimatch": "3.0.0",
+    "walk": "2.3.9"
+  }
+}

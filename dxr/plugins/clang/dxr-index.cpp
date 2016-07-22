@@ -95,20 +95,33 @@ public:
   PreprocThunk(IndexConsumer *c) : real(c) {}
 #if CLANG_AT_LEAST(3, 3)
   void MacroDefined(const Token &tok, const MacroDirective *md) override;
-  void MacroExpands(const Token &tok, const MacroDirective *md, SourceRange range,
-                    const MacroArgs *ma) override;
-  void MacroUndefined(const Token &tok, const MacroDirective *md) override;
-#if CLANG_AT_LEAST(3, 4)
-  void Defined(const Token &tok, const MacroDirective *md,
-               SourceRange range) override;
-#else
-  void Defined(const Token &tok, const MacroDirective *md) override;
-#endif
-  void Ifdef(SourceLocation loc, const Token &tok,
-             const MacroDirective *md) override;
-  void Ifndef(SourceLocation loc, const Token &tok,
-              const MacroDirective *md) override;
-#else
+  #if CLANG_AT_LEAST(3, 7)
+    void MacroExpands(const Token &tok, const MacroDefinition &md,
+                      SourceRange range, const MacroArgs *ma) override;
+    void MacroUndefined(const Token &tok, const MacroDefinition &md) override;
+    void Ifdef(SourceLocation loc, const Token &tok,
+               const MacroDefinition &md) override;
+    void Ifndef(SourceLocation loc, const Token &tok,
+                const MacroDefinition &md) override;
+  #else
+    void MacroExpands(const Token &tok, const MacroDirective *md,
+                      SourceRange range, const MacroArgs *ma) override;
+    void MacroUndefined(const Token &tok, const MacroDirective *md) override;
+    void Ifdef(SourceLocation loc, const Token &tok,
+               const MacroDirective *md) override;
+    void Ifndef(SourceLocation loc, const Token &tok,
+                const MacroDirective *md) override;
+  #endif
+  #if CLANG_AT_LEAST(3, 7)
+    void Defined(const Token &tok, const MacroDefinition &md,
+                 SourceRange range) override;
+  #elif CLANG_AT_LEAST(3, 4)
+    void Defined(const Token &tok, const MacroDirective *md,
+                 SourceRange range) override;
+  #else
+    void Defined(const Token &tok, const MacroDirective *md) override;
+  #endif
+#else  // clang < 3.3
   void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI) override;
   void MacroExpands(const Token &MacroNameTok, const MacroInfo *MI,
                     SourceRange Range) override;
@@ -117,7 +130,7 @@ public:
   void Ifdef(SourceLocation loc, const Token &tok) override;
   void Ifndef(SourceLocation loc, const Token &tok) override;
 #endif
-  void InclusionDirective(  // same in 3.2 and 3.3
+  void InclusionDirective(
       SourceLocation hashLoc,
       const Token &includeTok,
       StringRef fileName,
@@ -138,6 +151,8 @@ private:
   SourceManager &sm;
   std::ostream *out;
   std::map<std::string, FileInfoPtr> relmap;
+  // Map the SourceLocation of a macro to the text of the macro def.
+  std::map<SourceLocation, std::string> macromap;
   LangOptions &features;
 #if CLANG_AT_LEAST(3, 6)
   std::unique_ptr<DiagnosticConsumer> inner;
@@ -585,21 +600,15 @@ public:
                methodDecl->begin_overridden_methods(),
                end = methodDecl->end_overridden_methods();
              iter != end; ++iter) {
-          const FunctionDecl *overriddenDecl = nullptr;
-          // Get the overridden definition if it exists...
-          (*iter)->isDefined(overriddenDecl);
-          // Otherwise get the pure virtual declaration if that exists.
-          if (!overriddenDecl && (*iter)->isPure()) {
-            overriddenDecl = *iter;
-          }
-          if (overriddenDecl) {
-            beginRecord("func_override", functionLocation);
-            recordValue("name", functionName);
-            recordValue("qualname", functionQualName);
-            recordValue("overriddenname", overriddenDecl->getNameAsString());
-            recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
-            *out << std::endl;
-          }
+          const FunctionDecl *overriddenDecl = *iter;
+          if (!interestingLocation(overriddenDecl->getLocation()))
+            continue;
+          beginRecord("func_override", functionLocation);
+          recordValue("name", functionName);
+          recordValue("qualname", functionQualName);
+          recordValue("overriddenname", overriddenDecl->getNameAsString());
+          recordValue("overriddenqualname", getQualifiedName(*overriddenDecl));
+          *out << std::endl;
         }
       }
     }
@@ -1129,32 +1138,39 @@ public:
     } else {
       defnStart = nameLen;
     }
-    // Find the first non-whitespace character for the definition.
-    for (; defnStart < length; defnStart++) {
-      switch (contents[defnStart]) {
-        case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
-          continue;
+    bool hasArgs = (argsEnd - argsStart > 2);  // An empty '()' doesn't count.
+    if (!hasArgs) {
+      // Skip leading whitespace in the definition up to and including any first
+      // line continuation.
+      for (; defnStart < length; defnStart++) {
+        switch (contents[defnStart]) {
+          case ' ': case '\t': case '\v': case '\r': case '\n': case '\f':
+            continue;
+          case '\\':
+            if (defnStart + 2 < length && contents[defnStart + 1] == '\n') {
+              defnStart += 2;
+            }
+            break;
+        }
+        break;
       }
-      break;
     }
     beginRecord("macro", nameStart);
     recordValue("loc", locationToString(nameStart));
     recordValue("locend", locationToString(afterToken(nameStart)));
     recordValue("name", std::string(contents, nameLen));
-    if (argsStart > 0) {
-      recordValue("args", std::string(contents + argsStart,
-                                      argsEnd - argsStart), true);
-    }
     if (defnStart < length) {
-      std::string text =  std::string(contents + defnStart,
-        length - defnStart);
+      std::string text;
+      if (hasArgs)  // Give the argument list.
+        text = std::string(contents + argsStart, argsEnd - argsStart);
+      text += std::string(contents + defnStart, length - defnStart);
       // FIXME: handle non-ASCII characters better
       for (size_t i = 0; i < text.size(); ++i) {
         if ((text[i] < ' ' || text[i] >= 0x7F) &&
             text[i] != '\t' && text[i] != '\n')
           text[i] = '?';
       }
-      recordValue("text", text, true);
+      macromap.insert(make_pair(nameStart, text));
     }
     *out << std::endl;
   }
@@ -1177,6 +1193,11 @@ public:
     recordValue("loc", locationToString(refLoc));
     recordValue("locend", locationToString(afterToken(refLoc)));
     recordValue("kind", "macro");
+    std::map<SourceLocation, std::string>::const_iterator it =
+      macromap.find(macroLoc);
+    if (it != macromap.end()) {
+      recordValue("text", it->second, true);
+    }
     *out << std::endl;
   }
 
@@ -1247,30 +1268,55 @@ public:
 void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
   real->MacroDefined(tok, md->getMacroInfo());
 }
-void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md,
-                                SourceRange range, const MacroArgs *ma) {
-  real->MacroExpands(tok, md->getMacroInfo(), range);
-}
-void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
-  real->MacroUndefined(tok, md->getMacroInfo());
-}
-#if CLANG_AT_LEAST(3, 4)
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md,
-                           SourceRange) {
-#else
-void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
-#endif
-  real->Defined(tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
-                         const MacroDirective *md) {
-  real->Ifdef(loc, tok, md->getMacroInfo());
-}
-void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
-                          const MacroDirective *md) {
-  real->Ifndef(loc, tok, md->getMacroInfo());
-}
-#else
+  #if CLANG_AT_LEAST(3, 7)
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDefinition &md,
+                                  SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md.getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDefinition &md) {
+    real->MacroUndefined(tok, md.getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
+                           const MacroDefinition &md) {
+    real->Ifdef(loc, tok, md.getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
+                            const MacroDefinition &md) {
+    real->Ifndef(loc, tok, md.getMacroInfo());
+  }
+  #else
+  void PreprocThunk::MacroExpands(const Token &tok, const MacroDirective *md,
+                                  SourceRange range, const MacroArgs *ma) {
+    real->MacroExpands(tok, md->getMacroInfo(), range);
+  }
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDirective *md) {
+    real->MacroUndefined(tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
+                           const MacroDirective *md) {
+    real->Ifdef(loc, tok, md->getMacroInfo());
+  }
+  void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok,
+                            const MacroDirective *md) {
+    real->Ifndef(loc, tok, md->getMacroInfo());
+  }
+  #endif
+  #if CLANG_AT_LEAST(3, 7)
+  void PreprocThunk::Defined(const Token &tok, const MacroDefinition &md,
+                             SourceRange range) {
+    real->Defined(tok, md.getMacroInfo());
+  }
+  #elif CLANG_AT_LEAST(3, 4)
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md,
+                             SourceRange) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  #else
+  void PreprocThunk::Defined(const Token &tok, const MacroDirective *md) {
+    real->Defined(tok, md->getMacroInfo());
+  }
+  #endif
+#else  // clang < 3.3
 void PreprocThunk::MacroDefined(const Token &tok, const MacroInfo *MI) {
   real->MacroDefined(tok, MI);
 }
@@ -1291,7 +1337,7 @@ void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
   real->Ifndef(loc, tok, nullptr);
 }
 #endif
-void PreprocThunk::InclusionDirective(  // same in 3.2 and 3.3
+void PreprocThunk::InclusionDirective(
     SourceLocation hashLoc,
     const Token &includeTok,
     StringRef fileName,
@@ -1361,11 +1407,7 @@ protected:
 
     // The temp directory for this plugin's output.
     const char *tmp = getenv("DXR_CXX_CLANG_TEMP_FOLDER");
-    std::string tmpdir;
-    if (tmp)
-      tmpdir = tmp;
-    else
-      tmpdir = output;
+    std::string tmpdir = tmp ? tmp : output;
     char *abs_tmpdir = realpath(tmpdir.c_str(), nullptr);
     if (!abs_tmpdir) {
       DiagnosticsEngine &D = CI.getDiagnostics();

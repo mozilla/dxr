@@ -1,32 +1,7 @@
 """Tests for searches about overrides of virtual methods"""
 
+from dxr.testing import DxrInstanceTestCase
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
-import nose.tools
-
-
-class SingleOverrideTests(CSingleFileTestCase):
-    source = r"""
-        class Base {
-            virtual void foo();
-        };
-        void Base::foo() {
-        }
-        class Derived : public Base {
-            void foo();
-        };
-        void Derived::foo() {
-        }
-        """ + MINIMAL_MAIN
-
-    def test_overridden(self):
-        """Find parent/ancestor methods overridden by a given one."""
-        self.found_line_eq(
-            '+overridden:Derived::foo()', 'void Base::<b>foo</b>() {')
-
-    def test_overrides(self):
-        """Find child/descendant methods which override a given one."""
-        self.found_line_eq(
-            '+overrides:Base::foo()', 'void Derived::<b>foo</b>() {')
 
 
 class ParallelOverrideTests(CSingleFileTestCase):
@@ -162,3 +137,18 @@ class MultipleOverrides(CSingleFileTestCase):
     def test_overrides2(self):
         self.found_line_eq('+overrides:Base2::foo()',
                            'void Derived::<b>foo</b>() {')
+
+
+class OverrideInDifferentCompilationUnit(DxrInstanceTestCase):
+    """Test overrides and overriddens when the overriding and overridden
+    methods are defined in different compilation units."""
+
+    def test_overridden(self):
+        """Find parent/ancestor methods overridden by a given one."""
+        self.found_line_eq(
+            '+overridden:Derived::foo()', 'void Base::<b>foo</b>() {}', 3)
+
+    def test_overrides(self):
+        """Find child/descendant methods which override a given one."""
+        self.found_line_eq(
+            '+overrides:Base::foo()', 'void Derived::<b>foo</b>() {}', 3)

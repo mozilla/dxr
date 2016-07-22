@@ -3,6 +3,7 @@ from xpidl.xpidl import IDLParser, IDLError
 
 import dxr.indexers
 from dxr.indexers import iterable_per_line, with_start_and_end, split_into_lines
+from dxr.utils import split_content_lines
 from dxr.plugins.xpidl.filters import PLUGIN_NAME
 from dxr.plugins.xpidl.visitor import IdlVisitor
 
@@ -24,7 +25,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # Don't try again if we already excepted.
         if not self._idl and not self._had_idl_exception:
             try:
-                self._idl = IdlVisitor(self.parser, self.contents, self.contents.splitlines(True),
+                self._idl = IdlVisitor(self.parser, self.contents, split_content_lines(self.contents),
                                        self.path, self.absolute_path(),
                                        self.plugin_config.include_folders,
                                        self.plugin_config.header_path, self.tree)
@@ -34,7 +35,8 @@ class FileToIndex(dxr.indexers.FileToIndex):
 
     def is_interesting(self):
         # TODO: consider adding a link from generated headers back to the idl
-        return self.path.endswith('.idl')
+        # Perform the endswith check first because super.is_interesting hits the filesystem.
+        return self.path.endswith('.idl') and super(FileToIndex, self).is_interesting()
 
     def links(self):
         if self.idl:

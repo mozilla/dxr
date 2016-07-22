@@ -1,9 +1,4 @@
-import os.path
-
-from dxr.query import Query
 from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
-
-from nose.tools import eq_
 
 
 class TypeAndMethodTests(CSingleFileTestCase):
@@ -65,7 +60,7 @@ class TypeAndMethodTests(CSingleFileTestCase):
     def test_qualified_function_name_multiple_matches(self):
         """Multiple matches on fully qualified function name should not yield
         a direct result."""
-        self.is_not_direct_result('MemberFunction::member_FUNCTION(int)')
+        self.is_not_redirect_result('MemberFunction::member_FUNCTION(int)')
 
     def test_qualified_type_name_insensitive(self):
         """A unique, case-insensitive match on fully qualified type name
@@ -84,11 +79,13 @@ class TypeAndMethodTests(CSingleFileTestCase):
     def test_qualified_type_name_multiple_matches(self):
         """Multiple case-insensitive prefix matches on fully qualified type
         name should not yield a direct result."""
-        self.is_not_direct_result('MemberFunction::InnerCLASS')
+        self.is_not_redirect_result('MemberFunction::InnerCLASS')
 
     def test_type_sensitive(self):
         """If the query is an exact match for a class, we should jump there."""
         self.direct_result_eq('MemberFunction', 2)
+
+
 
 
 class MacroTypedefTests(CSingleFileTestCase):
@@ -127,7 +124,7 @@ class MacroTypedefTests(CSingleFileTestCase):
     def test_macro_name_multiple_matches(self):
         """Multiple matches on a macro name should not yield a direct
         result."""
-        self.is_not_direct_result('macro_NAME')
+        self.is_not_redirect_result('macro_NAME')
 
     def test_typedef_name_insensitive(self):
         """A unique, case-insensitive match on a typedef name should take you
@@ -146,4 +143,4 @@ class MacroTypedefTests(CSingleFileTestCase):
     def test_typedef_name_multiple_matches(self):
         """Multiple matches on a typedef name should not yield a direct
         result."""
-        self.is_not_direct_result('myTypeDef')
+        self.is_not_redirect_result('myTypeDef')
