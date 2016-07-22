@@ -31,7 +31,7 @@ def direct_searchers(plugins):
 
 
 def _make_es_query(filters, is_line_query):
-    """Construct an ES query from nested list of filters by applying OR to each
+    """Construct an ES query from a nested list of filters by applying OR to each
     inner list of filters and AND between lists of filter.
 
     """
@@ -161,7 +161,7 @@ class Query(object):
         is_line_query = any(f.domain == LINE for f in
                             chain.from_iterable(filters))
 
-        return self._do_search_and_highlight(_make_es_query(filters, is_line_query),
+        return self._search_and_highlight(_make_es_query(filters, is_line_query),
                                              filters, is_line_query,
                                              offset, limit)
 
@@ -175,10 +175,10 @@ class Query(object):
         file_filters = [[f for f in named_filters if f.domain == FILE] for named_filters in
                         self._filters] + [[PathFilter(term, self.enabled_plugins)]]
         filtered_query = _make_es_query(file_filters, False)
-        path_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
+        substring_query = {'constant_score': {'query': filtered_query, 'boost': 0.5}}
         # We add a second query that boosts exact path segment matches.
         match_field = 'path.segments' if term['case_sensitive'] else 'path.segments_lower'
-        exact_query = {
+        segment_query = {
             'filtered': {
                 'query': {'constant_score': {'query': {'match': {match_field: term['arg']}},
                                              'boost': 2.0}},
@@ -188,12 +188,12 @@ class Query(object):
         }
         query = {
             'dis_max': {
-                'queries': [path_query, exact_query]
+                'queries': [substring_query, segment_query]
             }
         }
         # We ask not to sort by path and line, to use score ranking instead.
-        result_count, results = self._do_search_and_highlight(query, file_filters, False, 0, promote_limit, False)
-        return result_count, results, ' '.join((str(f) for f in chain.from_iterable(file_filters)))
+        result_count, results = self._search_and_highlight(query, file_filters, False, 0, promote_limit, False)
+        return result_count, results, ' '.join((unicode(f) for f in chain.from_iterable(file_filters)))
 
     def direct_result(self):
         """Return a single search result that is an exact match for the query.
@@ -231,8 +231,8 @@ class Query(object):
                 elif len(results) > 1:
                     return None
 
-    def _do_search_and_highlight(self, query, filters, is_line_query, offset, limit,
-                                 alphabetize=True):
+    def _search_and_highlight(self, query, filters, is_line_query, offset, limit,
+                              should_alphabetize=True):
         """Perform a query using self.es_search and highlight the results,
         returning a tuple (total count of results, list of results)
 
@@ -241,12 +241,12 @@ class Query(object):
         :arg is_line_query: whether to query lines (otherwise query files)
         :arg offset: return results starting from this number
         :arg limit: maximum number of results to return
-        :arg alphabetize: whether to alphabetize the results alphabetically by path and
+        :arg should_alphabetize: whether to should_alphabetize the results alphabetically by path and
         numerically by line
 
         """
         # Decide on the sort mode: either alphanumerically or by score.
-        if alphabetize:
+        if should_alphabetize:
             sort_mode = ['path', 'number'] if is_line_query else ['path']
         else:
             sort_mode = ['_score']

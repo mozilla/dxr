@@ -23,26 +23,33 @@ class PathFilterTests(TestCase):
     More is covered in integration tests.
 
     """
-    def filter_str(self):
-        """Test that str(filter) works with different operators.
+    def filter_unicode(self):
+        """Test that unicode(filter) works with different operators.
         """
         term = {'arg': "foo", 'name': 'path',
                 'not': False, 'case_sensitive': False, 'qualified': False}
         a_filter = PathFilter(term, [])
-        eq_(str(a_filter), "path:foo")
+        eq_(unicode(a_filter), u"path:foo")
 
         term['not'] = True
-        eq_(str(a_filter), "-path:foo")
+        eq_(unicode(a_filter), u"-path:foo")
 
         term['case_sensitive'] = True
-        eq_(str(a_filter), "-path:@foo")
+        eq_(unicode(a_filter), u"-path:@foo")
 
         term['qualified'] = True
         term['not'] = False
-        eq_(str(a_filter), "+path:@foo")
+        eq_(unicode(a_filter), u"+path:@foo")
 
         term['arg'] = 'Foo bar'
-        eq_(str(a_filter), 'path:@"Foo bar"')
+        eq_(unicode(a_filter), u'path:@"Foo bar"')
+
+        term['arg'] = 'Foo "bar"'
+        eq_(unicode(a_filter), u'path:@"Foo \\"bar\\"')
+
+        accented_e = u'\u00E9'
+        term['arg'] = u'readm' + accented_e
+        eq_(unicode(a_filter), u'path:@readm' + accented_e)
 
     def test_bigrams_and_wildcards(self):
         """Make sure the right query shape is constructed and strings shorter

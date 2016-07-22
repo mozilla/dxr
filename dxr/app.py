@@ -188,7 +188,7 @@ def _search_json(query, tree, query_text, offset, limit, config):
     except BadTerm as exc:
         return jsonify({'error_html': exc.reason, 'error_level': 'warning'}), 400
     # If we're asked to redirect and there's a single result, redirect to the result.
-    if (request.values.get('redirect') == 'true' and count == 1):
+    if request.values.get('redirect') == 'true' and count == 1:
         _, path, line = next(results)
         line = line[0][0] if line else None
         params = {
@@ -201,9 +201,9 @@ def _search_json(query, tree, query_text, offset, limit, config):
 
     # Pull up all the non-negated text terms.
     single_term = query.single_text_term()
-    promoted_count, promoted, promoted_query = 0, [], ""
+    promoted_count, promoted, promoted_query = 0, [], ''
     if offset == 0 and single_term:
-        # Now we pull out the single line term and pass into promoted paths.
+        # Now we pull out the single text term and pass into promoted paths.
         try:
             promoted_count, promoted, promoted_querystring = query.promoted_paths(single_term)
             promoted_query = url_for('.search', tree=tree, q=promoted_querystring,

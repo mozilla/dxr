@@ -194,21 +194,15 @@ code a {
     border-radius: 4px;
     padding: 0.5em 1.5em 1em;
 }
-.promoted-row {
-    padding-left: 26px;
-    padding-bottom: 5px;
-    position: relative;
-}
 
 /* results */
-.results .result_line:hover,
+.result_line:hover,
 .file tr:hover {
     background: none;
 }
-.results {
-    width: auto;
+.result_line code {
+    white-space: pre-wrap;
 }
-.results tr,
 .file tr {
     border: 0;
     line-height: 1.3;
@@ -220,29 +214,6 @@ code a {
     width: 6.5ch;
     vertical-align: top;
 }
-.results .right-column {
-    word-break: break-all;
-}
-.results .right-column code:hover {
-    text-decoration: underline;
-}
-.results td {
-    padding: .1rem .5rem;
-}
-.results a {
-    cursor: pointer;
-    display: inline-block;
-}
-.results a[data-path]{
-    cursor: context-menu;
-}
-.results code {
-    white-space: pre-wrap;
-    /* force display on one line */
-    display: inline-block;
-    max-height: 1.2em;
-    overflow: hidden;
-}
 .result_line, .result-head {
     position: relative;
     padding-left: 9ch;
@@ -250,8 +221,7 @@ code a {
 .result_line {
     padding-top: 5px;
 }
-.result-head
-{
+.result-head {
     padding-top: .3rem; /* Additional padding to visually seperate results.*/
 }
 .left-column, .leftmost-column {
@@ -276,7 +246,7 @@ code a {
 {
     display: inline;
 }
-.results .ctx_row {
+.result .ctx_row {
     opacity: 0.5;
 }
 .ctx_row .left_column {

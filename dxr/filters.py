@@ -72,26 +72,26 @@ class Filter(object):
         self._term = term
         self._enabled_plugins = enabled_plugins
 
-    def __str__(self):
-        """Return a string representation of this Filter as it appeared in the
+    def __unicode__(self):
+        """Return a unicode representation of this Filter as it appeared in the
         query string, defaulting to name:term. Override this method for Filters
         whose string representation does not match this format.
         """
 
-        prefix = ""
-        infix = ""
+        prefix = u""
+        infix = u""
         if 'not' in self._term and self._term['not']:
-            prefix += "-"
+            prefix += u'-'
         if 'qualified' in self._term and self._term['qualified']:
-            prefix += "+"
+            prefix += u'+'
         if 'case_sensitive' in self._term and self._term['case_sensitive']:
-            infix = "@"
+            infix = u'@'
         # If the term has spaces, then surround with double quotes and escape internal quotes.
         if ' ' in self._term['arg']:
-            return '%s%s:%s"%s"' % (prefix, self.name, infix,
-                                    self._term['arg'].replace('"', r'\"'))
+            return u'%s%s:%s"%s"' % (prefix, self.name, infix,
+                                     self._term['arg'].replace('"', r'\"'))
         else:
-            return '%s%s:%s%s' % (prefix, self.name, infix, self._term['arg'])
+            return u'%s%s:%s%s' % (prefix, self.name, infix, self._term['arg'])
 
     def filter(self):
         """Return the ES filter clause that applies my restrictions to the
