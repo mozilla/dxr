@@ -56,11 +56,11 @@
                                   {{ filter.name }}
                                 </td>
                                 <td class="selector-badges">
-                                  {% for text, color in filter.badges %}
-                                    {% if color %}
-                                      <span class="badge-label" style="background-color:{{ color }}">{{ text }}</span>
-                                    {% endif %}
-                                  {% endfor %}
+                                  {% for text, color in filter.badges -%}
+                                    {%- if color -%}
+                                      <span style="background-color:{{ color }}">{{ text }}</span>
+                                    {%- endif -%}
+                                  {%- endfor %}
                                 </td>
                                 <td class="selector-option-description">
                                   {{ filter.description }}

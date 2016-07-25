@@ -1,11 +1,10 @@
-.badge-label {
-    color: #FFF;
-    font-weight: 600;
+.selector-badges span {
     text-shadow: none;
     padding: 2px 4px;
+    font-size: 11px;
     /* remark: need to set background-color! */
     border-radius: .25em;
-    margin-left: 5px;
+    margin-left: 2px;
 }
 .selector-options {
     box-shadow: 0px 4px 5px 0px rgba(0,0,0,0.25);

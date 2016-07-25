@@ -21,7 +21,7 @@
               <td class="selector-option-label {% if tree == selected_tree %} selected {% endif %}">{{ tree }}</td>
               <td class="selector-badges">
                 {% for text, color in badges %}
-                  <span class="badge-label" style="background-color:{{ color }};">{{ text }}</span>
+                  <span style="background-color:{{ color }}">{{ text }}</span>
                 {% endfor %}
               </td>
               <td class="selector-option-description">{{ description }}</td>

@@ -407,7 +407,7 @@ def filter_menu_items(plugins):
     badge_colors = lang_badge_colors(plugins)
     return (dict(name=name,
                  description=filters[0].description,
-                 badges=[(f.lang, badge_colors.get(f.lang)) for f in filters if hasattr(f, 'lang')])
+                 badges=sorted((f.lang, badge_colors.get(f.lang)) for f in filters if hasattr(f, 'lang')))
             for name, filters in sorted_filters_by_name
             if filters[0].description)
 
