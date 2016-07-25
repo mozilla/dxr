@@ -88,7 +88,7 @@ $(function () {
         var selectedArray = generateSelectedArrays(); // generates sorted arrays
         var singleLinesArray = selectedArray[0];
         var rangesArray = selectedArray[1];
-        var lastNumber;
+        var firstNumber;
         // eliminate duplication
         for (s = 0; s < singleLinesArray.length; s++) {
             for (r = 0; r < rangesArray.length; r++) {
@@ -106,25 +106,29 @@ $(function () {
             // if no singleLines left or range < singleLine add range to hash
             if ((r == rangesArray.length) || (singleLinesArray[s] < rangesArray[r][0])) {
                 windowHash += singleLinesArray[s] + ',';
-                lastNumber = singleLinesArray[s];
+                if (!firstNumber) {
+                    firstNumber = singleLinesArray[s];
+                }
                 s++;
             } else if (( s == singleLinesArray.length) || (rangesArray[r][0] < singleLinesArray[s])) {
                 windowHash += rangesArray[r][0] + '-' + rangesArray[r][1] + ',';
-                lastNumber = rangesArray[r][1];
+                if (!firstNumber) {
+                    firstNumber = rangesArray[r][0];
+                }
                 r++;
             }
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
-            updateHash(windowHash, lastNumber);
+            updateHash(windowHash, firstNumber);
         }
     }
 
     //update places where hash location is used: window, permalink, other nav links
-    function updateHash(hash, lastNumber) {
+    function updateHash(hash, lineNumber) {
         if (permalink.length > 0)
             updatePermalink(hash);
-        updateNavLinks(lastNumber);
+        updateNavLinks(lineNumber);
         history.replaceState(null, '', hash);
     }
 
@@ -141,11 +145,11 @@ $(function () {
     //replace any occurrence of {{line}} in hrefs with the last-selected line.
     //unless the last-selected line is undefined, then remove {{line}} from the
     //displayed url.
-    function updateNavLinks(lastNumber) {
+    function updateNavLinks(lineNumber) {
         navlinks.each(function() {
             const $this = $(this);
             if ($this.data('template')) {
-                $this.attr('href', $this.data('template').replace(/{{line}}/g, lastNumber || ''));
+                $this.attr('href', $this.data('template').replace(/{{line}}/g, lineNumber || ''));
             }
         });
     }
@@ -345,9 +349,7 @@ $(function () {
     }
 
     // Highlight any lines specified by hash in either a direct page load or a history pop.
-    $(document).ready(function() {
-        processHash();
-    });
+    $(document).ready(processHash);
     $(window).on('popstate', function() {
         removeAllHighlighting();
         processHash();
