@@ -5,6 +5,7 @@
         <div class="icon-container {{ result.iconClass }}"></div>
       </div>
       <div>
+        {# All pathLines come from the output of path_line.html renders. #}
         {{ result.pathLine | safe }}
       </div>
     </div>
@@ -14,11 +15,11 @@
 {%- macro promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) -%}
   <p class="promoted-see-more">
     {% if promoted_count == 1 %}
-      Found 1 path result:
+      1 path result:
     {% elif promoted_count <= 5 %}
-      Showing all of <a href="{{ promoted_query }}">{{ promoted_count_formatted }} path results</a>:
+      Showing all <a href="{{ promoted_query }}">{{ promoted_count_formatted }} path results</a>:
     {% else %}
-      Showing first few of <a href="{{ promoted_query }}">{{ promoted_count_formatted }} path results</a>:
+      Path results:
     {% endif %}
   </p>
 {%- endmacro -%}

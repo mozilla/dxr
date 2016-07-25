@@ -6,7 +6,6 @@
 <div class="results-row">
 
   <div class="result_header">
-    {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
     {{ tree_menu(tree_tuples, tree) }}
   </div>
 
@@ -14,8 +13,14 @@
     <div class="promoted-container">
       {{ promoted_header(promoted_query, promoted_count, promoted_count_formatted, top_of_tree, tree) }}
       {{ promoted_list(query, promoted, promoted_count, www_root, tree) }}
+      {% if promoted_count > 5 %}
+        <p class="promoted-see-more">
+          <a href="{{ promoted_query }}">{{ promoted_count_formatted - 5 }} more</a>...
+        </p>
+      {% endif %}
     </div>
   {% endif %}
+  {{ results_header(result_count, result_count_formatted, top_of_tree, tree) }}
 
   {% if results|length > 0 %}
     <div class="results-container">
