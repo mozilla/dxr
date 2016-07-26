@@ -24,6 +24,10 @@ from dxr.utils import cd, if_raises
 # able to serve. Must match exactly; deploy will do nothing until it does.
 FORMAT = resource_string('dxr', 'format').strip()
 
+WORKERS_VALIDATOR = And(Use(int),
+                        lambda v: v >= 0,
+                        error='"workers" must be a non-negative integer.')
+
 
 class DotSection(object):
     """In the absense of an actual attribute, let attr lookup fall through to
@@ -105,9 +109,7 @@ class Config(DotSection):
                 Optional('workers', default=if_raises(NotImplementedError,
                                                       cpu_count,
                                                       1)):
-                    And(Use(int),
-                        lambda v: v >= 0,
-                        error='"workers" must be a non-negative integer.'),
+                    WORKERS_VALIDATOR,
                 Optional('skip_stages', default=[]): WhitespaceList,
                 Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
                 Optional('google_analytics_key', default=''): basestring,
@@ -221,6 +223,7 @@ class TreeConfig(DotSectionWrapper):
             Optional('source_encoding', default='utf-8'): basestring,
             Optional('temp_folder', default=None): AbsPath,
             Optional('p4web_url', default='http://p4web/'): basestring,
+            Optional('workers', default=None): WORKERS_VALIDATOR,
             Optional(basestring): dict})
         tree = schema.validate(unvalidated_tree)
 
@@ -228,6 +231,8 @@ class TreeConfig(DotSectionWrapper):
             tree['temp_folder'] = config.temp_folder
         if tree['object_folder'] is None:
             tree['object_folder'] = tree['source_folder']
+        if tree['workers'] is None:
+            tree['workers'] = config.workers
 
         # Convert enabled_plugins to a list of plugins:
         if tree['disabled_plugins'].is_all:
