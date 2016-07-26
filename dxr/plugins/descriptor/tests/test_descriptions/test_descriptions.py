@@ -20,7 +20,7 @@ class DescriptionTests(DxrInstanceTestCase):
         # Check that I stripped prepended spaces.
         ok_("  A line of the readme, with prepended spaces." not in response)
         # Javascript description with /** */ comment
-        ok_("Define foon, a dynamic higher order weakly typed late binded function." in response)
+        ok_("Define foon, a dynamic, higher-order, weakly typed, late-bound function/method." in response)
         # Python docstring
         ok_("foo.py: some very Pythonic codes." in response)
         # First case of generic description_re.
