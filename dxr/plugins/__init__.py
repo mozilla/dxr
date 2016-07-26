@@ -2,7 +2,6 @@
 
 from functools import partial
 from inspect import isclass, isfunction
-from os.path import join
 
 from ordereddict import OrderedDict
 from pkg_resources import iter_entry_points
@@ -42,6 +41,7 @@ class Plugin(object):
     """
     def __init__(self,
                  filters=None,
+                 folder_to_index=None,
                  tree_to_index=None,
                  file_to_skim=None,
                  mappings=None,
@@ -51,6 +51,7 @@ class Plugin(object):
                  config_schema=None):
         """
         :arg filters: A list of filter classes
+        :arg folder_to_index: A :class:`FolderToIndex` subclass
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
@@ -99,6 +100,7 @@ class Plugin(object):
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
         # effective and easier way to parallelize.
+        self.folder_to_index = folder_to_index
         self.tree_to_index = tree_to_index
         self.file_to_skim = file_to_skim
         self.mappings = mappings or {}
@@ -139,6 +141,7 @@ class Plugin(object):
                     file_to_index_class=namespace.get('FileToIndex'))
 
         return cls(filters=filters_from_namespace(namespace),
+                   folder_to_index=namespace.get('FolderToIndex'),
                    tree_to_index=tree_to_index,
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),

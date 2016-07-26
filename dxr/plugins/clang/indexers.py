@@ -4,16 +4,13 @@ from itertools import chain
 from operator import itemgetter
 import os
 from os import listdir
-import sys
 
-from funcy import (merge, imap, group_by, is_mapping, repeat,
-                   constantly, icat, autocurry)
+from funcy import merge, imap, autocurry
 
 from dxr.filters import LINE
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase,
                           QUALIFIED_LINE_NEEDLE, unsparsify, FuncSig)
-from dxr.lines import Ref
 from dxr.plugins.clang.condense import condense_file, condense_global
 from dxr.plugins.clang.menus import (FunctionRef, VariableRef, TypeRef,
     NamespaceRef, NamespaceAliasRef, MacroRef, IncludeRef, TypedefRef)
@@ -252,5 +249,5 @@ class TreeToIndex(TreeToIndexBase):
                            self._overriddens,
                            self._parents,
                            self._children,
-                           self._csv_map[sha1(path).hexdigest()],
+                           self._csv_map[sha1(path.encode('utf-8')).hexdigest()],
                            self._temp_folder)

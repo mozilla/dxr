@@ -1,8 +1,7 @@
-/* jshint devel:true, esnext: true */
+/* jshint devel:true */
 /* globals nunjucks: true, $ */
 
 var htmlEscape;
-
 $(function() {
     'use strict';
 
@@ -13,6 +12,7 @@ $(function() {
     dxr.wwwRoot = constants.data('root');
     dxr.baseUrl = location.protocol + '//' + location.host;
     dxr.searchUrl = constants.data('search');
+    dxr.linesUrl = constants.data('lines');
     dxr.tree = constants.data('tree');
 
     var timeouts = {};
@@ -107,13 +107,15 @@ $(function() {
 
             dataPath.push(paths[pathIndex]);
 
+            // Render the path segment and trim white space so copying the
+            // path will not insert spaces.
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
                 'is_dir': !isLastOrOnly
-            });
+            }).trim();
         }
 
         return [iconClass, pathLines];
@@ -134,17 +136,6 @@ $(function() {
         previousDataLimit = 0,
         defaultDataLimit = 100,
         lastURLWasSearch = false;  // Remember if the previous history URL was for a search (for popState).
-
-    // Has the user been redirected to a direct result?
-    var fromQuery = /[?&]?from=([^&]+)/.exec(location.search);
-    if (fromQuery !== null) {
-        // Offer the user the option to see all the results instead.
-        var viewResultsTxt = 'Showing a direct result. <a href="{{ url }}">Show all results instead.</a>';
-
-        var searchUrl = constants.data('search') + '?q=' + fromQuery[1];
-        queryField.val(decodeURIComponent(fromQuery[1]));
-        showBubble('info', viewResultsTxt.replace('{{ url }}', searchUrl));
-    }
 
     $(window).scroll(function() {
         didScroll = true;
@@ -245,18 +236,149 @@ $(function() {
     }
 
     /**
+     * Add click listeners to the context buttons to load more contexts.
+     */
+    function withContextListeners(renderedResults) {
+        var toJquery = $(renderedResults);
+
+        // AJAX query as context lines after given row if after is true,
+        // otherwise before given row.
+        function getContextLines(row, query, after) {
+            $.ajax({
+                dataType: "json",
+                url: query,
+                success: function(data) {
+                    var result;
+                    if (data.lines.length > 0) {
+                        result = nunjucks.render('context_lines.html', {
+                            www_root: dxr.wwwRoot,
+                            tree: dxr.tree,
+                            result: data
+                        });
+                        if (after) {
+                            row.after(withContextListeners(result));
+                        } else {
+                            row.before(withContextListeners(result));
+                        }
+                        // Call cleanup after adding to remove unnecessary
+                        // buttons and duplicated result rows.
+                        cleanupResults(row.parent());
+                    }
+                }
+            });
+        }
+
+        // Before attaching the listeners call cleanup, since that may change
+        // or remove buttons.
+        toJquery.find(".result").each(function() {
+            cleanupResults($(this));
+        });
+        // Attach event listeners to each of the context spans, given by
+        // {klass, start offset, end offset}
+        [{klass: ".ctx_full", start: -3, end: 3, after: true},
+         {klass: ".ctx_up", start: -4, end: -1, after: false},
+         {klass: ".ctx_down", start: 1, end: 4, after: true}].forEach(
+                function(ctx) {
+                    var c = ctx;
+                    $(c.klass, toJquery).on('click', function() {
+                        var $this = $(this),
+                            path = $this.parents('.result').data('path'),
+                            line = parseInt($this.parents(".result_line").data('line')),
+                            queryString = (dxr.linesUrl + '?' +
+                                           $.param({path: path,
+                                                    start: line + c.start,
+                                                    end: line + c.end}));
+                        getContextLines($this.parents(".result_line"), queryString, c.after);
+                    });
+                });
+        return toJquery;
+    }
+
+    /**
+     * Visit the result lines in result and remove duplicated lines and redundant context buttons.
+     */
+    function cleanupResults(result) {
+        // Construct {line: {contextEl, resultEl}}
+        var lineMap = {};
+        var spaces, text, resultCode, lineNode, ctxSpan;
+        // Visit the lines and remove duplicates.
+        result.children('.result_line').each(function() {
+            var $this = $(this);
+            var line = parseInt($this.data("line"));
+            lineMap[line] = lineMap[line] || {};
+            if (this.classList.contains("ctx_row")) {
+                if (lineMap[line].contextEl) {
+                    // Then this is duplicate, remove it.
+                    $this.remove();
+                } else {
+                    lineMap[line].contextEl = this;
+                }
+            } else {
+                if (lineMap[line].resultEl) {
+                    // Then this is duplicate, remove it.
+                    $this.remove();
+                } else {
+                    lineMap[line].resultEl = this;
+                }
+            }
+        });
+        // Now go through and fix some things.
+        for (var line in lineMap) {
+            if (!lineMap.hasOwnProperty(line)) continue;
+            // If some line has both context and result, then replace context line by result line.
+            // But since result strips trailing whitespace where context has it,
+            // we must bring that from the context line.
+            if (lineMap[line].contextEl && lineMap[line].resultEl) {
+                text = lineMap[line].contextEl.querySelector("code").textContent;
+                resultCode = lineMap[line].resultEl.querySelector("code");
+                spaces = "";
+                for (var i = 0; i < text.length && /\s/.test(text[i]); i++) {
+                    spaces += text[i];
+                }
+                resultCode.innerHTML = spaces + resultCode.innerHTML;
+                $(lineMap[line].contextEl).replaceWith(lineMap[line].resultEl);
+            }
+            lineNode = lineMap[line].resultEl || lineMap[line].contextEl;
+            ctxSpan = lineNode.querySelector(".leftmost-column > span");
+            line = parseInt(line);
+            // If previous line exists, remove ctx_up. If below line exists, remove ctx_down.
+            // If surrounded, remove ctx_full.
+            if (ctxSpan && ((lineMap[line - 1] && ctxSpan.classList.contains("ctx_up")) ||
+                        (lineMap[line + 1] && ctxSpan.classList.contains("ctx_down")) ||
+                        (lineMap[line + 1] && lineMap[line - 1] &&
+                         ctxSpan.classList.contains("ctx_full")))) {
+                $(ctxSpan).remove();
+            }
+            // But if it's a ctx_full and either top or bottom exists, convert it to an arrow.
+            if (ctxSpan && ctxSpan.classList.contains("ctx_full")) {
+                if (lineMap[line + 1]) {
+                    ctxSpan.classList.add("ctx_up");
+                    ctxSpan.classList.remove("ctx_full");
+                    ctxSpan.textContent = "△";
+                } else if (lineMap[line - 1]) {
+                    ctxSpan.classList.add("ctx_down");
+                    ctxSpan.classList.remove("ctx_full");
+                    ctxSpan.textContent = "▽";
+                }
+            }
+        }
+    }
+
+
+    /**
      * Populates the results template.
      * @param {object} data - The data returned from the query
      * @param {bool} append - Should the content be appended or overwrite
      */
     function populateResults(data, append) {
-        data.www_root = dxr.wwwRoot;
-        data.tree = dxr.tree;
-        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
-
+        var renderedData;
         var params = {
             q: data.query
         };
+
+        data.www_root = dxr.wwwRoot;
+        data.tree = dxr.tree;
+        data.top_of_tree = dxr.wwwRoot + '/' + data.tree + '/source/';
         data.query_string = $.param(params);
 
         // If no data is returned, inform the user.
@@ -279,9 +401,8 @@ $(function() {
             }
 
             if (!append) {
-                contentContainer
-                    .empty()
-                    .append(nunjucks.render('results_container.html', data));
+                renderedData = nunjucks.render('results_container.html', data);
+                contentContainer.empty().append(withContextListeners(renderedData));
             } else {
                 var resultsList = contentContainer.find('.results');
 
@@ -293,16 +414,18 @@ $(function() {
                     '.result[data-path="' + firstResult.path + '"]');
                 if (domFirstResult.length) {
                     data.results = data.results.splice(1);
-                    domFirstResult.append(nunjucks.render('result_lines.html', {
+                    var renderedLines = nunjucks.render('result_lines.html', {
                         www_root: dxr.wwwRoot,
                         tree: dxr.tree,
                         result: firstResult
-                    }));
+                    });
+                    domFirstResult.append(withContextListeners(renderedLines));
                 }
 
                 // Don't render if there was only the first result and it was rendered.
                 if (data.results.length) {
-                    resultsList.append(nunjucks.render('results.html', data));
+                    renderedData = nunjucks.render('results.html', data);
+                    resultsList.append(withContextListeners(renderedData));
                 }
             }
         }
@@ -315,7 +438,7 @@ $(function() {
     /**
      * Queries and populates the results templates with the returned data.
      *
-     * @param {bool} [redirect] - Whether to redirect if we hit a direct result.  Default is false.
+     * @param {bool} [redirect] - Whether to redirect if we hit a direct or unique result.  Default is false.
      * @param {string} [queryString] - The url to which to send the request. If left out,
      * queryString will be constructed from the contents of the query field.
      * @param {bool} [appendResults] - Append new results to the current list if true,
@@ -376,7 +499,7 @@ $(function() {
             // tab feature on search pages (Chrome and Firefox).
             cache: appendResults,
             success: function (data) {
-                // Check whether to redirect to a direct hit.
+                // Check whether to redirect to a direct or single hit.
                 if (data.redirect) {
                     window.location.href = data.redirect;
                     lastURLWasSearch = false;
@@ -390,13 +513,7 @@ $(function() {
                     if (addToHistory) {
                         var pushHistory = function () {
                             // Strip off offset= and limit= when updating.
-                            function dropAmp(fullMatch, ampOrQuestion) {
-                                // Drop a leading ampersand, keep a leading question mark.
-                                return (ampOrQuestion === '?') ? '?' : '';
-                            }
-                            var displayURL = queryString.replace(/([&?])offset=\d+/, dropAmp).
-                                                         replace(/([&?])limit=\d+/, dropAmp).
-                                                         replace('?&', '?');
+                            var displayURL = removeParams(queryString, ['offset', 'limit']);
                             history.pushState({}, '', displayURL);
                             lastURLWasSearch = true;
                         };
@@ -531,7 +648,6 @@ $(function() {
         var bg_src = href.replace('source', 'raw');
         anchorElement.style.backgroundImage = 'url(' + bg_src + ')';
     }
-
     window.addEventListener('load', function() {
         $(".image").not('.too_fat').each(function() {
             setBackgroundImageFromLink(this);
@@ -541,9 +657,15 @@ $(function() {
     // If on load of the search endpoint we have a query string then we need to
     // load the results of the query and activate infinite scroll.
     window.addEventListener('load', function() {
+        var savedURL, noRedirectURL;
         lastURLWasSearch = locationIsSearch();
         if (lastURLWasSearch) {
-            doQuery(false, window.location.href);
+            savedURL = window.location.href;
+            if (/[&?]redirect=true/.test(window.location.href)) {
+                noRedirectURL = removeParams(window.location.href, ['redirect']);
+                history.replaceState({}, '', noRedirectURL);
+            }
+            doQuery(false, savedURL);
         }
     });
 });

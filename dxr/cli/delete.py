@@ -1,7 +1,7 @@
 from click import ClickException, command, echo, option
 from pyelasticsearch import ElasticSearch, ElasticHttpNotFoundError
 
-from dxr.cli.utils import tree_objects, config_option, tree_names_argument
+from dxr.cli.utils import config_option, tree_names_argument
 from dxr.config import FORMAT
 from dxr.es import TREE
 

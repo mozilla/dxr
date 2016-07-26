@@ -16,10 +16,9 @@ from binaryornot.helpers import is_binary_string
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from click import progressbar
 from flask import current_app
-from funcy import ichunks, first, suppress
-from pyelasticsearch import (ElasticSearch, ElasticHttpNotFoundError,
-                             IndexAlreadyExistsError, bulk_chunks, Timeout,
-                             ConnectionError)
+from funcy import ichunks, first
+from pyelasticsearch import (ElasticSearch, IndexAlreadyExistsError,
+                             bulk_chunks, Timeout, ConnectionError)
 
 from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
@@ -27,9 +26,9 @@ from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_w
 from dxr.exceptions import BuildError
 from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
-from dxr.mime import decode_data, is_binary_image
+from dxr.mime import decode_data
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line, bucket)
+                       append_update_by_line, append_by_line, bucket, split_content_lines)
 from dxr.vcs import VcsCache
 
 
@@ -55,7 +54,9 @@ def index_and_deploy_tree(tree, verbose=False):
 
     """
     config = tree.config
-    es = ElasticSearch(config.es_hosts, timeout=config.es_indexing_timeout)
+    es = ElasticSearch(config.es_hosts,
+                       timeout=config.es_indexing_timeout,
+                       max_retries=config.es_indexing_retries)
     index_name = index_tree(tree, es, verbose=verbose)
     if 'index' not in tree.config.skip_stages:
         deploy_tree(tree, es, index_name)
@@ -377,8 +378,9 @@ def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIn
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
-    """Return an iterable of absolute paths to unignored source tree files or
-    the folders that contain them.
+    """Return an iterable of Unicode absolute paths to unignored source
+    tree files or the folders that contain them. Skip any non-utf8-decodeable
+    paths.
 
     Returned files include both binary and text ones.
 
@@ -409,7 +411,10 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
                 if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
                     continue  # Ignore the file.
 
-                yield join(root, f)
+                try:
+                    yield join(root, f).decode('utf-8')
+                except UnicodeDecodeError:
+                    pass
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
@@ -417,7 +422,10 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
             folders, rel_path, ignore_filenames, ignore_paths)
         if want_folders:
             for f in folders:
-                yield join(root, f)
+                try:
+                    yield join(root, f).decode('utf-8')
+                except UnicodeDecodeError:
+                    pass
 
 def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.
@@ -442,13 +450,15 @@ def index_file(tree, tree_indexers, path, es, index):
         else:
             raise
 
+    # Just like index_folders, if the path is not in UTF-8, then elasticsearch
+    # will not accept the path, so just move on.
     rel_path = relpath(path, tree.source_folder)
     is_text = isinstance(contents, unicode)
     is_link = islink(path)
     # Index by line if the contents are text and the path is not a symlink.
     index_by_line = is_text and not is_link
     if index_by_line:
-        lines = contents.splitlines(True)
+        lines = split_content_lines(contents)
         num_lines = len(lines)
         needles_by_line = [{} for _ in xrange(num_lines)]
         annotations_by_line = [[] for _ in xrange(num_lines)]
@@ -492,7 +502,6 @@ def index_file(tree, tree_indexers, path, es, index):
                     folder=folder_name,
                     name=file_name,
                     size=file_info.st_size,
-                    modified=datetime.fromtimestamp(file_info.st_mtime),
                     is_folder=False,
 
                     # And these, which all get mashed into arrays:
@@ -566,7 +575,7 @@ def index_chunk(tree,
                        open_log(tree.log_folder,
                                 'index-chunk-%s.log' % worker_number))
                 for path in paths:
-                    log and log.write('Starting %s.\n' % path)
+                    log and log.write('Starting %s.\n' % path.encode('utf-8'))
                     index_file(tree, tree_indexers, path, es, index)
                 log and log.write('Finished chunk.\n')
             finally:
@@ -581,6 +590,8 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
+    folder_indexers = [(p.name, p.folder_to_index)
+                       for p in tree.enabled_plugins if p.folder_to_index]
     with aligned_progressbar(unignored(tree.source_folder,
                                        tree.ignore_paths,
                                        tree.ignore_filenames,
@@ -588,13 +599,10 @@ def index_folders(tree, index, es):
                      show_eta=False,  # never even close
                      label='Indexing folders') as folders:
         for folder in folders:
-            rel_path = relpath(folder, tree.source_folder)
-            superfolder_path, folder_name = split(rel_path)
-            es.index(index, FILE, {
-                'path': [rel_path],  # array for consistency with non-folder file docs
-                'folder': superfolder_path,
-                'name': folder_name,
-                'is_folder': True})
+            needles = {'is_folder': True}
+            for name, folder_to_index in folder_indexers:
+                needles.update(dict(folder_to_index(name, tree, folder).needles()))
+            es.index(index, FILE, needles)
 
 
 def index_files(tree, tree_indexers, index, pool, es):
@@ -628,7 +636,7 @@ def index_files(tree, tree_indexers, index, pool, es):
             result = future.result()
             if result:
                 formatted_tb, type, value, path = result
-                print 'A worker failed while indexing %s:' % path
+                print 'A worker failed while indexing %s:' % path.encode('utf-8')
                 print formatted_tb
                 # Abort everything if anything fails:
                 raise type, value  # exits with non-zero

@@ -203,6 +203,7 @@ collection of subcomponents which do the actual work:
 
 .. digraph:: plugin
 
+   "Plugin" -> "FolderToIndex";
    "Plugin" -> "TreeToIndex" -> "FileToIndex";
    "Plugin" -> "FileToSkim";
    "Plugin" -> "filters";
@@ -248,8 +249,14 @@ manually:
     .. autoclass:: dxr.plugins.Plugin
        :members:
 
-Actual plugin functionality is implemented within tree indexers, file
-indexers, filters, and skimmers.
+Actual plugin functionality is implemented within file indexers, tree indexers,
+folder indexers, filters, and skimmers.
+
+Folder Indexers
+===============
+
+.. autoclass:: dxr.indexers.FolderToIndex
+   :members:
 
 Tree Indexers
 =============
@@ -423,14 +430,6 @@ used above are defined in the core plugin as follows::
             }
         }
     }
-
-Crash Early, Crash Often
-========================
-
-Since :program:`dxr index` generally runs without manual supervision, it's
-better to err on the side of crashing than to risk incorrectness. Any error
-that could make a plugin emit inaccurate output should be fatal. This keeps
-DXR's structural queries trustworthy.
 
 
 Contributing Documentation

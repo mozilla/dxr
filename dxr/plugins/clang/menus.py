@@ -2,7 +2,6 @@
 
 from os.path import basename
 
-from dxr.app import DXR_BLUEPRINT
 from dxr.lines import Ref
 from dxr.utils import browse_file_url, search_url
 
@@ -198,33 +197,56 @@ class NamespaceAliasRef(_QualnameRef):
                'icon': 'reference'}
 
 
-class FunctionRef(_RefWithDefinition):
+class FunctionRef(_ClangRef):
     """Ref for function definitions or references"""
 
     @classmethod
-    def _condensed_menu_data(cls, tree, prop):
-        return prop['qualname'], 'has_overriddens' in prop, 'has_overrides' in prop
+    def from_condensed(cls, tree, prop):
+        # We ignore the def location clang gives us since it can be wrong, but
+        # its existence means this ref isn't itself a def.
+        search_for_def = prop.get('defloc') is not None
+        return cls(tree,
+                   (search_for_def, prop['qualname'],
+                    'has_overriddens' in prop, 'has_overrides' in prop),
+                   qualname=prop['qualname'])
 
-    def _more_menu_items(self, (qualname, has_overriddens, has_overrides)):
+    def menu_items(self):
+        search_for_def, qualname = self.menu_data[:2]
+        if search_for_def:
+            menu = [{'html': "Jump to definition",
+                     'title': "Jump to definition",
+                     'href': '%s&%s' % (search_url(self.tree.name,
+                                                   '+function:%s' % quote(qualname)),
+                                        'redirect=true'),
+                     'icon': 'jump'}]
+        else:
+            menu = []
+        menu.extend(self._more_menu_items())
+        return menu
+
+    def _more_menu_items(self):
+        qualname, has_overriddens, has_overrides = self.menu_data[1:]
+        qualname = quote(qualname)
+        tree = self.tree.name
         yield {'html': "Find declarations",
                'title': "Find declarations of this function",
-               'href': search_url(self.tree.name, "+function-decl:%s" % quote(qualname)),
+               'href': search_url(tree, "+function-decl:%s" % qualname),
                'icon': 'reference'}
         yield {'html': "Find callers",
                'title': "Find functions that call this function",
-               'href': search_url(self.tree.name, "+callers:%s" % quote(qualname)),
+               'href': search_url(tree, "+callers:%s" % qualname),
                'icon': 'method'}
         yield {'html': "Find references",
                'title': "Find references to this function",
-               'href': search_url(self.tree.name, "+function-ref:%s" % quote(qualname)),
+               'href': search_url(tree, "+function-ref:%s" % qualname),
                'icon': 'reference'}
         if has_overriddens:
             yield {'html': "Find overridden",
                    'title': "Find functions that this function overrides",
-                   'href': search_url(self.tree.name, "+overridden:%s" % quote(qualname)),
+                   'href': search_url(tree, "+overridden:%s" % qualname),
                    'icon': 'method'}
         if has_overrides:
             yield {'html': "Find overrides",
                    'title': "Find overrides of this function",
-                   'href': search_url(self.tree.name, "+overrides:%s" % quote(qualname)),
+                   'href': search_url(tree, "+overrides:%s" % qualname),
                    'icon': 'method'}

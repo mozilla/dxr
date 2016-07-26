@@ -1,3 +1,8 @@
+# If there's an activated virtualenv, use that. Otherwise, make one in the cwd.
+# This lets the installed Python packages persist across container runs when
+# using Docker.
+VIRTUAL_ENV ?= $(PWD)/venv
+
 # Things you might normally want to run:
 
 ## These are meant to be run within whatever virtualized, containerized, or
@@ -7,7 +12,11 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
-	$(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+
+lint: $(VIRTUAL_ENV)/bin/activate requirements
+	$(VIRTUAL_ENV)/bin/pip install flake8
+	$(VIRTUAL_ENV)/bin/flake8 --config=tooling/flake8.config dxr/
 
 clean: static_clean
 	rm -rf .npm_installed \
@@ -58,10 +67,6 @@ docker_stop:
 
 # Private things:
 
-# If there's an activated virtualenv, use that. Otherwise, make one in the cwd.
-# This lets the installed Python packages persist across container runs when
-# using Docker.
-VIRTUAL_ENV ?= $(PWD)/venv
 DXR_PROD ?= 0
 
 # Bring the elasticsearch container up if it isn't:
@@ -166,4 +171,4 @@ dxr/static_manifest: $(CSS_TEMPS) dxr/build/leaf_manifest dxr/build/css_manifest
 	
 	cat dxr/build/leaf_manifest dxr/build/css_manifest > $@
 
-.PHONY: all test clean static_clean static docs dev docker_es shell docker_test docker_clean requirements plugins
+.PHONY: all test lint clean static_clean static docs dev docker_es shell docker_test docker_clean requirements plugins

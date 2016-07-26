@@ -14,7 +14,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
         for m in self.plugin_config.regex.finditer(self.contents):
             bug = m.group(1)
             yield (m.start(0),
-                   m.end(0), 
+                   m.end(0),
                    # We could make this more storage-efficient if we gave Refs
                    # access to the plugin config at request time.
                    BugRef(self.tree,

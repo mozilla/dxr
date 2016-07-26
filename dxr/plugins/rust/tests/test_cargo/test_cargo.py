@@ -1,8 +1,6 @@
 from dxr.testing import DxrInstanceTestCase
 import os
-from os.path import dirname, join
-import subprocess
-import sys
+
 
 class CargoTests(DxrInstanceTestCase):
     @classmethod

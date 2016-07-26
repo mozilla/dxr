@@ -177,8 +177,8 @@ class Ref(object):
 class Region(object):
     """A <span> tag with a CSS class, wrapped around a run of text"""
 
-    sort_order = 2  # Sort Regions innermost, as it doesn't matter if we split
-                    # them.
+    # Sort Regions innermost, as it doesn't matter if we split them.
+    sort_order = 2
     __slots__ = ['css_class']
 
     def __init__(self, css_class):

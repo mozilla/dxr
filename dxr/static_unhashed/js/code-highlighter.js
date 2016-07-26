@@ -1,4 +1,4 @@
-/* jshint devel:true, esnext: true */
+/* jshint devel:true */
 /* globals nunjucks: true, $ */
 
 /**
@@ -338,11 +338,16 @@ $(function () {
             //for directly linked line(s), scroll to the offset minus 150px for fixed search bar height
             //but only scrollTo if the offset is more than 150px in distance from the top of the page
             jumpPosition = parseInt(jumpPosition.top, 10) - 150;
-            if (jumpPosition >= 0) {
-                window.scrollTo(0, jumpPosition);
-            } else {
-                window.scrollTo(0, 0);
+            if (jumpPosition < 0) {
+                jumpPosition = 0;
             }
+
+            // Trying to scroll in the document ready handler doesn't work because some
+            // browsers (e.g. Chrome) will reset the scroll position later.
+            // Delaying the scroll with setTimeout works around this problem.
+            window.setTimeout(function() {
+                window.scrollTo(0, jumpPosition);
+            }, 0);
             //tidy up an incoming url that might be typed in manually
             setWindowHash();
         }

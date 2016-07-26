@@ -73,6 +73,16 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         eq_(response.status_code, 200)
         ok_("This file tests" in response.data)
 
+    def test_mdates(self):
+        """Make sure that modified dates listed in browse view are dates of
+        the last commit to the file.
+        """
+        response = self.client().get('/code/source/').data
+        # main.c
+        ok_('<time>2015 May 26 18:05</time>' in response)
+        # binary_file
+        ok_('<time>2016 Apr 07 21:04</time>' in response)
+
     def test_pygmentize(self):
         """Check that the pygmentize FileToSkim correctly colors a file from permalink."""
         client = self.client()

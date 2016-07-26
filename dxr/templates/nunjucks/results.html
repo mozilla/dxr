@@ -2,17 +2,15 @@
 
 {% macro results_list(results, www_root, tree) -%}
   {% for result in results %}
-    <tbody class="result" data-path="{{ result.path }}">
-      <tr class="result-head">
-        <td class="left-column">
+    <div class="result" data-path="{{ result.path }}">
+      <div class="result-head">
+        <div class="left-column">
           <div class="{{result.iconClass}} icon-container"></div>
-        </td>
-        <td>
-          {{ result.pathLine|safe }}
-        </td>
-      </tr>
+        </div>
+        <div>{{ result.pathLine|safe }}</div>
+      </div>
       {{ result_lines(result, www_root, tree) }}
-    </tbody>
+    </div>
   {% endfor %}
 {%- endmacro %}
 

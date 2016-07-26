@@ -1,4 +1,4 @@
-/* jshint devel:true, esnext: true */
+/* jshint devel:true */
 /* globals nunjucks: true, $ */
 
 $(function() {
@@ -30,8 +30,7 @@ $(function() {
         // Only add highlights if the currentNode is not undefined or null and
         // is an anchor link, as symbols will always be links.
         if (currentNode && currentNode[0].tagName === 'A') {
-            let id = currentNode.data('id');
-            fileContainer.find('a[data-id=' + id + ']').addClass('clicking');
+            fileContainer.find('a[data-id=' + currentNode.data('id') + ']').addClass('clicking');
         }
     }
 

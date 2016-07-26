@@ -32,14 +32,14 @@ base directory - The folder containing these folders...
 from contextlib import contextmanager
 import os
 from os import O_CREAT, O_EXCL, remove
-from os.path import join, exists, realpath
+from os.path import join, realpath
 from pipes import quote
 from shutil import rmtree
 from subprocess import check_output
 from tempfile import mkdtemp, gettempdir
 from time import sleep, strftime
 
-from click import command, echo, option, Path
+from click import command, option, Path
 from flask import current_app
 import requests
 

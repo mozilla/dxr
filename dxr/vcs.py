@@ -17,6 +17,7 @@ TODO:
 - Check if the mercurial paths are specific to Mozilla's customization or not.
 
 """
+from datetime import datetime
 import marshal
 import os
 from os.path import relpath, join, split
@@ -57,33 +58,46 @@ class Vcs(object):
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
+        raise NotImplementedError
+
+    def has_upstream(self):
+        """Return true if this VCS has a usable upstream."""
         return NotImplemented
+
+    # Note: the generate_* methods shouldn't be expected to return useful URLs
+    # unless this VCS has_upstream().
 
     def generate_log(self, path):
         """Construct URL to upstream view of log of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_diff(self, path):
         """Construct URL to upstream view of diff of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_blame(self, path):
         """Construct URL to upstream view of blame on file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_raw(self, path):
         """Construct URL to upstream view to raw file at path."""
-        return NotImplemented
+        raise NotImplementedError
+
+    def last_modified_date(self, path):
+        """Return a datetime object that represents the last UTC a commit was
+        made to the given path.
+        """
+        raise NotImplementedError
 
     @classmethod
     def get_contents(cls, path, revision, stderr=None):
         """Return contents of file at specified path at given revision, where path is an
         absolute path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def display_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
-        return NotImplemented
+        raise NotImplementedError
 
 
 class Mercurial(Vcs):
@@ -96,11 +110,20 @@ class Mercurial(Vcs):
                         configs=['extensions.previous_revisions=%s' % hgext]) as client:
             tip = client.tip()
             self.revision = tip.node
-            self.previous_revisions = self.find_previous_revisions(client)
+            self.previous_revisions = self._find_previous_revisions(client)
         self.upstream = self._construct_upstream_url()
 
+    def has_upstream(self):
+        return self.upstream != ""
+
     def _construct_upstream_url(self):
-        upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'], self.root).strip())
+        with open(os.devnull, 'w') as devnull:
+            try:
+                upstream = urlparse.urlparse(self.invoke_vcs(['paths', 'default'],
+                                                             self.root, stderr=devnull).strip())
+            except subprocess.CalledProcessError:
+                # No default path, so no upstream
+                return ""
         recomb = list(upstream)
         if upstream.scheme == 'ssh':
             recomb[0] = 'http'
@@ -114,21 +137,27 @@ class Mercurial(Vcs):
         recomb[3] = recomb[4] = recomb[5] = ''  # Just those three
         return urlparse.urlunparse(recomb)
 
-    def find_previous_revisions(self, client):
-        """Find the last revision in which each file changed, for diff links.
+    def _find_previous_revisions(self, client):
+        """Find the last revision and date in which each file changed, for diff
+        links and timestamps..
 
-        Return a mapping {path: last commit nodes in which file at path changed}
+        Return a mapping {path: date, last commit nodes in which file at path changed}
 
         """
         last_change = {}
         for line in client.rawcommand(['previous-revisions']).splitlines():
-            node, path = line.split(':', 1)
-            last_change[path] = node
+            commit, date, path = line.split('@', 2)
+            last_change[path] = (commit, datetime.utcfromtimestamp(float(date)))
         return last_change
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.hg' in dirs:
+            # Make sure mercurial is happy before claiming the source.
+            try:
+                Mercurial.invoke_vcs(['status'], path)
+            except subprocess.CalledProcessError:
+                return None
             dirs.remove('.hg')
             return cls(path)
         return None
@@ -139,12 +168,16 @@ class Mercurial(Vcs):
     def is_tracked(self, path):
         return path in self.previous_revisions
 
+    def last_modified_date(self, path):
+        if path in self.previous_revisions:
+            return self.previous_revisions[path][1]
+
     def generate_raw(self, path):
         return "{}raw-file/{}/{}".format(self.upstream, self.revision, path)
 
     def generate_diff(self, path):
         # We generate link to diff with the last revision in which the file changed.
-        return "{}diff/{}/{}".format(self.upstream, self.previous_revisions[path], path)
+        return "{}diff/{}/{}".format(self.upstream, self.previous_revisions[path][0], path)
 
     def generate_blame(self, path):
         return "{}annotate/{}/{}#l{{{{line}}}}".format(self.upstream, self.revision, path)
@@ -167,6 +200,34 @@ class Git(Vcs):
                                  self.invoke_vcs(['ls-files'], self.root).splitlines())
         self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], self.root).strip()
         self.upstream = self._construct_upstream_url()
+        self.last_changed = self._find_last_changed()
+
+    def _find_last_changed(self):
+        """Return map {path: date of last authored change}
+        """
+        consume_date = True
+        current_date = None
+        last_changed = {}
+        for line in self.invoke_vcs(
+                ['log', '--format=format:%at', '--name-only'], self.root).splitlines():
+            # Commits are separated by empty lines.
+            if not line:
+                # Then the next line is a date.
+                consume_date = True
+            else:
+                if consume_date:
+                    current_date = datetime.utcfromtimestamp(float(line))
+                    consume_date = False
+                else:
+                    # Then the line should have a file path, record it if we have
+                    # not seen it and it's tracked.
+                    if line in self.tracked_files and line not in last_changed:
+                        last_changed[line] = current_date
+        return last_changed
+
+
+    def has_upstream(self):
+        return self.upstream != ""
 
     def _construct_upstream_url(self):
         source_urls = self.invoke_vcs(['remote', '-v'], self.root).split('\n')
@@ -185,12 +246,22 @@ class Git(Vcs):
                     return repo
                 warn("Your git remote is not supported yet. Please use a "
                      "GitHub remote if you would like version control "
-                     "naviagtion links to show.")
+                     "navigation links to show.")
                 break
+        return ""
+
+    def last_modified_date(self, path):
+        return self.last_changed.get(path)
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
+            # Before claiming the source, make sure git actually thinks it's
+            # alright.
+            try:
+                Git.invoke_vcs(['status'], path)
+            except subprocess.CalledProcessError:
+                return None
             dirs.remove('.git')
             return cls(path)
         return None
@@ -230,6 +301,9 @@ class Perforce(Vcs):
         self.have = dict((x['path'][len(root) + 1:], x) for x in have)
         self.upstream = upstream
         self.revision = self._p4run(['changes', '-m1', '#have'])[0]['change']
+
+    def has_upstream(self):
+        return self.upstream != ""
 
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):

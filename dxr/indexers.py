@@ -1,15 +1,13 @@
 """Base classes and convenience functions for writing indexers and skimmers"""
 
-import cgi
 from collections import namedtuple
-from itertools import imap
 from operator import itemgetter
 from os.path import join, islink
 from warnings import warn
 
 from funcy import group_by, decorator, imapcat
 
-from dxr.utils import build_offset_map
+from dxr.utils import build_offset_map, split_content_lines
 
 
 STRING_PROPERTY = {
@@ -65,6 +63,21 @@ class PluginConfig(object):
     def plugin_config(self):
         """Return a mapping of plugin-specific config options."""
         return getattr(self.tree, self.plugin_name)
+
+
+class FolderToIndex(PluginConfig):
+    """The FolderToIndex generates needles for folders and provides an
+    optional list of headers to display in browse view as `browse_headers`.
+    """
+    browse_headers = []
+
+    def __init__(self, plugin_name, tree, path):
+        self.plugin_name = plugin_name
+        self.tree = tree
+        self.path = path
+
+    def needles(self):
+        return []
 
 
 class TreeToIndex(PluginConfig):
@@ -183,8 +196,9 @@ class FileToSkim(PluginConfig):
             file by line for display, so there will be no useful UI for those
             data to support. In fact, most skimmers won't be be able to do
             anything useful with None at all. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 
@@ -332,7 +346,7 @@ class FileToSkim(PluginConfig):
             if not self.contains_text():
                 raise ValueError("Can't get line offsets for a file that isn't"
                                  " text.")
-            lines = self.contents.splitlines(True) if self.contents is not None else []
+            lines = split_content_lines(self.contents) if self.contents is not None else []
             self._line_offset_list = build_offset_map(lines)
         return self._line_offset_list
 
@@ -351,8 +365,9 @@ class FileToIndex(FileToSkim):
             the file by line for display, so there will be no useful UI for
             those data to support. Think more along the lines of returning
             EXIF data to search by for a JPEG. For unicode, split the file into
-            lines using universal newlines (``unicode.splitlines()`` with no
-            params); that's what the rest of the framework expects.
+            lines using universal newlines
+            (``dxr.utils.split_content_lines()``); that's what the rest of the
+            framework expects.
         :arg tree: The :class:`~dxr.config.TreeConfig` of the tree to which
             the file belongs
 

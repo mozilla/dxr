@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from unittest import TestCase
 from datetime import datetime
 
 from nose.tools import eq_, assert_raises
