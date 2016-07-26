@@ -57,10 +57,8 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
 class FileToIndex(dxr.indexers.FileToIndex):
     """Do lots of work to yield a description needle."""
 
-    # comment_re anchors at start of line and finds everything after /* until
-    # the first / in order to match entire javadoc-style comments where every
-    # subsequent line starts with a * (e.g. to find entire licenses).
-    comment_re = re.compile(r'^(/\*+[\s\*]*)(?P<description>[^/]*)', flags=re.M)
+    # comment_re matches C-style block comments:
+    comment_re = re.compile(r'^(/\*[*\s]*)(?P<description>(\*(?!/)|[^*])*)\*/', flags=re.M)
     docstring_res = [re.compile(r'"""\s*(?P<description>[^"]*)"""', flags=re.M),
                      re.compile(r"'''\s*(?P<description>[^']*)'''", flags=re.M)]
     title_re = re.compile(r'<title>([^<]*)</title>')
@@ -145,11 +143,9 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # Haven't returned so we can fall back to the first non-empty line of
         # the first doc-comment.
         for match in self.comment_re.finditer(''.join(self.sixty_lines)):
-            desc = match.group('description')
-            # Trim off any '*' that we tacked at the end (because the regex stops at /).
-            desc = desc.rstrip('*').strip()
+            desc = match.group('description').strip()
             desc_lower = desc.lower()
             # Skip any comment that contains the license or a tab-width
             # emacs/vim setting.
-            if not any(pattern in desc_lower for pattern in ('tab-width', 'license', 'vim:')):
+            if not any(pattern in desc_lower for pattern in ['tab-width', 'license', 'vim:']):
                 return desc
