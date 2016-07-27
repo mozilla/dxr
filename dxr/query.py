@@ -192,7 +192,12 @@ class Query(object):
             }
         }
         # We ask not to sort by path and line, to use score ranking instead.
-        result_count, results = self._search_and_highlight(query, file_filters, False, 0, promote_limit, False)
+        result_count, results = self._search_and_highlight(query,
+                                                           file_filters,
+                                                           False,
+                                                           0,
+                                                           promote_limit,
+                                                           sort_by_score=True)
         return result_count, results, ' '.join((unicode(f) for f in chain.from_iterable(file_filters)))
 
     def direct_result(self):
@@ -232,7 +237,7 @@ class Query(object):
                     return None
 
     def _search_and_highlight(self, query, filters, is_line_query, offset, limit,
-                              should_alphabetize=True):
+                              sort_by_score=False):
         """Perform a query using self.es_search and highlight the results,
         returning a tuple (total count of results, list of results)
 
@@ -241,15 +246,14 @@ class Query(object):
         :arg is_line_query: whether to query lines (otherwise query files)
         :arg offset: return results starting from this number
         :arg limit: maximum number of results to return
-        :arg should_alphabetize: whether to should_alphabetize the results alphabetically by path and
+        :arg sort_by_score: whether to sort by item score before alphabetizing
         numerically by line
 
         """
-        # Decide on the sort mode: either alphanumerically or by score.
-        if should_alphabetize:
-            sort_mode = ['path', 'number'] if is_line_query else ['path']
-        else:
-            sort_mode = ['_score']
+        # Decide on the sort mode: either alphanumerically or by score first.
+        sort_mode = ['path', 'number'] if is_line_query else ['path']
+        if sort_by_score:
+            sort_mode.insert(0, '_score')
         results = self.es_search(
             {'query': query,
              'sort': sort_mode,
