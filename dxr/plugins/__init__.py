@@ -48,6 +48,7 @@ class Plugin(object):
                  analyzers=None,
                  direct_searchers=None,
                  refs=None,
+                 badge_colors=None,
                  config_schema=None):
         """
         :arg filters: A list of filter classes
@@ -82,6 +83,7 @@ class Plugin(object):
         :arg refs: An iterable of :class:`~dxr.lines.Ref` subclasses
             supported by this plugin. This is used at request time, to turn
             abreviated ES index data back into HTML.
+        :arg badge_colors: Mapping of Filter.lang -> color for menu badges.
         :arg config_schema: A validation schema for this plugin's
             configuration. See https://pypi.python.org/pypi/schema/ for docs.
 
@@ -105,6 +107,7 @@ class Plugin(object):
         self.file_to_skim = file_to_skim
         self.mappings = mappings or {}
         self.analyzers = analyzers or {}
+        self.badge_colors = badge_colors or {}
         self.config_schema = config_schema or {}
 
     @classmethod
@@ -146,6 +149,7 @@ class Plugin(object):
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
+                   badge_colors=namespace.get('badge_colors'),
                    direct_searchers=direct_searchers_from_namespace(namespace),
                    refs=refs_from_namespace(namespace))
 

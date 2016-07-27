@@ -10,6 +10,7 @@ plugin = Plugin(
     filters=filters_from_namespace(filters.__dict__),
     tree_to_index=TreeToIndex,
     mappings=mappings,
+    badge_colors={'py': '#ECE6FD'},
     refs=refs_from_namespace(menus.__dict__),
     config_schema = {
         'python_path': AbsPath

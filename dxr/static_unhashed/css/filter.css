@@ -57,14 +57,12 @@
     border-radius: 0 0 6px 6px;
     -webkit-box-shadow: 0px 4px 5px 0px rgba(0,0,0,0.25);
     box-shadow: 0px 4px 5px 0px rgba(0,0,0,0.25);
+    background-color: white;
 }
-.sf-select-options .selector-option-label {
-    display: inline-block;
+.selector-option-label {
     vertical-align: top;
-    width: 10rem;
 }
-.sf-select-options .selector-option-description {
-    display: inline-block;
+.selector-option-description {
     margin-right: 12rem;  /* Width of label plus padding */
     vertical-align: top;
     white-space: normal;

@@ -25,6 +25,7 @@ mappings = {
 plugin = Plugin(
     tree_to_index=TreeToIndex,
     mappings=mappings,
+    badge_colors={'js': '#D0FCF8'},
     refs=refs_from_namespace(refs.__dict__),
     filters=filters_from_namespace(filters.__dict__),
 )

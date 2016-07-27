@@ -40,7 +40,7 @@ $(function() {
         }
     });
 
-    options.on('click', 'a', function(event) {
+    options.on('click', 'tr', function(event) {
         event.stopPropagation();
 
         appendFilter($(this).data('value'));

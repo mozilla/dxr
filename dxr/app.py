@@ -200,7 +200,7 @@ def _search_json(query, tree, query_text, offset, limit, config):
         'results': results,
         'result_count': count_and_results['result_count'],
         'result_count_formatted': format_number(count_and_results['result_count']),
-        'tree_tuples': _tree_tuples(query_text)})
+        'tree_tuples': _tree_tuples('.search', q=query_text)})
 
 
 def _search_html(query, tree, query_text, offset, limit, config):
@@ -222,19 +222,21 @@ def _search_html(query, tree, query_text, offset, limit, config):
                                   redirect='false'),
             'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
-            'tree_tuples': _tree_tuples(query_text),
+            'tree_tuples': _tree_tuples('.search', q=query_text),
             'www_root': config.www_root}
 
     return render_template('search.html', **template_vars)
 
 
-def _tree_tuples(query_text):
+def _tree_tuples(endpoint, **kwargs):
     """Return a list of rendering info for Switch Tree menu items."""
     return [(f['name'],
-             url_for('.search',
+             url_for(endpoint,
                      tree=f['name'],
-                     q=query_text),
-             f['description'])
+                     **kwargs),
+             f['description'],
+             [(lang, color) for p in plugins_named(f['enabled_plugins'])
+              for lang, color in sorted(p.badge_colors.iteritems())])
             for f in frozen_configs()]
 
 
@@ -405,11 +407,7 @@ def _browse_folder(tree, path, config):
         # Common template variables:
         www_root=config.www_root,
         tree=tree,
-        tree_tuples=[
-            (t['name'],
-             url_for('.parallel', tree=t['name'], path=path),
-             t['description'])
-            for t in frozen_configs()],
+        tree_tuples=_tree_tuples('.parallel', path=path),
         generated_date=frozen['generated_date'],
         google_analytics_key=config.google_analytics_key,
         paths_and_names=_linked_pathname(path, tree),
@@ -458,11 +456,7 @@ def _build_common_file_template(tree, path, is_binary, date, config):
         # Common template variables:
         'www_root': config.www_root,
         'tree': tree,
-        'tree_tuples':
-            [(t['name'],
-              url_for('.parallel', tree=t['name'], path=path),
-              t['description'])
-            for t in frozen_configs()],
+        'tree_tuples': _tree_tuples('.parallel', path=path),
         'generated_date': date,
         'google_analytics_key': config.google_analytics_key,
         'filters': filter_menu_items(
