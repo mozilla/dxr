@@ -150,10 +150,8 @@ def index_tree(tree, es, verbose=False):
     name of the new ES index.
 
     """
-    config = tree.config
-
     def new_pool():
-        return ProcessPoolExecutor(max_workers=config.workers)
+        return ProcessPoolExecutor(max_workers=tree.workers)
 
     def farm_out(method_name):
         """Farm out a call to all tree indexers across a process pool.
@@ -164,7 +162,7 @@ def index_tree(tree, es, verbose=False):
         Show progress while doing it.
 
         """
-        if not config.workers:
+        if not tree.workers:
             return [save_scribbles(ti, method_name) for ti in tree_indexers]
         else:
             futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
@@ -191,6 +189,7 @@ def index_tree(tree, es, verbose=False):
     # Note starting time
     start_time = datetime.now()
 
+    config = tree.config
     skip_indexing = 'index' in config.skip_stages
     skip_build = 'build' in config.skip_stages
     skip_cleanup = skip_indexing or skip_build or 'clean' in config.skip_stages
@@ -616,7 +615,7 @@ def index_files(tree, tree_indexers, index, pool, es):
 
     index_folders(tree, index, es)
 
-    if not tree.config.workers:
+    if not tree.workers:
         for paths in path_chunks(tree):
             index_chunk(tree,
                         tree_indexers,
@@ -663,7 +662,7 @@ def build_tree(tree, tree_indexers, verbose):
     # Call make or whatever:
     with open_log(tree.log_folder, 'build.log', verbose) as log:
         print 'Building tree'
-        workers = max(tree.config.workers, 1)
+        workers = max(tree.workers, 1)
         r = subprocess.call(
             tree.build_command.replace('$jobs', str(workers))
                               .format(workers=workers),

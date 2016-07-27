@@ -197,6 +197,11 @@ per-tree options take effect when the tree is next indexed.
 ``p4web_url``
     The URL to the root of a p4web installation. Default: ``http://p4web/``
 
+``workers``
+    Number of concurrent processes to use for building and indexing this tree.
+    Default: ``workers`` setting from ``[DXR]`` section. You might want to set
+    this lower for a tree that uses memory-hungry plugins if you're low on RAM.
+
 Plugin Configuration
 ====================
 
