@@ -107,13 +107,15 @@ $(function() {
 
             dataPath.push(paths[pathIndex]);
 
+            // Render the path segment and trim white space so copying the
+            // path will not insert spaces.
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
                 'is_dir': !isLastOrOnly
-            });
+            }).trim();
         }
 
         return [iconClass, pathLines];

@@ -20,7 +20,7 @@ class DescriptionTests(DxrInstanceTestCase):
         # Check that I stripped prepended spaces.
         ok_("  A line of the readme, with prepended spaces." not in response)
         # Javascript description with /** */ comment
-        ok_("Define foon, a dynamic higher order weakly typed late binded function." in response)
+        ok_("Define foon, a dynamic, higher-order, weakly typed, late-bound function/method." in response)
         # Python docstring
         ok_("foo.py: some very Pythonic codes." in response)
         # First case of generic description_re.
@@ -29,6 +29,9 @@ class DescriptionTests(DxrInstanceTestCase):
         ok_("great code" in response)
         # Make sure license, vim, emacs mode lines skip.
         ok_("The description appears after a MPL and after some mode settings." in response)
+        # Test that the comment regular expression won't time out from lazy
+        # searching on big strings.
+        ok_("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" in response)
 
     def test_sub_browse_page(self):
         """Test that the expected descriptions appear on the subfolder's page.

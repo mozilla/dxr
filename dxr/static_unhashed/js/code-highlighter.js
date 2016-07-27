@@ -7,13 +7,15 @@
  * 1) Multi-select highlight lines with shift key and update window.location.hash
  * 2) Multi-select highlight lines with command/control key and update window.location.hash
  * 3) Highlight lines when page loads, if window.location.hash exists
- * In addition, we update the permalink link to keep it synchronized with window.location.
+ * In addition, we update the permalink and other nav links to keep them
+ * synchronized with window.location.
  */
 
 $(function () {
     'use strict';
     var container = $('#line-numbers'),
-        permalink = $('.permalink'), // whenever we update window.location, update this href too
+        navlinks = $('.panel a'), // whenever we update window.location, maybe update these too
+        permalink = $('.permalink'), // a subset of navlinks, but it has more specific update rules
         lastModifierKey = null, // use this as a sort of canary/state indicator showing the last user action
         singleLinesArray = [], //track single highlighted lines here
         rangesArray = []; // track ranges of highlighted lines here
@@ -86,6 +88,7 @@ $(function () {
         var selectedArray = generateSelectedArrays(); // generates sorted arrays
         var singleLinesArray = selectedArray[0];
         var rangesArray = selectedArray[1];
+        var firstNumber;
         // eliminate duplication
         for (s = 0; s < singleLinesArray.length; s++) {
             for (r = 0; r < rangesArray.length; r++) {
@@ -103,22 +106,29 @@ $(function () {
             // if no singleLines left or range < singleLine add range to hash
             if ((r == rangesArray.length) || (singleLinesArray[s] < rangesArray[r][0])) {
                 windowHash += singleLinesArray[s] + ',';
+                if (!firstNumber) {
+                    firstNumber = singleLinesArray[s];
+                }
                 s++;
             } else if (( s == singleLinesArray.length) || (rangesArray[r][0] < singleLinesArray[s])) {
                 windowHash += rangesArray[r][0] + '-' + rangesArray[r][1] + ',';
+                if (!firstNumber) {
+                    firstNumber = rangesArray[r][0];
+                }
                 r++;
             }
         }
         if (windowHash) {
             windowHash = windowHash.replace(reCleanup, '');
-            updateHash(windowHash);
+            updateHash(windowHash, firstNumber);
         }
     }
 
-    //update places where hash location is used: window, permalink
-    function updateHash(hash) {
+    //update places where hash location is used: window, permalink, other nav links
+    function updateHash(hash, lineNumber) {
         if (permalink.length > 0)
             updatePermalink(hash);
+        updateNavLinks(lineNumber);
         history.replaceState(null, '', hash);
     }
 
@@ -130,6 +140,18 @@ $(function () {
         if (hash_loc >= 0)
             permalink_href = permalink_href.substring(0, hash_loc);
         permalink.attr('href', permalink_href + windowHash);
+    }
+
+    //replace any occurrence of {{line}} in hrefs with the last-selected line.
+    //unless the last-selected line is undefined, then remove {{line}} from the
+    //displayed url.
+    function updateNavLinks(lineNumber) {
+        navlinks.each(function() {
+            const $this = $(this);
+            if ($this.data('template')) {
+                $this.attr('href', $this.data('template').replace(/{{line}}/g, lineNumber || ''));
+            }
+        });
     }
 
     //parse window.location.hash on new requests into two arrays

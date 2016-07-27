@@ -223,7 +223,7 @@ def _search_json(query, tree, query_text, offset, limit, config):
         'promoted_count_formatted': format_number(promoted_count),
         'result_count_formatted': format_number(count),
         'promoted_query': promoted_query,
-        'tree_tuples': _tree_tuples(query_text)})
+        'tree_tuples': _tree_tuples('.search', q=query_text)})
 
 
 def _search_html(tree, query_text, config):
@@ -245,19 +245,21 @@ def _search_html(tree, query_text, config):
                                   redirect='false'),
             'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
-            'tree_tuples': _tree_tuples(query_text),
+            'tree_tuples': _tree_tuples('.search', q=query_text),
             'www_root': config.www_root}
 
     return render_template('search.html', **template_vars)
 
 
-def _tree_tuples(query_text):
+def _tree_tuples(endpoint, **kwargs):
     """Return a list of rendering info for Switch Tree menu items."""
     return [(f['name'],
-             url_for('.search',
+             url_for(endpoint,
                      tree=f['name'],
-                     q=query_text),
-             f['description'])
+                     **kwargs),
+             f['description'],
+             [(lang, color) for p in plugins_named(f['enabled_plugins'])
+              for lang, color in sorted(p.badge_colors.iteritems())])
             for f in frozen_configs()]
 
 
@@ -428,11 +430,7 @@ def _browse_folder(tree, path, config):
         # Common template variables:
         www_root=config.www_root,
         tree=tree,
-        tree_tuples=[
-            (t['name'],
-             url_for('.parallel', tree=t['name'], path=path),
-             t['description'])
-            for t in frozen_configs()],
+        tree_tuples=_tree_tuples('.parallel', path=path),
         generated_date=frozen['generated_date'],
         google_analytics_key=config.google_analytics_key,
         paths_and_names=_linked_pathname(path, tree),
@@ -481,11 +479,7 @@ def _build_common_file_template(tree, path, is_binary, date, config):
         # Common template variables:
         'www_root': config.www_root,
         'tree': tree,
-        'tree_tuples':
-            [(t['name'],
-              url_for('.parallel', tree=t['name'], path=path),
-              t['description'])
-            for t in frozen_configs()],
+        'tree_tuples': _tree_tuples('.parallel', path=path),
         'generated_date': date,
         'google_analytics_key': config.google_analytics_key,
         'filters': filter_menu_items(
@@ -516,12 +510,23 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
     :arg image_rev: revision number of a textual or binary image, for images
         displayed at a certain rev
     """
+    def process_link_templates(sections):
+        """Look for {{line}} in the links of given sections, and duplicate them onto
+        a 'template' field.
+        """
+        for section in sections:
+            for link in section['items']:
+                if '{{line}}' in link['href']:
+                    link['template'] = link['href']
+                    link['href'] = link['href'].replace('{{line}}', '')
+
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
 
             [('Section Name', [{'icon': ..., 'title': ..., 'href': ...}])]
 
         """
+        process_link_templates(sections)
         # Sort by order, resolving ties by section name:
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))

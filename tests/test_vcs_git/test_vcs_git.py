@@ -16,7 +16,8 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
     def test_blame(self):
         """Make sure the blame link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/blame/%s/main.c" title="Blame" class="blame icon">Blame</a>' % LATEST_REVISION in response.data)
+        ok_('/blame/%s/main.c#L" title="Blame" class="blame icon"' % LATEST_REVISION in response.data)
+        ok_('/blame/%s/main.c#L{{line}}">Blame' % LATEST_REVISION in response.data)
 
     def test_raw(self):
         """Make sure the raw link exists and goes to the right place."""

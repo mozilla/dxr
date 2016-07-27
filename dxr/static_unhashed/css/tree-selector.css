@@ -50,12 +50,21 @@
     content: "\e803";
     speak: none;
 }
+.selector-options tr {
+    cursor: pointer;
+}
+.selector-option-label {
+    /* Leave some room for the selected icon + original padding */
+    padding-left: 35px;
+}
 .ts-modal {
+    position: absolute;
+    right: 0;
     border: 1px solid #d4d4d4;
     border-radius: 6px;
     z-index: 10;
-    right: 0;
-    position: absolute;
+    min-width: 18rem;
+    background-color: white;
 }
 header {
     background-color: #e0e0e0;

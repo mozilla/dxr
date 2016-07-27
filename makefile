@@ -15,7 +15,7 @@ test: all
 	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
 
 lint: $(VIRTUAL_ENV)/bin/activate requirements
-	$(VIRTUAL_ENV)/bin/pip install flake8
+	$(VIRTUAL_ENV)/bin/pip install flake8==3.0.1
 	$(VIRTUAL_ENV)/bin/flake8 --config=tooling/flake8.config dxr/
 
 clean: static_clean
