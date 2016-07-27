@@ -1,3 +1,6 @@
+.selector-badges {
+    vertical-align: top;
+}
 .selector-badges span {
     text-shadow: none;
     padding: 2px 4px;
