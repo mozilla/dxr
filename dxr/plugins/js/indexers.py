@@ -34,12 +34,11 @@ class TreeToIndex(dxr.indexers.TreeToIndex):
     def post_build(self):
         # Execute the esprima to dump metadata, by running node from here and
         # passing in the tree location
-        retcode = subprocess.call(['node', 'analyze_tree.js',
-                                   self.tree.source_folder,
-                                   join(self.tree.temp_folder, 'plugins/js')] +
-                                   self.tree.ignore_filenames,
-                                  cwd=join(self.plugin_folder, 'analyze_js'))
-        return retcode
+        subprocess.check_call(['node', 'analyze_tree.js',
+                               self.tree.source_folder,
+                               join(self.tree.temp_folder, 'plugins/js')] +
+                               self.tree.ignore_filenames,
+                              cwd=join(self.plugin_folder, 'analyze_js'))
 
     def file_to_index(self, path, contents):
         return FileToIndex(path, contents, self.plugin_name, self.tree)
