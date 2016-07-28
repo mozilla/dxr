@@ -1,22 +1,5 @@
 $(function() {
     var contentContainer = $('#content');
-    var options = $('.select-options .selector-options');
-
-    /**
-     * Mark the selected element as checked.
-     * @param {Object} selected - The item to mark as checked.
-     */
-    function setSelectedItem(selected) {
-        var items = options.find('a');
-
-        items.each(function() {
-            $(this).removeClass('selected')
-                   .removeAttr('aria-checked');
-        });
-
-        selected.addClass('selected');
-        selected.attr('aria-checked', 'true');
-    }
 
     // Show/Hide the options
     contentContainer.on('click', '.ts-select-trigger', function(event) {
@@ -49,7 +32,7 @@ $(function() {
         }
     });
 
-    options.on('click', 'tr', function(event) {
+    contentContainer.on('click', '.selector-options tr', function(event) {
         event.stopPropagation();
         window.location = $(this).data('href');
     });
