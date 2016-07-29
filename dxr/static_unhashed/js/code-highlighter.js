@@ -147,7 +147,7 @@ $(function () {
     //displayed url.
     function updateNavLinks(lineNumber) {
         navlinks.each(function() {
-            const $this = $(this);
+            var $this = $(this);
             if ($this.data('template')) {
                 $this.attr('href', $this.data('template').replace(/{{line}}/g, lineNumber || ''));
             }
