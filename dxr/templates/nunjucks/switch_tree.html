@@ -20,9 +20,9 @@
             <tr data-href="{{ url }}" {% if tree == selected_tree %}aria-checked="true"{% endif %}>
               <td class="selector-option-label {% if tree == selected_tree %} selected {% endif %}">{{ tree }}</td>
               <td class="selector-badges">
-                {% for text, color in badges %}
+                {% for text, color in badges -%}
                   <span style="background-color:{{ color }}">{{ text }}</span>
-                {% endfor %}
+                {%- endfor %}
               </td>
               <td class="selector-option-description">{{ description }}</td>
             </tr>
