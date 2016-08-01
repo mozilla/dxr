@@ -249,5 +249,5 @@ class TreeToIndex(TreeToIndexBase):
                            self._overriddens,
                            self._parents,
                            self._children,
-                           self._csv_map[sha1(path.encode('utf-8')).hexdigest()],
+                           self._csv_map[sha1(path).hexdigest()],
                            self._temp_folder)

@@ -296,3 +296,12 @@ def split_content_lines(unicode):
 
     """
     return unicode.splitlines(True)
+
+
+def unicode_for_display(str):
+    """Return a unicode representation of a bytestring for showing to humans.
+
+    Different inputs may return the same output.
+
+    """
+    return str.decode('utf8', 'replace')
