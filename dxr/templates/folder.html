@@ -39,7 +39,7 @@
         <tr>
           <td><a href="{{ relative_url }}" class="icon {{ icon }}">{{ name }}</a></td>
           {% for col in plugin_columns %}
-            <td>{{ col }}</th>
+            <td><a href="{{ relative_url }}">{{ col }}</a></td>
           {% endfor %}
           <td><a href="{{ relative_url }}">
             {% if modified is not none %}
