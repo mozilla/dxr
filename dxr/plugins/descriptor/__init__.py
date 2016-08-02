@@ -5,7 +5,6 @@ from itertools import ifilter
 import re
 from os import listdir
 from os.path import splitext, basename, join, isfile
-from warnings import warn
 
 import dxr.indexers
 
@@ -30,13 +29,13 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
         """If the folder contains a readme, then yield the first line of the
         readme as the description.
 
-        Similar to https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#251.
+        Similar to
+        https://mxr.mozilla.org/webtools-central/source/mxr/Local.pm#251.
+
         """
+        # listdir() returns unicode iff a unicode path is passed in. self.path
+        # is a bytestring.
         for entry in sorted(listdir(self.path)):
-            try:
-                entry = entry.decode('utf-8')
-            except UnicodeDecodeError:
-                continue
             path = join(self.path, entry)
             # If we find a readme, then open it and return the first line if
             # it's non-empty.
@@ -49,7 +48,7 @@ class FolderToIndex(dxr.indexers.FolderToIndex):
                     description = describe_readme([first_line])
                     if description:
                         # Pack into a list for consistency with the file needle.
-                        return [("Description", [description])]
+                        return [('Description', [description])]
         # Didn't find anything to use as a description
         return []
 
@@ -128,17 +127,20 @@ class FileToIndex(dxr.indexers.FileToIndex):
         try:
             description_re = re.compile(ur'(?:{}|{}|description)'
                                           '(?:{})?\s*(?:[{}]\n?)\s*'
-                                          '(?P<description>[\w\s-]+)'.format(re.escape(self.path),
-                                                                             re.escape(root),
-                                                                             re.escape(ext),
-                                                                             delimiters),
+                                          '(?P<description>[\w\s-]+)'.format(
+                                              re.escape(self.path.decode('utf-8')),
+                                              re.escape(root.decode('utf-8')),
+                                              re.escape(ext.decode('utf-8')),
+                                              delimiters),
                                         re.IGNORECASE | re.UNICODE)
+        except UnicodeDecodeError:
+            # We couldn't make Unicode sense of the bag-of-bytes filename.
+            pass
+        else:
             for line in self.sixty_lines:
                 match = description_re.search(line)
                 if match:
                     return match.group('description')
-        except re.error:
-            warn("Error on compiling or search regexp for {}".format(self.path))
 
         # Haven't returned so we can fall back to the first non-empty line of
         # the first doc-comment.

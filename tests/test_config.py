@@ -214,3 +214,15 @@ def test_per_tree_workers():
 
     # This should fall back to the default:
     eq_(config.trees['flowzilla-central'].workers, 9)
+
+
+def test_bytestring_paths():
+    """Ensure source_folder and such are bytestrings, not Unicode."""
+    config = Config("""
+        [DXR]
+        enabled_plugins = clang
+
+        [mozilla-central]
+        source_folder = /some/path
+        """)
+    ok_(isinstance(config.trees['mozilla-central'].source_folder, str))

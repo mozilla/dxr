@@ -28,7 +28,8 @@ from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
 from dxr.mime import decode_data
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line, bucket, split_content_lines)
+                       append_update_by_line, append_by_line, bucket,
+                       split_content_lines, unicode_for_display)
 from dxr.vcs import VcsCache
 
 
@@ -377,9 +378,8 @@ def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIn
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
-    """Return an iterable of Unicode absolute paths to unignored source
-    tree files or the folders that contain them. Skip any non-utf8-decodeable
-    paths.
+    """Return an iterable of bytestring absolute paths to unignored source
+    tree files or the folders that contain them.
 
     Returned files include both binary and text ones.
 
@@ -387,6 +387,11 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
         instead.
 
     """
+    # On Linux (which is what we guarantee support for), paths are bags of
+    # bytes; they may not even be representable as Unicode code points.
+    if isinstance(folder, unicode):
+        folder = folder.encode('utf8')
+
     def raise_(exc):
         raise exc
 
@@ -410,10 +415,7 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
                 if any(fnmatchcase("/" + path.replace(os.sep, "/"), e) for e in ignore_paths):
                     continue  # Ignore the file.
 
-                try:
-                    yield join(root, f).decode('utf-8')
-                except UnicodeDecodeError:
-                    pass
+                yield join(root, f)
 
         # Exclude folders that match an ignore pattern.
         # os.walk listens to any changes we make in `folders`.
@@ -421,10 +423,7 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
             folders, rel_path, ignore_filenames, ignore_paths)
         if want_folders:
             for f in folders:
-                try:
-                    yield join(root, f).decode('utf-8')
-                except UnicodeDecodeError:
-                    pass
+                yield join(root, f)
 
 def index_file(tree, tree_indexers, path, es, index):
     """Index a single file into ES, and build a static HTML representation of it.
@@ -435,7 +434,7 @@ def index_file(tree, tree_indexers, path, es, index):
     worker processes. That goes at 52MB/s on my OS X laptop, measuring by the
     size of the pickled object and including the pickling and unpickling time.
 
-    :arg path: Absolute path to the file to index
+    :arg path: Bytestring absolute path to the file to index
     :arg index: The ES index name
 
     """
@@ -498,8 +497,8 @@ def index_file(tree, tree_indexers, path, es, index):
         # Hard-code the keys that are hard-coded in the browse()
         # controller. Merge with the pluggable ones from needles:
         doc = dict(# Some non-array fields:
-                    folder=folder_name,
-                    name=file_name,
+                    folder=unicode_for_display(folder_name),
+                    name=unicode_for_display(file_name),
                     size=file_info.st_size,
                     is_folder=False,
 
@@ -574,7 +573,7 @@ def index_chunk(tree,
                        open_log(tree.log_folder,
                                 'index-chunk-%s.log' % worker_number))
                 for path in paths:
-                    log and log.write('Starting %s.\n' % path.encode('utf-8'))
+                    log and log.write('Starting %s.\n' % path)
                     index_file(tree, tree_indexers, path, es, index)
                 log and log.write('Finished chunk.\n')
             finally:
@@ -635,7 +634,7 @@ def index_files(tree, tree_indexers, index, pool, es):
             result = future.result()
             if result:
                 formatted_tb, type, value, path = result
-                print 'A worker failed while indexing %s:' % path.encode('utf-8')
+                print 'A worker failed while indexing %s:' % path
                 print formatted_tb
                 # Abort everything if anything fails:
                 raise type, value  # exits with non-zero

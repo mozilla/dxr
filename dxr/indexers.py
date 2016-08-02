@@ -67,8 +67,7 @@ class PluginConfig(object):
 
 class FolderToIndex(PluginConfig):
     """The FolderToIndex generates needles for folders and provides an
-    optional list of headers to display in browse view as `browse_headers`.
-    """
+    optional list of headers to display in browse view as `browse_headers`."""
     browse_headers = []
 
     def __init__(self, plugin_name, tree, path):
@@ -187,9 +186,9 @@ class FileToSkim(PluginConfig):
     def __init__(self, path, contents, plugin_name, tree, file_properties=None,
                  line_properties=None):
         """
-        :arg path: The conceptual path to the file, relative to the tree's
-            source folder. Such a file might not exist on disk. This is useful
-            mostly as a hint for syntax coloring.
+        :arg path: The (bytestring) conceptual path to the file, relative to
+            the tree's source folder. Such a file might not exist on disk. This
+            is useful mostly as a hint for syntax coloring.
         :arg contents: What's in the file: unicode if we knew or successfully
             guessed an encoding, None otherwise. Don't return any by-line data
             for None; the framework won't have succeeded in breaking up the
@@ -320,7 +319,7 @@ class FileToSkim(PluginConfig):
     # Convenience methods:
 
     def absolute_path(self):
-        """Return the absolute path of the file to skim.
+        """Return the (bytestring) absolute path of the file to skim.
 
         Note: in skimmers, the returned path may not exist if the source folder
         moved between index and serve time.
@@ -357,8 +356,8 @@ class FileToIndex(FileToSkim):
     def __init__(self, path, contents, plugin_name, tree):
         """Analyze a file or digest an analysis that happened at compile time.
 
-        :arg path: A path to the file to index, relative to the tree's source
-            folder
+        :arg path: The (bytestring) path to the file to index, relative to the
+            tree's source folder
         :arg contents: What's in the file: unicode if we managed to guess at an
             encoding and decode it, None otherwise. Don't return any by-line
             data for None; the framework won't have succeeded in breaking up
