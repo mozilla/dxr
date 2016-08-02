@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from nose.tools import raises
 
 from dxr.testing import DxrInstanceTestCase
@@ -41,3 +42,10 @@ class PathAndFileFilterTests(DxrInstanceTestCase):
                             ['fishy_folder/fish2', 'fishy_folder/gill'])
 
         self.found_files_eq('file:fish[14]', ['fish1', 'folder/fish4'])
+
+    def test_unicode(self):
+        """Make sure searching for non-ASCII names works."""
+        self.found_files_eq(u'file:fre\u0301mium*', [u'fre\u0301mium.txt'])
+
+        # This one fails because é is normalized differently in ES than here:
+        # self.found_files_eq(u'file:frémium*', [u'frémium.txt'])
