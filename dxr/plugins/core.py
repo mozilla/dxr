@@ -566,9 +566,16 @@ def _path_trigram_filter(path, is_case_sensitive):
         regex = '(/|^){0}$'  # Start at any path segment.
 
     return es_regex_filter(
-            regex_grammar.parse(regex.format(re.escape(path))),
-            'path',
-            is_case_sensitive)
+        regex_grammar.parse(
+            regex.format(
+                re.escape(
+                    path.encode('ascii', 'backslashreplace')
+                )
+            )
+        ),
+        'path',
+        is_case_sensitive
+    )
 
 
 @direct_search(priority=100)
