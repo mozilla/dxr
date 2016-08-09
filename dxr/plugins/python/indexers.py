@@ -260,10 +260,11 @@ class FileToIndex(FileToIndexBase):
                 # names, we start the queue for the current parenthesis level
                 # at the byte offset for the keyword token, but only start
                 # pushing character offsets once we're past the keyword.
-                paren_stack.setdefault(paren_level, (utf8_start, []))
+                queue_start, node_queue = paren_stack.setdefault(paren_level, (utf8_start, []))
+                node_start_table.setdefault(queue_start, node_queue)
 
                 if tok_name not in ('def', 'class'):
-                    paren_stack[paren_level][1].append((start, end))
+                    node_queue.append((start, end))
 
                 continue
 
@@ -276,22 +277,16 @@ class FileToIndex(FileToIndexBase):
                 if tok_name in '([{':
                     paren_level += 1
                 elif tok_name in '}])':
-                    node_start, node_queue = paren_stack.pop(paren_level, (None, None))
-                    if node_start is not None:
-                        node_start_table[node_start] = node_queue
+                    paren_stack.pop(paren_level, (None, None))
                     paren_level -= 1
                 elif tok_name == '.':
                     # Attribute access.  Don't reset, stay at the same level.
                     pass
                 else:
-                    node_start, node_queue = paren_stack.pop(paren_level, (None, None))
-                    if node_start is not None:
-                        node_start_table[node_start] = node_queue
+                    paren_stack.pop(paren_level, (None, None))
 
             elif tok_type == token.NEWLINE:
-                node_start, node_queue = paren_stack.pop(paren_level, (None, None))
-                if node_start is not None:
-                    node_start_table[node_start] = node_queue
+                paren_stack.pop(paren_level, (None, None))
 
         return node_start_table
 
