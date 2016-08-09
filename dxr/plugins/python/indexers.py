@@ -230,27 +230,35 @@ class FileToIndex(FileToIndexBase):
         return self.visitor.refs
 
     def analyze_tokens(self):
-        """Split the file into tokens and analyze them for data needed
-        for indexing.
+        """Split the file into tokens and return a table mapping utf-8 bytestring
+        offsets to lists of unicode offsets for these tokens.
 
         """
-        # Run the file contents through the tokenizer, both as unicode
-        # and as a utf-8 encoded string.  This will allow us to build
-        # up a mapping between the byte offset and the character offset.
+        # Run the file contents through the tokenizer, both as unicode and as a utf-8
+        # encoded string.  This will allow us to build up a mapping between the byte
+        # offset and the character offset.
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
         utf8_token_gen = tokenize.generate_tokens(
             StringIO(self.contents.encode('utf-8')).readline)
 
-        # This is a mapping from the utf-8 byte starting points provided by
-        # the ast nodes, to a list of the unicode character offset tuples for
-        # both the start and the end points of the actual tokens.  Attribute
-        # ast nodes wind up with the same lineno and col_offset as the object
-        # they are attributes of, so store all of the offsets in a list.
+        # The ast nodes provide their locations as an index into a utf-8 encoded
+        # bytestring, which of course won't match up when we are indexing into a
+        # unicode string if there are multi-byte characters involved, so we need to
+        # provide a conversion table from utf-8 to unicode indexes.  Unfortunately,
+        # attribute ast nodes wind up with the same lineno and col_offset as the node
+        # they are attributes of, making this a bit tricky, so we need to group
+        # together offsets that are part of the same chain into a list.  This list
+        # can then be used to yield successive real offsets for the attributes as we
+        # get ast nodes that repeat the same lineno and col_offset.
+
+        # This table will contain, e.g. {(42, 4): [((42, 8), (42, 14)), ...], ...}
         node_start_table = {}
 
         paren_level, paren_stack = 0, {}
 
         for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
+            # start and end here are themselves tuples of (lineno, col_offset), as is
+            # utf8_start.
             tok_type, tok_name, start, end, _ = unicode_token
             utf8_start = utf8_token[2]
 
