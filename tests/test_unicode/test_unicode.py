@@ -1,9 +1,17 @@
 # -*- coding: UTF-8 -*-
 
+from dxr.testing import DxrInstanceTestCase
 from dxr.testing import SingleFileTestCase
 
 
-class NonAsciiSearchStringTests(SingleFileTestCase):
+class NonAsciiPathTest(DxrInstanceTestCase):
+    """Just tests that the index can be created without error."""
+
+    def test_indexes(self):
+        pass
+
+
+class NonAsciiSearchStringTest(SingleFileTestCase):
     source = u"""
         dünya
         """
