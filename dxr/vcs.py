@@ -256,15 +256,13 @@ class Git(Vcs):
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
-            # Before claiming the source, make sure git actually thinks it's
-            # alright.
             try:
-                Git.invoke_vcs(['status'], path)
+                vcs = cls(path)
             except subprocess.CalledProcessError:
-                return None
-            dirs.remove('.git')
-            return cls(path)
-        return None
+                pass
+            else:
+                dirs.remove('.git')
+                return vcs
 
     def display_rev(self, path):
         return self.revision[:10]

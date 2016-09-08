@@ -265,7 +265,7 @@ class DxrInstanceTestCase(TestCase):
 
 class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
     """Test case which runs `make` before dxr index and `make clean` before dxr
-    clean within a code directory, and otherwise delegates to DxrInstanceTestCase.
+    clean within a code directory and otherwise delegates to DxrInstanceTestCase.
 
     This test is suitable for cases where some setup must be performed before
     `dxr index` can be run (for example extracting sources from archive).
