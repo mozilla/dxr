@@ -426,6 +426,7 @@ code a {
 
 .current-tree-nav {
     display: inline-block;
+    line-height: .7em;
 }
 
 /* top of tree */
