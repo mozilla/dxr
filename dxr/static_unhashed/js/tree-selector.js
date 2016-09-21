@@ -1,5 +1,5 @@
 $(function() {
-    var contentContainer = $('#content');
+    var contentContainer = $('.nav-bar');
 
     // Show/Hide the options
     contentContainer.on('click', '.ts-select-trigger', function(event) {

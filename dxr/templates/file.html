@@ -12,18 +12,25 @@
   <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
 {% endblock %}
 
-{% block content %}
-  <div class="breadcrumbs">
-    {%- for path, name in paths_and_names -%}
-      {%- if not loop.first or loop.last -%}
-        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- else -%}
-        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- endif -%}
-    {%- endfor -%}
-  </div>
+{% block nav_bar %}
+  <nav class="nav-bar">
+    <div class="current-tree-nav">
+      <div class="breadcrumbs">
+        {%- for path, name in paths_and_names -%}
+          {%- if not loop.first or loop.last -%}
+            <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+          {%- else -%}
+            <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+    {{ tree_menu(tree_tuples, tree) }}
+  </nav>
+{% endblock %}
 
-  {{ tree_menu(tree_tuples, tree) }}
+{% block content %}
+
 
   {% if sections %}
     <div class="panel">
