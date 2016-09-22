@@ -238,33 +238,48 @@ $(function () {
             // on shift, find last-selected code element
             // if lastSelectedNum less than clickedNum go back
             // else if lastSelectedNum greater than line id, go forward
-            if (lastSelectedNum === clickedNum) {
-                //toggle a single shiftclicked line
+            if (isNaN(lastSelectedNum)) {
+                //shiftclick with no previous lastSelectedNum
+                line.addClass('clicked');
+                selectedLineNums = $('.line-number.clicked');
+                selectedLineCode = $('code.clicked');
+                line.addClass(classToAdd);
+                line.addClass('last-selected');
+            }
+            else if (lastSelectedNum === clickedNum) {
+                //toggle a single previously shiftclicked line
                 line.removeClass('last-selected highlighted clicked multihighlight');
+                updateHash('#');
             } else if (lastSelectedNum < clickedNum) {
-                //shiftclick descending down the page
+                //shiftclick descending down the page - .last-selected to .clicked
                 line.addClass('clicked');
                 selectedLineNums = $('.line-number.last-selected').nextUntil($('.line-number.clicked'));
                 selectedLineCode = $('code.last-selected').nextUntil($('code.clicked'));
                 $('.last-selected').removeClass('clicked');
+                //mark new last-selected
+                lastSelectedLine.addClass(classToAdd)
+                                .removeClass('last-selected highlighted');
+                line.addClass(classToAdd);
+                line.addClass('last-selected');
             } else if (lastSelectedNum > clickedNum) {
-                //shiftclick ascending up the page
+                //shiftclick ascending up the page - .clicked to .last-selected
                 $('.line-number, code').removeClass('clicked');
                 line.addClass('clicked');
                 selectedLineNums = $('.line-number.clicked').nextUntil($('.line-number.last-selected'));
                 selectedLineCode = $('code.clicked').nextUntil($('code.last-selected'));
+                //mark new last-selected
+                lastSelectedLine.addClass(classToAdd)
+                                .removeClass('last-selected highlighted');
+                line.addClass(classToAdd);
+                line.addClass('last-selected');
             }
-            selectedLineNums.addClass(classToAdd);
-            selectedLineCode.addClass(classToAdd);
+            if (selectedLineNums) {
+                selectedLineNums.addClass(classToAdd);
+                selectedLineCode.addClass(classToAdd);
+            }
 
             //set the last used modifier key
             lastModifierKey = 'shift';
-            // since all highlighed items are stripped, add one back, mark new last-selected
-            lastSelectedLine.addClass(classToAdd)
-                            .removeClass('last-selected highlighted');
-            //line.removeClass('highlighted');
-            line.addClass(classToAdd);
-            line.addClass('last-selected');
 
         } else if (event.shiftKey && lastModifierKey === 'singleSelectKey') {
             //if ctrl/command was last pressed, add multihighlight class to new lines
