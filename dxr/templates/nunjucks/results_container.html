@@ -1,7 +1,4 @@
 {% from "results.html" import results_list -%}
-{% from "results_header.html" import results_header -%}
-
-{{ results_header(result_count, result_count_formatted, top_of_tree, tree_tuples, tree) }}
 
 {% if results|length > 0 %}
   <div class="results">

@@ -385,6 +385,8 @@ $(function() {
         if (!data.results.length) {
             resultsLineCount = 0;
             if (!append) {
+                var renderedNav = nunjucks.render('results_nav.html', data);
+                $('.current-tree-nav').empty().append(renderedNav);
                 contentContainer
                     .empty()
                     .append(nunjucks.render('results_container.html', data));
@@ -403,6 +405,8 @@ $(function() {
             if (!append) {
                 renderedData = nunjucks.render('results_container.html', data);
                 contentContainer.empty().append(withContextListeners(renderedData));
+                var renderedNav = nunjucks.render('results_nav.html', data);
+                $('.current-tree-nav').empty().append(renderedNav);
             } else {
                 var resultsList = contentContainer.find('.results');
 
@@ -426,6 +430,8 @@ $(function() {
                 if (data.results.length) {
                     renderedData = nunjucks.render('results.html', data);
                     resultsList.append(withContextListeners(renderedData));
+                    var renderedNav = nunjucks.render('results_nav.html', data);
+                    $('.current-tree-nav').empty().append(renderedNav);
                 }
             }
         }
