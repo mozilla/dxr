@@ -1,10 +1,19 @@
 {% extends "layout.html" %}
+{% from "nunjucks/switch_tree.html" import tree_menu %}
 
 {% block title %}{{ query }} - DXR Search{% endblock %}
 
 {% block site_css %}
   {{ super() }}
   <link href="{{ url_for('.static', filename='css/tree-selector.css') }}" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+
+{% block nav_bar %}
+  <nav class="nav-bar">
+    <div class="current-tree-nav">
+    </div>
+    {{ tree_menu(tree_tuples, tree) }}
+  </nav>
 {% endblock %}
 
 {% block site_js %}
