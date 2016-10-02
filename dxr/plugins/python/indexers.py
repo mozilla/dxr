@@ -254,6 +254,32 @@ class FileToIndex(FileToIndexBase):
         # This table will contain, e.g. {(42, 4): [((42, 8), (42, 14)), ...], ...}
         node_start_table = {}
 
+        # However, if we have a sequence of attribute name tokens inside, say,
+        # method call parens or indexing brackets, the ast nodes for each of
+        # these will contain the location of the first token of the sequence
+        # inside, not the first of the outside sequence, e.g. for the line
+        #
+        #     a.b(d.e.f).c
+        #
+        # the nodes for 'd', 'e', and 'f' will each have the location of 'd',
+        # not 'a'.  Therefore, we need to push and pop the actual locations
+        # gleaned from the tokenizer onto a series of stacks that are aware of
+        # how many parens (or whichever) deep the token is.  So for the above
+        # example, the paren_stack would look like this by the time we process 'f'
+        #
+        #     {0: ((42, 4), [((42, 4), (42, 5)),       # node 'a'
+        #                    ((42, 6), (42, 7))]),     # node 'b'
+        #      1: ((42, 8), [((42, 8), (42, 9)),       # node 'd'
+        #                    ((42, 10), (42, 11)),     # node 'e'
+        #                    ((42, 12), (42, 13))])}   # node 'f'
+        #
+        # These lists that are being built up as the second item of each pair
+        # in the dict will then be popped out of the dict at the closing paren,
+        # bracket, or brace, and will have already been added to the
+        # longer-term node_start_table described above.  In this example, node
+        # 'c' would then be appended to the existing list at level 0, which
+        # would then terminate and be popped off in turn.
+
         paren_level, paren_stack = 0, {}
 
         for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
@@ -277,24 +303,28 @@ class FileToIndex(FileToIndexBase):
                 continue
 
             elif tok_type == token.OP:
-                # Container delimiters (parens, brackets, and braces) start a
-                # new context where the node for following name tokens will no
-                # longer be tied to the position of the head of the current
-                # queue.  So, keep track of the current context with a stack,
-                # here implemented with a dict so that it can be sparse.
+                # Delimiters (parens, brackets, and braces) start a new context
+                # where the node for following name tokens will no longer be
+                # tied to the position of the head of the current queue.  So,
+                # keep track of the current context with a stack, here
+                # implemented with a dict keyed on the current paren level so
+                # that it can be sparse.
                 if tok_name in '([{':
                     paren_level += 1
                 elif tok_name in '}])':
-                    paren_stack.pop(paren_level, (None, None))
+                    # The items for the current paren level are popped off (and
+                    # below) without doing anything with them, since the
+                    # reference to the list is already in node_start_table.
+                    paren_stack.pop(paren_level, None)
                     paren_level -= 1
                 elif tok_name == '.':
                     # Attribute access.  Don't reset, stay at the same level.
                     pass
                 else:
-                    paren_stack.pop(paren_level, (None, None))
+                    paren_stack.pop(paren_level, None)
 
             elif tok_type == token.NEWLINE:
-                paren_stack.pop(paren_level, (None, None))
+                paren_stack.pop(paren_level, None)
 
         return node_start_table
 
