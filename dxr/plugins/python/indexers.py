@@ -85,6 +85,14 @@ class IndexingNodeVisitor(ast.NodeVisitor, ClassFunctionVisitorMixin):
         self.needles = []
         self.refs = []
 
+    def visit_Name(self, node):
+        self.file_to_index.advance_node(node)
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node):
+        self.file_to_index.advance_node(node)
+        self.generic_visit(node)
+
     def visit_FunctionDef(self, node):
         # Index the function itself for the function: filter.
         start, end = self.file_to_index.get_node_start_end(node)
@@ -195,7 +203,7 @@ class FileToIndex(FileToIndexBase):
 
         """
         if not self._visitor:
-            self.node_start_table, self.call_start_table = self.analyze_tokens()
+            self.node_start_table = self.analyze_tokens()
             self._visitor = IndexingNodeVisitor(self, self.tree_analysis)
             syntax_tree = ast_parse(self.contents)
             self._visitor.visit(syntax_tree)
@@ -222,71 +230,103 @@ class FileToIndex(FileToIndexBase):
         return self.visitor.refs
 
     def analyze_tokens(self):
-        """Split the file into tokens and analyze them for data needed
-        for indexing.
+        """Split the file into tokens and return a table mapping utf-8 bytestring
+        offsets to lists of unicode offsets for these tokens.
 
         """
-        # Run the file contents through the tokenizer, both as unicode
-        # and as a utf-8 encoded string.  This will allow us to build
-        # up a mapping between the byte offset and the character offset.
+        # Run the file contents through the tokenizer, both as unicode and as a utf-8
+        # encoded string.  This will allow us to build up a mapping between the byte
+        # offset and the character offset.
         token_gen = tokenize.generate_tokens(StringIO(self.contents).readline)
         utf8_token_gen = tokenize.generate_tokens(
             StringIO(self.contents.encode('utf-8')).readline)
 
-        # These are a mapping from the utf-8 byte starting points provided by
-        # the ast nodes, to the unicode character offset tuples for both the
-        # start and the end points.
-        node_start_table = {}
-        call_start_table = {}
+        # The ast nodes provide their locations as an index into a utf-8 encoded
+        # bytestring, which of course won't match up when we are indexing into a
+        # unicode string if there are multi-byte characters involved, so we need to
+        # provide a conversion table from utf-8 to unicode indexes.  Unfortunately,
+        # attribute ast nodes wind up with the same lineno and col_offset as the node
+        # they are attributes of, making this a bit tricky, so we need to group
+        # together offsets that are part of the same chain into a list.  This list
+        # can then be used to yield successive real offsets for the attributes as we
+        # get ast nodes that repeat the same lineno and col_offset.
 
-        node_type, node_start = None, None
+        # This table will contain, e.g. {(42, 4): [((42, 8), (42, 14)), ...], ...}
+        node_start_table = {}
+
+        # However, if we have a sequence of attribute name tokens inside, say,
+        # method call parens or indexing brackets, the ast nodes for each of
+        # these will contain the location of the first token of the sequence
+        # inside, not the first of the outside sequence, e.g. for the line
+        #
+        #     a.b(d.e.f).c
+        #
+        # the nodes for 'd', 'e', and 'f' will each have the location of 'd',
+        # not 'a'.  Therefore, we need to push and pop the actual locations
+        # gleaned from the tokenizer onto a series of stacks that are aware of
+        # how many parens (or whichever) deep the token is.  So for the above
+        # example, the paren_stack would look like this by the time we process 'f'
+        #
+        #     {0: ((42, 4), [((42, 4), (42, 5)),       # node 'a'
+        #                    ((42, 6), (42, 7))]),     # node 'b'
+        #      1: ((42, 8), [((42, 8), (42, 9)),       # node 'd'
+        #                    ((42, 10), (42, 11)),     # node 'e'
+        #                    ((42, 12), (42, 13))])}   # node 'f'
+        #
+        # These lists that are being built up as the second item of each pair
+        # in the dict will then be popped out of the dict at the closing paren,
+        # bracket, or brace, and will have already been added to the
+        # longer-term node_start_table described above.  In this example, node
+        # 'c' would then be appended to the existing list at level 0, which
+        # would then terminate and be popped off in turn.
+
         paren_level, paren_stack = 0, {}
 
         for unicode_token, utf8_token in izip(token_gen, utf8_token_gen):
+            # start and end here are themselves tuples of (lineno, col_offset), as is
+            # utf8_start.
             tok_type, tok_name, start, end, _ = unicode_token
             utf8_start = utf8_token[2]
 
             if tok_type == token.NAME:
                 # AST nodes for classes and functions point to the position of
                 # their 'def' and 'class' tokens. To get the position of their
-                # names, we look for 'def' and 'class' tokens and store the
-                # position of the token immediately following them.
-                if node_start and node_type == 'definition':
-                    node_start_table[node_start[0]] = (start, end)
-                    node_type, node_start = None, None
-                    continue
+                # names, we start the queue for the current parenthesis level
+                # at the byte offset for the keyword token, but only start
+                # pushing character offsets once we're past the keyword.
+                queue_start, node_queue = paren_stack.setdefault(paren_level, (utf8_start, []))
+                node_start_table.setdefault(queue_start, node_queue)
 
-                if tok_name in ('def', 'class'):
-                    node_type, node_start = 'definition', (utf8_start, start)
-                    continue
+                if tok_name not in ('def', 'class'):
+                    node_queue.append((start, end))
 
-                # Record all name nodes in the token table.  Currently unused,
-                # but will be needed for recording variable references.
-                node_start_table[utf8_start] = (start, end)
-                node_type, node_start = 'name', (utf8_start, start)
+                continue
 
             elif tok_type == token.OP:
-                # In order to properly capture the start and end of function
-                # calls, we need to keep track of the parens.  Put the
-                # starting positions on a stack (here implemented with a dict
-                # so that it can be sparse), but only if the previous node was
-                # a name.
-                if tok_name == '(':
-                    if node_type == 'name':
-                        paren_stack[paren_level] = node_start
+                # Delimiters (parens, brackets, and braces) start a new context
+                # where the node for following name tokens will no longer be
+                # tied to the position of the head of the current queue.  So,
+                # keep track of the current context with a stack, here
+                # implemented with a dict keyed on the current paren level so
+                # that it can be sparse.
+                if tok_name in '([{':
                     paren_level += 1
-                elif tok_name == ')':
+                elif tok_name in '}])':
+                    # The items for the current paren level are popped off (and
+                    # below) without doing anything with them, since the
+                    # reference to the list is already in node_start_table.
+                    paren_stack.pop(paren_level, None)
                     paren_level -= 1
-                    if paren_level in paren_stack:
-                        call_start = paren_stack.pop(paren_level)
-                        call_start_table[call_start[0]] = (call_start[1], end)
+                elif tok_name == '.':
+                    # Attribute access.  Don't reset, stay at the same level.
+                    pass
+                else:
+                    paren_stack.pop(paren_level, None)
 
-                node_type, node_start = None, None
+            elif tok_type == token.NEWLINE:
+                paren_stack.pop(paren_level, None)
 
-            else:
-                node_type, node_start = None, None
-
-        return node_start_table, call_start_table
+        return node_start_table
 
     def get_node_start_end(self, node):
         """Return start and end positions within the file for the given
@@ -295,14 +335,23 @@ class FileToIndex(FileToIndexBase):
         """
         loc = node.lineno, node.col_offset
 
-        if isinstance(node, ast.ClassDef) or isinstance(node, ast.FunctionDef):
-            start, end = self.node_start_table.get(loc, (None, None))
-        elif isinstance(node, ast.Call):
-            start, end = self.call_start_table.get(loc, (None, None))
-        else:
-            start, end = None, None
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Call)):
+            loc_list = self.node_start_table.get(loc, [])
+            if loc_list:
+                return loc_list[-1]
 
-        return start, end
+        return None, None
+
+    def advance_node(self, node):
+        """Destructively change which actual token offset we'll get on a call
+        to get_node_start_end.
+
+        """
+        loc = node.lineno, node.col_offset
+        try:
+            self.node_start_table[loc].pop()
+        except (KeyError, IndexError):
+            pass
 
 
 def file_needle(needle_type, name, qualname=None):

@@ -47,4 +47,4 @@ class UnicodeOffsetTests(PythonSingleFileTestCase):
         characters, not bytes.
 
         """
-        self.found_line_eq('callers:kilroy', u'print u"どうもありがとう " + <b>kilroy()</b>', 9)
+        self.found_line_eq('callers:kilroy', u'print u"どうもありがとう " + <b>kilroy</b>()', 9)
