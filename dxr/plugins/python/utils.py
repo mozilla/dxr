@@ -52,6 +52,19 @@ def convert_node_to_name(node):
     if isinstance(node, ast.Name):
         return node.id
     elif isinstance(node, ast.Attribute):
+        return node.attr
+    else:
+        return None
+
+
+def convert_node_to_fullname(node):
+    """Convert an AST node to a full dotted name if possible. Return None
+    if we can't (such as function calls).
+
+    """
+    if isinstance(node, ast.Name):
+        return node.id
+    elif isinstance(node, ast.Attribute):
         value_name = convert_node_to_name(node.value)
         if value_name:
             return value_name + '.' + node.attr
