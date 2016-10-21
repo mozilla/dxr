@@ -80,6 +80,20 @@
     </div>
 
     {% block nav_bar %}
+      <nav class="nav-bar">
+        <div class="current-tree-nav">
+          <div class="breadcrumbs">
+            {%- for path, name in paths_and_names -%}
+              {%- if not loop.first or loop.last and loop.length != 1 -%}
+                <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+              {%- else -%}
+                <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        </div>
+        {{ tree_menu(tree_tuples, tree) }}
+      </nav>
     {% endblock %}
     
     <div id="content" class="content">
