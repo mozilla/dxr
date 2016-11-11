@@ -65,6 +65,9 @@
     min-width: 18rem;
     z-index: 10;
     background-color: white;
+    overflow: auto;
+    max-height: 250px;
+    max-height: 70vh;
 }
 header {
     background-color: #e0e0e0;
