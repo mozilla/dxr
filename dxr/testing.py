@@ -243,11 +243,16 @@ class DxrInstanceTestCase(TestCase):
 
     """
     @classmethod
+    def this_dir(cls):
+        """Return the path to the dir containing the testcase class."""
+        return dirname(sys.modules[cls.__module__].__file__)
+
+    @classmethod
     def setup_class(cls):
         """Build the instance."""
         # nose does some amazing magic that makes this work even if there are
         # multiple test modules with the same name:
-        cls._config_dir_path = dirname(sys.modules[cls.__module__].__file__)
+        cls._config_dir_path = cls.this_dir()
         chdir(cls._config_dir_path)
         run('dxr index')
         cls._es().refresh()
@@ -264,22 +269,23 @@ class DxrInstanceTestCase(TestCase):
 
 
 class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
-    """Test case which runs `make` before dxr index and `make clean` before dxr
-    clean within a code directory and otherwise delegates to DxrInstanceTestCase.
+    """Test case which runs ``make`` before ``dxr index`` and ``make clean``
+    before ``dxr clean`` within a code directory and otherwise delegates to
+    DxrInstanceTestCase.
 
     This test is suitable for cases where some setup must be performed before
-    `dxr index` can be run (for example extracting sources from archive).
+    ``dxr index`` can be run (for example extracting sources from archive).
 
     """
     @classmethod
     def setup_class(cls):
-        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        build_dir = join(cls.this_dir(), 'code')
         subprocess.check_call(['make'], cwd=build_dir)
         super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
 
     @classmethod
     def teardown_class(cls):
-        build_dir = join(dirname(sys.modules[cls.__module__].__file__), 'code')
+        build_dir = join(cls.this_dir(), 'code')
         subprocess.check_call(['make', 'clean'], cwd=build_dir)
         super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
 
@@ -303,7 +309,7 @@ class SingleFileTestCase(TestCase):
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
-        cls._config_dir_path = mkdtemp()
+        super(SingleFileTestCase, cls).setup_class()
         code_path = join(cls._config_dir_path, 'code')
         mkdir(code_path)
         _make_file(code_path, cls.source_filename, cls.source)
@@ -319,7 +325,7 @@ class SingleFileTestCase(TestCase):
             make_app(cls.config()).run(host='0.0.0.0', port=8000)
             print "Cleaning up indices..."
         cls._delete_es_indices()
-        rmtree(cls._config_dir_path)
+        super(SingleFileTestCase, cls).setup_class()
 
     def _source_for_query(self, s):
         return (s.replace('<b>', '')
