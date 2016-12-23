@@ -1,10 +1,16 @@
-from dxr.testing import DxrInstanceTestCaseMakeFirst
+from os import mkdir
+from os.path import join
+from subprocess import check_call
 
 from nose.tools import ok_, eq_
 
+from dxr.testing import (DxrInstanceTestCaseMakeFirst, GenerativeTestCase,
+                         make_file)
+from dxr.utils import cd
+
 
 class MercurialTests(DxrInstanceTestCaseMakeFirst):
-    """Test our Mercurial integration, both core and omniglot."""
+    """Tests for Mercurial integration, both core and omniglot."""
 
     def test_diff_file1(self):
         """Make sure the diff link goes to the first after-initial commit."""
@@ -52,3 +58,26 @@ class MercurialTests(DxrInstanceTestCaseMakeFirst):
         response = self.client().get('/code/source/').data
         ok_('<time>2014 Nov 06 19:11</time>' in response)
         ok_('<time>2014 Oct 30 20:10</time>' in response)
+
+
+class MercurialMoveTests(GenerativeTestCase):
+    """Tests for Mercurial integration that involves hg moves."""
+
+    @classmethod
+    def generate_source(cls):
+        code_dir = cls.code_dir()
+        folder = join(code_dir, 'folder')
+        mkdir(folder)
+        make_file(folder, 'file', 'some contents!')
+        with cd(code_dir):
+            check_call(['hg', 'init'])
+            check_call(['hg', 'add', 'folder'])
+            check_call(['hg', 'commit', '-m', 'Add a folder.', '-u', 'me'])
+            check_call(['hg', 'mv', 'folder', 'moved_folder'])
+            check_call(['hg', 'commit', '-m', 'Move the containing folder.', '-u', 'me'])
+
+    def test_cat_moved_file(self):
+        """Make sure we can get the contents of a former-rev file whose parent
+        dir no longer exists."""
+        response = self.client().get('/code/rev/0/folder/file')
+        ok_('some contents!' in response.data)

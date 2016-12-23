@@ -5,7 +5,7 @@ from os import chdir, mkdir
 from os.path import dirname, join
 import re
 from shutil import rmtree
-import subprocess
+from subprocess import check_call
 import sys
 from tempfile import mkdtemp
 import unittest
@@ -41,6 +41,12 @@ class TestCase(unittest.TestCase):
     @classmethod
     def teardown_class(cls):
         rmtree(cls._config_dir_path)
+
+    @classmethod
+    def code_dir(cls):
+        """Return the path to the folder which typically contains the indexed
+        source code in tests with only one source tree."""
+        return join(cls._config_dir_path, 'code')
 
     def app(self):
         if not hasattr(self, '_app'):
@@ -245,13 +251,13 @@ class DxrInstanceTestCase(TestCase):
     @classmethod
     def this_dir(cls):
         """Return the path to the dir containing the testcase class."""
+        # nose does some amazing magic that makes this work even if there are
+        # multiple test modules with the same name:
         return dirname(sys.modules[cls.__module__].__file__)
 
     @classmethod
     def setup_class(cls):
         """Build the instance."""
-        # nose does some amazing magic that makes this work even if there are
-        # multiple test modules with the same name:
         cls._config_dir_path = cls.this_dir()
         chdir(cls._config_dir_path)
         run('dxr index')
@@ -268,52 +274,24 @@ class DxrInstanceTestCase(TestCase):
         return file_text(join(cls._config_dir_path, 'dxr.config'))
 
 
-class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
-    """Test case which runs ``make`` before ``dxr index`` and ``make clean``
-    before ``dxr clean`` within a code directory and otherwise delegates to
-    DxrInstanceTestCase.
+class GenerativeTestCase(TestCase):
+    """Container for tests whose source-code folders are generated rather than
+    living permanently in DXR's source tree.
 
-    This test is suitable for cases where some setup must be performed before
-    ``dxr index`` can be run (for example extracting sources from archive).
-
-    """
-    @classmethod
-    def setup_class(cls):
-        build_dir = join(cls.this_dir(), 'code')
-        subprocess.check_call(['make'], cwd=build_dir)
-        super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
-
-    @classmethod
-    def teardown_class(cls):
-        build_dir = join(cls.this_dir(), 'code')
-        subprocess.check_call(['make', 'clean'], cwd=build_dir)
-        super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
-
-
-class SingleFileTestCase(TestCase):
-    """Container for tests that need only a single source file
-
-    You can express the source as a string rather than creating a whole bunch
-    of files in the FS. I'll slam it down into a temporary DXR instance and
-    then kick off the usual build process, deleting the instance afterward.
-
-    :cvar source_filename: The filename used for the source file
+    You get one tree's source-code folder for free, and you can make more
+    yourself if you like.
 
     """
     # Set this to True in a subclass to keep the generated instance around and
     # host it on port 8000 so you can examine it:
     stop_for_interaction = False
 
-    source_filename = 'main'
-
     @classmethod
     def setup_class(cls):
-        """Create a temporary DXR instance on the FS, and build it."""
-        super(SingleFileTestCase, cls).setup_class()
-        code_path = join(cls._config_dir_path, 'code')
+        super(GenerativeTestCase, cls).setup_class()
+        code_path = cls.code_dir()
         mkdir(code_path)
-        _make_file(code_path, cls.source_filename, cls.source)
-
+        cls.generate_source()
         for tree in cls.config().trees.itervalues():
             index_and_deploy_tree(tree)
         cls._es().refresh()
@@ -325,7 +303,50 @@ class SingleFileTestCase(TestCase):
             make_app(cls.config()).run(host='0.0.0.0', port=8000)
             print "Cleaning up indices..."
         cls._delete_es_indices()
-        super(SingleFileTestCase, cls).setup_class()
+        super(GenerativeTestCase, cls).setup_class()
+
+    @classmethod
+    def generate_source(cls):
+        """Generate any source code a subclass wishes."""
+
+
+# TODO: Make into a GenerativeTestCase
+class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
+    """Test case which runs ``make`` before ``dxr index`` and ``make clean``
+    before ``dxr clean`` within a code directory and otherwise delegates to
+    DxrInstanceTestCase.
+
+    This test is suitable for cases where some setup must be performed before
+    ``dxr index`` can be run (for example extracting sources from archive).
+
+    """
+    @classmethod
+    def setup_class(cls):
+        check_call(['make'], cwd=join(cls.this_dir(), 'code'))
+        super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        check_call(['make', 'clean'], cwd=join(cls.this_dir(), 'code'))
+        super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
+
+
+class SingleFileTestCase(GenerativeTestCase):
+    """Container for tests that need only a single source file
+
+    You can express the source as a string rather than creating a whole bunch
+    of files in the FS. I'll slam it down into a temporary DXR instance and
+    then kick off the usual build process, deleting the instance afterward.
+
+    :cvar source_filename: The filename used for the source file
+
+    """
+    source_filename = 'main'
+
+    @classmethod
+    def generate_source(cls):
+        """Create a single file of source code on the FS."""
+        make_file(cls.code_dir(), cls.source_filename, cls.source)
 
     def _source_for_query(self, s):
         return (s.replace('<b>', '')
@@ -395,7 +416,7 @@ class SingleFileTestCase(TestCase):
             'single')
 
 
-def _make_file(path, filename, contents):
+def make_file(path, filename, contents):
     """Make file ``filename`` within ``path``, full of unicode ``contents``."""
     with open(join(path, filename), 'w') as file:
         file.write(contents.encode('utf-8'))
