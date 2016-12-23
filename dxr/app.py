@@ -276,8 +276,7 @@ def raw_rev(tree, revision, path):
 
     config = current_app.dxr_config
     tree_config = config.trees[tree]
-    abs_path = join(tree_config.source_folder, path)
-    data = file_contents_at_rev(abs_path, revision)
+    data = file_contents_at_rev(tree_config.source_folder, path, revision)
     if data is None:
         raise NotFound
     data_file = StringIO(data)
@@ -589,8 +588,7 @@ def rev(tree, revision, path):
     """
     config = current_app.dxr_config
     tree_config = config.trees[tree]
-    abs_path = join(tree_config.source_folder, path)
-    contents = file_contents_at_rev(abs_path, revision)
+    contents = file_contents_at_rev(tree_config.source_folder, path, revision)
     if contents is not None:
         image_rev = None
         if is_binary_image(path):
