@@ -20,7 +20,7 @@ TODO:
 from datetime import datetime
 import marshal
 import os
-from os.path import relpath, join, split
+from os.path import exists, join, realpath, relpath, split
 from pkg_resources import resource_filename
 import subprocess
 import urlparse
@@ -90,9 +90,18 @@ class Vcs(object):
         raise NotImplementedError
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        """Return contents of file at specified path at given revision, where path is an
-        absolute path."""
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        """Return contents of a file at a certain revision.
+
+        :arg working_dir: The working directory from which to run the VCS
+            command. The root of the checkout works well, since it is always
+            there, unlike the folder the file is in, which may not exist at the
+            current revision.
+        :arg rel_path: The relative path to the file, from ``working_dir``
+        :arg revision: The revision at which to pull the file, in a
+            VCS-dependent format
+
+        """
         raise NotImplementedError
 
     def display_rev(self, path):
@@ -186,9 +195,8 @@ class Mercurial(Vcs):
         return "{}filelog/{}/{}".format(self.upstream, self.revision, path)
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        head, tail = split(path)
-        return cls.invoke_vcs(['cat', '-r', revision, tail], head, stderr=stderr)
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        return cls.invoke_vcs(['cat', '-r', revision, rel_path], working_dir, stderr=stderr)
 
 
 class Git(Vcs):
@@ -285,9 +293,8 @@ class Git(Vcs):
         return "{}/commits/{}/{}".format(self.upstream, self.revision, path)
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        head, tail = split(path)
-        return cls.invoke_vcs(['show', revision + ':./' + tail], head, stderr=stderr)
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        return cls.invoke_vcs(['show', revision + ':./' + rel_path], working_dir, stderr=stderr)
 
 
 class Perforce(Vcs):
@@ -354,15 +361,14 @@ class Perforce(Vcs):
         return '#' + info['haveRev']
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        directory, filename = split(path)
-        env = os.environ
-        env["PWD"] = directory
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        env = os.environ.copy()
+        env['PWD'] = working_dir
         return subprocess.check_output([cls.command,
                                         'print',
                                         '-q',
-                                        filename + '@' + revision],
-                                       cwd=directory, env=env, stderr=stderr)
+                                        rel_path + '@' + revision],
+                                       cwd=working_dir, env=env, stderr=stderr)
 
 
 every_vcs = [Mercurial, Git, Perforce]
@@ -405,21 +411,63 @@ def tree_to_repos(tree):
     return ordered_sources
 
 
-def file_contents_at_rev(abspath, revision):
-    """Attempt to return the contents of a file at a specific revision."""
+def _split_existent(abs_folder):
+    """Split a path to a dir in two, with the first half consisting of the
+    longest segment that exists on the FS; the second, the remainder."""
+    existent = abs_folder
+    nonexistent = ''
+    while existent:
+        if exists(existent):
+            break
+        existent, non = split(existent)
+        nonexistent = join(non, nonexistent)
+    return existent, nonexistent
+
+
+def _is_within(inner, outer):
+    """Return whether path ``inner`` is contained by or identical with folder
+    ``outer``."""
+    # The added slashes are meant to prevent wrong answers if outer='z/a' and
+    # inner='z/abc'.
+    return (realpath(inner) + '/').startswith(realpath(outer) + '/')
+
+
+def file_contents_at_rev(source_folder, rel_file, revision):
+    """Attempt to return the contents of a file at a specific revision.
+
+    If such a file is not found, return None.
+
+    :arg source_folder: The absolute path to the root of the source folder for
+        the tree we're talking about
+    :arg rel_file: The source-folder-relative path to a file
+    :arg revision: The VCS revision identifier, in a format defined by the VCS
+
+    """
+    # Rather than keeping a memory-intensive VcsCache around in the web process
+    # (which we haven't measured; it might be okay, but I'm afraid), just keep
+    # stepping rootward in the FS hierarchy until we find an actually existing
+    # dir. Regardless of the method, the point is to work even on files whose
+    # containing dirs have been moved or renamed.
+    rel_folder, file = split(rel_file)
+    abs_folder = join(source_folder, rel_folder)
+    existent, nonexistent = _split_existent(abs_folder)
+
+    # Security check: don't serve files outside the source folder:
+    if not _is_within(existent, source_folder):
+        return None
 
     with open(os.devnull, 'w') as devnull:
         for cls in every_vcs:
             try:
-                return cls.get_contents(abspath, revision, stderr=devnull)
+                return cls.get_contents(existent, join(nonexistent, file), revision, stderr=devnull)
             except subprocess.CalledProcessError:
                 continue
-    return None
 
 
 class VcsCache(object):
     """This class offers a way to obtain Vcs objects for any file within a
     given tree."""
+
     def __init__(self, tree):
         """Construct a VcsCache for the given tree.
 
@@ -435,13 +483,14 @@ class VcsCache(object):
         know about that claims to track that file.
 
         :arg string path: a path to a file (not a folder)
+
         """
         if path in self._path_cache:
             return self._path_cache[path]
         abs_path = join(self.tree.source_folder, path)
         for directory, vcs in self.repos.iteritems():
-            # This seems to be the easiest way to find "is abs_path in the subtree
-            # rooted at directory?"
+            # This seems to be the easiest way to find "is abs_path in the
+            # subtree rooted at directory?"
             if relpath(abs_path, directory).startswith('..'):
                 continue
             if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):
