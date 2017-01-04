@@ -1,7 +1,7 @@
 import cgi
 from commands import getoutput
 import json
-from os import chdir, mkdir
+from os import mkdir
 from os.path import dirname, join
 import re
 from shutil import rmtree
@@ -23,7 +23,7 @@ except ImportError:
 from dxr.app import make_app
 from dxr.build import index_and_deploy_tree
 from dxr.config import Config
-from dxr.utils import file_text, run
+from dxr.utils import cd, file_text, run
 
 
 class TestCase(unittest.TestCase):
@@ -36,11 +36,43 @@ class TestCase(unittest.TestCase):
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
-        cls._config_dir_path = mkdtemp()
+        cls.generate()
+        cls.index()
+        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
+        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
+        cls.degenerate()
+
+    @classmethod
+    def generate(cls):
+        """Create any on-disk artifacts necessary before running the ``dxr
+        index`` job. Squirrel away the config file's dir path in
+        ``cls._config_dir_path``."""
+        cls._config_dir_path = mkdtemp()
+
+    @classmethod
+    def degenerate(cls):
+        """Remove any on-disk artifacts created by ``generate()``."""
         rmtree(cls._config_dir_path)
+
+    @classmethod
+    def index(cls):
+        """Run a DXR indexing job."""
+
+    @classmethod
+    def dxr_index(cls):
+        """Run the `dxr index` command in the config file's directory."""
+        with cd(cls._config_dir_path):
+            run('dxr index')
+
+    @classmethod
+    def this_dir(cls):
+        """Return the path to the dir containing the testcase class."""
+        # nose does some amazing magic that makes this work even if there are
+        # multiple test modules with the same name:
+        return dirname(sys.modules[cls.__module__].__file__)
 
     @classmethod
     def code_dir(cls):
@@ -241,33 +273,30 @@ class TestCase(unittest.TestCase):
 
 
 class DxrInstanceTestCase(TestCase):
-    """Test case which builds an actual DXR instance that lives on the
-    filesystem and then runs its tests
+    """Test case which builds an actual DXR config that lives on the
+    filesystem
 
     This is suitable for complex tests with many files where the FS is the
-    least confusing place to express them.
+    most convenient place to express them.
 
     """
     @classmethod
-    def this_dir(cls):
-        """Return the path to the dir containing the testcase class."""
-        # nose does some amazing magic that makes this work even if there are
-        # multiple test modules with the same name:
-        return dirname(sys.modules[cls.__module__].__file__)
+    def generate(cls):
+        cls._config_dir_path = cls.this_dir()
 
     @classmethod
-    def setup_class(cls):
-        """Build the instance."""
-        cls._config_dir_path = cls.this_dir()
-        chdir(cls._config_dir_path)
-        run('dxr index')
-        cls._es().refresh()
+    def degenerate(cls):
+        """Don't delete anything."""
+
+    @classmethod
+    def index(cls):
+        cls.dxr_index()
 
     @classmethod
     def teardown_class(cls):
-        chdir(cls._config_dir_path)
-        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
-        run('dxr clean')
+        with cd(cls._config_dir_path):
+            run('dxr clean')
+        super(DxrInstanceTestCase, cls).teardown_class()
 
     @classmethod
     def config_input(cls, config_dir_path):
@@ -287,14 +316,22 @@ class GenerativeTestCase(TestCase):
     stop_for_interaction = False
 
     @classmethod
-    def setup_class(cls):
-        super(GenerativeTestCase, cls).setup_class()
+    def generate(cls):
+        """Make a "code" folder in the temp dir, and call ``generate_source()``
+        on my subclass."""
+        super(GenerativeTestCase, cls).generate()
         code_path = cls.code_dir()
         mkdir(code_path)
         cls.generate_source()
+
+    @classmethod
+    def degenerate(cls):
+        """Don't delete anything."""
+
+    @classmethod
+    def index(cls):
         for tree in cls.config().trees.itervalues():
             index_and_deploy_tree(tree)
-        cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
@@ -302,8 +339,7 @@ class GenerativeTestCase(TestCase):
             print "Pausing for interaction at 0.0.0.0:8000..."
             make_app(cls.config()).run(host='0.0.0.0', port=8000)
             print "Cleaning up indices..."
-        cls._delete_es_indices()
-        super(GenerativeTestCase, cls).setup_class()
+        super(GenerativeTestCase, cls).teardown_class()
 
     @classmethod
     def generate_source(cls):
@@ -321,9 +357,9 @@ class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
 
     """
     @classmethod
-    def setup_class(cls):
+    def generate(cls):
         check_call(['make'], cwd=join(cls.this_dir(), 'code'))
-        super(DxrInstanceTestCaseMakeFirst, cls).setup_class()
+        super(DxrInstanceTestCaseMakeFirst, cls).generate()
 
     @classmethod
     def teardown_class(cls):
