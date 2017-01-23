@@ -295,7 +295,16 @@ def split_content_lines(unicode):
     resulting lines.
 
     """
-    return unicode.splitlines(True)
+    lines = unicode.splitlines(True)
+    # Vertical Tabs and Form Feeds are treated as end-of-lines by splitlines
+    # but we don't want them to be.
+    def unsplit_some_lines(accum, x):
+        if accum and (accum[-1].endswith(u"\v") or accum[-1].endswith(u"\f")):
+            accum[-1] += x
+        else:
+            accum.append(x)
+        return accum
+    return reduce(unsplit_some_lines, lines, [])
 
 
 def unicode_for_display(str):
