@@ -296,10 +296,13 @@ def split_content_lines(unicode):
 
     """
     lines = unicode.splitlines(True)
-    # Vertical Tabs and Form Feeds are treated as end-of-lines by splitlines
-    # but we don't want them to be.
+    # Vertical Tabs, Form Feeds and some other characters are treated as
+    # end-of-lines by unicode.splitlines but we don't want them to be.
+    # See https://docs.python.org/2/library/stdtypes.html#unicode.splitlines
+    non_line_endings = frozenset((u"\v", u"\f", u"\x1c", u"\x1d", u"\x1e",
+                                  u"\x85", u"\u2028", u"\u2029"))
     def unsplit_some_lines(accum, x):
-        if accum and (accum[-1].endswith(u"\v") or accum[-1].endswith(u"\f")):
+        if accum and accum[-1] and accum[-1][-1] in non_line_endings:
             accum[-1] += x
         else:
             accum.append(x)
