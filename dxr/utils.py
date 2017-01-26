@@ -295,7 +295,26 @@ def split_content_lines(unicode):
     resulting lines.
 
     """
-    return unicode.splitlines(True)
+    lines = unicode.splitlines(True)
+    # Vertical Tabs, Form Feeds and some other characters are treated as
+    # end-of-lines by unicode.splitlines.
+    # See https://docs.python.org/2/library/stdtypes.html#unicode.splitlines
+    # Since we don't want those characters to be treated as line endings, we
+    # take the result and stitch any affected lines back together.
+
+    # str.splitlines behaves more as we desire but encoding, calling
+    # str.splitlines and then decoding again is slower.
+
+    # Using a frozenset here is faster than using a tuple.
+    non_line_endings = frozenset((u"\v", u"\f", u"\x1c", u"\x1d", u"\x1e",
+                                  u"\x85", u"\u2028", u"\u2029"))
+    def unsplit_some_lines(accum, x):
+        if accum and accum[-1] and accum[-1][-1] in non_line_endings:
+            accum[-1] += x
+        else:
+            accum.append(x)
+        return accum
+    return reduce(unsplit_some_lines, lines, [])
 
 
 def unicode_for_display(str):
