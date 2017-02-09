@@ -207,6 +207,14 @@ public:
     printPolicy.SuppressTagKeyword = true;
   }
 
+  ~IndexConsumer() {
+#if CLANG_AT_LEAST(3, 6)
+    ci.getDiagnostics().setClient(inner.release());
+#else
+    ci.getDiagnostics().setClient(inner);
+#endif
+  }
+
 #if CLANG_AT_LEAST(3, 3)
   // `clone` was removed from the DiagnosticConsumer interface in version 3.3,
   // so this can all be deleted once we're no longer supporting 3.2.
