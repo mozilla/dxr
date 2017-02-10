@@ -882,7 +882,7 @@ public:
     printReference(kindForDecl(e->getMemberDecl()),
                    e->getMemberDecl(),
                    e->getExprLoc(),
-                   e->getSourceRange().getEnd());
+                   e->getMemberNameInfo().getEndLoc());
     return true;
   }
 
