@@ -41,6 +41,6 @@ namespace sha1
 		@param hexstring should point to a buffer of at least 41 bytes of size for storing the hexadecimal representation of the hash. A zero will be written at position 40, so the buffer will be a valid zero ended string.
 	*/
 	void toHexString(const unsigned char *hash, char *hexstring);
-}; // namespace sha1
+} // namespace sha1
 
 #endif // SHA1_DEFINED

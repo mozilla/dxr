@@ -38,7 +38,7 @@ namespace sha1
 {
 	namespace // local
 	{
-		inline const unsigned int rol(const unsigned int num, const unsigned int cnt)
+		inline unsigned int rol(const unsigned int num, const unsigned int cnt)
 		{
 			return((num << cnt) | (num >> (32-cnt)));
 		}
