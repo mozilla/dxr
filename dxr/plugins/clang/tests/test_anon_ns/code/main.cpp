@@ -1,4 +1,5 @@
 #include "main2.h"
+#include "main3.h"
 
 namespace
 {
@@ -11,5 +12,6 @@ int main()
 {
     foo();  /* calling foo in main */
     bar();
+    baz();
     return 0;
 }
