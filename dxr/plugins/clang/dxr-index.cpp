@@ -1390,7 +1390,7 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string>& args) override {
-    if (args.size() != 1) {
+    if (args.empty()) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
         "Need an argument for the source directory");
@@ -1399,8 +1399,10 @@ protected:
     }
     // Load our directories.
 
-    // The source directory.
-    char *abs_src = realpath(args[0].c_str(), nullptr);
+    // The source directory. Follow the GCC/Clang convention of picking the
+    // the value of the argument that has been specificed last in the command
+    // line.
+    char *abs_src = realpath(args.back().c_str(), nullptr);
     if (!abs_src) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
