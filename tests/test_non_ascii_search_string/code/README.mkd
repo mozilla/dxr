@@ -1,0 +1,12 @@
+Hello World
+===========
+_The most annoying sources in the world._
+
+These sources are designed to be as annoying as possible,
+this achieved by doing stuff such as having really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really really long lines :)
+Or I would include UTF-8 charaters, to see if something crashes, that would be really annoying as I think I've already fixed that bug...
+Well here we go... I'll just write something in Danish, then we'll have a little easter egg too :)
+Hej Verden,
+Håber godt nok aldrig jeg kommer til rette den der bug med UTF-8 fejl, for skal jeg være helt ærligt, så er det lavet så det virker...
+Jeg ved faktisk ikke rigtigt om det er korrekt lavet, mest af alt fordi jeg ikke finder encodings særligt spændende.
+Når, hvis jeg da så lige skal være et rigtigt røvhul kan jeg slutte denne tekst af med uden et linjeskift!!! Det er godt nok træls
