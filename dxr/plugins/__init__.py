@@ -41,15 +41,18 @@ class Plugin(object):
     """
     def __init__(self,
                  filters=None,
+                 folder_to_index=None,
                  tree_to_index=None,
                  file_to_skim=None,
                  mappings=None,
                  analyzers=None,
                  direct_searchers=None,
                  refs=None,
+                 badge_colors=None,
                  config_schema=None):
         """
         :arg filters: A list of filter classes
+        :arg folder_to_index: A :class:`FolderToIndex` subclass
         :arg tree_to_index: A :class:`TreeToIndex` subclass
         :arg file_to_skim: A :class:`FileToSkim` subclass
         :arg mappings: Additional Elasticsearch mapping definitions for all the
@@ -80,6 +83,7 @@ class Plugin(object):
         :arg refs: An iterable of :class:`~dxr.lines.Ref` subclasses
             supported by this plugin. This is used at request time, to turn
             abreviated ES index data back into HTML.
+        :arg badge_colors: Mapping of Filter.lang -> color for menu badges.
         :arg config_schema: A validation schema for this plugin's
             configuration. See https://pypi.python.org/pypi/schema/ for docs.
 
@@ -98,10 +102,12 @@ class Plugin(object):
         # we can parallelize even better. OTOH, there are probably a LOT of
         # files in any time-consuming tree, so we already have a perfectly
         # effective and easier way to parallelize.
+        self.folder_to_index = folder_to_index
         self.tree_to_index = tree_to_index
         self.file_to_skim = file_to_skim
         self.mappings = mappings or {}
         self.analyzers = analyzers or {}
+        self.badge_colors = badge_colors or {}
         self.config_schema = config_schema or {}
 
     @classmethod
@@ -138,10 +144,12 @@ class Plugin(object):
                     file_to_index_class=namespace.get('FileToIndex'))
 
         return cls(filters=filters_from_namespace(namespace),
+                   folder_to_index=namespace.get('FolderToIndex'),
                    tree_to_index=tree_to_index,
                    file_to_skim=namespace.get('FileToSkim'),
                    mappings=namespace.get('mappings'),
                    analyzers=namespace.get('analyzers'),
+                   badge_colors=namespace.get('badge_colors'),
                    direct_searchers=direct_searchers_from_namespace(namespace),
                    refs=refs_from_namespace(namespace))
 

@@ -16,7 +16,8 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
     def test_blame(self):
         """Make sure the blame link exists and goes to the right place."""
         response = self.client().get('/code/source/main.c')
-        ok_('/blame/%s/main.c" title="Blame" class="blame icon">Blame</a>' % LATEST_REVISION in response.data)
+        ok_('/blame/%s/main.c#L" title="Blame" class="blame icon"' % LATEST_REVISION in response.data)
+        ok_('/blame/%s/main.c#L{{line}}">Blame' % LATEST_REVISION in response.data)
 
     def test_raw(self):
         """Make sure the raw link exists and goes to the right place."""
@@ -71,6 +72,16 @@ class GitTests(DxrInstanceTestCaseMakeFirst):
         response = self.client().get('/code/rev/%s/deeper/deeper_file' % LATEST_REVISION)
         eq_(response.status_code, 200)
         ok_("This file tests" in response.data)
+
+    def test_mdates(self):
+        """Make sure that modified dates listed in browse view are dates of
+        the last commit to the file.
+        """
+        response = self.client().get('/code/source/').data
+        # main.c
+        ok_('<time>2015 May 26 18:05</time>' in response)
+        # binary_file
+        ok_('<time>2016 Apr 07 21:04</time>' in response)
 
     def test_pygmentize(self):
         """Check that the pygmentize FileToSkim correctly colors a file from permalink."""

@@ -65,6 +65,20 @@ class PluginConfig(object):
         return getattr(self.tree, self.plugin_name)
 
 
+class FolderToIndex(PluginConfig):
+    """The FolderToIndex generates needles for folders and provides an
+    optional list of headers to display in browse view as `browse_headers`."""
+    browse_headers = []
+
+    def __init__(self, plugin_name, tree, path):
+        self.plugin_name = plugin_name
+        self.tree = tree
+        self.path = path
+
+    def needles(self):
+        return []
+
+
 class TreeToIndex(PluginConfig):
     """A TreeToIndex performs build environment setup and teardown and serves
     as a repository for scratch data that should persist across an entire
@@ -172,9 +186,9 @@ class FileToSkim(PluginConfig):
     def __init__(self, path, contents, plugin_name, tree, file_properties=None,
                  line_properties=None):
         """
-        :arg path: The conceptual path to the file, relative to the tree's
-            source folder. Such a file might not exist on disk. This is useful
-            mostly as a hint for syntax coloring.
+        :arg path: The (bytestring) conceptual path to the file, relative to
+            the tree's source folder. Such a file might not exist on disk. This
+            is useful mostly as a hint for syntax coloring.
         :arg contents: What's in the file: unicode if we knew or successfully
             guessed an encoding, None otherwise. Don't return any by-line data
             for None; the framework won't have succeeded in breaking up the
@@ -222,6 +236,9 @@ class FileToSkim(PluginConfig):
         """Return an iterable of links for the navigation pane::
 
             (sort order, heading, [(icon, title, href), ...])
+
+            File views will replace any {{line}} within the href with the
+            last-selected line number.
 
         """
         return []
@@ -302,7 +319,7 @@ class FileToSkim(PluginConfig):
     # Convenience methods:
 
     def absolute_path(self):
-        """Return the absolute path of the file to skim.
+        """Return the (bytestring) absolute path of the file to skim.
 
         Note: in skimmers, the returned path may not exist if the source folder
         moved between index and serve time.
@@ -339,8 +356,8 @@ class FileToIndex(FileToSkim):
     def __init__(self, path, contents, plugin_name, tree):
         """Analyze a file or digest an analysis that happened at compile time.
 
-        :arg path: A path to the file to index, relative to the tree's source
-            folder
+        :arg path: The (bytestring) path to the file to index, relative to the
+            tree's source folder
         :arg contents: What's in the file: unicode if we managed to guess at an
             encoding and decode it, None otherwise. Don't return any by-line
             data for None; the framework won't have succeeded in breaking up

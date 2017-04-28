@@ -35,6 +35,7 @@ plugin = Plugin(
                           file_to_index_class=FileToIndex),
     refs=refs_from_namespace(refs.__dict__),
     filters=filters_from_namespace(filters.__dict__),
+    badge_colors={'xpidl': '#DAF6B9'},
     mappings=mappings,
     config_schema={
         'header_path': AbsPath,

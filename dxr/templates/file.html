@@ -13,18 +13,6 @@
 {% endblock %}
 
 {% block content %}
-  <div class="breadcrumbs">
-    {%- for path, name in paths_and_names -%}
-      {%- if not loop.first or loop.last -%}
-        <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- else -%}
-        <a href="{{ www_root }}{{ path }}">{{ name }}</a>
-      {%- endif -%}
-    {%- endfor -%}
-  </div>
-
-  {{ tree_menu(tree_tuples, tree) }}
-
   {% if sections %}
     <div class="panel">
       <button id="panel-toggle">
@@ -37,7 +25,7 @@
           <ul>
             {% for item in section['items'] %}
               <li>
-                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon">{{ item.title }}</a>
+                <a href="{{ item.href }}" title="{{ item.title }}" class="{{ item.icon }} icon" {%- if 'template' in item %} data-template="{{ item.template }}" {%- endif %}>{{ item.title }}</a>
               </li>
             {%- endfor %}
           </ul>

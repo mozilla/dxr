@@ -9,7 +9,7 @@ apt-get -q update \
         npm \
         python-pip python-virtualenv python2.7-dev \
         mercurial git subversion \
-        llvm-3.5 libclang-3.5-dev clang-3.5 \
+        llvm-3.8 libclang-3.8-dev clang-3.8 \
         curl apt-transport-https
 
 # Install newer node.
@@ -25,8 +25,8 @@ apt-get install -y nodejs
 #
 # --force overrides any older-version LLVM alternative lying around. This was
 # useful with vagrant, probably less so with ephemeral containers.
-update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.5 0
+update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.8 0
 # There is no clang++ until we do this:
-update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.5 0
+update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.8 0
 # And we might as well make a clang link so we can compile mozilla-central:
-update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.5 0
+update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.8 0

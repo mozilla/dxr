@@ -200,7 +200,7 @@ def _search_json(query, tree, query_text, offset, limit, config):
         'results': results,
         'result_count': count_and_results['result_count'],
         'result_count_formatted': format_number(count_and_results['result_count']),
-        'tree_tuples': _tree_tuples(query_text)})
+        'tree_tuples': _tree_tuples('.search', q=query_text)})
 
 
 def _search_html(query, tree, query_text, offset, limit, config):
@@ -222,19 +222,21 @@ def _search_html(query, tree, query_text, offset, limit, config):
                                   redirect='false'),
             'top_of_tree': url_for('.browse', tree=tree),
             'tree': tree,
-            'tree_tuples': _tree_tuples(query_text),
+            'tree_tuples': _tree_tuples('.search', q=query_text),
             'www_root': config.www_root}
 
     return render_template('search.html', **template_vars)
 
 
-def _tree_tuples(query_text):
+def _tree_tuples(endpoint, **kwargs):
     """Return a list of rendering info for Switch Tree menu items."""
     return [(f['name'],
-             url_for('.search',
+             url_for(endpoint,
                      tree=f['name'],
-                     q=query_text),
-             f['description'])
+                     **kwargs),
+             f['description'],
+             [(lang, color) for p in plugins_named(f['enabled_plugins'])
+              for lang, color in sorted(p.badge_colors.iteritems())])
             for f in frozen_configs()]
 
 
@@ -274,8 +276,7 @@ def raw_rev(tree, revision, path):
 
     config = current_app.dxr_config
     tree_config = config.trees[tree]
-    abs_path = join(tree_config.source_folder, path)
-    data = file_contents_at_rev(abs_path, revision)
+    data = file_contents_at_rev(tree_config.source_folder, path, revision)
     if data is None:
         raise NotFound
     data_file = StringIO(data)
@@ -358,6 +359,15 @@ def browse(tree, path=''):
                             frozen['generated_date'])
 
 
+def concat_plugin_headers(plugin_list):
+    """Return a list of the concatenation of all browse_headers in the
+    FolderToIndexes of given plugin list.
+
+    """
+    return list(chain.from_iterable(p.folder_to_index.browse_headers
+                                    for p in plugin_list if p.folder_to_index))
+
+
 def _browse_folder(tree, path, config):
     """Return a rendered folder listing for folder ``path``.
 
@@ -365,16 +375,28 @@ def _browse_folder(tree, path, config):
     listing. Otherwise, raise NotFound.
 
     """
+    def item_or_list(item):
+        """If item is a list, return its first element.
+
+        Otherwise, just return it.
+
+        """
+        # TODO @pelmers: remove this function when format bumps to 20
+        if isinstance(item, list):
+            return item[0]
+        return item
+
     frozen = frozen_config(tree)
 
+    plugin_headers = concat_plugin_headers(plugins_named(frozen['enabled_plugins']))
     files_and_folders = filtered_query(
         frozen['es_alias'],
         FILE,
         filter={'folder': path},
         sort=[{'is_folder': 'desc'}, 'name'],
-        size=10000,
+        size=1000000,
         include=['name', 'modified', 'size', 'link', 'path', 'is_binary',
-                 'is_folder'])
+                 'is_folder'] + plugin_headers)
 
     if not files_and_folders:
         raise NotFound
@@ -384,14 +406,11 @@ def _browse_folder(tree, path, config):
         # Common template variables:
         www_root=config.www_root,
         tree=tree,
-        tree_tuples=[
-            (t['name'],
-             url_for('.parallel', tree=t['name'], path=path),
-             t['description'])
-            for t in frozen_configs()],
+        tree_tuples=_tree_tuples('.parallel', path=path),
         generated_date=frozen['generated_date'],
         google_analytics_key=config.google_analytics_key,
         paths_and_names=_linked_pathname(path, tree),
+        plugin_headers=plugin_headers,
         filters=filter_menu_items(
             plugins_named(frozen['enabled_plugins'])),
         # Autofocus only at the root of each tree:
@@ -403,8 +422,9 @@ def _browse_folder(tree, path, config):
         files_and_folders=[
             (_icon_class_name(f),
              f['name'],
-             decode_es_datetime(f['modified']) if 'modified' in f else None,
+             decode_es_datetime(item_or_list(f['modified'])) if 'modified' in f else None,
              f.get('size'),
+             [f.get(h, [''])[0] for h in plugin_headers],
              url_for('.browse', tree=tree, path=f.get('link', f['path'])[0]))
             for f in files_and_folders])
 
@@ -435,11 +455,7 @@ def _build_common_file_template(tree, path, is_binary, date, config):
         # Common template variables:
         'www_root': config.www_root,
         'tree': tree,
-        'tree_tuples':
-            [(t['name'],
-              url_for('.parallel', tree=t['name'], path=path),
-              t['description'])
-            for t in frozen_configs()],
+        'tree_tuples': _tree_tuples('.parallel', path=path),
         'generated_date': date,
         'google_analytics_key': config.google_analytics_key,
         'filters': filter_menu_items(
@@ -470,12 +486,23 @@ def _browse_file(tree, path, line_docs, file_doc, config, is_binary,
     :arg image_rev: revision number of a textual or binary image, for images
         displayed at a certain rev
     """
+    def process_link_templates(sections):
+        """Look for {{line}} in the links of given sections, and duplicate them onto
+        a 'template' field.
+        """
+        for section in sections:
+            for link in section['items']:
+                if '{{line}}' in link['href']:
+                    link['template'] = link['href']
+                    link['href'] = link['href'].replace('{{line}}', '')
+
     def sidebar_links(sections):
         """Return data structure to build nav sidebar from. ::
 
             [('Section Name', [{'icon': ..., 'title': ..., 'href': ...}])]
 
         """
+        process_link_templates(sections)
         # Sort by order, resolving ties by section name:
         return sorted(sections, key=lambda section: (section['order'],
                                                      section['heading']))
@@ -561,8 +588,7 @@ def rev(tree, revision, path):
     """
     config = current_app.dxr_config
     tree_config = config.trees[tree]
-    abs_path = join(tree_config.source_folder, path)
-    contents = file_contents_at_rev(abs_path, revision)
+    contents = file_contents_at_rev(tree_config.source_folder, path, revision)
     if contents is not None:
         image_rev = None
         if is_binary_image(path):

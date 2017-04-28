@@ -40,4 +40,4 @@ env:
   global:
     - GH_REF: github.com/mozilla/dxr.git
     - secure: "ZaFYROXPqDRTb9iPK196ar5rOHDIcOw7xD7kV0bbXMAaJZv7T7TmQQ9gRso/qwwAeOKO4IRi9iGRDQU5yqZ4hy6FbVXUV6AXI3QXbm0X+qd38kboXzwfbpwfRpZRj5CmzZ32wo3w4jtB7OSzX6OvP+7J5YHRoRwTj30JLhLrXfk="
-    - secure: "O8n+VSEjws3YKrsaJmY32bYgzSstmiF6nyyuwQIodoNFoAes5XXAIj8xvrJE40Co7HK2JztKUzb0Hkx7cLMZOMeou/HT9N5O3ML15Ka9CWZ0gD8C0IlZvc8x1jbuB97uD9omID1d/HzIPABj2YZjgh5HdsIJnHXx1xnJ/xtuASI="
+    - secure: "GJmoBLzDTezl03i9+79zw2jJ7cD3jZGsbSDo7NezqEezC2B6wyJFVbOT5unL7FOAmOOU+tXNCQmBFZsInyPQ1Ps4D0I1+IVjvfQRSiHYGNrfc6xNh3h5n55TLff2bJ9jxPuiLZRY/xt1LFqQVhrqpNLizwUyy3AFIi3+xpl18Tc="

@@ -207,6 +207,14 @@ public:
     printPolicy.SuppressTagKeyword = true;
   }
 
+  ~IndexConsumer() {
+#if CLANG_AT_LEAST(3, 6)
+    ci.getDiagnostics().setClient(inner.release());
+#else
+    ci.getDiagnostics().setClient(inner);
+#endif
+  }
+
 #if CLANG_AT_LEAST(3, 3)
   // `clone` was removed from the DiagnosticConsumer interface in version 3.3,
   // so this can all be deleted once we're no longer supporting 3.2.
@@ -292,6 +300,22 @@ public:
       recordValue("locend", locationToString(afterToken(endLoc)));
   }
 
+  // Given a declaration, get the name of the file containing the corresponding
+  // definition or the name of the file containing the declaration if no
+  // definition can be found.
+  std::string getRealFilenameForDefinition(const NamedDecl &d) {
+    const NamedDecl *decl = &d;
+
+    if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
+      const FunctionDecl *def = 0;
+      if (fd->isDefined(def))
+        decl = def;
+    }
+
+    const std::string &filename = sm.getFilename(decl->getLocation());
+    return getFileInfo(filename)->realname;
+  }
+
   // This is a wrapper around NamedDecl::getQualifiedNameAsString.
   // It produces more qualified output to distinguish several cases
   // which would otherwise be ambiguous.
@@ -368,8 +392,7 @@ public:
     const std::string anon_ns = "<anonymous namespace>";
 #endif
     if (StringRef(ret).startswith(anon_ns)) {
-      const std::string &filename = ci.getFrontendOpts().Inputs[0].getFile().str();
-      const std::string &realname = getFileInfo(filename)->realname;
+      const std::string &realname = getRealFilenameForDefinition(d);
       ret = "(" + ret.substr(1, anon_ns.size() - 2) + " in " + realname + ")" +
         ret.substr(anon_ns.size());
     }
@@ -874,7 +897,7 @@ public:
     printReference(kindForDecl(e->getMemberDecl()),
                    e->getMemberDecl(),
                    e->getExprLoc(),
-                   e->getSourceRange().getEnd());
+                   e->getMemberNameInfo().getEndLoc());
     return true;
   }
 
@@ -1367,7 +1390,7 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string>& args) override {
-    if (args.size() != 1) {
+    if (args.empty()) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
         "Need an argument for the source directory");
@@ -1376,8 +1399,10 @@ protected:
     }
     // Load our directories.
 
-    // The source directory.
-    char *abs_src = realpath(args[0].c_str(), nullptr);
+    // The source directory. Follow the GCC/Clang convention of picking the
+    // the value of the argument that has been specificed last in the command
+    // line.
+    char *abs_src = realpath(args.back().c_str(), nullptr);
     if (!abs_src) {
       DiagnosticsEngine &D = CI.getDiagnostics();
       unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,

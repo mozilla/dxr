@@ -20,7 +20,7 @@ TODO:
 
 import marshal
 import os
-from os.path import isfile, join, relpath, split
+from os.path import exists, isfile, join, realpath, relpath, split
 from pkg_resources import resource_filename
 import re
 import subprocess
@@ -59,7 +59,7 @@ class Vcs(object):
 
     def is_tracked(self, path):
         """Does the repository track this file?"""
-        return NotImplemented
+        raise NotImplementedError
 
     def has_upstream(self):
         """Return true if this VCS has a usable upstream."""
@@ -70,29 +70,45 @@ class Vcs(object):
 
     def generate_log(self, path):
         """Construct URL to upstream view of log of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_diff(self, path):
         """Construct URL to upstream view of diff of file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_blame(self, path):
         """Construct URL to upstream view of blame on file at path."""
-        return NotImplemented
+        raise NotImplementedError
 
     def generate_raw(self, path):
         """Construct URL to upstream view to raw file at path."""
-        return NotImplemented
+        raise NotImplementedError
+
+    def last_modified_date(self, path):
+        """Return a datetime object that represents the last UTC a commit was
+        made to the given path.
+        """
+        raise NotImplementedError
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        """Return contents of file at specified path at given revision, where path is an
-        absolute path."""
-        return NotImplemented
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        """Return contents of a file at a certain revision.
+
+        :arg working_dir: The working directory from which to run the VCS
+            command. Beware that the dirs which existed at the rev in question
+            may not exist in the checked-out rev. Also, you cannot blithely use
+            the root of the source folder, as there may be, for instance,
+            nested git repos in the tree.
+        :arg rel_path: The relative path to the file, from ``working_dir``
+        :arg revision: The revision at which to pull the file, in a
+            VCS-dependent format
+
+        """
+        raise NotImplementedError
 
     def display_rev(self, path):
         """Return a human-readable revision identifier for the repository."""
-        return NotImplemented
+        raise NotImplementedError
 
 
 class Mercurial(Vcs):
@@ -105,7 +121,7 @@ class Mercurial(Vcs):
                         configs=['extensions.previous_revisions=%s' % hgext]) as client:
             tip = client.tip()
             self.revision = tip.node
-            self.previous_revisions = self.find_previous_revisions(client)
+            self.previous_revisions = self._find_previous_revisions(client)
         self.upstream = self._construct_upstream_url()
 
     def has_upstream(self):
@@ -132,16 +148,17 @@ class Mercurial(Vcs):
         recomb[3] = recomb[4] = recomb[5] = ''  # Just those three
         return urlparse.urlunparse(recomb)
 
-    def find_previous_revisions(self, client):
-        """Find the last revision in which each file changed, for diff links.
+    def _find_previous_revisions(self, client):
+        """Find the last revision and date in which each file changed, for diff
+        links and timestamps..
 
-        Return a mapping {path: last commit nodes in which file at path changed}
+        Return a mapping {path: date, last commit nodes in which file at path changed}
 
         """
         last_change = {}
         for line in client.rawcommand(['previous-revisions']).splitlines():
-            node, path = line.split(':', 1)
-            last_change[path] = node
+            commit, date, path = line.split('@', 2)
+            last_change[path] = (commit, datetime.utcfromtimestamp(float(date)))
         return last_change
 
     @classmethod
@@ -162,23 +179,26 @@ class Mercurial(Vcs):
     def is_tracked(self, path):
         return path in self.previous_revisions
 
+    def last_modified_date(self, path):
+        if path in self.previous_revisions:
+            return self.previous_revisions[path][1]
+
     def generate_raw(self, path):
-        return self.upstream + 'raw-file/' + self.revision + '/' + path
+        return "{}raw-file/{}/{}".format(self.upstream, self.revision, path)
 
     def generate_diff(self, path):
         # We generate link to diff with the last revision in which the file changed.
-        return self.upstream + 'diff/' + self.previous_revisions[path] + '/' + path
+        return "{}diff/{}/{}".format(self.upstream, self.previous_revisions[path][0], path)
 
     def generate_blame(self, path):
-        return self.upstream + 'annotate/' + self.revision + '/' + path
+        return "{}annotate/{}/{}#l{{{{line}}}}".format(self.upstream, self.revision, path)
 
     def generate_log(self, path):
-        return self.upstream + 'filelog/' + self.revision + '/' + path
+        return "{}filelog/{}/{}".format(self.upstream, self.revision, path)
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        head, tail = split(path)
-        return cls.invoke_vcs(['cat', '-r', revision, tail], head, stderr=stderr)
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        return cls.invoke_vcs(['cat', '-r', revision, rel_path], working_dir, stderr=stderr)
 
 
 class Git(Vcs):
@@ -190,6 +210,31 @@ class Git(Vcs):
                                  self.invoke_vcs(['ls-files'], self.root).splitlines())
         self.revision = self.invoke_vcs(['rev-parse', 'HEAD'], self.root).strip()
         self.upstream = self._construct_upstream_url()
+        self.last_changed = self._find_last_changed()
+
+    def _find_last_changed(self):
+        """Return map {path: date of last authored change}
+        """
+        consume_date = True
+        current_date = None
+        last_changed = {}
+        for line in self.invoke_vcs(
+                ['log', '--format=format:%at', '--name-only'], self.root).splitlines():
+            # Commits are separated by empty lines.
+            if not line:
+                # Then the next line is a date.
+                consume_date = True
+            else:
+                if consume_date:
+                    current_date = datetime.utcfromtimestamp(float(line))
+                    consume_date = False
+                else:
+                    # Then the line should have a file path, record it if we have
+                    # not seen it and it's tracked.
+                    if line in self.tracked_files and line not in last_changed:
+                        last_changed[line] = current_date
+        return last_changed
+
 
     def has_upstream(self):
         return self.upstream != ""
@@ -215,18 +260,19 @@ class Git(Vcs):
                 break
         return ""
 
+    def last_modified_date(self, path):
+        return self.last_changed.get(path)
+
     @classmethod
     def claim_vcs_source(cls, path, dirs, tree):
         if '.git' in dirs:
-            # Before claiming the source, make sure git actually thinks it's
-            # alright.
             try:
-                Git.invoke_vcs(['status'], path)
+                vcs = cls(path)
             except subprocess.CalledProcessError:
-                return None
-            dirs.remove('.git')
-            return cls(path)
-        return None
+                pass
+            else:
+                dirs.remove('.git')
+                return vcs
 
     def display_rev(self, path):
         return self.revision[:10]
@@ -235,23 +281,22 @@ class Git(Vcs):
         return path in self.tracked_files
 
     def generate_raw(self, path):
-        return self.upstream + "/raw/" + self.revision + "/" + path
+        return "{}/raw/{}/{}".format(self.upstream, self.revision, path)
 
     def generate_diff(self, path):
         # I really want to make this anchor on the file in question, but github
         # doesn't seem to do that nicely
-        return self.upstream + "/commit/" + self.revision
+        return "{}/commit/{}".format(self.upstream, self.revision)
 
     def generate_blame(self, path):
-        return self.upstream + "/blame/" + self.revision + "/" + path
+        return "{}/blame/{}/{}#L{{{{line}}}}".format(self.upstream, self.revision, path)
 
     def generate_log(self, path):
-        return self.upstream + "/commits/" + self.revision + "/" + path
+        return "{}/commits/{}/{}".format(self.upstream, self.revision, path)
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        head, tail = split(path)
-        return cls.invoke_vcs(['show', revision + ':./' + tail], head, stderr=stderr)
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        return cls.invoke_vcs(['show', revision + ':./' + rel_path], working_dir, stderr=stderr)
 
 
 class Perforce(Vcs):
@@ -297,37 +342,35 @@ class Perforce(Vcs):
 
     def generate_raw(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=98&rev1=' + info['haveRev']
+        return "{}{}?ac=98&rev1={}".format(self.upstream, info['depotFile'], info['haveRev'])
 
     def generate_diff(self, path):
         info = self.have[path]
         haveRev = info['haveRev']
         prevRev = str(int(haveRev) - 1)
-        return (self.upstream + info['depotFile'] + '?ac=19&rev1=' + prevRev +
-                '&rev2=' + haveRev)
+        return "{}{}?ac=19&rev1={}&rev2={}".format(self.upstream, info['depotFile'], prevRev, haveRev)
 
     def generate_blame(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=193'
+        return "{}{}?ac=193".format(self.upstream, info['depotFile'])
 
     def generate_log(self, path):
         info = self.have[path]
-        return self.upstream + info['depotFile'] + '?ac=22#' + info['haveRev']
+        return "{}{}?ac=22#{}".format(self.upstream, info['depotFile'], info['haveRev'])
 
     def display_rev(self, path):
         info = self.have[path]
         return '#' + info['haveRev']
 
     @classmethod
-    def get_contents(cls, path, revision, stderr=None):
-        directory, filename = split(path)
-        env = os.environ
-        env["PWD"] = directory
+    def get_contents(cls, working_dir, rel_path, revision, stderr=None):
+        env = os.environ.copy()
+        env['PWD'] = working_dir
         return subprocess.check_output([cls.command,
                                         'print',
                                         '-q',
-                                        filename + '@' + revision],
-                                       cwd=directory, env=env, stderr=stderr)
+                                        rel_path + '@' + revision],
+                                       cwd=working_dir, env=env, stderr=stderr)
 
 class Subversion(Vcs):
     command = 'svn'
@@ -485,13 +528,55 @@ def tree_to_repos(tree):
     return ordered_sources
 
 
-def file_contents_at_rev(abspath, revision):
-    """Attempt to return the contents of a file at a specific revision."""
+def _split_existent(abs_folder):
+    """Split a path to a dir in two, with the first half consisting of the
+    longest segment that exists on the FS; the second, the remainder."""
+    existent = abs_folder
+    nonexistent = ''
+    while existent:
+        if exists(existent):
+            break
+        existent, non = split(existent)
+        nonexistent = join(non, nonexistent)
+    return existent, nonexistent
+
+
+def _is_within(inner, outer):
+    """Return whether path ``inner`` is contained by or identical with folder
+    ``outer``."""
+    # The added slashes are meant to prevent wrong answers if outer='z/a' and
+    # inner='z/abc'.
+    return (realpath(inner) + '/').startswith(realpath(outer) + '/')
+
+
+def file_contents_at_rev(source_folder, rel_file, revision):
+    """Attempt to return the contents of a file at a specific revision.
+
+    If such a file is not found, return None.
+
+    :arg source_folder: The absolute path to the root of the source folder for
+        the tree we're talking about
+    :arg rel_file: The source-folder-relative path to a file
+    :arg revision: The VCS revision identifier, in a format defined by the VCS
+
+    """
+    # Rather than keeping a memory-intensive VcsCache around in the web process
+    # (which we haven't measured; it might be okay, but I'm afraid), just keep
+    # stepping rootward in the FS hierarchy until we find an actually existing
+    # dir. Regardless of the method, the point is to work even on files whose
+    # containing dirs have been moved or renamed.
+    rel_folder, file = split(rel_file)
+    abs_folder = join(source_folder, rel_folder)
+    existent, nonexistent = _split_existent(abs_folder)
+
+    # Security check: don't serve files outside the source folder:
+    if not _is_within(existent, source_folder):
+        return None
 
     with open(os.devnull, 'w') as devnull:
         for cls in every_vcs:
             try:
-                return cls.get_contents(abspath, revision, stderr=devnull)
+                return cls.get_contents(existent, join(nonexistent, file), revision, stderr=devnull)
             except subprocess.CalledProcessError:
                 continue
             except OSError:
@@ -503,6 +588,7 @@ def file_contents_at_rev(abspath, revision):
 class VcsCache(object):
     """This class offers a way to obtain Vcs objects for any file within a
     given tree."""
+
     def __init__(self, tree):
         """Construct a VcsCache for the given tree.
 
@@ -518,13 +604,14 @@ class VcsCache(object):
         know about that claims to track that file.
 
         :arg string path: a path to a file (not a folder)
+
         """
         if path in self._path_cache:
             return self._path_cache[path]
         abs_path = join(self.tree.source_folder, path)
         for directory, vcs in self.repos.iteritems():
-            # This seems to be the easiest way to find "is abs_path in the subtree
-            # rooted at directory?"
+            # This seems to be the easiest way to find "is abs_path in the
+            # subtree rooted at directory?"
             if relpath(abs_path, directory).startswith('..'):
                 continue
             if vcs.is_tracked(relpath(abs_path, vcs.get_root_dir())):

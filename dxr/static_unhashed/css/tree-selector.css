@@ -52,11 +52,22 @@
     content: "\e803";
     speak: none;
 }
+.selector-options tr {
+    cursor: pointer;
+}
+.selector-option-label {
+    /* Leave some room for the selected icon + original padding */
+    padding-left: 35px;
+}
 .ts-modal {
     border: 1px solid #d4d4d4;
     border-radius: 6px;
-    min-width: 120%;
+    min-width: 18rem;
     z-index: 10;
+    background-color: white;
+    overflow: auto;
+    max-height: 250px;
+    max-height: 70vh;
 }
 header {
     background-color: #e0e0e0;

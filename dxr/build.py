@@ -28,7 +28,8 @@ from dxr.filters import LINE, FILE
 from dxr.lines import es_lines, finished_tags
 from dxr.mime import decode_data
 from dxr.utils import (open_log, deep_update, append_update,
-                       append_update_by_line, append_by_line, bucket, split_content_lines)
+                       append_update_by_line, append_by_line, bucket,
+                       split_content_lines, unicode_for_display)
 from dxr.vcs import VcsCache
 
 
@@ -150,10 +151,8 @@ def index_tree(tree, es, verbose=False):
     name of the new ES index.
 
     """
-    config = tree.config
-
     def new_pool():
-        return ProcessPoolExecutor(max_workers=config.workers)
+        return ProcessPoolExecutor(max_workers=tree.workers)
 
     def farm_out(method_name):
         """Farm out a call to all tree indexers across a process pool.
@@ -164,7 +163,7 @@ def index_tree(tree, es, verbose=False):
         Show progress while doing it.
 
         """
-        if not config.workers:
+        if not tree.workers:
             return [save_scribbles(ti, method_name) for ti in tree_indexers]
         else:
             futures = [pool.submit(full_traceback, save_scribbles, ti, method_name)
@@ -191,6 +190,7 @@ def index_tree(tree, es, verbose=False):
     # Note starting time
     start_time = datetime.now()
 
+    config = tree.config
     skip_indexing = 'index' in config.skip_stages
     skip_build = 'build' in config.skip_stages
     skip_cleanup = skip_indexing or skip_build or 'clean' in config.skip_stages
@@ -378,8 +378,8 @@ def unicode_contents(path, encoding_guess):  # TODO: Make accessible to TreeToIn
 
 
 def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
-    """Return an iterable of absolute paths to unignored source tree files or
-    the folders that contain them.
+    """Return an iterable of bytestring absolute paths to unignored source
+    tree files or the folders that contain them.
 
     Returned files include both binary and text ones.
 
@@ -387,6 +387,11 @@ def unignored(folder, ignore_paths, ignore_filenames, want_folders=False):
         instead.
 
     """
+    # On Linux (which is what we guarantee support for), paths are bags of
+    # bytes; they may not even be representable as Unicode code points.
+    if isinstance(folder, unicode):
+        folder = folder.encode('utf8')
+
     def raise_(exc):
         raise exc
 
@@ -429,7 +434,7 @@ def index_file(tree, tree_indexers, path, es, index):
     worker processes. That goes at 52MB/s on my OS X laptop, measuring by the
     size of the pickled object and including the pickling and unpickling time.
 
-    :arg path: Absolute path to the file to index
+    :arg path: Bytestring absolute path to the file to index
     :arg index: The ES index name
 
     """
@@ -446,10 +451,6 @@ def index_file(tree, tree_indexers, path, es, index):
     # Just like index_folders, if the path is not in UTF-8, then elasticsearch
     # will not accept the path, so just move on.
     rel_path = relpath(path, tree.source_folder)
-    try:
-        rel_path = rel_path.decode('utf-8')
-    except UnicodeDecodeError:
-        return
     is_text = isinstance(contents, unicode)
     is_link = islink(path)
     # Index by line if the contents are text and the path is not a symlink.
@@ -496,10 +497,9 @@ def index_file(tree, tree_indexers, path, es, index):
         # Hard-code the keys that are hard-coded in the browse()
         # controller. Merge with the pluggable ones from needles:
         doc = dict(# Some non-array fields:
-                    folder=folder_name,
-                    name=file_name,
+                    folder=unicode_for_display(folder_name),
+                    name=unicode_for_display(file_name),
                     size=file_info.st_size,
-                    modified=datetime.fromtimestamp(file_info.st_mtime),
                     is_folder=False,
 
                     # And these, which all get mashed into arrays:
@@ -588,6 +588,8 @@ def index_chunk(tree,
 
 def index_folders(tree, index, es):
     """Index the folder hierarchy into ES."""
+    folder_indexers = [(p.name, p.folder_to_index)
+                       for p in tree.enabled_plugins if p.folder_to_index]
     with aligned_progressbar(unignored(tree.source_folder,
                                        tree.ignore_paths,
                                        tree.ignore_filenames,
@@ -595,19 +597,10 @@ def index_folders(tree, index, es):
                      show_eta=False,  # never even close
                      label='Indexing folders') as folders:
         for folder in folders:
-            rel_path = relpath(folder, tree.source_folder)
-            # If the path is not in UTF-8, then elasticsearch will not
-            # accept the path, so just move on.
-            try:
-                rel_path = rel_path.decode('utf-8')
-            except UnicodeDecodeError:
-                continue
-            superfolder_path, folder_name = split(rel_path)
-            es.index(index, FILE, {
-                'path': [rel_path],  # array for consistency with non-folder file docs
-                'folder': superfolder_path,
-                'name': folder_name,
-                'is_folder': True})
+            needles = {'is_folder': True}
+            for name, folder_to_index in folder_indexers:
+                needles.update(dict(folder_to_index(name, tree, folder).needles()))
+            es.index(index, FILE, needles)
 
 
 def index_files(tree, tree_indexers, index, pool, es):
@@ -621,7 +614,7 @@ def index_files(tree, tree_indexers, index, pool, es):
 
     index_folders(tree, index, es)
 
-    if not tree.config.workers:
+    if not tree.workers:
         for paths in path_chunks(tree):
             index_chunk(tree,
                         tree_indexers,
@@ -668,7 +661,7 @@ def build_tree(tree, tree_indexers, verbose):
     # Call make or whatever:
     with open_log(tree.log_folder, 'build.log', verbose) as log:
         print 'Building tree'
-        workers = max(tree.config.workers, 1)
+        workers = max(tree.workers, 1)
         r = subprocess.call(
             tree.build_command.replace('$jobs', str(workers))
                               .format(workers=workers),

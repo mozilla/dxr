@@ -17,16 +17,18 @@ Mercurial extension that prints the last node in which each tracked file changed
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+
 def previous_revisions(ui, repo, **opts):
-    """Print the last node in which each file changed."""
+    """Print the last node@date@file in which each file changed."""
     last_change = {}
     for rev in range(0, repo['tip'].rev() + 1):
         ctx = repo[rev]
         # Go through all filenames changed in this commit
         for filename in ctx.files():
-            last_change[filename] = ctx.hex()
-    for filename, node in last_change.iteritems():
-        ui.write('%s:%s\n' % (node, filename))
+            # Date is returned as a (timestamp, timezone) tuple.
+            last_change[filename] = (ctx.hex(), ctx.date()[0])
+    for filename, (node, date) in last_change.iteritems():
+        ui.write('%s@%s@%s\n' % (node, date, filename))
 
 cmdtable = {
     'previous-revisions': (previous_revisions, [], '')

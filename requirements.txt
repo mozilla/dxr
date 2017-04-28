@@ -7,6 +7,7 @@ binaryornot==0.4.0
 certifi==2015.04.28
 
 # sha256: 5T44s6Sv5tETLeYrdACkrDY0Utxd_PjYjo4MzmY8aKo
+# sha256: qvUUveOAILTx5CxqbhQfKCeopYzPw7Irb_WhpLUL5W4
 chardet==2.3.0
 
 # sha256: mrHTE_mbIJ-PcaYp82gzAwyNfHIoLPd1aDS69WfcpmI

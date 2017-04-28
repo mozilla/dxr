@@ -1075,5 +1075,6 @@ mappings = {
 
 plugin = Plugin(filters=filters_from_namespace(filters.__dict__),
                 tree_to_index=TreeToIndex,
+                badge_colors={'rust':'#FEDFB0'},
                 mappings=mappings,
                 refs=refs_from_namespace(refs.__dict__))

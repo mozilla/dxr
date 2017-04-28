@@ -13,7 +13,7 @@ from collections import namedtuple
 from dxr.indexers import (FileToIndex as FileToIndexBase,
                           TreeToIndex as TreeToIndexBase)
 from dxr.mime import icon
-from dxr.utils import browse_file_url
+from dxr.utils import browse_file_url, unicode_for_display
 
 
 # A list of extensions along with a title describing the type of extensions:
@@ -68,8 +68,10 @@ class FileToIndex(FileToIndexBase):
                 is_indexed(dual_path)):
                 yield (4,
                        dual_exts.title,
-                       [(icon(dual_path), basename(dual_path),
-                        browse_file_url(self.tree.name, dual_path))])
+                       [(icon(dual_path),
+                        unicode_for_display(basename(dual_path)),
+                        browse_file_url(self.tree.name,
+                                        unicode_for_display(dual_path)))])
                 # Todo? this 'break' breaks handling of multiple extension
                 # pairings on the same basename.
                 break

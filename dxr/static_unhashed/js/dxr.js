@@ -107,13 +107,15 @@ $(function() {
 
             dataPath.push(paths[pathIndex]);
 
+            // Render the path segment and trim white space so copying the
+            // path will not insert spaces.
             pathLines += nunjucks.render('path_line.html', {
                 'data_path': dataPath.join('/'),
                 'display_path': paths[pathIndex],
                 'url': pathRoot + dataPath.join('/'),
                 'is_first_or_only': isFirstOrOnly,
                 'is_dir': !isLastOrOnly
-            });
+            }).trim();
         }
 
         return [iconClass, pathLines];
@@ -383,6 +385,7 @@ $(function() {
         if (!data.results.length) {
             resultsLineCount = 0;
             if (!append) {
+                renderResultsNav(data);
                 contentContainer
                     .empty()
                     .append(nunjucks.render('results_container.html', data));
@@ -401,6 +404,7 @@ $(function() {
             if (!append) {
                 renderedData = nunjucks.render('results_container.html', data);
                 contentContainer.empty().append(withContextListeners(renderedData));
+                renderResultsNav(data);
             } else {
                 var resultsList = contentContainer.find('.results');
 
@@ -424,6 +428,7 @@ $(function() {
                 if (data.results.length) {
                     renderedData = nunjucks.render('results.html', data);
                     resultsList.append(withContextListeners(renderedData));
+                    renderResultsNav(data);
                 }
             }
         }
@@ -431,6 +436,14 @@ $(function() {
         if (!append) {
             document.title = data.query + " - DXR Search";
         }
+    }
+
+    /**
+     * Renders/updates the nav bar for a set of search results
+     */
+    function renderResultsNav(data) {
+        var renderedNav = nunjucks.render('results_nav.html', data);
+        $('.current-tree-nav').empty().append(renderedNav);
     }
 
     /**

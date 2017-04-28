@@ -139,7 +139,7 @@ $(function() {
             }
 
             // If the offset is beyond the last word, no word was clicked on.
-            if (offset === endIndex) {
+            if (offset > endIndex) {
                 return;
             }
 

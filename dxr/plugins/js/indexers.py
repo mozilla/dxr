@@ -9,6 +9,7 @@ from dxr.indexers import (Extent, Position, iterable_per_line_sorted,
                           with_start_and_end)
 
 
+# loc is (row, (col_start, col_end)).
 AnalysisSchema = namedtuple('AnalysisSchema', ['loc', 'kind', 'type', 'name', 'sym'])
 
 

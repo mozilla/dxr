@@ -49,24 +49,31 @@
                           </button>
                         </section>
                         <div class="sf-select-options sf-modal" aria-expanded="false">
-                          <ul class="selector-options" tabindex="-1">
+                          <table class="selector-options" tabindex="-1">
                             {% for filter in filters %}
-                              <li>
-                                <a href="javascript:void(0)" data-value="{{ filter.name }}:">
-                                  <span class="selector-option-label">
-                                    {{ filter.name }}
-                                  </span>
-                                  <span class="selector-option-description">
-                                    {{ filter.description }}
-                                  </span>
-                                </a>
-                              </li>
+                              <tr data-value="{{ filter.name }}:">
+                                <td class="selector-option-label">
+                                  {{ filter.name }}
+                                </td>
+                                <td class="selector-badges">
+                                  {% for text, color in filter.badges -%}
+                                    {%- if color -%}
+                                      <span style="background-color:{{ color }}">{{ text }}</span>
+                                    {%- endif -%}
+                                  {%- endfor %}
+                                </td>
+                                <td class="selector-option-description">
+                                  {{ filter.description }}
+                                </td>
+                              </tr>
                             {% endfor %}
-                          </ul>
+                          </table>
                         </div>
                     </div>
                 </div>
             </fieldset>
+
+            <noscript>Please turn on JavaScript to use DXR.</noscript>
 
             <input type="hidden" value="{{ tree }}" id="ts-value" />
             <input type="hidden" name="redirect" value="true" id="redirect" />
@@ -74,6 +81,23 @@
         </form>
     </div>
 
+    {% block nav_bar %}
+      <nav class="nav-bar">
+        <div class="current-tree-nav">
+          <div class="breadcrumbs">
+            {%- for path, name in paths_and_names -%}
+              {%- if not loop.first or loop.last and loop.length != 1 -%}
+                <span class="path-separator">/</span><a href="{{ www_root }}{{ path }}">{{ name }}</a>
+              {%- else -%}
+                <a href="{{ www_root }}{{ path }}">{{ name }}</a>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        </div>
+        {{ tree_menu(tree_tuples, tree) }}
+      </nav>
+    {% endblock %}
+    
     <div id="content" class="content">
       {% block content %}
       {% endblock %}

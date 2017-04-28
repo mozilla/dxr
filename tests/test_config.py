@@ -193,3 +193,36 @@ def test_unknown_plugin():
     else:
         fail("An unknown plugin name passed to enabled_plugins didn't "
              "raise ConfigError")
+
+
+def test_per_tree_workers():
+    """Make sure per-tree workers are recognized and fall back to the global
+    default."""
+    config = Config("""
+        [DXR]
+        workers = 9
+        enabled_plugins = clang
+
+        [mozilla-central]
+        workers = 5
+        source_folder = /some/path
+
+        [flowzilla-central]
+        source_folder = /some/path
+        """)
+    eq_(config.trees['mozilla-central'].workers, 5)
+
+    # This should fall back to the default:
+    eq_(config.trees['flowzilla-central'].workers, 9)
+
+
+def test_bytestring_paths():
+    """Ensure source_folder and such are bytestrings, not Unicode."""
+    config = Config("""
+        [DXR]
+        enabled_plugins = clang
+
+        [mozilla-central]
+        source_folder = /some/path
+        """)
+    ok_(isinstance(config.trees['mozilla-central'].source_folder, str))

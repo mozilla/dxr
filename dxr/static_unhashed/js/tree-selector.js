@@ -1,22 +1,5 @@
 $(function() {
-    var contentContainer = $('#content');
-    var options = $('.select-options .selector-options');
-
-    /**
-     * Mark the selected element as checked.
-     * @param {Object} selected - The item to mark as checked.
-     */
-    function setSelectedItem(selected) {
-        var items = options.find('a');
-
-        items.each(function() {
-            $(this).removeClass('selected')
-                   .removeAttr('aria-checked');
-        });
-
-        selected.addClass('selected');
-        selected.attr('aria-checked', 'true');
-    }
+    var contentContainer = $('.nav-bar');
 
     // Show/Hide the options
     contentContainer.on('click', '.ts-select-trigger', function(event) {
@@ -49,13 +32,9 @@ $(function() {
         }
     });
 
-    options.on('click', 'a', function(event) {
+    contentContainer.on('click', '.selector-options tr', function(event) {
         event.stopPropagation();
-        setSelectedItem($(this));
-        // Set the value of the relevant hidden type element to
-        // the selected value.
-        $('#ts-value').val($(this).text());
-        $('.select-options').hide();
+        window.location = $(this).data('href');
     });
 
     onEsc(hideOptionsAndHelp);

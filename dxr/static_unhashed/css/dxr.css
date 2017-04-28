@@ -349,7 +349,7 @@ code a {
     transform: rotate3d(0, 0, 1, 270deg);
 }
 .content {
-    margin-top: 55px;
+    margin-top: 95px;
     padding: 1rem 2rem;
 }
 .path-separator {
@@ -412,6 +412,21 @@ code a {
 }
 .help-msg a {
     color: #0095dd;
+}
+
+/* nav bar */
+.nav-bar {
+    position: fixed;
+    width: 100%;
+    top: 55px;
+    z-index: 90;
+    background-color: #fff;
+    padding: 1.1rem 2rem 0rem;
+}
+
+.current-tree-nav {
+    display: inline-block;
+    line-height: .7em;
 }
 
 /* top of tree */

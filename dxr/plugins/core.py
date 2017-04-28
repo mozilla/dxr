@@ -1,8 +1,10 @@
 """Core, non-language-specific features of DXR, implemented as a Plugin"""
 
 from base64 import b64encode
+from datetime import datetime
 from itertools import chain
-from os.path import relpath, splitext, realpath, basename
+from os import stat
+from os.path import relpath, splitext, realpath, basename, split
 import re
 
 from flask import url_for
@@ -20,7 +22,7 @@ from dxr.query import some_filters
 from dxr.plugins import direct_search
 from dxr.trigrammer import (regex_grammar, NGRAM_LENGTH, es_regex_filter,
                             NoTrigrams, PythonRegexVisitor)
-from dxr.utils import glob_to_regex, split_content_lines
+from dxr.utils import glob_to_regex, split_content_lines, unicode_for_display
 
 __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter',
            'ExtFilter', 'RegexpFilter', 'IdFilter', 'RefFilter']
@@ -84,6 +86,7 @@ mappings = {
                 'type': 'boolean',
                 'index': 'no'
             },
+            'description': UNINDEXED_STRING,
 
             # Sidebar nav links:
             'links': {
@@ -435,6 +438,20 @@ class RefFilter(FilterAggregator):
         super(RefFilter, self).__init__(term, enabled_plugins, lambda f: f.is_reference)
 
 
+class FolderToIndex(dxr.indexers.FolderToIndex):
+    def needles(self):
+        rel_path = relpath(self.path, self.tree.source_folder)
+        # Convert from bag of bytes to unicode, which ES demands and the web
+        # likes:
+        rel_path = unicode_for_display(rel_path)
+        superfolder_path, folder_name = split(rel_path)
+        return [
+            ('path', [rel_path]),  # array for consistency with non-folder file docs
+            ('folder', superfolder_path),
+            ('name', folder_name)
+        ]
+
+
 class TreeToIndex(dxr.indexers.TreeToIndex):
     def environment(self, vars):
         vars['source_folder'] = self.tree.source_folder
@@ -455,10 +472,12 @@ class FileToIndex(dxr.indexers.FileToIndex):
         """Fill out path (and path.trigrams)."""
         if self.is_link():
             # realpath will keep following symlinks until it gets to the 'real' thing.
-            yield 'link', relpath(realpath(self.absolute_path()), self.tree.source_folder)
-        yield 'path', self.path
-        yield 'file_name', basename(self.path)
-        extension = splitext(self.path)[1]
+            yield 'link', relpath(realpath(self.absolute_path()),
+                                  self.tree.source_folder)
+        unicode_path = unicode_for_display(self.path)
+        yield 'path', unicode_path
+        yield 'file_name', basename(unicode_path)
+        extension = splitext(unicode_path)[1]
         if extension:
             yield 'ext', extension[1:]  # skip the period
         # We store both the contents of textual images twice so that they can
@@ -474,6 +493,20 @@ class FileToIndex(dxr.indexers.FileToIndex):
         # binary, but not an image
         elif not self.contains_text():
             yield 'is_binary', True
+        # Find the last modified time from version control if possible,
+        # otherwise fall back to the timestamp from stat'ing the file.
+        modified = None
+        if self.vcs:
+            vcs_relative_path = relpath(self.absolute_path(),
+                                        self.vcs.get_root_dir())
+            try:
+                modified = self.vcs.last_modified_date(vcs_relative_path)
+            except NotImplementedError:
+                pass
+        if modified is None:
+            file_info = stat(self.absolute_path())
+            modified = datetime.utcfromtimestamp(file_info.st_mtime)
+        yield 'modified', modified
 
     def needles_by_line(self):
         """Fill out line number and content for every line."""
@@ -491,7 +524,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    [('permalink', 'Permalink', url_for('.rev',
                                                        tree=self.tree.name,
                                                        revision=self.vcs.revision,
-                                                       path=self.path))])
+                                                       path=unicode_for_display(self.path)))])
         else:
             yield 5, 'Untracked file', []
 
@@ -500,7 +533,7 @@ class FileToIndex(dxr.indexers.FileToIndex):
                    'Image',
                    [('svgview', 'View', url_for('.raw',
                                                 tree=self.tree.name,
-                                                path=self.path))])
+                                                path=unicode_for_display(self.path)))])
 
     def is_interesting(self):
         """Core plugin puts all files in the search index."""
@@ -538,9 +571,16 @@ def _path_trigram_filter(path, is_case_sensitive):
         regex = '(/|^){0}$'  # Start at any path segment.
 
     return es_regex_filter(
-            regex_grammar.parse(regex.format(re.escape(path))),
-            'path',
-            is_case_sensitive)
+        regex_grammar.parse(
+            regex.format(
+                re.escape(
+                    path.encode('ascii', 'backslashreplace')
+                )
+            )
+        ),
+        'path',
+        is_case_sensitive
+    )
 
 
 @direct_search(priority=100)

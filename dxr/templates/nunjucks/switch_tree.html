@@ -15,16 +15,19 @@
           <input type="text" name="filter-txt" id="filter-txt" placeholder="Filter trees" />
           <input type="submit" value="Filter" class="visually-hidden" />
         </form>
-        <ul class="selector-options" tabindex="-1">
-          {% for tree, url, description in tree_tuples %}
-            <li>
-              <a href="{{ url }}" {% if tree == selected_tree %}class="selected" aria-checked="true"{% endif %}>
-                <span class="selector-option-label">{{ tree }}</span>
-                <span class="selector-option-description">{{ description }}</span>
-              </a>
-            </li>
+        <table class="selector-options" tabindex="-1">
+          {% for tree, url, description, badges in tree_tuples %}
+            <tr data-href="{{ url }}" {% if tree == selected_tree %}aria-checked="true"{% endif %}>
+              <td class="selector-option-label {% if tree == selected_tree %} selected {% endif %}">{{ tree }}</td>
+              <td class="selector-badges">
+                {% for text, color in badges -%}
+                  <span style="background-color:{{ color }}">{{ text }}</span>
+                {%- endfor %}
+              </td>
+              <td class="selector-option-description">{{ description }}</td>
+            </tr>
           {% endfor %}
-        </ul>
+        </table>
       </div>
     </section>
   {% endif %}

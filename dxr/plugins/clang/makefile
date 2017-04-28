@@ -1,5 +1,9 @@
 LLVM_CONFIG ?= llvm-config
 LLVM_LDFLAGS := $(shell ${LLVM_CONFIG} --ldflags)
+ifeq ($(LLVM_LDFLAGS),)
+$(error Could not run $(LLVM_CONFIG).  Please make sure it is available on your PATH \
+or specify the absolute path of the llvm-config executable in the LLVM_CONFIG environment variable)
+endif
 CXXFLAGS := $(shell ${LLVM_CONFIG} --cxxflags) -std=c++11 -Wall -Wno-strict-aliasing $(if $(DEBUG),-O0 -g)
 LDFLAGS := -fPIC -g -Wl,-R -Wl,'$$ORIGIN' $(LLVM_LDFLAGS) -shared
 

@@ -374,6 +374,21 @@ def filters_by_name(plugins):
          chain.from_iterable(p.filters for p in plugins)))
 
 
+@cached
+def lang_badge_colors(plugins):
+    """Return a mapping of filter languages to their badge colors as defined by
+    provided plugins.
+
+    :arg plugins: An iterable of plugins from which to get badge colors
+
+    """
+    badges = {}
+    for p in plugins:
+        if p.badge_colors:
+            badges.update(p.badge_colors)
+    return badges
+
+
 def filter_menu_items(plugins):
     """Return the additional template variables needed to render filter.html.
 
@@ -381,17 +396,20 @@ def filter_menu_items(plugins):
         menu
 
     Language-agnostic filters come first (as they happen to be among the most
-    useful ones and are relatively few), then the rest, alphabetically. There
-    is room for better UI here. For instance, I'd like to badge each filter
-    with the languages it supports.
+    useful ones and are relatively few), then the rest, alphabetically.
 
     """
+    # Concretize to iterate over it more than once.
+    plugins = list(plugins)
     sorted_filters_by_name = sorted(
-        ((name, filters[0]) for name, filters in filters_by_name(plugins).items()),
-        key=lambda (name, filter): (hasattr(filter, 'lang'), name))
-    return (dict(name=name, description=filter.description)
-            for name, filter in sorted_filters_by_name
-            if filter.description)
+        ((name, filters) for name, filters in filters_by_name(plugins).iteritems()),
+        key=lambda (name, filters): (hasattr(filters[0], 'lang'), name))
+    badge_colors = lang_badge_colors(plugins)
+    return (dict(name=name,
+                 description=filters[0].description,
+                 badges=sorted((f.lang, badge_colors.get(f.lang)) for f in filters if hasattr(f, 'lang')))
+            for name, filters in sorted_filters_by_name
+            if filters[0].description)
 
 
 def highlight(content, extents):

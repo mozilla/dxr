@@ -1,3 +1,4 @@
+"use strict";
 const esprima = require('esprima');
 const fs = require('fs');
 const path = require('path');
@@ -736,7 +737,17 @@ function analyzeJS(filepath, relpath, tempFilepath)
   fileIndex = relpath;
   nextSymId = 0;
   outLines = [];
-  const text = String(fs.readFileSync(filepath));
+  let text = String(fs.readFileSync(filepath));
+
+  // Remove the things esprima considers line break characters but DXR doesn't.
+  // This makes esprima's position reporting match DXR's so we don't try to
+  // reach past the last line of the file when computing chars-from-BOF offsets.
+  // We replace them with things that aren't line breaks but have equal length
+  // so the computed positions work out and so tokenization doesn't change.
+  // Then the user is still presented with the original file, but the offsets
+  // of needles and refs are correct.
+  text = text.replace(/[\u2028\u2029]/g, ' ');
+
   const lines = text.split('\n');
   // With files this large we currently risk running out of memory in the
   // indexer, so we skip them. TODO: fix the issue and disable this check.

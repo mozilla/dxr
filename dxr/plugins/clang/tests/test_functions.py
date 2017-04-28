@@ -96,6 +96,43 @@ class TemplateClassMemberReferenceTests(CSingleFileTestCase):
                             [('Foo&lt;int&gt;().<b>bar</b>();', 16)])
 
 
+class TemplateMemberReferenceTests(CSingleFileTestCase):
+    """Tests for finding out where template member functions of a class are referenced or declared"""
+
+    source = r"""
+        class Foo
+        {
+        public:
+            template <typename T>
+            void bar();
+        };
+
+        template <typename T>
+        void Foo::bar()
+        {
+        }
+
+        void baz()
+        {
+            Foo().bar<int>();
+        }
+        """ + MINIMAL_MAIN
+
+    def test_function_decl(self):
+        """Try searching for function declaration."""
+        self.found_line_eq('+function-decl:Foo::bar()', 'void <b>bar</b>();')
+
+    def test_function(self):
+        """Try searching for function definition."""
+        self.found_lines_eq('+function:Foo::bar()',
+                            [('void Foo::<b>bar</b>()', 10)])
+
+    def test_function_ref(self):
+        """Try searching for function references."""
+        self.found_lines_eq('+function-ref:Foo::bar()',
+                            [('Foo().<b>bar</b>&lt;int&gt;();', 16)])
+
+
 class ConstTests(CSingleFileTestCase):
     source = """
         class ConstOverload

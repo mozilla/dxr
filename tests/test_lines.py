@@ -307,3 +307,12 @@ class IntegrationTests(TestCase):
         """
         text_to_html_lines('hello!',
                            regions=[(3, 3, Region('a')), (3, 5, Region('b'))])
+
+def test_unusual_whitespace():
+    """Ensure that vertical tabs and form feeds are treated as ordinary
+    whitespace and not as line endings"""
+    lines = [u"This contains 3 lines\n",
+             u"This line has a vertical tab \v and a form feed \f in it\n",
+             u"This is the last line\n"]
+    eq_(split_content_lines(u''.join(lines)), lines)
+
