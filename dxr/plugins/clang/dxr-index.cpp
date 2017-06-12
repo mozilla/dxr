@@ -395,6 +395,9 @@ public:
       const std::string &realname = getRealFilenameForDefinition(d);
       ret = "(" + ret.substr(1, anon_ns.size() - 2) + " in " + realname + ")" +
         ret.substr(anon_ns.size());
+    } else if (d.getLinkageInternal() == InternalLinkage) {
+      const std::string &realname = getRealFilenameForDefinition(d);
+      ret = "(static in " + realname + ")::" + ret;
     }
     return ret;
   }
