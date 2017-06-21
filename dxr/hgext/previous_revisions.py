@@ -18,6 +18,14 @@ Mercurial extension that prints the last node in which each tracked file changed
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+from mercurial import cmdutil
+
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
+
+@command('previous-revisions', [])
 def previous_revisions(ui, repo, **opts):
     """Print the last node@date@file in which each file changed."""
     last_change = {}
@@ -30,8 +38,6 @@ def previous_revisions(ui, repo, **opts):
     for filename, (node, date) in last_change.iteritems():
         ui.write('%s@%s@%s\n' % (node, date, filename))
 
-cmdtable = {
-    'previous-revisions': (previous_revisions, [], '')
-}
 
-testedwith = '3.4'
+testedwith = '4.2.1'
+minimumhgversion = '1.9'  # not tested with 1.9, but this is where @command was introduced

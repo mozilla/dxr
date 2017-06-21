@@ -36,8 +36,8 @@ Jinja2==2.7.3
 # sha256: pOwa_1m5WhS0XrLiN2GgF56YMZ2lp-t2tW6ozce4ccM
 MarkupSafe==0.23
 
-# sha256: 3MkOSoR2FJ7MivE8CCAoYLTJyYepTE88GLKClLb9js0
-Mercurial==3.4.2
+# sha256: 19VXL1qgeX-_IWhEDqpRFJ34hkX-N6-LFfpmDZqBWKA
+Mercurial==4.2.1
 
 # sha256: k-YuBcetPaGiM972cx6ChRVnAeNBml_ieQF8Qp7GfOA
 more-itertools==2.2
@@ -89,5 +89,5 @@ xpidl==1.0
 # sha256: FWvz7Ce6nsfgz4--AoCHGAmdIY3kA-tkpxTXO6GimrE
 requests==1.2.3
 
-# sha256: DcCH0Vt3TNqC08gJb7DlFMrrLdtg7tOOkFaxbiebo8U
-python-hglib==1.7
+# sha256: aT1u2SplZueIAsegPCVs2jPQjGOtPwD8-hE3mxhLlGI
+python-hglib==2.4
