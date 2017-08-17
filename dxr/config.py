@@ -6,8 +6,9 @@ Please update docs/source/configuration.rst when you change this.
 from datetime import datetime
 from multiprocessing import cpu_count
 from ordereddict import OrderedDict
-from os import getcwd
+from os import getcwd, getenv
 from os.path import abspath
+
 
 from configobj import ConfigObj
 from funcy import merge
@@ -18,6 +19,11 @@ from schema import Optional, Use, And, Schema, SchemaError
 from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins_but_core, core_plugin
 from dxr.utils import cd, if_raises
+
+#setup default elasticsearch host to use if not specifice in any config file
+DXR_DEFAULT_ELASTICSEARCH_HOST = getenv('DXR_DEFAULT_ELASTICSEARCH_HOST', '127.0.0.1')
+DXR_DEFAULT_ELASTICSEARCH_URL='http://' + DXR_DEFAULT_ELASTICSEARCH_HOST+ ':9200/'
+
 
 
 # Format version, signifying the instance format this web frontend code is
@@ -113,7 +119,7 @@ class Config(DotSection):
                 Optional('skip_stages', default=[]): WhitespaceList,
                 Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
                 Optional('google_analytics_key', default=''): basestring,
-                Optional('es_hosts', default='http://127.0.0.1:9200/'):
+                Optional('es_hosts', default=DXR_DEFAULT_ELASTICSEARCH_URL):
                     WhitespaceList,
                 # A semi-random name, having the tree name and format version in it.
                 Optional('es_index', default='dxr_{format}_{tree}_{unique}'):

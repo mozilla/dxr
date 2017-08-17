@@ -90,12 +90,10 @@ mappings = {
 
             # Sidebar nav links:
             'links': {
-                'type': 'object',
                 'properties': {
                     'order': UNINDEXED_INT,
                     'heading': UNINDEXED_STRING,
                     'items': {
-                        'type': 'object',
                         'properties': {
                             'icon': UNINDEXED_STRING,
                             'title': UNINDEXED_STRING,
@@ -156,11 +154,10 @@ mappings = {
             },
 
             'refs': {
-                'type': 'object',
+                'properties': {
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': {
-                    'type': 'object',
+                'ref_payload': {
                     'properties': {
                         'plugin': UNINDEXED_STRING,
                         'id': UNINDEXED_STRING,  # Ref ID
@@ -174,17 +171,18 @@ mappings = {
                         'qualname_hash': UNINDEXED_LONG
                     }
                 }
+                }
             },
 
             'regions': {
-                'type': 'object',
+                'properties':{
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': UNINDEXED_STRING,
+                'region_payload': UNINDEXED_STRING,
+                }
             },
 
             'annotations': {
-                'type': 'object',
                 'properties': {
                     'title': UNINDEXED_STRING,
                     'class': UNINDEXED_STRING,

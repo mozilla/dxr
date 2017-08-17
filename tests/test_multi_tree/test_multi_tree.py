@@ -12,6 +12,11 @@ class ParallelControllerTests(DxrInstanceTestCase):
         """Make sure the /parallel controller redirects to an existent parallel
         file."""
         response = self.client().get('/code/parallel/folder/nested_folder/hai')
+        
+         
+        for e in response.headers.keys():
+            print response.headers[e]
+            
         eq_(response.headers['Location'],
             'http://localhost/code/source/folder/nested_folder/hai')
 
@@ -19,6 +24,9 @@ class ParallelControllerTests(DxrInstanceTestCase):
         """Make sure the /parallel controller redirects to an existent parallel
         folder."""
         response = self.client().get('/code/parallel/folder/')
+        
+        for e in response.headers.keys():
+            print response.headers[e]
         eq_(response.headers['Location'],
             'http://localhost/code/source/folder/')
 
@@ -26,4 +34,8 @@ class ParallelControllerTests(DxrInstanceTestCase):
         """Make sure the /parallel controller redirects to an existent parallel
         file or folder."""
         response = self.client().get('/code/parallel/folder/nope')
+        
+         
+        for e in response.headers.keys():
+            print response.headers[e]
         eq_(response.headers['Location'], 'http://localhost/code/source/')

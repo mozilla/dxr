@@ -22,7 +22,7 @@ except ImportError:
 
 from dxr.app import make_app
 from dxr.build import index_and_deploy_tree
-from dxr.config import Config
+from dxr.config import Config, DXR_DEFAULT_ELASTICSEARCH_URL
 from dxr.utils import cd, file_text, run
 
 
@@ -108,13 +108,16 @@ class TestCase(unittest.TestCase):
         implementation returns just enough to instantiate the Flask app.
 
         """
+        
         return {
             'DXR': {
                 'enabled_plugins': '',
                 'temp_folder': '{0}/temp'.format(config_dir_path),
                 'es_index': 'dxr_test_{format}_{tree}_{unique}',
                 'es_alias': 'dxr_test_{format}_{tree}',
-                'es_catalog_index': 'dxr_test_catalog'
+                'es_catalog_index': 'dxr_test_catalog',
+                'es_hosts': DXR_DEFAULT_ELASTICSEARCH_URL
+
             },
             'code': {
                 'source_folder': '{0}/code'.format(config_dir_path),
@@ -257,7 +260,7 @@ class TestCase(unittest.TestCase):
 
     @classmethod
     def _es(cls):
-        return ElasticSearch('http://127.0.0.1:9200/')
+        return ElasticSearch(DXR_DEFAULT_ELASTICSEARCH_URL)
 
     @classmethod
     def _delete_es_indices(cls):
@@ -270,6 +273,7 @@ class TestCase(unittest.TestCase):
         # When you delete an index, any alias to it goes with it.
         # This takes care of dxr_test_catalog as well.
         cls._es().delete_index('dxr_test_*')
+        cls._es().refresh()
 
 
 class DxrInstanceTestCase(TestCase):
