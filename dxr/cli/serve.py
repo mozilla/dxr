@@ -4,7 +4,6 @@ from dxr.app import make_app
 from dxr.config import DXR_DEFAULT_ELASTICSEARCH_HOST
 from dxr.cli.utils import config_option
 
-#MLS FIXME change localhost default for test cases
 
 @command()
 @config_option
