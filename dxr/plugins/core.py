@@ -90,12 +90,10 @@ mappings = {
 
             # Sidebar nav links:
             'links': {
-                'type': 'object',
                 'properties': {
                     'order': UNINDEXED_INT,
                     'heading': UNINDEXED_STRING,
                     'items': {
-                        'type': 'object',
                         'properties': {
                             'icon': UNINDEXED_STRING,
                             'title': UNINDEXED_STRING,
@@ -156,35 +154,35 @@ mappings = {
             },
 
             'refs': {
-                'type': 'object',
-                'start': UNINDEXED_INT,
-                'end': UNINDEXED_INT,
-                'payload': {
-                    'type': 'object',
-                    'properties': {
-                        'plugin': UNINDEXED_STRING,
-                        'id': UNINDEXED_STRING,  # Ref ID
-                        'menu_data': UNINDEXED_STRING,  # opaque to ES
-                        'hover': UNINDEXED_STRING,
-                        # Hash of qualname of the symbol we're hanging the
-                        # menu off of, if it is a symbol and we can come up
-                        # with a qualname. This powers the highlighting of
-                        # other occurrences of the symbol when you pull up the
-                        # context menu.
-                        'qualname_hash': UNINDEXED_LONG
+                'properties': {
+                    'start': UNINDEXED_INT,
+                    'end': UNINDEXED_INT,
+                    'ref_payload': {
+                        'properties': {
+                            'plugin': UNINDEXED_STRING,
+                            'id': UNINDEXED_STRING,  # Ref ID
+                            'menu_data': UNINDEXED_STRING,  # opaque to ES
+                            'hover': UNINDEXED_STRING,
+                            # Hash of qualname of the symbol we're hanging the
+                            # menu off of, if it is a symbol and we can come up
+                            # with a qualname. This powers the highlighting of
+                            # other occurrences of the symbol when you pull up the
+                            # context menu.
+                            'qualname_hash': UNINDEXED_LONG
                     }
+                }
                 }
             },
 
             'regions': {
-                'type': 'object',
+                'properties':{
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': UNINDEXED_STRING,
+                'region_payload': UNINDEXED_STRING,
+                }
             },
 
             'annotations': {
-                'type': 'object',
                 'properties': {
                     'title': UNINDEXED_STRING,
                     'class': UNINDEXED_STRING,

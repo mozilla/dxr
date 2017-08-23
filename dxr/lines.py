@@ -34,6 +34,7 @@ class Line(object):
     def __repr__(self):
         return 'Line()'
 
+
 LINE = Line()
 
 
@@ -120,8 +121,11 @@ class Ref(object):
                 warn('Ref subclass from plugin %s with ID %s was referenced '
                      'in the index but not found in the current '
                      'implementation. Ignored.' % (plugin, id))
-
-        payload = es_data['payload']
+        try:
+            payload = es_data['ref_payload']
+        except KeyError:
+            # handle case where this is a region payload instead of a ref payload
+            payload = es_data['region_payload']
         cls = ref_class(payload['plugin'], payload['id'])
         return (es_data['start'],
                 es_data['end'],
@@ -191,7 +195,7 @@ class Region(object):
     def es_to_triple(cls, es_region):
         """Convert ES-dwelling region representation to a (start, end,
         :class:`~dxr.lines.Region`) triple."""
-        return es_region['start'], es_region['end'], cls(es_region['payload'])
+        return es_region['start'], es_region['end'], cls(es_region['region_payload'])
 
     def opener(self):
         return u'<span class="%s">' % cgi.escape(self.css_class, True)
@@ -513,7 +517,7 @@ def es_lines(tags):
                 payloads[payload]['end'] = pos
         # Index objects are refs or regions. Regions' payloads are just
         # strings; refs' payloads are objects. See mappings in plugins/core.py
-        yield [{'payload': payload.es(),
+        yield [{'region_payload': payload.es(),
                 'start': pos['start'],
                 'end': pos['end']}
                for payload, pos in payloads.iteritems()]

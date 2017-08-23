@@ -46,6 +46,8 @@ class _FileToIgnore(object):
     """
     def is_interesting(self):
         return False
+
+
 FILE_TO_IGNORE = _FileToIgnore()
 
 

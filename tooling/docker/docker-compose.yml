@@ -4,11 +4,13 @@ es:
   build: ./es
   ports:
     - "8000:8000"
-
+    
 # An interactive container for experimentation and debugging
 dev:
   build: ./dev
   net: container:es
+  environment:
+    - DXR_DEFAULT_ELASTICSEARCH_HOST=127.0.0.1
   ports:
     - "8000:8000"
   volumes:
