@@ -108,7 +108,7 @@ class TestCase(unittest.TestCase):
         implementation returns just enough to instantiate the Flask app.
 
         """
-        
+
         return {
             'DXR': {
                 'enabled_plugins': '',

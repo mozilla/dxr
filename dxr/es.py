@@ -107,18 +107,19 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
 
 def create_index_and_wait(es, index, settings=None):
     """Create a new index, and wait for all shards to become ready."""
-    
+
     #MLS FIXME - review to verify ok to delete if already exists, this started throwing error in testcase in 2.x
     try:
-    
         es.create_index(index, settings=settings)
     except ElasticHttpError:
         es.delete_index(index)
         es.create_index(index, settings=settings)
-        
+
     es.health(index=index,
-              wait_for_status='yellow',
+#mls - please review, this waits until  shards are avail for safe cluster
+# commented out until 5.5.5
 #              wait_for_no_relocating_shards='true',  # wait for all
+              wait_for_status='yellow',
               timeout='5m')
 
 

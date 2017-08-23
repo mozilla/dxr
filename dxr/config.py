@@ -20,7 +20,7 @@ from dxr.exceptions import ConfigError
 from dxr.plugins import all_plugins_but_core, core_plugin
 from dxr.utils import cd, if_raises
 
-#setup default elasticsearch host to use if not specifice in any config file
+#set up default elasticsearch host to use if not specified in any config file
 DXR_DEFAULT_ELASTICSEARCH_HOST = getenv('DXR_DEFAULT_ELASTICSEARCH_HOST', '127.0.0.1')
 DXR_DEFAULT_ELASTICSEARCH_URL='http://' + DXR_DEFAULT_ELASTICSEARCH_HOST+ ':9200/'
 
@@ -329,6 +329,8 @@ def plugin_list(value):
         raise SchemaError('Never heard of plugin "%s". I\'ve heard of '
                           'these: %s.' % (name, ', '.join(plugins.keys())),
                           None)
+
+
 Plugins = Use(plugin_list)
 
 

@@ -34,6 +34,7 @@ class Line(object):
     def __repr__(self):
         return 'Line()'
 
+
 LINE = Line()
 
 
@@ -120,8 +121,7 @@ class Ref(object):
                 warn('Ref subclass from plugin %s with ID %s was referenced '
                      'in the index but not found in the current '
                      'implementation. Ignored.' % (plugin, id))
-         
-        try:     
+        try:
             payload = es_data['ref_payload']
         except KeyError:
             # handle case where this is a region payload instead of a ref payload

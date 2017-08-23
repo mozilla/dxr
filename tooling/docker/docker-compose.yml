@@ -10,9 +10,10 @@ dev:
   build: ./dev
   net: container:es
   environment:
-    - DXR_DEFAULT_ELASTICSEARCH_HOST=127.0.0.1
+    - DXR_DEFAULT_ELASTICSEARCH_HOST=192.168.1.86
   ports:
     - "8000:8000"
+    - "8888:8888"
   volumes:
     - ../..:/home/dxr/dxr:Z
   volumes_from:

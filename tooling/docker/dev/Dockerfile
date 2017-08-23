@@ -38,4 +38,4 @@ ENV VIRTUAL_ENV=/venv PATH=/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/u
 
 WORKDIR /home/dxr/dxr
 
-EXPOSE 8000
+EXPOSE 8000 8888
