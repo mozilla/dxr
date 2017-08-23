@@ -1,7 +1,6 @@
 from click import command, option
 
 from dxr.app import make_app
-from dxr.config import DXR_DEFAULT_ELASTICSEARCH_HOST
 from dxr.cli.utils import config_option
 
 
@@ -13,7 +12,7 @@ from dxr.cli.utils import config_option
         flag_value='0.0.0.0',
         help='Serve on all interfaces.  Equivalent to --host 0.0.0.0')
 @option('--host', '-h',
-        default=DXR_DEFAULT_ELASTICSEARCH_HOST,
+        default='localhost',
         show_default=True,
         help='The host address to serve on')
 @option('--workers', '-w',
