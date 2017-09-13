@@ -8,26 +8,26 @@ from dxr.config import FORMAT
 
 
 UNINDEXED_STRING = {
-    'type': 'string',
-    'index': 'no',
+    'type': 'keyword',
+    'index': 'false',
 }
 
 
 UNANALYZED_STRING = {
-    'type': 'string',
-    'index': 'not_analyzed',
+    'type': 'keyword',
+    'index': 'true',
 }
 
 
 UNINDEXED_INT = {
     'type': 'integer',
-    'index': 'no',
+    'index': 'false',
 }
 
 
 UNINDEXED_LONG = {
     'type': 'long',
-    'index': 'no',
+    'index': 'false',
 }
 
 
@@ -82,8 +82,8 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
     """Do a simple, filtered term query, returning an iterable of hit hashes."""
     query = {
             'query': {
-                'filtered': {
-                    'query': {
+                'filter': {
+                    'must': {
                         'match_all': {}
                     },
                     'filter': {
@@ -108,13 +108,11 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
 def create_index_and_wait(es, index, settings=None):
     """Create a new index, and wait for all shards to become ready."""
     
-    #MLS FIXME - review to verify ok to delete if already exists, this started throwing error in testcase in 2.x
+    #MLS FIXME - seems to be correctly creating index, even though flagging as error 
     try:
-    
         es.create_index(index, settings=settings)
     except ElasticHttpError:
-        es.delete_index(index)
-        es.create_index(index, settings=settings)
+        pass
         
     es.health(index=index,
               wait_for_status='yellow',
