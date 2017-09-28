@@ -36,14 +36,23 @@ class TestCase(unittest.TestCase):
     @classmethod
     def setup_class(cls):
         """Create a temporary DXR instance on the FS, and build it."""
+        
+        #MLS FIXME - added next 2 lines from old teardown to clean up
+        # this leaves the db after the test is ran
+        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
+        cls.degenerate()
+
+        
+        
         cls.generate()
         cls.index()
         cls._es().refresh()
 
     @classmethod
     def teardown_class(cls):
-        cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
-        cls.degenerate()
+        pass
+        #cls._delete_es_indices()  # TODO: Replace with a call to 'dxr delete --force'.
+        #cls.degenerate()
 
     @classmethod
     def generate(cls):

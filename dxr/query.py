@@ -141,19 +141,13 @@ class Query(object):
 
         if ors:
             query = {
-                'filtered': {
-                    'query': {
-                        'match_all': {}
-                    },
+                'bool': {
                     'filter': {
                         'and': ors
                     }
                 }
             }
-        else:
-            query = {
-                'match_all': {}
-            }
+
 
         results = self.es_search(
             {'query': query,

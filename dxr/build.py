@@ -137,7 +137,16 @@ def swap_alias(alias, index, es):
     old_index = None
     
     try:
-        old_index = first(es.aliases(alias))
+        #MLS print alias
+        print("*******  alias to find index: " + str(old_index))
+        if old_index == None:
+            raise ValueError("No Old Index: trip exception clause")
+        
+        
+        old_index = first(es.get_aliases(alias))
+        #MLS FIXME added print for debugging
+        print(" #####          old index = " + str(old_index))
+        
         # Make the alias point to the new index.
         removal = ([{'remove': {'index': old_index, 'alias': alias}}] if
                old_index else [])
@@ -146,7 +155,7 @@ def swap_alias(alias, index, es):
         # Delete the old index.
         if old_index:
             es.delete_index(old_index)
-    except ElasticHttpNotFoundError:
+    except (ElasticHttpNotFoundError, ValueError):
         # no olad alias existed, just add new alias
         es.update_aliases( [{'add': {'index': index, 'alias': alias}}])  # atomic
 

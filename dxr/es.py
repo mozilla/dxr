@@ -82,8 +82,8 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
     """Do a simple, filtered term query, returning an iterable of hit hashes."""
     query = {
             'query': {
-                'filter': {
-                    'must': {
+                'filtered': {
+                    'query': {
                         'match_all': {}
                     },
                     'filter': {
@@ -118,6 +118,12 @@ def create_index_and_wait(es, index, settings=None):
               wait_for_status='yellow',
 #              wait_for_no_relocating_shards='true',  # wait for all
               timeout='5m')
+    
+
+    # curl -XPUT 'http://localhost:9200/_all/_settings?preserve_existing=true' -d '{
+    # "index.max_result_window" : "2147483647"
+    #}'
+    es.update_all_settings({'index':{'max_result_window':2147483647 }})
 
 
 def sources(search_results):
