@@ -130,7 +130,7 @@ class Query(object):
         # punt by returning {} and ors that contain nothing but punts:
         ors = filter(None, [filter(None, (f.filter() for f in term))
                             for term in filters])
-        ors = [{'or': x} for x in ors]
+        ors = [ x for x in ors]
 
         if not is_line_query:
             # Don't show folders yet in search results. I don't think the JS
@@ -142,10 +142,8 @@ class Query(object):
         if ors:
             query = {
                 'bool': {
-                    'filter': {
-                        'and': ors
+                    'filter':  ors
                     }
-                }
             }
 
 
@@ -186,9 +184,6 @@ class Query(object):
                     {
                         'query': {
                             'filtered': {
-                                'query': {
-                                    'match_all': {}
-                                },
                                 'filter': clause
                             }
                         },

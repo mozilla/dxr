@@ -82,10 +82,7 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
     """Do a simple, filtered term query, returning an iterable of hit hashes."""
     query = {
             'query': {
-                'filtered': {
-                    'query': {
-                        'match_all': {}
-                    },
+                'bool': {
                     'filter': {
                         'term': filter
                     }

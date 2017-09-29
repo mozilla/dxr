@@ -405,7 +405,7 @@ class FilterAggregator(Filter):
 
     def filter(self):
         # OR together all the underlying filters.
-        return {'or': filter(None, (f.filter() for f in self.filters))}
+        return filter(None, (f.filter() for f in self.filters))
 
     def highlight_content(self, result):
         # Union all of our underlying filters.
