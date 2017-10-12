@@ -170,11 +170,13 @@ class NameFilterBase(Filter):
             # term filters have no query analysis phase. We must use a
             # match query, which is an analyzer pass + a term filter:
             return {
+                'query': {
+                    'match': {
                         '{needle}.name.lower'.format(needle=self._needle):
                             self._term['arg']
                     }
-                
-            
+                }
+            }
 
     @negatable
     def filter(self):
@@ -228,8 +230,8 @@ class QualifiedNameFilterBase(NameFilterBase):
         if self._term['qualified']:
             return self._term_filter('qualname')
         else:
-            return [super(QualifiedNameFilterBase, self)._positive_filter(),
-                           self._term_filter('qualname')]
+            return { [super(QualifiedNameFilterBase, self)._positive_filter(),
+                           self._term_filter('qualname')]}
 
     def _should_be_highlit(self, entity):
         """Return whether a structural entity should be highlit, according to
