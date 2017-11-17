@@ -11,11 +11,11 @@ from dxr.utils import build_offset_map, split_content_lines
 
 
 STRING_PROPERTY = {
-    'type': 'string',
-    'index': 'not_analyzed',
+    'type': 'keyword',
+    'index': 'true',
     'fields': {
         'lower': {  # for qualified_type direct searcher
-            'type': 'string',
+            'type': 'text',
             'analyzer': 'lowercase'
         }
     }
@@ -43,11 +43,11 @@ QUALIFIED_LINE_NEEDLE = {
         'qualname': STRING_PROPERTY,
         'start': {
             'type': 'integer',
-            'index': 'no'  # just for highlighting
+            'index': 'false'  # just for highlighting
         },
         'end': {
             'type': 'integer',
-            'index': 'no'
+            'index': 'false'
         }
     }
 }

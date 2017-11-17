@@ -1,33 +1,33 @@
 """Elasticsearch utilities not general enough to lift into pyelasticsearch"""
 
 from flask import current_app
-from pyelasticsearch import ElasticHttpNotFoundError
+from pyelasticsearch import ElasticHttpNotFoundError, ElasticHttpError
 from werkzeug.exceptions import NotFound
 
 from dxr.config import FORMAT
 
 
 UNINDEXED_STRING = {
-    'type': 'string',
-    'index': 'no',
+    'type': 'keyword',
+    'index': 'false',
 }
 
 
 UNANALYZED_STRING = {
-    'type': 'string',
-    'index': 'not_analyzed',
+    'type': 'keyword',
+    'index': 'true',
 }
 
 
 UNINDEXED_INT = {
     'type': 'integer',
-    'index': 'no',
+    'index': 'false',
 }
 
 
 UNINDEXED_LONG = {
     'type': 'long',
-    'index': 'no',
+    'index': 'false',
 }
 
 
@@ -82,10 +82,7 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
     """Do a simple, filtered term query, returning an iterable of hit hashes."""
     query = {
             'query': {
-                'filtered': {
-                    'query': {
-                        'match_all': {}
-                    },
+                'bool': {
                     'filter': {
                         'term': filter
                     }
@@ -107,11 +104,23 @@ def filtered_query_hits(index, doc_type, filter, sort=None, size=1, include=None
 
 def create_index_and_wait(es, index, settings=None):
     """Create a new index, and wait for all shards to become ready."""
-    es.create_index(index, settings=settings)
+    
+    #MLS FIXME - seems to be correctly creating index, even though flagging as error 
+    try:
+        es.create_index(index, settings=settings)
+    except ElasticHttpError:
+        pass
+        
     es.health(index=index,
               wait_for_status='yellow',
-              wait_for_relocating_shards=0,  # wait for all
+#              wait_for_no_relocating_shards='true',  # wait for all
               timeout='5m')
+    
+
+    # curl -XPUT 'http://localhost:9200/_all/_settings?preserve_existing=true' -d '{
+    # "index.max_result_window" : "2147483647"
+    #}'
+    es.update_all_settings({'index':{'max_result_window':2147483647 }})
 
 
 def sources(search_results):

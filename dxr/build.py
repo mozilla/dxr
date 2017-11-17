@@ -18,8 +18,7 @@ from click import progressbar
 from flask import current_app
 from funcy import ichunks, first
 from pyelasticsearch import (ElasticSearch, IndexAlreadyExistsError,
-                             bulk_chunks, Timeout, ConnectionError)
-
+                             bulk_chunks, Timeout, ConnectionError, ElasticHttpNotFoundError)
 from dxr.app import make_app, dictify_links
 from dxr.config import FORMAT
 from dxr.es import UNINDEXED_STRING, UNANALYZED_STRING, TREE, create_index_and_wait
@@ -31,6 +30,7 @@ from dxr.utils import (open_log, deep_update, append_update,
                        append_update_by_line, append_by_line, bucket,
                        split_content_lines, unicode_for_display)
 from dxr.vcs import VcsCache
+
 
 
 def full_traceback(callable, *args, **kwargs):
@@ -134,16 +134,33 @@ def swap_alias(alias, index, es):
 
     """
     # Get the index the alias currently points to.
-    old_index = first(es.aliases(alias))
-
-    # Make the alias point to the new index.
-    removal = ([{'remove': {'index': old_index, 'alias': alias}}] if
+    old_index = None
+    
+    try:
+        #MLS print alias
+        print("*******  alias to find index: " + str(old_index))
+        if old_index == None:
+            raise ValueError("No Old Index: trip exception clause")
+        
+        
+        old_index = first(es.get_aliases(alias))
+        #MLS FIXME added print for debugging
+        print(" #####          old index = " + str(old_index))
+        
+        # Make the alias point to the new index.
+        removal = ([{'remove': {'index': old_index, 'alias': alias}}] if
                old_index else [])
-    es.update_aliases(removal + [{'add': {'index': index, 'alias': alias}}])  # atomic
+        es.update_aliases(removal + [{'add': {'index': index, 'alias': alias}}])  # atomic
 
-    # Delete the old index.
-    if old_index:
-        es.delete_index(old_index)
+        # Delete the old index.
+        if old_index:
+            es.delete_index(old_index)
+    except (ElasticHttpNotFoundError, ValueError):
+        # no olad alias existed, just add new alias
+        es.update_aliases( [{'add': {'index': index, 'alias': alias}}])  # atomic
+
+
+    
 
 
 def index_tree(tree, es, verbose=False):
@@ -524,7 +541,7 @@ def index_file(tree, tree_indexers, path, es, index):
                 # request time we want to be able to merge them individually
                 # with those from skimmers.
                 refs_and_regions = bucket(tags, lambda index_obj: "regions" if
-                                          isinstance(index_obj['payload'], basestring) else
+                                          isinstance(index_obj['region_payload'], basestring) else
                                           "refs")
                 if 'refs' in refs_and_regions:
                     total['refs'] = refs_and_regions['refs']
@@ -600,8 +617,13 @@ def index_folders(tree, index, es):
             needles = {'is_folder': True}
             for name, folder_to_index in folder_indexers:
                 needles.update(dict(folder_to_index(name, tree, folder).needles()))
-            es.index(index, FILE, needles)
-
+            #MLS FIXME added catch
+            try:
+                es.index(index, FILE, needles)
+            except:
+                print " *****Exception Thrown while processing folder " 
+                
+                 
 
 def index_files(tree, tree_indexers, index, pool, es):
     """Divide source files into groups, and send them out to be indexed."""

@@ -17,8 +17,8 @@ class DeepUpdateTests(TestCase):
             'line': {
                 'properties': {
                     'path': {  # A key will be added within this.
-                        'type': 'string',
-                        'index': 'not_analyzed'
+                        'type': 'keyword',
+                        'index': 'true'
                     }
                 }  # A key will be added after this mapping-valued key.
             },

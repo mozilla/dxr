@@ -21,9 +21,7 @@ def list(config):
 
     es = ElasticSearch(config.es_hosts)
     query = {
-        'query': {
-            'match_all': {}
-        },
+
         'sort': ['name', 'format']
     }
     catalog_docs = sources(es.search(query,

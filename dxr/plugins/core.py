@@ -29,15 +29,17 @@ __all__ = ['mappings', 'analyzers', 'TextFilter', 'PathFilter', 'FilenameFilter'
 
 
 PATH_SEGMENT_MAPPING = {  # some portion of a path/to/a/folder/filename.cpp string
-    'type': 'string',
-    'index': 'not_analyzed',  # support JS source fetching & sorting & browse() lookups
+    'type': 'keyword',
+    'index': 'true',  # support JS source fetching & sorting & browse() lookups
     'fields': {
         'trigrams_lower': {
-            'type': 'string',
+            'type': 'text',
+            'fielddata': 'true',
             'analyzer': 'trigramalyzer_lower'  # accelerate wildcards
         },
         'trigrams': {
-            'type': 'string',
+            'type': 'text',
+            'fielddata': 'true',
             'analyzer': 'trigramalyzer'
         }
     }
@@ -73,29 +75,27 @@ mappings = {
             'size': UNINDEXED_INT,  # bytes. not present for folders.
             'modified': {  # not present for folders
                 'type': 'date',
-                'index': 'no'
+                'index': 'false'
             },
             'is_folder': {
                 'type': 'boolean'
             },
             'raw_data': {  # present only if the file is an image
                 'type': 'binary',
-                'index': 'no'
+                'index': 'false'
             },
             'is_binary': { # assumed False if not present
                 'type': 'boolean',
-                'index': 'no'
+                'index': 'false'
             },
             'description': UNINDEXED_STRING,
 
             # Sidebar nav links:
             'links': {
-                'type': 'object',
                 'properties': {
                     'order': UNINDEXED_INT,
                     'heading': UNINDEXED_STRING,
                     'items': {
-                        'type': 'object',
                         'properties': {
                             'icon': UNINDEXED_STRING,
                             'title': UNINDEXED_STRING,
@@ -131,8 +131,8 @@ mappings = {
             # JS regex script, but in actuality, that uses much more RAM than
             # pulling just plain content, to the point of crashing.
             'content': {
-                'type': 'string',
-                'index': 'not_analyzed',  # Support fast fetching from JS.
+                'type': 'keyword',
+                'index': 'true',  # Support fast fetching from JS.
 
                 # ES supports terms of only length 32766 (by UTF-8 encoded
                 # length). The limit here (in Unicode points, in an
@@ -145,22 +145,23 @@ mappings = {
                 # These get populated even if the ignore_above kicks in:
                 'fields': {
                     'trigrams_lower': {
-                        'type': 'string',
+                        'type': 'text',
+                        'fielddata': 'true',
                         'analyzer': 'trigramalyzer_lower'
                     },
                     'trigrams': {
-                        'type': 'string',
+                        'type': 'text',
+                        'fielddata': 'true',
                         'analyzer': 'trigramalyzer'
                     }
                 }
             },
 
             'refs': {
-                'type': 'object',
+                'properties': {
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': {
-                    'type': 'object',
+                'ref_payload': {
                     'properties': {
                         'plugin': UNINDEXED_STRING,
                         'id': UNINDEXED_STRING,  # Ref ID
@@ -174,17 +175,18 @@ mappings = {
                         'qualname_hash': UNINDEXED_LONG
                     }
                 }
+                }
             },
 
             'regions': {
-                'type': 'object',
+                'properties':{
                 'start': UNINDEXED_INT,
                 'end': UNINDEXED_INT,
-                'payload': UNINDEXED_STRING,
+                'region_payload': UNINDEXED_STRING,
+                }
             },
 
             'annotations': {
-                'type': 'object',
                 'properties': {
                     'title': UNINDEXED_STRING,
                     'class': UNINDEXED_STRING,
@@ -403,7 +405,7 @@ class FilterAggregator(Filter):
 
     def filter(self):
         # OR together all the underlying filters.
-        return {'or': filter(None, (f.filter() for f in self.filters))}
+        return filter(None, (f.filter() for f in self.filters))
 
     def highlight_content(self, result):
         # Union all of our underlying filters.
