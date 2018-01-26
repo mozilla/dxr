@@ -98,7 +98,12 @@ public:
   #if CLANG_AT_LEAST(3, 7)
     void MacroExpands(const Token &tok, const MacroDefinition &md,
                       SourceRange range, const MacroArgs *ma) override;
+    #if CLANG_AT_LEAST(5, 0)
+    void MacroUndefined(const Token &tok, const MacroDefinition &md,
+                        const MacroDirective *Undef) override;
+    #else
     void MacroUndefined(const Token &tok, const MacroDefinition &md) override;
+    #endif
     void Ifdef(SourceLocation loc, const Token &tok,
                const MacroDefinition &md) override;
     void Ifndef(SourceLocation loc, const Token &tok,
@@ -1299,9 +1304,16 @@ void PreprocThunk::MacroDefined(const Token &tok, const MacroDirective *md) {
                                   SourceRange range, const MacroArgs *ma) {
     real->MacroExpands(tok, md.getMacroInfo(), range);
   }
+    #if CLANG_AT_LEAST(5, 0)
+  void PreprocThunk::MacroUndefined(const Token &tok, const MacroDefinition &md,
+                                    const MacroDirective */*Undef*/) {
+    real->MacroUndefined(tok, md.getMacroInfo());
+  }
+    #else
   void PreprocThunk::MacroUndefined(const Token &tok, const MacroDefinition &md) {
     real->MacroUndefined(tok, md.getMacroInfo());
   }
+    #endif
   void PreprocThunk::Ifdef(SourceLocation loc, const Token &tok,
                            const MacroDefinition &md) {
     real->Ifdef(loc, tok, md.getMacroInfo());
