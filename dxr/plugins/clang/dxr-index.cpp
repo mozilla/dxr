@@ -419,17 +419,15 @@ public:
     *out << name;
   }
 
-  void recordValue(const char *key, std::string value, bool needQuotes=false) {
+  void recordValue(const char *key, std::string value) {
     *out << "," << key << ",\"";
     int start = 0;
-    if (needQuotes) {
-      int quote = value.find('"');
-      while (quote != -1) {
-        // Need to repeat the "
-        *out << value.substr(start, quote - start + 1) << "\"";
-        start = quote + 1;
-        quote = value.find('"', start);
-      }
+    int quote = value.find('"');
+    while (quote != -1) {
+      // Need to repeat the "
+      *out << value.substr(start, quote - start + 1) << "\"";
+      start = quote + 1;
+      quote = value.find('"', start);
     }
     *out << value.substr(start) << "\"";
   }
@@ -721,10 +719,10 @@ public:
       recordValue("qualname", getQualifiedName(*d));
       recordValue("loc", locationToString(location));
       recordValue("locend", locationToString(afterToken(location)));
-      recordValue("type", d->getType().getAsString(printPolicy), true);
+      recordValue("type", d->getType().getAsString(printPolicy));
       const std::string &value = getValueForValueDecl(d);
       if (!value.empty())
-        recordValue("value", value, true);
+        recordValue("value", value);
       printScope(d);
       *out << std::endl;
     }
@@ -1121,7 +1119,7 @@ public:
     info.FormatDiagnostic(message);
 
     beginRecord("warning", info.getLocation());
-    recordValue("msg", message.c_str(), true);
+    recordValue("msg", message.c_str());
     StringRef opt = DiagnosticIDs::getWarningOptionForDiag(info.getID());
     if (!opt.empty())
       recordValue("opt", ("-W" + opt).str());
@@ -1227,7 +1225,7 @@ public:
     std::map<SourceLocation, std::string>::const_iterator it =
       macromap.find(macroLoc);
     if (it != macromap.end()) {
-      recordValue("text", it->second, true);
+      recordValue("text", it->second);
     }
     *out << std::endl;
   }
