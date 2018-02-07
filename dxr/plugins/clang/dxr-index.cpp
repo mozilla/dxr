@@ -1257,29 +1257,32 @@ public:
       StringRef relativePath,
       const Module *imported) {
     PresumedLoc presumedHashLoc = sm.getPresumedLoc(hashLoc);
-    const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
-    const FileInfoPtr &target = getFileInfo(file->getName());
-    SourceLocation targetBegin, targetEnd;
-
     if (!interestingLocation(hashLoc) ||
         filenameRange.isInvalid() ||
-        presumedHashLoc.isInvalid() ||
+        presumedHashLoc.isInvalid())
+      return;
 
-        // Don't record inclusions of files that are outside the source tree,
-        // like stdlibs. file is NULL if an #include can't be resolved, like if
-        // you include a nonexistent file.
-        !file ||
+    // Don't record inclusions of files that are outside the source tree,
+    // like stdlibs. file is NULL if an #include can't be resolved, like if
+    // you include a nonexistent file.
+    if (!file)
+      return;
 
-        !(target->interesting) ||
+    const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
+    const FileInfoPtr &target = getFileInfo(file->getName());
+    if (!target->interesting)
+      return;
 
-        // TODO: Come up with some kind of reasonable extent for macro-based
-        // includes, like #include FOO_MACRO.
-        (targetBegin = filenameRange.getBegin()).isMacroID() ||
-        (targetEnd = filenameRange.getEnd()).isMacroID() ||
+    // TODO: Come up with some kind of reasonable extent for macro-based
+    // includes, like #include FOO_MACRO.
+    const SourceLocation targetBegin = filenameRange.getBegin();
+    const SourceLocation targetEnd = filenameRange.getEnd();
+    if (targetBegin.isMacroID() || targetEnd.isMacroID())
+      return;
 
-        // TODO: Support generated files once we run the trigram indexer over
-        // them. For now, we skip them.
-        !(source->realname.compare(0, GENERATED.size(), GENERATED)) ||
+    // TODO: Support generated files once we run the trigram indexer over
+    // them. For now, we skip them.
+    if (!(source->realname.compare(0, GENERATED.size(), GENERATED)) ||
         !(target->realname.compare(0, GENERATED.size(), GENERATED)))
       return;
 
