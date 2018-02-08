@@ -9,25 +9,35 @@
 # sake of a good dev experience.
 
 # Ubuntu 14.04.3
-FROM ubuntu@sha256:0ca448cb174259ddb2ae6e213ebebe7590862d522fe38971e1175faedf0b6823
+FROM ubuntu:14.04
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL MAINTAINER="Erik Rose <erik@mozilla.com>"
 
-MAINTAINER Erik Rose <erik@mozilla.com>
 
-COPY set_up_ubuntu.sh /tmp/
-RUN DEBIAN_FRONTEND=noninteractive /tmp/set_up_ubuntu.sh
 
-COPY set_up_common.sh /tmp/
-RUN DEBIAN_FRONTEND=noninteractive /tmp/set_up_common.sh
+RUN apt-get -qq update \
+    && apt-get -qqy install \
+          npm \
+          python-pip python-virtualenv python2.7-dev \
+          mercurial git \
+          llvm-3.8 libclang-3.8-dev clang-3.8 \
+          curl apt-transport-https \
+    && apt-get -yqq remove  nodejs \
+    && curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
+    && DISTRO=$(lsb_release -c -s) \
+    && echo "deb https://deb.nodesource.com/node_6.x ${DISTRO} main" > /etc/apt/sources.list.d/nodesource.list \
+    && echo "deb-src https://deb.nodesource.com/node_6.x ${DISTRO} main" >> /etc/apt/sources.list.d/nodesource.list \
+    && apt-get -qq update \
+    && apt-get -qqy install  nodejs \
+    && update-alternatives --force --install /usr/local/bin/llvm-config llvm-config /usr/bin/llvm-config-3.8 0 \
+    && update-alternatives --force --install /usr/local/bin/clang++ clang++ /usr/bin/clang++-3.8 0 \
+    && update-alternatives --force --install /usr/local/bin/clang clang /usr/bin/clang-3.8 0 \
+    && curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=2016-01-25 --yes \
+    && echo "root:docker" | chpasswd \
+    && apt-get -qqy install graphviz \
+    && useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid 1000 dxr \
+    && echo "dxr:docker" | chpasswd
 
-# Give root a known password so devs can become root:
-RUN echo "root:docker" | chpasswd
-
-# Install Graphviz, needed only for building docs.
-# Not running apt-get clean, to keep dev experience snappy.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -q -y install graphviz
-
-RUN useradd --create-home --home-dir /home/dxr --shell /bin/bash --groups sudo --uid 1000 dxr
-RUN echo "dxr:docker" | chpasswd
 VOLUME /home/dxr/dxr
 USER dxr
 
