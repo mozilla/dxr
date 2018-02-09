@@ -67,7 +67,7 @@ struct FileInfo {
     interesting = rname.compare(0, srcdir.length(), srcdir) == 0;
     if (interesting) {
       // Remove the trailing `/' as well.
-      realname.erase(0, srcdir.length() + 1);
+      realname.erase(0, srcdir.length());
     } else if (rname.compare(0, output.length(), output) == 0) {
       // We're in the output directory, so we are probably a generated header.
       // We use the escape character to indicate the objdir nature.
@@ -1428,7 +1428,7 @@ protected:
       D.Report(DiagID) << args[0];
       return false;
     }
-    FileInfo::srcdir = abs_src;
+    FileInfo::srcdir = std::string(abs_src) + "/";
 
     // The build output directory.
     const char *env = getenv("DXR_CXX_CLANG_OBJECT_FOLDER");
