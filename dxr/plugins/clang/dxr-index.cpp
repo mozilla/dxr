@@ -1268,7 +1268,6 @@ public:
     if (!file)
       return;
 
-    const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
     const FileInfoPtr &target = getFileInfo(file->getName());
     if (!target->interesting)
       return;
@@ -1280,6 +1279,7 @@ public:
     if (targetBegin.isMacroID() || targetEnd.isMacroID())
       return;
 
+    const FileInfoPtr &source = getFileInfo(presumedHashLoc.getFilename());
     // TODO: Support generated files once we run the trigram indexer over
     // them. For now, we skip them.
     if (!(source->realname.compare(0, GENERATED.size(), GENERATED)) ||
