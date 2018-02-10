@@ -2,7 +2,7 @@
 
 from nose import SkipTest
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class DefinitionTests(CSingleFileTestCase):
@@ -78,7 +78,7 @@ class TemplateClassMemberReferenceTests(CSingleFileTestCase):
         {
             Foo<int>().bar();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_function_decl(self):
         """Try searching for function declaration."""
@@ -116,7 +116,7 @@ class TemplateMemberReferenceTests(CSingleFileTestCase):
         {
             Foo().bar<int>();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_function_decl(self):
         """Try searching for function declaration."""
@@ -147,7 +147,7 @@ class ConstTests(CSingleFileTestCase):
 
         void ConstOverload::foo() const {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_const_functions(self):
         """Make sure const functions are indexed separately from non-const but
@@ -165,7 +165,7 @@ class PrototypeParamTests(CSingleFileTestCase):
         int prototype_parameter_function(int prototype_parameter) {
             return prototype_parameter;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_prototype_params(self):
         # I have no idea what this tests.

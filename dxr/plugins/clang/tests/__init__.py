@@ -12,11 +12,3 @@ class CSingleFileTestCase(SingleFileTestCase):
         input['code']['build_command'] = '$CXX %s -c main.cpp' % cls.cflags
         return input
 
-
-# Tests that don't otherwise need a main() can append this one just to get
-# their code to compile:
-MINIMAL_MAIN = """
-    int main(int argc, char* argv[]) {
-        return 0;
-    }
-    """

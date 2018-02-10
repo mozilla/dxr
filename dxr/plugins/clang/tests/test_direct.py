@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TypeAndMethodTests(CSingleFileTestCase):
@@ -23,7 +23,7 @@ class TypeAndMethodTests(CSingleFileTestCase):
         }
         void MemberFunction::unique_member_function(int a) {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_qualified_function_name_insensitive(self):
         """A unique, case-insensitive match on fully qualified function name
@@ -105,7 +105,7 @@ class MacroTypedefTests(CSingleFileTestCase):
         typedef int MyTypeDef;
         typedef int MYTYPEDEF;
         typedef int MyUniqueTypeDef;
-        """ + MINIMAL_MAIN
+        """
 
     def test_macro_name_insensitive(self):
         """A unique, case-insensitive match on a macro name should take you

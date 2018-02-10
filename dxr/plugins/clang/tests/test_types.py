@@ -1,11 +1,11 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TypeTests(CSingleFileTestCase):
     source = r"""
         class Foo {};
         class Bar {};
-        """ + MINIMAL_MAIN
+        """
 
     def test_simple_type(self):
         self.found_line_eq('type:Foo',
@@ -24,7 +24,7 @@ class InjectedTypeTests(CSingleFileTestCase):
         class Foo {
             void bar(const Foo &);
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_injected_type(self):
         self.found_line_eq('type-ref:Foo', 'void bar(const <b>Foo</b> &amp;);')

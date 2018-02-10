@@ -1,6 +1,6 @@
 """Tests for searches about warnings"""
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TautWarningTests(CSingleFileTestCase):
@@ -12,7 +12,7 @@ class TautWarningTests(CSingleFileTestCase):
             if (x < 0)
                 return;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_warning(self):
         self.found_line_eq(
@@ -33,7 +33,7 @@ class MultipleOnSameLineWarningTests(CSingleFileTestCase):
             if (!x < 3)
                 return;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_warning(self):
         if self.clang_at_least(3.4):

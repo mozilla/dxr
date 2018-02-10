@@ -1,6 +1,6 @@
 """Tests for searches about namespaces"""
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class NamespaceDefTests(CSingleFileTestCase):
@@ -13,7 +13,7 @@ class NamespaceDefTests(CSingleFileTestCase):
             namespace Inner {
             }
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_definitions(self):
         self.found_lines_eq('+namespace:Outer', [
@@ -40,7 +40,7 @@ class NamespaceExprRefTests(CSingleFileTestCase):
             Outer::baz = 1;
             Outer::Inner::bar();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_expression_references(self):
         self.found_lines_eq('+namespace-ref:Outer', [
@@ -66,7 +66,7 @@ class NamespaceDeclRefTests(CSingleFileTestCase):
             Outer::MyClass *x;
             Outer::Inner::MyClass *y;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_declaration_references(self):
         self.found_lines_eq('+namespace-ref:Outer', [
@@ -85,7 +85,7 @@ class NamespaceUsingDirectiveTests(CSingleFileTestCase):
         }
         using namespace Outer;
         using namespace Outer::Inner;
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_using_directive_references(self):
         self.found_lines_eq('+namespace-ref:Outer', [
@@ -112,7 +112,7 @@ class NamespaceUsingDeclarationTests(CSingleFileTestCase):
             using Outer::foo;
             using Outer::Inner::bar;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_using_declaration_references(self):
         self.found_lines_eq('+namespace-ref:Outer', [
@@ -132,7 +132,7 @@ class NamespaceAliasTests(CSingleFileTestCase):
             namespace OuterAlias = Outer;
             OuterAlias::foo();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_namespace_alias_definitions(self):
         """Try searching for namespace alias definitions."""
