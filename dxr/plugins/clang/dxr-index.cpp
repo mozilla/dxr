@@ -912,6 +912,8 @@ public:
       visitNestedNameSpecifierLoc(e->getQualifierLoc());
     SourceLocation start = e->getNameInfo().getBeginLoc();
     SourceLocation end = e->getNameInfo().getEndLoc();
+    if (end.isInvalid())
+        end = start;
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(e->getDecl())) {
       /* We want to avoid overlapping refs for operator() or operator[]
          at least until we have better support for overlapping refs.
