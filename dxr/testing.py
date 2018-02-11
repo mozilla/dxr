@@ -112,9 +112,9 @@ class TestCase(unittest.TestCase):
             'DXR': {
                 'enabled_plugins': '',
                 'temp_folder': '{0}/temp'.format(config_dir_path),
-                'es_index': 'dxr_test_{format}_{tree}_{unique}',
-                'es_alias': 'dxr_test_{format}_{tree}',
-                'es_catalog_index': 'dxr_test_catalog'
+                'es_index': 'dxr_test_{config_path_hash}_{format}_{tree}_{unique}',
+                'es_alias': 'dxr_test_{config_path_hash}_{format}_{tree}',
+                'es_catalog_index': 'dxr_test_{config_path_hash}_catalog'
             },
             'code': {
                 'source_folder': '{0}/code'.format(config_dir_path),
@@ -261,15 +261,16 @@ class TestCase(unittest.TestCase):
 
     @classmethod
     def _delete_es_indices(cls):
-        """Delete anything that is named like a DXR test index.
+        """Delete ES indices created by this test.
 
-        Yes, this is scary as hell but very expedient. Won't work if
+        This won't work if
         ES's action.destructive_requires_name is set to true.
 
         """
         # When you delete an index, any alias to it goes with it.
-        # This takes care of dxr_test_catalog as well.
-        cls._es().delete_index('dxr_test_*')
+        # This takes care of the test catalog as well.
+        cls._es().delete_index('dxr_test_{config_path_hash}_*'.format(
+            config_path_hash=cls.config().path_hash()))
 
 
 class DxrInstanceTestCase(TestCase):

@@ -11,6 +11,7 @@ from os.path import abspath
 
 from configobj import ConfigObj
 from funcy import merge
+from hashlib import sha1
 from more_itertools import first
 from pkg_resources import resource_string
 from schema import Optional, Use, And, Schema, SchemaError
@@ -153,6 +154,7 @@ class Config(DotSection):
 
         if not relative_to:
             relative_to = getcwd()
+        self.path = relative_to
         with cd(relative_to):
             try:
                 config = schema.validate(config_obj.dict())
@@ -182,6 +184,9 @@ class Config(DotSection):
                     except SchemaError as exc:
                         raise ConfigError(exc.code, [section])
 
+        self._section['es_catalog_index'] = self._section['es_catalog_index'].format(
+            config_path_hash=self.path_hash())
+
         # Make sure default_tree is defined:
         if not self.default_tree:
             self._section['default_tree'] = first(self.trees.iterkeys())
@@ -190,6 +195,9 @@ class Config(DotSection):
         # enabled_plugins of trees, and now we're done with them:
         del self._section['enabled_plugins']
         del self._section['disabled_plugins']
+
+    def path_hash(self):
+        return sha1(self.path).hexdigest()
 
 
 class TreeConfig(DotSectionWrapper):
