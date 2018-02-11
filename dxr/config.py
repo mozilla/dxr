@@ -94,68 +94,68 @@ class Config(DotSection):
         Raise ConfigError if the configuration is invalid.
 
         """
-        schema = Schema({
-            'DXR': {
-                Optional('temp_folder', default=abspath('dxr-temp-{tree}')):
-                    AbsPath,
-                Optional('default_tree', default=None): basestring,
-                Optional('disabled_plugins', default=plugin_list('')): Plugins,
-                Optional('enabled_plugins', default=plugin_list('*')): Plugins,
-                Optional('generated_date',
-                         default=datetime.utcnow()
-                                         .strftime("%a, %d %b %Y %H:%M:%S +0000")):
-                    basestring,
-                Optional('log_folder', default=abspath('dxr-logs-{tree}')):
-                    AbsPath,
-                Optional('workers', default=if_raises(NotImplementedError,
-                                                      cpu_count,
-                                                      1)):
-                    WORKERS_VALIDATOR,
-                Optional('skip_stages', default=[]): WhitespaceList,
-                Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
-                Optional('google_analytics_key', default=''): basestring,
-                Optional('es_hosts', default='http://127.0.0.1:9200/'):
-                    WhitespaceList,
-                # A semi-random name, having the tree name and format version in it.
-                Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
-                    basestring,
-                Optional('es_alias', default='dxr_{format}_{tree}'):
-                    basestring,
-                Optional('es_catalog_index', default='dxr_catalog'):
-                    basestring,
-                Optional('es_catalog_replicas', default=1):
-                    Use(int, error='"es_catalog_replicas" must be an integer.'),
-                Optional('max_thumbnail_size', default=20000):
-                    And(Use(int),
-                        lambda v: v >= 0,
-                        error='"max_thumbnail_size" must be a non-negative '
-                              'integer.'),
-                Optional('es_indexing_timeout', default=60):
-                    And(Use(int),
-                        lambda v: v >= 0,
-                        error='"es_indexing_timeout" must be a non-negative '
-                              'integer.'),
-                Optional('es_indexing_retries', default=0):
-                    And(Use(int),
-                        lambda v: v >= 0,
-                        error='"es_indexing_retries" must be a non-negative '
-                              'integer.'),
-                Optional('es_refresh_interval', default=60):
-                    Use(int, error='"es_refresh_interval" must be an integer.')
-            },
-            basestring: dict
-        })
-
-        # Parse the ini into nested dicts:
-        config_obj = ConfigObj(input.splitlines() if isinstance(input,
-                                                                basestring)
-                               else input,
-                               list_values=False)
-
         if not relative_to:
             relative_to = getcwd()
         self.path = relative_to
         with cd(relative_to):
+            schema = Schema({
+                'DXR': {
+                    Optional('temp_folder', default=abspath('dxr-temp-{tree}')):
+                        AbsPath,
+                    Optional('default_tree', default=None): basestring,
+                    Optional('disabled_plugins', default=plugin_list('')): Plugins,
+                    Optional('enabled_plugins', default=plugin_list('*')): Plugins,
+                    Optional('generated_date',
+                             default=datetime.utcnow()
+                                             .strftime("%a, %d %b %Y %H:%M:%S +0000")):
+                        basestring,
+                    Optional('log_folder', default=abspath('dxr-logs-{tree}')):
+                        AbsPath,
+                    Optional('workers', default=if_raises(NotImplementedError,
+                                                          cpu_count,
+                                                          1)):
+                        WORKERS_VALIDATOR,
+                    Optional('skip_stages', default=[]): WhitespaceList,
+                    Optional('www_root', default=''): Use(lambda v: v.rstrip('/')),
+                    Optional('google_analytics_key', default=''): basestring,
+                    Optional('es_hosts', default='http://127.0.0.1:9200/'):
+                        WhitespaceList,
+                    # A semi-random name, having the tree name and format version in it.
+                    Optional('es_index', default='dxr_{format}_{tree}_{unique}'):
+                        basestring,
+                    Optional('es_alias', default='dxr_{format}_{tree}'):
+                        basestring,
+                    Optional('es_catalog_index', default='dxr_catalog'):
+                        basestring,
+                    Optional('es_catalog_replicas', default=1):
+                        Use(int, error='"es_catalog_replicas" must be an integer.'),
+                    Optional('max_thumbnail_size', default=20000):
+                        And(Use(int),
+                            lambda v: v >= 0,
+                            error='"max_thumbnail_size" must be a non-negative '
+                                  'integer.'),
+                    Optional('es_indexing_timeout', default=60):
+                        And(Use(int),
+                            lambda v: v >= 0,
+                            error='"es_indexing_timeout" must be a non-negative '
+                                  'integer.'),
+                    Optional('es_indexing_retries', default=0):
+                        And(Use(int),
+                            lambda v: v >= 0,
+                            error='"es_indexing_retries" must be a non-negative '
+                                  'integer.'),
+                    Optional('es_refresh_interval', default=60):
+                        Use(int, error='"es_refresh_interval" must be an integer.')
+                },
+                basestring: dict
+            })
+
+            # Parse the ini into nested dicts:
+            config_obj = ConfigObj(input.splitlines() if isinstance(input,
+                                                                    basestring)
+                                   else input,
+                                   list_values=False)
+
             try:
                 config = schema.validate(config_obj.dict())
             except SchemaError as exc:
