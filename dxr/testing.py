@@ -326,10 +326,6 @@ class GenerativeTestCase(TestCase):
         cls.generate_source()
 
     @classmethod
-    def degenerate(cls):
-        """Don't delete anything."""
-
-    @classmethod
     def index(cls):
         for tree in cls.config().trees.itervalues():
             index_and_deploy_tree(tree)
