@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from os.path import basename, join
-from shutil import copytree
+from distutils.dir_util import copy_tree
 
 from dxr.testing import GenerativeTestCase, SingleFileTestCase
-
 
 class NonAsciiPathTest(GenerativeTestCase):
     """Just tests that the index can be created without error."""
@@ -20,24 +18,11 @@ class NonAsciiPathTest(GenerativeTestCase):
 
         """
         super(NonAsciiPathTest, cls).generate()
-        temp_dir = join(cls._config_dir_path, basename(cls.this_dir()))
-        copytree(cls.this_dir(), temp_dir)
-        cls._orig_config_dir, cls._config_dir_path = cls._config_dir_path, temp_dir
+        copy_tree(cls.this_dir(), cls._config_dir_path)
 
     @classmethod
     def index(cls):
         cls.dxr_index()
-
-    @classmethod
-    def teardown_class(cls):
-        """Restore config path so superclass will delete the temp dir made by
-        the superclass.
-
-        That dir also contains everything we've copied over.
-
-        """
-        cls._config_dir_path = cls._orig_config_dir
-        super(NonAsciiPathTest, cls).teardown_class()
 
     def test_indexes(self):
         pass
