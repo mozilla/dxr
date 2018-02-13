@@ -1,5 +1,6 @@
 import cgi
 from commands import getoutput
+from distutils.dir_util import copy_tree
 import json
 from os import mkdir
 from os.path import dirname, join
@@ -23,7 +24,7 @@ except ImportError:
 from dxr.app import make_app
 from dxr.build import index_and_deploy_tree
 from dxr.config import Config
-from dxr.utils import cd, file_text, run
+from dxr.utils import file_text
 
 
 class TestCase(unittest.TestCase):
@@ -279,17 +280,8 @@ class DxrInstanceTestCase(TestCase):
     """
     @classmethod
     def generate(cls):
-        cls._config_dir_path = cls.this_dir()
-
-    @classmethod
-    def degenerate(cls):
-        """Don't delete anything."""
-
-    @classmethod
-    def teardown_class(cls):
-        with cd(cls._config_dir_path):
-            run('dxr clean')
-        super(DxrInstanceTestCase, cls).teardown_class()
+        super(DxrInstanceTestCase, cls).generate()
+        copy_tree(cls.this_dir(), cls._config_dir_path, preserve_symlinks=True)
 
     @classmethod
     def config_input(cls, config_dir_path):
@@ -342,12 +334,12 @@ class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
     """
     @classmethod
     def generate(cls):
-        check_call(['make'], cwd=join(cls.this_dir(), 'code'))
         super(DxrInstanceTestCaseMakeFirst, cls).generate()
+        check_call(['make'], cwd=join(cls._config_dir_path, 'code'))
 
     @classmethod
     def teardown_class(cls):
-        check_call(['make', 'clean'], cwd=join(cls.this_dir(), 'code'))
+        check_call(['make', 'clean'], cwd=join(cls._config_dir_path, 'code'))
         super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
 
 
