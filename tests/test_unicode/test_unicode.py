@@ -20,10 +20,6 @@ class NonAsciiPathTest(GenerativeTestCase):
         super(NonAsciiPathTest, cls).generate()
         copy_tree(cls.this_dir(), cls._config_dir_path)
 
-    @classmethod
-    def index(cls):
-        cls.dxr_index()
-
     def test_indexes(self):
         pass
 

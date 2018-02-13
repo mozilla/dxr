@@ -60,12 +60,8 @@ class TestCase(unittest.TestCase):
     @classmethod
     def index(cls):
         """Run a DXR indexing job."""
-
-    @classmethod
-    def dxr_index(cls):
-        """Run the `dxr index` command in the config file's directory."""
-        with cd(cls._config_dir_path):
-            run('dxr index')
+        for tree in cls.config().trees.itervalues():
+            index_and_deploy_tree(tree)
 
     @classmethod
     def this_dir(cls):
@@ -290,10 +286,6 @@ class DxrInstanceTestCase(TestCase):
         """Don't delete anything."""
 
     @classmethod
-    def index(cls):
-        cls.dxr_index()
-
-    @classmethod
     def teardown_class(cls):
         with cd(cls._config_dir_path):
             run('dxr clean')
@@ -324,11 +316,6 @@ class GenerativeTestCase(TestCase):
         code_path = cls.code_dir()
         mkdir(code_path)
         cls.generate_source()
-
-    @classmethod
-    def index(cls):
-        for tree in cls.config().trees.itervalues():
-            index_and_deploy_tree(tree)
 
     @classmethod
     def teardown_class(cls):
