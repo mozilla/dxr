@@ -12,7 +12,9 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
-	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	. $(VIRTUAL_ENV)/bin/activate && \
+	    nprocesses=$$(python -c 'import multiprocessing; print multiprocessing.cpu_count() / 2') && \
+	    LANG=C.UTF-8 nosetests -v --nologcapture --processes=$$nprocesses
 
 lint: $(VIRTUAL_ENV)/bin/activate requirements
 	$(VIRTUAL_ENV)/bin/pip install flake8==3.0.1
