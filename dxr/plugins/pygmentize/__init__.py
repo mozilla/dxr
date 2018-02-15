@@ -93,6 +93,7 @@ def _regions_for_contents(lexer, contents):
     for index, token, text in lexer.get_tokens_unprocessed(contents):
         cls = token_classes.get(token)
         if cls:
+            text = text.rstrip('\r\n')
             yield index, index + len(text), Region(cls)
 
 
