@@ -118,7 +118,7 @@ dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 	touch $@
 
 # Install requirements in current virtualenv:
-.peep_installed: requirements.txt
+.peep_installed: $(VIRTUAL_ENV)/bin/activate requirements.txt
 	$(VIRTUAL_ENV)/bin/python tooling/peep.py install -r requirements.txt
 	touch $@
 
