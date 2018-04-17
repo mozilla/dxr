@@ -5,13 +5,6 @@
 /dxr/static
 /dxr/static_manifest
 /dxr/static_unhashed/js/templates.js
-dxr-logs-*
-dxr-temp-*
-/tests/test_non_ascii_paths/code/c
-**/tests/*/code/code
-**/tests/*/code2/code
-/dxr/plugins/rust/tests/test_cargo/code/Cargo.lock
-/dxr/plugins/rust/tests/test_smoke/code/libkrate2.rlib
 /.noseids
 /build
 /dist
