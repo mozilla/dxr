@@ -23,8 +23,9 @@ _TitledExts = namedtuple('_TitledExts', ['exts', 'title'])
 class TreeToIndex(TreeToIndexBase):
     def __init__(self, plugin_name, tree, vcs_cache):
         super(TreeToIndex, self).__init__(plugin_name, tree, vcs_cache)
-        self.header_exts = _TitledExts(['.h', '.hxx', '.hpp'], 'Header')
-        self.impl_exts = _TitledExts(['.cpp', '.c', '.cc', '.cxx', '.mm'],
+        self.header_exts = _TitledExts(['.h', '.h++', '.hh', '.hpp', '.hxx'],
+                                       'Header')
+        self.impl_exts = _TitledExts(['.cpp', 'c++', '.c', '.cc', '.cxx', '.mm'],
                                      'Implementation')
 
     def file_to_index(self, path, contents):

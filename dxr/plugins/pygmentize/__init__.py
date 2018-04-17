@@ -79,7 +79,8 @@ def _lexer_for_filename(filename):
 
             # Also we can syntax highlight XUL as XML, and IDL/WebIDL as CPP
             lexer = get_lexer_for_filename(
-                'dummy.cpp' if filename.endswith(('.h', '.idl', '.webidl'))
+                'dummy.cpp' if filename.endswith(
+                    ('.h', '.idl', '.webidl', '.tcc', '.tpp'))
                 else 'dummy.xml' if filename.endswith(('.xul', '.svg'))
                 else filename)
         except ClassNotFound:
