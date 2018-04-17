@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 from nose.tools import ok_
 
@@ -9,7 +9,7 @@ class MacroTests(CSingleFileTestCase):
         #define MACRO
         #define ADD(x, y) ((x) + (y))
 
-        """ + MINIMAL_MAIN
+        """
 
     def test_simple(self):
         """Make sure macro definitions are found."""
@@ -36,7 +36,7 @@ class MacroRefTests(CSingleFileTestCase):
         #endif
 
         #undef MACRO
-        """ + MINIMAL_MAIN
+        """
 
     def test_refs(self):
         self.found_lines_eq('+macro-ref:MACRO', [
@@ -71,7 +71,7 @@ class MacroArgumentReferenceTests(CSingleFileTestCase):
                 ID(y) +
                 ADD(x, y);
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_refs(self):
         """Test variables referenced in macro arguments"""
@@ -103,7 +103,7 @@ class MacroArgumentFieldReferenceTests(CSingleFileTestCase):
                 FOO(bar) +
                 FIELD(foo, bar);
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_refs(self):
         """Test struct fields referenced in macro arguments"""
@@ -129,7 +129,7 @@ class MacroArgumentDeclareTests(CSingleFileTestCase):
             DECLARE(b);
             DECLARE2(c, d);
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_decls(self):
         """Test variables declared in macro arguments"""
@@ -151,7 +151,7 @@ SD;
 #define ADD(x, y)  ((x) + (y))
 
 int c = ADD(0, 0);
-        """ + MINIMAL_MAIN
+        """
 
     def test_macro_titles(self):
         """Test that a ref to a macro gets a title tooltip containing the

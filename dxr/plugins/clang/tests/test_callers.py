@@ -1,6 +1,6 @@
 """Tests for searches using callers"""
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class DirectCallTests(CSingleFileTestCase):
@@ -79,7 +79,7 @@ class IndirectCallTests(CSingleFileTestCase):
             d.foo();
             d.bar();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_virtual_base(self):
         """Virtual methods on base classes should be found only on invocations

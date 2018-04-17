@@ -477,9 +477,7 @@ public:
   // vars, funcs, types, enums, classes, unions, etc.
   void declDef(const char *kind, const NamedDecl *decl, const NamedDecl *def,
                SourceLocation begin, SourceLocation end) {
-    if (!def || def == decl) {
-      // Why aren't we interested in declarations of things that aren't [later]
-      // defined?
+    if (def == decl) {
       return;
     }
 
@@ -487,11 +485,12 @@ public:
                                                   // expansion location.
     std::string name = decl->getNameAsString();
     recordValue("name", name);
-    recordValue("qualname", getQualifiedName(*def));
+    recordValue("qualname", getQualifiedName(def ? *def : *decl));
     recordValue("loc", locationToString(decl->getLocation()));
     recordValue("locend",
                 locationToString(afterToken(decl->getLocation(), name)));
-    recordValue("defloc", locationToString(def->getLocation()));
+    if (def)
+      recordValue("defloc", locationToString(def->getLocation()));
     if (kind)
       recordValue("kind", kind);
     *out << std::endl;
@@ -642,10 +641,10 @@ public:
       }
     }
 
-    const FunctionDecl *def;
-    if (d->isDefined(def))
-      declDef("function", d, def,
-              d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
+    const FunctionDecl *def = nullptr;
+    d->isDefined(def);
+    declDef("function", d, def,
+            d->getNameInfo().getBeginLoc(), d->getNameInfo().getEndLoc());
 
     return true;
   }
@@ -876,12 +875,13 @@ public:
   // Expressions!
   void printReference(const char *kind, NamedDecl *d,
                       SourceLocation refLoc, SourceLocation end) {
-    if (!interestingLocation(d->getLocation()) || !interestingLocation(refLoc))
+    if (!interestingLocation(refLoc))
       return;
     SourceLocation nonMacroRefLoc = escapeMacros(refLoc);
     std::string name = d->getNameAsString();
     beginRecord("ref", nonMacroRefLoc);
-    recordValue("defloc", locationToString(d->getLocation()));
+    if (interestingLocation(d->getLocation()))
+      recordValue("defloc", locationToString(d->getLocation()));
     recordValue("loc", locationToString(nonMacroRefLoc));
     recordLocEndForName(name, nonMacroRefLoc, escapeMacros(end));
     if (kind)
@@ -936,8 +936,7 @@ public:
       return true;
 
     Decl *callee = e->getCalleeDecl();
-    if (!callee || !interestingLocation(callee->getLocation()) ||
-        !NamedDecl::classof(callee))
+    if (!callee || !NamedDecl::classof(callee))
       return true;
 
     const NamedDecl *namedCallee = dyn_cast<NamedDecl>(callee);
@@ -949,7 +948,8 @@ public:
     beginRecord("call", e->getLocStart());
     recordValue("callloc", locationToString(e->getLocStart()));
     recordValue("calllocend", locationToString(e->getLocEnd()));
-    recordValue("calleeloc", locationToString(callee->getLocation()));
+    if (interestingLocation(callee->getLocation()))
+      recordValue("calleeloc", locationToString(callee->getLocation()));
     recordValue("name", namedCallee->getNameAsString());
     recordValue("qualname", getQualifiedName(*namedCallee));
     // Determine the type of call
@@ -976,8 +976,7 @@ public:
       return true;
 
     CXXConstructorDecl *callee = e->getConstructor();
-    if (!callee || !interestingLocation(callee->getLocation()) ||
-        !NamedDecl::classof(callee))
+    if (!callee || !NamedDecl::classof(callee))
       return true;
 
     // Fun facts about call exprs:
@@ -987,7 +986,8 @@ public:
     beginRecord("call", e->getLocStart());
     recordValue("callloc", locationToString(e->getLocStart()));
     recordValue("calllocend", locationToString(e->getLocEnd()));
-    recordValue("calleeloc", locationToString(callee->getLocation()));
+    if (interestingLocation(callee->getLocation()))
+      recordValue("calleeloc", locationToString(callee->getLocation()));
     recordValue("name", callee->getNameAsString());
     recordValue("qualname", getQualifiedName(*callee));
 

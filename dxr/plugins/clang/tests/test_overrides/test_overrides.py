@@ -1,7 +1,7 @@
 """Tests for searches about overrides of virtual methods"""
 
 from dxr.testing import DxrInstanceTestCase
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class ParallelOverrideTests(CSingleFileTestCase):
@@ -24,7 +24,7 @@ class ParallelOverrideTests(CSingleFileTestCase):
         };
         void DerivedB::foo() {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_overridden(self):
         self.found_line_eq(
@@ -57,7 +57,7 @@ class HierarchyOverrideTests(CSingleFileTestCase):
         };
         void Derived2::foo() {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_overridden(self):
         self.found_line_eq(
@@ -92,7 +92,7 @@ class HierarchyImplicitOverrideTests(CSingleFileTestCase):
         };
         void Derived2::foo() {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_overridden(self):
         self.found_line_eq('+overridden:Derived2::foo()',
@@ -123,7 +123,7 @@ class MultipleOverrides(CSingleFileTestCase):
         };
         void Derived::foo() {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_overridden(self):
         self.found_lines_eq('+overridden:Derived::foo()',

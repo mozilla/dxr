@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class MemberVariableTests(CSingleFileTestCase):
@@ -7,7 +7,7 @@ class MemberVariableTests(CSingleFileTestCase):
             public:
                 int member_variable;
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_member_variable(self):
         """Test searching for members of a class (or struct) that contains
@@ -31,7 +31,7 @@ class MemberVariableCtorTests(CSingleFileTestCase):
             Bar bar;
             int baz;
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_implicit_init(self):
         """Test searching for references to a member of a class that is
@@ -53,7 +53,7 @@ class MemberFunctionTests(CSingleFileTestCase):
 
         void MemberFunction::member_function() {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_member_function(self):
         """Test searching for members of a class (or struct) that contains
@@ -70,7 +70,7 @@ class StaticMemberTests(CSingleFileTestCase):
         };
 
         int StaticMember::static_member = 0;
-        """ + MINIMAL_MAIN
+        """
 
     def test_static_members(self):
         self.found_line_eq('+var:StaticMember::static_member', 'int StaticMember::<b>static_member</b> = 0;')
@@ -143,7 +143,7 @@ class MemberTests(CSingleFileTestCase):
             retval &= rhs;
             return retval;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_members(self):
         """Make sure we can find all the members of a class."""

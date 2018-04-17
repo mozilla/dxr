@@ -207,7 +207,8 @@ def process_call(props):
     call_end_col += 1
     props['span'] = Extent(call_start,
                            Position(row=call_end_row, col=call_end_col))
-    props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
+    if 'calleeloc' in props:
+        props['calleeloc'] = _process_loc(props['calleeloc'])  # for Jump To
     return props
 
 

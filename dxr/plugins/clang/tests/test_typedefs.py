@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TypedefTests(CSingleFileTestCase):
@@ -7,7 +7,7 @@ class TypedefTests(CSingleFileTestCase):
 
         void my_typedef_function(MyTypedef) {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_typedefs(self):
         self.found_line_eq('+type:MyTypedef',
