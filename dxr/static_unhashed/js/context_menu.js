@@ -9,7 +9,7 @@ $(function() {
         contentContainer = $('#content'),
         nonWordCharRE = /[^A-Z0-9_]/i;
 
-    if (['cpp', 'cc', 'cxx', 'h', 'hxx', 'hpp'].indexOf(
+    if (['cpp', 'c++', 'cc', 'cxx', 'h', 'h++', 'hh', 'hxx', 'hpp', 'tcc', 'tpp'].indexOf(
           extension(window.location.pathname).toLowerCase()) > -1) {
         // C++ files should include '~' as a valid name character.  (This
         // doesn't cause us to accidentally scoop up '~' operators because those
