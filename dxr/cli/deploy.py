@@ -190,7 +190,7 @@ class Deployment(object):
                     # Does this recurse into submodules?
                     run('git fsck --no-dangling')
 
-                    # Install stuff, using the copy of pip from the checkout:
+                    # Install stuff, using the copy of pip from the new virtualenv:
                     venv = join(new_build_path, VENV_NAME)
                     run('VIRTUAL_ENV={venv} make requirements', venv=venv)
                     # Compile nunjucks templates and cachebust static assets:
