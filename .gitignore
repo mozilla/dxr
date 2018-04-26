@@ -21,6 +21,6 @@
 /docs/build
 .dxr_installed
 .npm_installed
-.peep_installed
+.requirements_installed
 /venv
 /*.egg
