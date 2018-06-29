@@ -205,10 +205,15 @@ class FunctionRef(_ClangRef):
         # We ignore the def location clang gives us since it can be wrong, but
         # its existence means this ref isn't itself a def.
         search_for_def = prop.get('defloc') is not None
-        return cls(tree,
-                   (search_for_def, prop['qualname'],
-                    'has_overriddens' in prop, 'has_overrides' in prop),
-                   qualname=prop['qualname'])
+        ret = cls(tree,
+                  (search_for_def, prop['qualname'],
+                   'has_overriddens' in prop, 'has_overrides' in prop),
+                  qualname=prop['qualname'])
+        if not search_for_def:
+            # Prefer FunctionRefs with definitions over FunctionRefs without
+            # definitions.
+            ret.sort_order += 0.1
+        return ret
 
     def menu_items(self):
         search_for_def, qualname = self.menu_data[:2]
