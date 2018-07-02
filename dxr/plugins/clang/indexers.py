@@ -88,10 +88,11 @@ class FileToIndex(FileToIndexBase):
                            # together with other getters.
                            kind_getter('ref', 'function')]),
             (VariableRef, [getter_or_empty('variable'),
-                           kind_getter('ref', 'variable')]),
+                           kind_getter('ref', 'variable'),
+                           kind_getter('decldef', 'variable')]),
             (TypeRef, [getter_or_empty('type'),
                        kind_getter('ref', 'type'),
-                       not_kind_getter('decldef', 'function')]),
+                       kind_getter('decldef', 'type')]),
             (TypedefRef, [getter_or_empty('typedef'),
                           kind_getter('ref', 'typedef')]),
             (NamespaceRef, [getter_or_empty('namespace'),
@@ -175,12 +176,6 @@ class FileToIndex(FileToIndexBase):
 def kind_getter(field, kind, condensed):
     """Reach into a field and filter based on the kind."""
     return (ref for ref in condensed.get(field, []) if ref.get('kind') == kind)
-
-
-@autocurry
-def not_kind_getter(field, kind, condensed):
-    """Reach into a field and filter out those with given kind."""
-    return (ref for ref in condensed.get(field, []) if ref.get('kind') != kind)
 
 
 
