@@ -1,3 +1,9 @@
+struct type_in_main;
+struct type_in_second;
+
+extern int var_in_main;
+extern int var_in_second;
+
 void function_in_main();
 void function_in_second();
 

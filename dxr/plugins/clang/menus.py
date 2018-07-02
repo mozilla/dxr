@@ -36,9 +36,13 @@ class _RefWithDefinition(_ClangRef):
             definition_tuple = definition[0], definition[1].row  # path, row
         else:
             definition_tuple = None, None
-        return cls(tree,
-                   (definition_tuple + cls._condensed_menu_data(tree, prop)),
-                   qualname=prop.get('qualname'))
+        ret = cls(tree,
+                  (definition_tuple + cls._condensed_menu_data(tree, prop)),
+                  qualname=prop.get('qualname'))
+        if not definition:
+            # Prefer Refs with definitions over Refs without definitions.
+            ret.sort_order += 0.1
+        return ret
 
     def menu_items(self):
         """Return a jump-to-definition menu item along with whatever others
