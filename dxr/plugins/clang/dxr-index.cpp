@@ -900,8 +900,17 @@ public:
   }
 
   bool VisitMemberExpr(MemberExpr *e) {
-    printReference(kindForDecl(e->getMemberDecl()),
-                   e->getMemberDecl(),
+    ValueDecl *vd = e->getMemberDecl();
+    if (FieldDecl *fd = dyn_cast<FieldDecl>(vd)) {
+      /* Ignore references to a anonymous structs and unions.
+       * We can't do anything useful with them and they overlap with the
+       * reference to the member inside the struct/union causing us to
+       * effectively lose that other reference. */
+      if (fd->isAnonymousStructOrUnion())
+        return true;
+    }
+    printReference(kindForDecl(vd),
+                   vd,
                    e->getExprLoc(),
                    e->getMemberNameInfo().getEndLoc());
     return true;
