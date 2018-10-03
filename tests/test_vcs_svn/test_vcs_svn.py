@@ -43,20 +43,23 @@ class SubversionTests(DxrInstanceTestCaseMakeFirst):
         eq_(response.status_code, 200)
         ok_('/rev/' + LATEST_REVISION + '/' + CHANGED_FILE + '" title="Permalink" class="permalink icon">Permalink</a>' in response.data)
 
-    def test_permalink_works(self):
-        """Make sure the permalinks actually work."""
-        # Test latest repository revision.
+    def test_permalink_works_latest(self):
+        """Check the permalink of the latest repository revision."""
         perma_url = '/code/rev/' + LATEST_REVISION + '/' + CHANGED_FILE
         response = self.client().get(perma_url)
         eq_(response.status_code, 200)
-        # Test latest file revision.
-        before = '/code/rev/3/' + CHANGED_FILE
-        response = self.client().get(before)
+
+    def test_permalink_works_last(self):
+        """Ccheck the permalink of the latest file revision."""
+        perma_url = '/code/rev/3/' + CHANGED_FILE
+        response = self.client().get(perma_url)
         eq_(response.status_code, 200)
         ok_('Mozilla!' in response.data)
-        # Test first file revision.
-        before = '/code/rev/2/' + CHANGED_FILE
-        response = self.client().get(before)
+
+    def test_permalink_works_first(self):
+        """Check the permalink of the first file revision."""
+        perma_url = '/code/rev/2/' + CHANGED_FILE
+        response = self.client().get(perma_url)
         eq_(response.status_code, 200)
         ok_('Mozilla?' in response.data)
 
