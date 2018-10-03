@@ -9,7 +9,7 @@ $(function() {
         contentContainer = $('#content'),
         nonWordCharRE = /[^A-Z0-9_]/i;
 
-    if (['cpp', 'cc', 'cxx', 'h', 'hxx', 'hpp'].indexOf(
+    if (['cpp', 'c++', 'cc', 'cxx', 'h', 'h++', 'hh', 'hxx', 'hpp', 'tcc', 'tpp'].indexOf(
           extension(window.location.pathname).toLowerCase()) > -1) {
         // C++ files should include '~' as a valid name character.  (This
         // doesn't cause us to accidentally scoop up '~' operators because those
@@ -145,18 +145,16 @@ $(function() {
 
             word = selectedTxtString.substr(startIndex, endIndex - startIndex);
 
-            // No word was clicked on, nothing to search.
-            if (word === '') {
-                return;
-            }
+            var menuItems = [];
 
-            // Build the Object needed for the context-menu template.
-            var contextMenu = {},
-                menuItems = [{
+            if (word !== '') {
+                // A word was clicked on.
+                menuItems.push({
                     html: 'Search for the substring <strong>' + htmlEscape(word) + '</strong>',
                     href: dxr.wwwRoot + "/" + encodeURIComponent(dxr.tree) + "/search?q=" + encodeURIComponent(word),
                     icon: 'search'
-                }];
+                });
+            }
 
             var currentNode = $(node).closest('a');
             // Only check for the data-menu attribute if the current node has an
@@ -168,13 +166,17 @@ $(function() {
                 menuItems = menuItems.concat(currentNodeData);
             }
 
-            contextMenu.menuItems = menuItems;
+            if (menuItems.length === 0) {
+                // Nothing to display.
+                return;
+            }
+
             // Rather than putting the context menu in the file container,
             // attaching it to the body makes the re-layout much quicker
             // because the lines of the file do not need to be re-flowed.
             // In the end they're the same, since the menu will be absolute'd
             // to where it should go.
-            setContextMenu($('body'), contextMenu, event);
+            setContextMenu($('body'), { menuItems: menuItems }, event);
         }
     });
 

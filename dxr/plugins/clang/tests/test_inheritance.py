@@ -1,6 +1,6 @@
 """Tests for queries about superclasses and subclasses"""
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class InheritanceTests(CSingleFileTestCase):
@@ -21,7 +21,7 @@ class InheritanceTests(CSingleFileTestCase):
 
         struct E : public D {
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_subclasses(self):
         """We should find all direct and indirect subclasses."""

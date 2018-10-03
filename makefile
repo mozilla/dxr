@@ -12,7 +12,9 @@ all: static plugins requirements .dxr_installed
 
 test: all
 	$(VIRTUAL_ENV)/bin/pip install nose
-	LANG=C.UTF-8 $(VIRTUAL_ENV)/bin/nosetests -v --nologcapture
+	. $(VIRTUAL_ENV)/bin/activate && \
+	    nprocesses=$$(python -c 'import multiprocessing; print multiprocessing.cpu_count() / 2') && \
+	    LANG=C.UTF-8 nosetests -v --nologcapture --processes=$$nprocesses
 
 lint: $(VIRTUAL_ENV)/bin/activate requirements
 	$(VIRTUAL_ENV)/bin/pip install flake8==3.0.1
@@ -20,7 +22,7 @@ lint: $(VIRTUAL_ENV)/bin/activate requirements
 
 clean: static_clean
 	rm -rf .npm_installed \
-	       .peep_installed \
+	       .requirements_installed \
 	       venv \
 	       .dxr_installed
 	@# Remove anything within node_modules that's not checked into git. Skip things
@@ -86,7 +88,7 @@ docker_machine:
 # creating one for you, you'll need Python packages installed.
 $(VIRTUAL_ENV)/bin/activate:
 	virtualenv $(VIRTUAL_ENV)
-	rm -f .peep_installed .dxr_installed
+	rm -f .requirements_installed .dxr_installed
 
 # Install DXR into the venv. Reinstall it if the setuptools entry points may
 # have changed. To install it in non-editable mode, set DXR_PROD=1 in the
@@ -100,7 +102,7 @@ endif
 	touch $@
 
 # Install Python requirements:
-requirements: $(VIRTUAL_ENV)/bin/activate .peep_installed
+requirements: $(VIRTUAL_ENV)/bin/activate .requirements_installed
 
 plugins:
 	$(MAKE) -C dxr/plugins/clang
@@ -118,8 +120,9 @@ dxr/static_unhashed/js/templates.js: dxr/templates/nunjucks/*.html \
 	touch $@
 
 # Install requirements in current virtualenv:
-.peep_installed: requirements.txt
-	$(VIRTUAL_ENV)/bin/python tooling/peep.py install -r requirements.txt
+.requirements_installed: $(VIRTUAL_ENV)/bin/activate requirements.txt
+	. $(VIRTUAL_ENV)/bin/activate && ./tooling/pipstrap.py
+	$(VIRTUAL_ENV)/bin/pip install --require-hashes -r requirements.txt
 	touch $@
 
 # Static-file cachebusting:

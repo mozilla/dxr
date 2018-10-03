@@ -1,5 +1,6 @@
 import cgi
 from commands import getoutput
+from distutils.dir_util import copy_tree
 import json
 from os import mkdir
 from os.path import dirname, join
@@ -23,7 +24,7 @@ except ImportError:
 from dxr.app import make_app
 from dxr.build import index_and_deploy_tree
 from dxr.config import Config
-from dxr.utils import cd, file_text, run
+from dxr.utils import file_text
 
 
 class TestCase(unittest.TestCase):
@@ -60,12 +61,8 @@ class TestCase(unittest.TestCase):
     @classmethod
     def index(cls):
         """Run a DXR indexing job."""
-
-    @classmethod
-    def dxr_index(cls):
-        """Run the `dxr index` command in the config file's directory."""
-        with cd(cls._config_dir_path):
-            run('dxr index')
+        for tree in cls.config().trees.itervalues():
+            index_and_deploy_tree(tree)
 
     @classmethod
     def this_dir(cls):
@@ -112,9 +109,9 @@ class TestCase(unittest.TestCase):
             'DXR': {
                 'enabled_plugins': '',
                 'temp_folder': '{0}/temp'.format(config_dir_path),
-                'es_index': 'dxr_test_{format}_{tree}_{unique}',
-                'es_alias': 'dxr_test_{format}_{tree}',
-                'es_catalog_index': 'dxr_test_catalog'
+                'es_index': 'dxr_test_{config_path_hash}_{format}_{tree}_{unique}',
+                'es_alias': 'dxr_test_{config_path_hash}_{format}_{tree}',
+                'es_catalog_index': 'dxr_test_{config_path_hash}_catalog'
             },
             'code': {
                 'source_folder': '{0}/code'.format(config_dir_path),
@@ -261,15 +258,16 @@ class TestCase(unittest.TestCase):
 
     @classmethod
     def _delete_es_indices(cls):
-        """Delete anything that is named like a DXR test index.
+        """Delete ES indices created by this test.
 
-        Yes, this is scary as hell but very expedient. Won't work if
+        This won't work if
         ES's action.destructive_requires_name is set to true.
 
         """
         # When you delete an index, any alias to it goes with it.
-        # This takes care of dxr_test_catalog as well.
-        cls._es().delete_index('dxr_test_*')
+        # This takes care of the test catalog as well.
+        cls._es().delete_index('dxr_test_{config_path_hash}_*'.format(
+            config_path_hash=cls.config().path_hash()))
 
 
 class DxrInstanceTestCase(TestCase):
@@ -282,21 +280,8 @@ class DxrInstanceTestCase(TestCase):
     """
     @classmethod
     def generate(cls):
-        cls._config_dir_path = cls.this_dir()
-
-    @classmethod
-    def degenerate(cls):
-        """Don't delete anything."""
-
-    @classmethod
-    def index(cls):
-        cls.dxr_index()
-
-    @classmethod
-    def teardown_class(cls):
-        with cd(cls._config_dir_path):
-            run('dxr clean')
-        super(DxrInstanceTestCase, cls).teardown_class()
+        super(DxrInstanceTestCase, cls).generate()
+        copy_tree(cls.this_dir(), cls._config_dir_path, preserve_symlinks=True)
 
     @classmethod
     def config_input(cls, config_dir_path):
@@ -325,15 +310,6 @@ class GenerativeTestCase(TestCase):
         cls.generate_source()
 
     @classmethod
-    def degenerate(cls):
-        """Don't delete anything."""
-
-    @classmethod
-    def index(cls):
-        for tree in cls.config().trees.itervalues():
-            index_and_deploy_tree(tree)
-
-    @classmethod
     def teardown_class(cls):
         if cls.stop_for_interaction:
             print "Pausing for interaction at 0.0.0.0:8000..."
@@ -358,12 +334,12 @@ class DxrInstanceTestCaseMakeFirst(DxrInstanceTestCase):
     """
     @classmethod
     def generate(cls):
-        check_call(['make'], cwd=join(cls.this_dir(), 'code'))
         super(DxrInstanceTestCaseMakeFirst, cls).generate()
+        check_call(['make'], cwd=join(cls._config_dir_path, 'code'))
 
     @classmethod
     def teardown_class(cls):
-        check_call(['make', 'clean'], cwd=join(cls.this_dir(), 'code'))
+        check_call(['make', 'clean'], cwd=join(cls._config_dir_path, 'code'))
         super(DxrInstanceTestCaseMakeFirst, cls).teardown_class()
 
 

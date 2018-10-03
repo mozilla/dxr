@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TypeTests(CSingleFileTestCase):
@@ -11,7 +11,7 @@ class TypeTests(CSingleFileTestCase):
         {
             Foo<int>();
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_simple_type(self):
         self.found_line_eq('type:Foo',
@@ -29,7 +29,7 @@ class BaseClassTests(CSingleFileTestCase):
         class Bar : public Foo<T>
         {
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_base_class(self):
         self.found_line_eq('type-ref:Foo',
@@ -46,7 +46,7 @@ class TemplateParameterTests(CSingleFileTestCase):
         void bar(const T &)
         {
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_class_template_parameter(self):
         self.found_line_eq('+type:Foo::T',

@@ -1,4 +1,4 @@
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class VarTests(CSingleFileTestCase):
@@ -9,7 +9,7 @@ class VarTests(CSingleFileTestCase):
         void smoo(int i, char **c) {
             int inner;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_unqualified(self):
         """Search for var definitions using unqualified names."""

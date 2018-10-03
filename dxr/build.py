@@ -71,7 +71,9 @@ def deploy_tree(tree, es, index_name):
     config = tree.config
 
     # Make new index live:
-    alias = config.es_alias.format(format=FORMAT, tree=tree.name)
+    alias = config.es_alias.format(format=FORMAT,
+                                   tree=tree.name,
+                                   config_path_hash=config.path_hash())
     swap_alias(alias, index_name, es)
 
     # Create catalog index if it doesn't exist.
@@ -196,7 +198,7 @@ def index_tree(tree, es, verbose=False):
     skip_cleanup = skip_indexing or skip_build or 'clean' in config.skip_stages
 
     # Create and/or clear out folders:
-    ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder)
+    ensure_folder(tree.object_folder, tree.source_folder != tree.object_folder and not skip_cleanup)
     ensure_folder(tree.temp_folder, not skip_cleanup)
     ensure_folder(tree.log_folder, not skip_cleanup)
     ensure_folder(join(tree.temp_folder, 'plugins'), not skip_cleanup)
@@ -212,7 +214,8 @@ def index_tree(tree, es, verbose=False):
             # Substitute the format, tree name, and uuid into the index identifier.
             index = tree.es_index.format(format=FORMAT,
                                          tree=tree.name,
-                                         unique=uuid1())
+                                         unique=uuid1(),
+                                         config_path_hash=config.path_hash())
             create_index_and_wait(
                 es,
                 index,

@@ -41,7 +41,7 @@ setup(
                       'parsimonious>=0.6,<0.7',
                       'pyelasticsearch>=1.1,<2.0',
                       'Pygments>=2.1.3,<3.0',
-                      'python-hglib>=1.7,<2.0',
+                      'python-hglib>=1.7,<3.0',
                       'tabulate>=0.7.5,<0.8',
                       'xpidl>=1.0',
                       'requests>=1.0,<2.0'],

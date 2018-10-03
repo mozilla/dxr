@@ -55,8 +55,8 @@ function main() {
   walker.on("file", (root, stat, next) => {
     const fullPath = path.join(root, stat.name);
     const pathSegment = path.relative(treeRoot, root);
-        // Test each ignore pattern against the path, and make sure it ends in .js.
-    const disallow = (reduceIgnores(fullPath, !/jsm?$/.test(stat.name))
+    // Test each ignore pattern against the path, and make sure it ends in .js or .jsm
+    const disallow = (reduceIgnores(fullPath, !/\.jsm?$/.test(stat.name))
                         || testSegments(pathSegment));
     if (!disallow) {
       const tempPath = path.join(tempRoot, pathSegment);

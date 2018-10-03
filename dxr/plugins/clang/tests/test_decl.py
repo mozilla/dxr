@@ -1,6 +1,6 @@
 """Tests for searches for declarations"""
 
-from dxr.plugins.clang.tests import CSingleFileTestCase, MINIMAL_MAIN
+from dxr.plugins.clang.tests import CSingleFileTestCase
 
 
 class TypeDeclarationTests(CSingleFileTestCase):
@@ -11,7 +11,7 @@ class TypeDeclarationTests(CSingleFileTestCase):
         class MyClass
         {
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_type(self):
         """Try searching for type declarations."""
@@ -27,7 +27,7 @@ class FunctionDeclarationTests(CSingleFileTestCase):
         void foo()
         {
         };
-        """ + MINIMAL_MAIN
+        """
 
     def test_function(self):
         """Try searching for function declarations."""
@@ -45,7 +45,7 @@ class VariableDeclarationTests(CSingleFileTestCase):
         {
             extern int x;
         }
-        """ + MINIMAL_MAIN
+        """
 
     def test_variable(self):
         """Try searching for variable declarations."""
