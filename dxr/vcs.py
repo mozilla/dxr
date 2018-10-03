@@ -17,7 +17,7 @@ TODO:
 - Check if the mercurial paths are specific to Mozilla's customization or not.
 
 """
-
+from datetime import datetime
 import marshal
 import os
 from os.path import exists, isfile, join, realpath, relpath, split
