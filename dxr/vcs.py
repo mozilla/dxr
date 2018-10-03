@@ -482,7 +482,7 @@ class Subversion(Vcs):
                 return info
 
             # Find and return specific property.
-            regex = re.compile("(?<=%s: )(.+)" % prop)
+            regex = re.compile("(?<=%s: )(.+)" % re.escape(prop))
             return regex.search(info).group()
         except subprocess.CalledProcessError:
             return None
