@@ -135,6 +135,19 @@ public:
   void Ifdef(SourceLocation loc, const Token &tok) override;
   void Ifndef(SourceLocation loc, const Token &tok) override;
 #endif
+#if CLANG_AT_LEAST(7, 0)
+  void InclusionDirective(
+      SourceLocation hashLoc,
+      const Token &includeTok,
+      StringRef fileName,
+      bool isAngled,
+      CharSourceRange filenameRange,
+      const FileEntry *file,
+      StringRef searchPath,
+      StringRef relativePath,
+      const Module *imported,
+      SrcMgr::CharacteristicKind FileType) override;
+#else
   void InclusionDirective(
       SourceLocation hashLoc,
       const Token &includeTok,
@@ -145,6 +158,7 @@ public:
       StringRef searchPath,
       StringRef relativePath,
       const Module *imported) override;
+#endif
 };
 
 // IndexConsumer is our primary AST consumer.
@@ -1111,9 +1125,13 @@ public:
         // TODO: Why do we want to attach the warning to the macro definition
         // site rather than its use?
         loc = sm.getImmediateSpellingLoc(loc);
-      }
-      else
+      } else {
+#if CLANG_AT_LEAST(7, 0)
+        loc = sm.getImmediateExpansionRange(loc).getBegin();
+#else
         loc = sm.getImmediateExpansionRange(loc).first;
+#endif
+      }
     }
     return loc;
   }
@@ -1387,6 +1405,22 @@ void PreprocThunk::Ifndef(SourceLocation loc, const Token &tok) {
   real->Ifndef(loc, tok, nullptr);
 }
 #endif
+#if CLANG_AT_LEAST(7, 0)
+void PreprocThunk::InclusionDirective(
+    SourceLocation hashLoc,
+    const Token &includeTok,
+    StringRef fileName,
+    bool isAngled,
+    CharSourceRange filenameRange,
+    const FileEntry *file,
+    StringRef searchPath,
+    StringRef relativePath,
+    const Module *imported,
+    SrcMgr::CharacteristicKind) {
+  real->InclusionDirective(hashLoc, includeTok, fileName, isAngled, filenameRange,
+                           file, searchPath, relativePath, imported);
+}
+#else
 void PreprocThunk::InclusionDirective(
     SourceLocation hashLoc,
     const Token &includeTok,
@@ -1400,6 +1434,7 @@ void PreprocThunk::InclusionDirective(
   real->InclusionDirective(hashLoc, includeTok, fileName, isAngled, filenameRange,
                            file, searchPath, relativePath, imported);
 }
+#endif
 
 // Our plugin entry point.
 class DXRIndexAction : public PluginASTAction {
