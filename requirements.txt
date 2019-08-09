@@ -7,8 +7,8 @@ certifi==2015.04.28 \
 chardet==2.3.0 \
     --hash=sha256:e53e38b3a4afe6d1132de62b7400a4ac363452dc5dfcf8d88e8e0cce663c68aa \
     --hash=sha256:aaf514bde38020b4f1e42c6a6e141f2827a8a58ccfc3b22b6ff5a1a4b50be56e
-click==4.0 \
-    --hash=sha256:9ab1d313f99b209f8f71a629f36833030c8d7c72282cf7756834baf567dca662
+click==7.0 \
+    --hash=sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13
 configobj==5.0.6 \
     --hash=sha256:a2f5650770e1c87fb335af19a9b7eb73fc05ccf22144eb68db7d00cd2bcb0902
 elasticsearch==1.6.0 \
