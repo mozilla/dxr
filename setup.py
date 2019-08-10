@@ -29,7 +29,7 @@ setup(
                                   'pygmentize = dxr.plugins.pygmentize',
                                   'extmatch = dxr.plugins.extmatch'],
                   'console_scripts': ['dxr = dxr.cli:main']},
-    install_requires=['click>=3.3,<=8.0',
+    install_requires=['click>=3.3,<8.0',
                       'configobj>=5.0.6',
                       'Flask>=0.9',
                       'funcy>=1.0,<2.0',
