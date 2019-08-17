@@ -85,7 +85,7 @@ also need to install rust.  Refer to
 :file:`tooling/docker/dev/set_up_common.sh` for the currently recommended
 install command, something like::
 
-  curl -s https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --date=<date> --yes
+  curl -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly-<date> -y
 
 .. note::
 
