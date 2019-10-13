@@ -11,7 +11,7 @@ Getting Started
 The easiest way to get DXR working on your own machine is...
 
 1. Get the source code you want to index.
-2. If it a language analyzed at build time (like C++ or Rust), tell DXR how to
+2. If it is a language analyzed at build time (like C++ or Rust), tell DXR how to
    build it.
 3. Run :program:`dxr index` to index your code.
 4. Run :program:`dxr serve` to present a web-based search interface.
