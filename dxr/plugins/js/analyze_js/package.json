@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": { "preinstall": "lockdown" },
   "dependencies": {
-    "eslint": "2.9.0",
+    "eslint": "6.5.1",
     "esprima": "2.7.2",
     "lockdown": "0.0.6",
     "minimatch": "3.0.0",
